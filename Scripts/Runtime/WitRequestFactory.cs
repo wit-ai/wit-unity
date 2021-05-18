@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using com.facebook.witai.data;
+
 namespace com.facebook.witai
 {
     public static class WitRequestFactory
@@ -93,20 +95,22 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static WitRequest ListAppsRequest(this WitConfiguration config)
+        public static WitRequest ListAppsRequest(this WitConfiguration config, int limit, int offset = 0)
         {
-            return new WitRequest(config, "apps");
+            return new WitRequest(config, "apps",
+                QueryParam("limit", limit.ToString()),
+                QueryParam("offset", offset.ToString()));
         }
 
         /// <summary>
         /// Requests details for a specific application
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="appName">The name of the app as it is defined in wit.ai</param>
+        /// <param name="appId">The id of the app as it is defined in wit.ai</param>
         /// <returns></returns>
-        public static WitRequest GetAppRequest(this WitConfiguration config, string appName)
+        public static WitRequest GetAppRequest(this WitConfiguration config, string appId)
         {
-            return new WitRequest(config, $"apps/{appName}");
+            return new WitRequest(config, $"apps/{appId}");
         }
     }
 }

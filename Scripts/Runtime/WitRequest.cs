@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using com.facebook.witai.data;
 using com.facebook.witai.lib;
 
 namespace com.facebook.witai
@@ -121,7 +122,6 @@ namespace com.facebook.witai
             uriBuilder.Host = URI_AUTHORITY;
             uriBuilder.Path = command;
 
-            string query = "";
             if (queryParams.Any())
             {
                 var p = queryParams.Select(par =>
@@ -144,6 +144,7 @@ namespace com.facebook.witai
                     request.ContentType =
                         $"audio/raw;encoding={encoding};bits={bits};rate={samplerate};endian={endian.ToString().ToLower()}";
                     request.Method = "POST";
+                    request.Headers["Transfer-encoding"] = "chunked";
                     break;
             }
 

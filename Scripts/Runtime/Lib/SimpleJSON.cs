@@ -198,6 +198,25 @@ namespace com.facebook.witai.lib
             get { return this as JSONArray; }
         }
 
+        public virtual string[] AsStringArray
+        {
+            get
+            {
+                string[] array = new string[0];
+                var jsonArray = AsArray;
+                if (null != jsonArray)
+                {
+                    array = new string[jsonArray.Count];
+                    for (int i = 0; i < array.Length; i++)
+                    {
+                        array[i] = jsonArray[i].Value;
+                    }
+                }
+
+                return array;
+            }
+        }
+
         public virtual JSONClass AsObject
         {
             get { return this as JSONClass; }
