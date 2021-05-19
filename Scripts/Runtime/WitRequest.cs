@@ -144,7 +144,11 @@ namespace com.facebook.witai
                     request.ContentType =
                         $"audio/raw;encoding={encoding};bits={bits};rate={samplerate};endian={endian.ToString().ToLower()}";
                     request.Method = "POST";
-                    request.Headers["Transfer-encoding"] = "chunked";
+                    request.SendChunked = true;
+                    break;
+                case "apps":
+                    request.Headers["Authorization"] =
+                        $"Bearer {configuration.EditorToken.Trim()}";
                     break;
             }
 

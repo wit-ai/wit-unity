@@ -9,6 +9,10 @@ using System;
 using com.facebook.witai.lib;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace com.facebook.witai.data
 {
     [CreateAssetMenu(fileName = "WitConfiguration", menuName = "Wit/Configuration", order = 1)]
@@ -16,32 +20,28 @@ namespace com.facebook.witai.data
     {
         [SerializeField] public string clientAccessToken;
 
-        [SerializeField] public int activeApplication;
-        [SerializeField] public string[] applicationNames;
-        [SerializeField] public WitApplication[] applications;
         [SerializeField] public WitEntity[] entities;
         [SerializeField] public WitIntent[] intents;
 
-        public WitApplication ActiveApplication
+        public string EditorToken
         {
+#if UNITY_EDITOR
             get
             {
-                WitApplication app = null;
-                if (activeApplication >= 0 && activeApplication < applications.Length)
-                {
-                    app = applications[activeApplication];
-                }
-                return app;
+                return EditorPrefs.GetString("Wit::EditorToken", "");
             }
+            set
+            {
+                EditorPrefs.SetString("Wit::EditorToken", value);
+            }
+#else
+            get => clientAccessToken;
+#endif
         }
 
         public void Update()
         {
-            var request = this.ListAppsRequest(10);
-            request.onResponse = (r) => OnUpdate(r, UpdateAppList);
-            request.Request();
-
-            request = this.ListIntentsRequest();
+            var request = this.ListIntentsRequest();
             request.onResponse = (r) => OnUpdate(r, UpdateIntentList);
             request.Request();
 
@@ -85,20 +85,6 @@ namespace com.facebook.witai.data
                 entity.witConfiguration = this;
                 entities[i] = entity;
                 entity.Update();
-            }
-        }
-
-        private void UpdateAppList(JSONNode appListJson)
-        {
-            var appList = appListJson.AsArray;
-            applicationNames = new string[appList.Count];
-            applications = new WitApplication[appList.Count];
-            for (int i = 0; i < appList.Count; i++)
-            {
-                var app = WitApplication.FromJson(appList[i]);
-                app.witConfiguration = this;
-                applicationNames[i] = app.name;
-                applications[i] = app;
             }
         }
     }
