@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 using System.Collections.Generic;
 using System.Linq;
 using com.facebook.witai.data;
@@ -12,7 +18,6 @@ public class WitConfigurationEditor : Editor
 
     private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
 
-    private int appIndex = -1;
     private int selectedToolPanel;
 
     private readonly string[] toolPanelNames = new []
@@ -26,8 +31,6 @@ public class WitConfigurationEditor : Editor
 
     private Editor applicationEditor;
     private Vector2 scroll;
-
-
 
     private bool IsTokenValid => !string.IsNullOrEmpty(configuration.clientAccessToken) &&
                                  configuration.clientAccessToken.Length == 32;
