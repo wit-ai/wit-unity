@@ -30,29 +30,8 @@ namespace com.facebook.witai.callbackhandlers
 
         public override void OnInspectorGUI()
         {
-            string intent ;
-            if (intentNames.Length > 0)
-            {
-                intentIndex = EditorGUILayout.Popup("Intent", intentIndex, intentNames);
-                if (intentIndex > 0)
-                {
-                    intent = intentNames[intentIndex];
-                }
-                else
-                {
-                    intent = EditorGUILayout.TextField(handler.intent);
-                }
-            }
-            else
-            {
-                intent = EditorGUILayout.TextField("Intent", handler.intent);
-            }
-
-            if (intent != handler.intent)
-            {
-                handler.intent = intent;
-                EditorUtility.SetDirty(handler);
-            }
+            bool intentChanged = WitEditorUI.FallbackPopup(serializedObject, "intent",
+                intentNames, ref intentIndex);
 
 
             var confidenceProperty = serializedObject.FindProperty("confidence");

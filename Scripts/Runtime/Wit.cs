@@ -78,7 +78,7 @@ namespace com.facebook.witai
             }
 
             events?.OnMicLevelChanged?.Invoke(levelMax);
-            if (null != activeRequest)
+            if (null != activeRequest && activeRequest.IsActive)
             {
                 byte[] sampleBytes = Convert(sample);
                 activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
