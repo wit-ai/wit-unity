@@ -83,6 +83,10 @@ namespace com.facebook.witai
                 byte[] sampleBytes = Convert(sample);
                 activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
             }
+            else
+            {
+                Deactivate();
+            }
         }
 
 

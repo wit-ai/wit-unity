@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using com.facebook.witai.data;
 using com.facebook.witai.lib;
+using UnityEngine;
 
 namespace com.facebook.witai
 {
@@ -160,14 +161,17 @@ namespace com.facebook.witai
                 isRequestStreamActive = true;
                 request.BeginGetRequestStream(HandleRequestStream, request);
             }
-            else
-            {
-                request.BeginGetResponse(HandleResponse, request);
-            }
+
+            request.BeginGetResponse(HandleResponse, request);
         }
 
         private void HandleResponse(IAsyncResult ar)
         {
+            if (null != stream)
+            {
+                Debug.Log("Request stream was still open. Closing.");
+                CloseRequestStream();
+            }
             response = (HttpWebResponse) request.EndGetResponse(ar);
 
             statusCode = (int) response.StatusCode;
@@ -220,9 +224,9 @@ namespace com.facebook.witai
         {
             if (isRequestStreamActive)
             {
-                stream?.Close();
-                request.BeginGetResponse(HandleResponse, request);
+                stream?.Dispose();
                 isRequestStreamActive = false;
+                stream = null;
             }
         }
 
