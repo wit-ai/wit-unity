@@ -115,9 +115,9 @@ namespace com.facebook.witai
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate()
+        public WitRequest Activate()
         {
-            if (Active) return;
+            if (Active) return null;
 
             // Make sure we aren't checking activation time until
             // the mic starts recording.
@@ -128,6 +128,7 @@ namespace com.facebook.witai
             activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(StartMic);
             activeRequest.onResponse = QueueResult;
             activeRequest.Request();
+            return activeRequest;
         }
 
         private void StartMic()
@@ -174,11 +175,12 @@ namespace com.facebook.witai
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="transcription"></param>
-        public void Activate(string transcription)
+        public WitRequest Activate(string transcription)
         {
             activeRequest = Configuration.MessageRequest(transcription);
             activeRequest.onResponse = QueueResult;
             activeRequest.Request();
+            return activeRequest;
         }
 
         /// <summary>

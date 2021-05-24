@@ -12,10 +12,10 @@ namespace com.facebook.witai
         {
             var property = serializedObject.FindProperty(propertyName);
             string intent;
-            if (names.Length > 0)
+            if (null != names && names.Length > 0)
             {
                 index = EditorGUILayout.Popup(property.displayName, index, names);
-                if (index > 0)
+                if (index >= 0)
                 {
                     intent = names[index];
                 }

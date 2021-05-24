@@ -71,11 +71,21 @@ namespace com.facebook.witai
         /// Callback called when a response is received from the server
         /// </summary>
         public Action<WitRequest> onResponse;
+
         /// <summary>
         /// Callback called when the server is ready to receive data from the WitRequest's input
         /// stream. See WitRequest.Write()
         /// </summary>
         public Action<WitRequest> onInputStreamReady;
+
+        /// <summary>
+        /// Returns the raw string response that was received before converting it to a JSON object.
+        ///
+        /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
+        /// values or other interactions from this callback. This is intended to be used for demo
+        /// and test UI, not for regular use.
+        /// </summary>
+        public Action<string> onRawResponse;
 
         /// <summary>
         /// Returns true if a request is pending. Will return false after data has been populated
@@ -184,7 +194,9 @@ namespace com.facebook.witai
                     var responseStream = response.GetResponseStream();
                     using (var streamReader = new StreamReader(responseStream))
                     {
-                        responseData = JSON.Parse(streamReader.ReadToEnd());
+                        var stringResponse = streamReader.ReadToEnd();
+                        onRawResponse?.Invoke(stringResponse);
+                        responseData = JSON.Parse(stringResponse);
                     }
 
                     responseStream.Close();

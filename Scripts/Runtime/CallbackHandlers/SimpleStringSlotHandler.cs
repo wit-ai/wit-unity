@@ -15,7 +15,7 @@ namespace com.facebook.witai.callbackhandlers
     public class SimpleStringSlotHandler : WitResponseHandler
     {
         [SerializeField] public string intent;
-        [SerializeField] public string slot;
+        [SerializeField] public string entity;
         [Range(0, 1f)] [SerializeField] public float confidence = .9f;
 
         [SerializeField] public string format;
@@ -30,7 +30,7 @@ namespace com.facebook.witai.callbackhandlers
             var intentNode = WitResultUtilities.GetFirstIntent(response);
             if (intent == intentNode["name"].Value && intentNode["confidence"].AsFloat > confidence)
             {
-                var slotValue = WitResultUtilities.GetFirstSlot(response, slot);
+                var slotValue = WitResultUtilities.GetFirstSlot(response, entity);
                 if (!string.IsNullOrEmpty(format))
                 {
                     onIntentSlotTriggered.Invoke(format.Replace("{value}", slotValue));

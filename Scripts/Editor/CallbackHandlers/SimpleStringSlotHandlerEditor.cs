@@ -6,6 +6,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -19,6 +20,8 @@ namespace com.facebook.witai.callbackhandlers
         private SimpleStringSlotHandler handler;
         private string[] intentNames;
         private int intentIndex;
+        private string[] entityNames;
+        private int entityIndex;
 
         private void OnEnable()
         {
@@ -30,11 +33,16 @@ namespace com.facebook.witai.callbackhandlers
 
         public override void OnInspectorGUI()
         {
+            var handler = target as SimpleStringSlotHandler;
             var intentChanged = WitEditorUI.FallbackPopup(serializedObject,"intent", intentNames, ref intentIndex);
-            if (intentChanged)
+            if (intentChanged || intentNames.Length > 0 && null == entityNames)
             {
-                //handler.wit.Configuration.intents[intentIndex].entities[0].
+                entityNames = handler.wit.Configuration.intents[intentIndex].entities
+                    .Select((e) => e.name).ToArray();
+                entityIndex = Array.IndexOf(entityNames, handler.entity);
             }
+
+            WitEditorUI.FallbackPopup(serializedObject, "entity", entityNames, ref entityIndex);
 
             var confidenceProperty = serializedObject.FindProperty("confidence");
             EditorGUILayout.PropertyField(confidenceProperty);
