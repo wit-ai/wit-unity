@@ -31,6 +31,6 @@ namespace com.facebook.witai.data
             }
         }
 
-        protected abstract void Update(JSONNode data);
+        protected abstract void Update(WitResponseNode data);
     }
 }

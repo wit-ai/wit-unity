@@ -20,7 +20,7 @@ namespace com.facebook.witai.callbackhandlers
 
         public UnityEvent OnIntentTriggered => onIntentTriggered;
 
-        protected override void OnHandleResponse(JSONNode response)
+        protected override void OnHandleResponse(WitResponseNode response)
         {
             var intentNode = WitResultUtilities.GetFirstIntent(response);
             if (intent == intentNode["name"].Value && intentNode["confidence"].AsFloat > confidence)

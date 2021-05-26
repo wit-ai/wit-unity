@@ -45,6 +45,8 @@
  *   float, double, bool, string. It's not the most efficient way but for a moderate amount of data
  *   it should work on all platforms.
  *
+ *  2021-26-5 Update:
+ *  Renamed to avoid name collisions with other libraries that include a copy of SimpleJSON
  * * * * */
 using System;
 using System.Collections;
@@ -65,21 +67,21 @@ namespace com.facebook.witai.lib
         FloatValue = 7,
     }
 
-    public class JSONNode
+    public class WitResponseNode
     {
         #region common interface
 
-        public virtual void Add(string aKey, JSONNode aItem)
+        public virtual void Add(string aKey, WitResponseNode aItem)
         {
         }
 
-        public virtual JSONNode this[int aIndex]
+        public virtual WitResponseNode this[int aIndex]
         {
             get { return null; }
             set { }
         }
 
-        public virtual JSONNode this[string aKey]
+        public virtual WitResponseNode this[string aKey]
         {
             get { return null; }
             set { }
@@ -96,32 +98,32 @@ namespace com.facebook.witai.lib
             get { return 0; }
         }
 
-        public virtual void Add(JSONNode aItem)
+        public virtual void Add(WitResponseNode aItem)
         {
             Add("", aItem);
         }
 
-        public virtual JSONNode Remove(string aKey)
+        public virtual WitResponseNode Remove(string aKey)
         {
             return null;
         }
 
-        public virtual JSONNode Remove(int aIndex)
+        public virtual WitResponseNode Remove(int aIndex)
         {
             return null;
         }
 
-        public virtual JSONNode Remove(JSONNode aNode)
+        public virtual WitResponseNode Remove(WitResponseNode aNode)
         {
             return aNode;
         }
 
-        public virtual IEnumerable<JSONNode> Childs
+        public virtual IEnumerable<WitResponseNode> Childs
         {
             get { yield break; }
         }
 
-        public IEnumerable<JSONNode> DeepChilds
+        public IEnumerable<WitResponseNode> DeepChilds
         {
             get
             {
@@ -193,9 +195,9 @@ namespace com.facebook.witai.lib
             set { Value = (value) ? "true" : "false"; }
         }
 
-        public virtual JSONArray AsArray
+        public virtual WitResponseArray AsArray
         {
-            get { return this as JSONArray; }
+            get { return this as WitResponseArray; }
         }
 
         public virtual string[] AsStringArray
@@ -217,9 +219,9 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public virtual JSONClass AsObject
+        public virtual WitResponseClass AsObject
         {
-            get { return this as JSONClass; }
+            get { return this as WitResponseClass; }
         }
 
 
@@ -227,24 +229,24 @@ namespace com.facebook.witai.lib
 
         #region operators
 
-        public static implicit operator JSONNode(string s)
+        public static implicit operator WitResponseNode(string s)
         {
-            return new JSONData(s);
+            return new WitResponseData(s);
         }
 
-        public static implicit operator string(JSONNode d)
+        public static implicit operator string(WitResponseNode d)
         {
             return (d == null) ? null : d.Value;
         }
 
-        public static bool operator ==(JSONNode a, object b)
+        public static bool operator ==(WitResponseNode a, object b)
         {
-            if (b == null && a is JSONLazyCreator)
+            if (b == null && a is WitResponseLazyCreator)
                 return true;
             return System.Object.ReferenceEquals(a, b);
         }
 
-        public static bool operator !=(JSONNode a, object b)
+        public static bool operator !=(WitResponseNode a, object b)
         {
             return !(a == b);
         }
@@ -299,10 +301,10 @@ namespace com.facebook.witai.lib
             return result;
         }
 
-        public static JSONNode Parse(string aJSON)
+        public static WitResponseNode Parse(string aJSON)
         {
-            Stack<JSONNode> stack = new Stack<JSONNode>();
-            JSONNode ctx = null;
+            Stack<WitResponseNode> stack = new Stack<WitResponseNode>();
+            WitResponseNode ctx = null;
             int i = 0;
             string Token = "";
             string TokenName = "";
@@ -318,11 +320,11 @@ namespace com.facebook.witai.lib
                             break;
                         }
 
-                        stack.Push(new JSONClass());
+                        stack.Push(new WitResponseClass());
                         if (ctx != null)
                         {
                             TokenName = TokenName.Trim();
-                            if (ctx is JSONArray)
+                            if (ctx is WitResponseArray)
                                 ctx.Add(stack.Peek());
                             else if (TokenName != "")
                                 ctx.Add(TokenName, stack.Peek());
@@ -340,11 +342,11 @@ namespace com.facebook.witai.lib
                             break;
                         }
 
-                        stack.Push(new JSONArray());
+                        stack.Push(new WitResponseArray());
                         if (ctx != null)
                         {
                             TokenName = TokenName.Trim();
-                            if (ctx is JSONArray)
+                            if (ctx is WitResponseArray)
                                 ctx.Add(stack.Peek());
                             else if (TokenName != "")
                                 ctx.Add(TokenName, stack.Peek());
@@ -370,7 +372,7 @@ namespace com.facebook.witai.lib
                         if (Token != "")
                         {
                             TokenName = TokenName.Trim();
-                            if (ctx is JSONArray)
+                            if (ctx is WitResponseArray)
                                 ctx.Add(Token);
                             else if (TokenName != "")
                                 ctx.Add(TokenName, Token);
@@ -406,7 +408,7 @@ namespace com.facebook.witai.lib
 
                         if (Token != "")
                         {
-                            if (ctx is JSONArray)
+                            if (ctx is WitResponseArray)
                                 ctx.Add(Token);
                             else if (TokenName != "")
                                 ctx.Add(TokenName, Token);
@@ -567,7 +569,7 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public static JSONNode Deserialize(System.IO.BinaryReader aReader)
+        public static WitResponseNode Deserialize(System.IO.BinaryReader aReader)
         {
             JSONBinaryTag type = (JSONBinaryTag) aReader.ReadByte();
             switch (type)
@@ -575,7 +577,7 @@ namespace com.facebook.witai.lib
                 case JSONBinaryTag.Array:
                 {
                     int count = aReader.ReadInt32();
-                    JSONArray tmp = new JSONArray();
+                    WitResponseArray tmp = new WitResponseArray();
                     for (int i = 0; i < count; i++)
                         tmp.Add(Deserialize(aReader));
                     return tmp;
@@ -583,7 +585,7 @@ namespace com.facebook.witai.lib
                 case JSONBinaryTag.Class:
                 {
                     int count = aReader.ReadInt32();
-                    JSONClass tmp = new JSONClass();
+                    WitResponseClass tmp = new WitResponseClass();
                     for (int i = 0; i < count; i++)
                     {
                         string key = aReader.ReadString();
@@ -595,23 +597,23 @@ namespace com.facebook.witai.lib
                 }
                 case JSONBinaryTag.Value:
                 {
-                    return new JSONData(aReader.ReadString());
+                    return new WitResponseData(aReader.ReadString());
                 }
                 case JSONBinaryTag.IntValue:
                 {
-                    return new JSONData(aReader.ReadInt32());
+                    return new WitResponseData(aReader.ReadInt32());
                 }
                 case JSONBinaryTag.DoubleValue:
                 {
-                    return new JSONData(aReader.ReadDouble());
+                    return new WitResponseData(aReader.ReadDouble());
                 }
                 case JSONBinaryTag.BoolValue:
                 {
-                    return new JSONData(aReader.ReadBoolean());
+                    return new WitResponseData(aReader.ReadBoolean());
                 }
                 case JSONBinaryTag.FloatValue:
                 {
-                    return new JSONData(aReader.ReadSingle());
+                    return new WitResponseData(aReader.ReadSingle());
                 }
 
                 default:
@@ -646,26 +648,26 @@ namespace com.facebook.witai.lib
             return LoadFromCompressedStream(stream);
         }
 #else
-        public static JSONNode LoadFromCompressedFile(string aFileName)
+        public static WitResponseNode LoadFromCompressedFile(string aFileName)
         {
             throw new Exception(
                 "Can't use compressed functions. You need include the SharpZipLib and uncomment the define at the top of SimpleJSON");
         }
 
-        public static JSONNode LoadFromCompressedStream(System.IO.Stream aData)
+        public static WitResponseNode LoadFromCompressedStream(System.IO.Stream aData)
         {
             throw new Exception(
                 "Can't use compressed functions. You need include the SharpZipLib and uncomment the define at the top of SimpleJSON");
         }
 
-        public static JSONNode LoadFromCompressedBase64(string aBase64)
+        public static WitResponseNode LoadFromCompressedBase64(string aBase64)
         {
             throw new Exception(
                 "Can't use compressed functions. You need include the SharpZipLib and uncomment the define at the top of SimpleJSON");
         }
 #endif
 
-        public static JSONNode LoadFromStream(System.IO.Stream aData)
+        public static WitResponseNode LoadFromStream(System.IO.Stream aData)
         {
             using (var R = new System.IO.BinaryReader(aData))
             {
@@ -673,7 +675,7 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public static JSONNode LoadFromFile(string aFileName)
+        public static WitResponseNode LoadFromFile(string aFileName)
         {
 #if USE_FileIO
             using (var F = System.IO.File.OpenRead(aFileName))
@@ -685,7 +687,7 @@ namespace com.facebook.witai.lib
 #endif
         }
 
-        public static JSONNode LoadFromBase64(string aBase64)
+        public static WitResponseNode LoadFromBase64(string aBase64)
         {
             var tmp = System.Convert.FromBase64String(aBase64);
             var stream = new System.IO.MemoryStream(tmp);
@@ -694,16 +696,16 @@ namespace com.facebook.witai.lib
         }
     } // End of JSONNode
 
-    public class JSONArray : JSONNode, IEnumerable
+    public class WitResponseArray : WitResponseNode, IEnumerable
     {
-        private List<JSONNode> m_List = new List<JSONNode>();
+        private List<WitResponseNode> m_List = new List<WitResponseNode>();
 
-        public override JSONNode this[int aIndex]
+        public override WitResponseNode this[int aIndex]
         {
             get
             {
                 if (aIndex < 0 || aIndex >= m_List.Count)
-                    return new JSONLazyCreator(this);
+                    return new WitResponseLazyCreator(this);
                 return m_List[aIndex];
             }
             set
@@ -715,9 +717,9 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public override JSONNode this[string aKey]
+        public override WitResponseNode this[string aKey]
         {
-            get { return new JSONLazyCreator(this); }
+            get { return new WitResponseLazyCreator(this); }
             set { m_List.Add(value); }
         }
 
@@ -726,45 +728,45 @@ namespace com.facebook.witai.lib
             get { return m_List.Count; }
         }
 
-        public override void Add(string aKey, JSONNode aItem)
+        public override void Add(string aKey, WitResponseNode aItem)
         {
             m_List.Add(aItem);
         }
 
-        public override JSONNode Remove(int aIndex)
+        public override WitResponseNode Remove(int aIndex)
         {
             if (aIndex < 0 || aIndex >= m_List.Count)
                 return null;
-            JSONNode tmp = m_List[aIndex];
+            WitResponseNode tmp = m_List[aIndex];
             m_List.RemoveAt(aIndex);
             return tmp;
         }
 
-        public override JSONNode Remove(JSONNode aNode)
+        public override WitResponseNode Remove(WitResponseNode aNode)
         {
             m_List.Remove(aNode);
             return aNode;
         }
 
-        public override IEnumerable<JSONNode> Childs
+        public override IEnumerable<WitResponseNode> Childs
         {
             get
             {
-                foreach (JSONNode N in m_List)
+                foreach (WitResponseNode N in m_List)
                     yield return N;
             }
         }
 
         public IEnumerator GetEnumerator()
         {
-            foreach (JSONNode N in m_List)
+            foreach (WitResponseNode N in m_List)
                 yield return N;
         }
 
         public override string ToString()
         {
             string result = "[ ";
-            foreach (JSONNode N in m_List)
+            foreach (WitResponseNode N in m_List)
             {
                 if (result.Length > 2)
                     result += ", ";
@@ -778,7 +780,7 @@ namespace com.facebook.witai.lib
         public override string ToString(string aPrefix)
         {
             string result = "[ ";
-            foreach (JSONNode N in m_List)
+            foreach (WitResponseNode N in m_List)
             {
                 if (result.Length > 3)
                     result += ", ";
@@ -801,18 +803,18 @@ namespace com.facebook.witai.lib
         }
     } // End of JSONArray
 
-    public class JSONClass : JSONNode, IEnumerable
+    public class WitResponseClass : WitResponseNode, IEnumerable
     {
-        private Dictionary<string, JSONNode> m_Dict = new Dictionary<string, JSONNode>();
+        private Dictionary<string, WitResponseNode> m_Dict = new Dictionary<string, WitResponseNode>();
 
-        public override JSONNode this[string aKey]
+        public override WitResponseNode this[string aKey]
         {
             get
             {
                 if (m_Dict.ContainsKey(aKey))
                     return m_Dict[aKey];
                 else
-                    return new JSONLazyCreator(this, aKey);
+                    return new WitResponseLazyCreator(this, aKey);
             }
             set
             {
@@ -823,7 +825,7 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public override JSONNode this[int aIndex]
+        public override WitResponseNode this[int aIndex]
         {
             get
             {
@@ -846,7 +848,7 @@ namespace com.facebook.witai.lib
         }
 
 
-        public override void Add(string aKey, JSONNode aItem)
+        public override void Add(string aKey, WitResponseNode aItem)
         {
             if (!string.IsNullOrEmpty(aKey))
             {
@@ -859,16 +861,16 @@ namespace com.facebook.witai.lib
                 m_Dict.Add(Guid.NewGuid().ToString(), aItem);
         }
 
-        public override JSONNode Remove(string aKey)
+        public override WitResponseNode Remove(string aKey)
         {
             if (!m_Dict.ContainsKey(aKey))
                 return null;
-            JSONNode tmp = m_Dict[aKey];
+            WitResponseNode tmp = m_Dict[aKey];
             m_Dict.Remove(aKey);
             return tmp;
         }
 
-        public override JSONNode Remove(int aIndex)
+        public override WitResponseNode Remove(int aIndex)
         {
             if (aIndex < 0 || aIndex >= m_Dict.Count)
                 return null;
@@ -877,7 +879,7 @@ namespace com.facebook.witai.lib
             return item.Value;
         }
 
-        public override JSONNode Remove(JSONNode aNode)
+        public override WitResponseNode Remove(WitResponseNode aNode)
         {
             try
             {
@@ -891,25 +893,25 @@ namespace com.facebook.witai.lib
             }
         }
 
-        public override IEnumerable<JSONNode> Childs
+        public override IEnumerable<WitResponseNode> Childs
         {
             get
             {
-                foreach (KeyValuePair<string, JSONNode> N in m_Dict)
+                foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
                     yield return N.Value;
             }
         }
 
         public IEnumerator GetEnumerator()
         {
-            foreach (KeyValuePair<string, JSONNode> N in m_Dict)
+            foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
                 yield return N;
         }
 
         public override string ToString()
         {
             string result = "{";
-            foreach (KeyValuePair<string, JSONNode> N in m_Dict)
+            foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
             {
                 if (result.Length > 2)
                     result += ", ";
@@ -923,7 +925,7 @@ namespace com.facebook.witai.lib
         public override string ToString(string aPrefix)
         {
             string result = "{ ";
-            foreach (KeyValuePair<string, JSONNode> N in m_Dict)
+            foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
             {
                 if (result.Length > 3)
                     result += ", ";
@@ -947,7 +949,7 @@ namespace com.facebook.witai.lib
         }
     } // End of JSONClass
 
-    public class JSONData : JSONNode
+    public class WitResponseData : WitResponseNode
     {
         private string m_Data;
 
@@ -957,27 +959,27 @@ namespace com.facebook.witai.lib
             set { m_Data = value; }
         }
 
-        public JSONData(string aData)
+        public WitResponseData(string aData)
         {
             m_Data = aData;
         }
 
-        public JSONData(float aData)
+        public WitResponseData(float aData)
         {
             AsFloat = aData;
         }
 
-        public JSONData(double aData)
+        public WitResponseData(double aData)
         {
             AsDouble = aData;
         }
 
-        public JSONData(bool aData)
+        public WitResponseData(bool aData)
         {
             AsBool = aData;
         }
 
-        public JSONData(int aData)
+        public WitResponseData(int aData)
         {
             AsInt = aData;
         }
@@ -994,7 +996,7 @@ namespace com.facebook.witai.lib
 
         public override void Serialize(System.IO.BinaryWriter aWriter)
         {
-            var tmp = new JSONData("");
+            var tmp = new WitResponseData("");
 
             tmp.AsInt = AsInt;
             if (tmp.m_Data == this.m_Data)
@@ -1033,24 +1035,24 @@ namespace com.facebook.witai.lib
         }
     } // End of JSONData
 
-    internal class JSONLazyCreator : JSONNode
+    internal class WitResponseLazyCreator : WitResponseNode
     {
-        private JSONNode m_Node = null;
+        private WitResponseNode m_Node = null;
         private string m_Key = null;
 
-        public JSONLazyCreator(JSONNode aNode)
+        public WitResponseLazyCreator(WitResponseNode aNode)
         {
             m_Node = aNode;
             m_Key = null;
         }
 
-        public JSONLazyCreator(JSONNode aNode, string aKey)
+        public WitResponseLazyCreator(WitResponseNode aNode, string aKey)
         {
             m_Node = aNode;
             m_Key = aKey;
         }
 
-        private void Set(JSONNode aVal)
+        private void Set(WitResponseNode aVal)
         {
             if (m_Key == null)
             {
@@ -1064,50 +1066,50 @@ namespace com.facebook.witai.lib
             m_Node = null; // Be GC friendly.
         }
 
-        public override JSONNode this[int aIndex]
+        public override WitResponseNode this[int aIndex]
         {
-            get { return new JSONLazyCreator(this); }
+            get { return new WitResponseLazyCreator(this); }
             set
             {
-                var tmp = new JSONArray();
+                var tmp = new WitResponseArray();
                 tmp.Add(value);
                 Set(tmp);
             }
         }
 
-        public override JSONNode this[string aKey]
+        public override WitResponseNode this[string aKey]
         {
-            get { return new JSONLazyCreator(this, aKey); }
+            get { return new WitResponseLazyCreator(this, aKey); }
             set
             {
-                var tmp = new JSONClass();
+                var tmp = new WitResponseClass();
                 tmp.Add(aKey, value);
                 Set(tmp);
             }
         }
 
-        public override void Add(JSONNode aItem)
+        public override void Add(WitResponseNode aItem)
         {
-            var tmp = new JSONArray();
+            var tmp = new WitResponseArray();
             tmp.Add(aItem);
             Set(tmp);
         }
 
-        public override void Add(string aKey, JSONNode aItem)
+        public override void Add(string aKey, WitResponseNode aItem)
         {
-            var tmp = new JSONClass();
+            var tmp = new WitResponseClass();
             tmp.Add(aKey, aItem);
             Set(tmp);
         }
 
-        public static bool operator ==(JSONLazyCreator a, object b)
+        public static bool operator ==(WitResponseLazyCreator a, object b)
         {
             if (b == null)
                 return true;
             return System.Object.ReferenceEquals(a, b);
         }
 
-        public static bool operator !=(JSONLazyCreator a, object b)
+        public static bool operator !=(WitResponseLazyCreator a, object b)
         {
             return !(a == b);
         }
@@ -1138,13 +1140,13 @@ namespace com.facebook.witai.lib
         {
             get
             {
-                JSONData tmp = new JSONData(0);
+                WitResponseData tmp = new WitResponseData(0);
                 Set(tmp);
                 return 0;
             }
             set
             {
-                JSONData tmp = new JSONData(value);
+                WitResponseData tmp = new WitResponseData(value);
                 Set(tmp);
             }
         }
@@ -1153,13 +1155,13 @@ namespace com.facebook.witai.lib
         {
             get
             {
-                JSONData tmp = new JSONData(0.0f);
+                WitResponseData tmp = new WitResponseData(0.0f);
                 Set(tmp);
                 return 0.0f;
             }
             set
             {
-                JSONData tmp = new JSONData(value);
+                WitResponseData tmp = new WitResponseData(value);
                 Set(tmp);
             }
         }
@@ -1168,13 +1170,13 @@ namespace com.facebook.witai.lib
         {
             get
             {
-                JSONData tmp = new JSONData(0.0);
+                WitResponseData tmp = new WitResponseData(0.0);
                 Set(tmp);
                 return 0.0;
             }
             set
             {
-                JSONData tmp = new JSONData(value);
+                WitResponseData tmp = new WitResponseData(value);
                 Set(tmp);
             }
         }
@@ -1183,43 +1185,43 @@ namespace com.facebook.witai.lib
         {
             get
             {
-                JSONData tmp = new JSONData(false);
+                WitResponseData tmp = new WitResponseData(false);
                 Set(tmp);
                 return false;
             }
             set
             {
-                JSONData tmp = new JSONData(value);
+                WitResponseData tmp = new WitResponseData(value);
                 Set(tmp);
             }
         }
 
-        public override JSONArray AsArray
+        public override WitResponseArray AsArray
         {
             get
             {
-                JSONArray tmp = new JSONArray();
+                WitResponseArray tmp = new WitResponseArray();
                 Set(tmp);
                 return tmp;
             }
         }
 
-        public override JSONClass AsObject
+        public override WitResponseClass AsObject
         {
             get
             {
-                JSONClass tmp = new JSONClass();
+                WitResponseClass tmp = new WitResponseClass();
                 Set(tmp);
                 return tmp;
             }
         }
     } // End of JSONLazyCreator
 
-    public static class JSON
+    public static class WitResponseJson
     {
-        public static JSONNode Parse(string aJSON)
+        public static WitResponseNode Parse(string aJSON)
         {
-            return JSONNode.Parse(aJSON);
+            return WitResponseNode.Parse(aJSON);
         }
     }
 }

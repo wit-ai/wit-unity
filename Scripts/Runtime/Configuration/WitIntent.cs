@@ -24,11 +24,11 @@ namespace com.facebook.witai.data
             return witConfiguration.GetIntentRequest(name);
         }
 
-        protected override void Update(JSONNode entityJson)
+        protected override void Update(WitResponseNode entityWitResponse)
         {
-            id = entityJson["id"].Value;
-            name = entityJson["name"].Value;
-            var entityArray = entityJson["entities"].AsArray;
+            id = entityWitResponse["id"].Value;
+            name = entityWitResponse["name"].Value;
+            var entityArray = entityWitResponse["entities"].AsArray;
             entities = new WitEntity[entityArray.Count];
             for (int i = 0; i < entityArray.Count; i++)
             {
@@ -36,10 +36,10 @@ namespace com.facebook.witai.data
             }
         }
 
-        public static WitIntent FromJson(JSONNode intentJson)
+        public static WitIntent FromJson(WitResponseNode intentWitResponse)
         {
             var intent = new WitIntent();
-            intent.Update(intentJson);
+            intent.Update(intentWitResponse);
             return intent;
         }
     }

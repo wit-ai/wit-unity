@@ -26,19 +26,19 @@ namespace com.facebook.witai.data
             return witConfiguration.GetAppRequest(id);
         }
 
-        protected override void Update(JSONNode appJson)
+        protected override void Update(WitResponseNode appWitResponse)
         {
-            id = appJson["id"].Value;
-            name = appJson["name"].Value;
-            lang = appJson["lang"].Value;
-            isPrivate = appJson["private"].AsBool;
-            createdAt = appJson["created_at"].Value;
+            id = appWitResponse["id"].Value;
+            name = appWitResponse["name"].Value;
+            lang = appWitResponse["lang"].Value;
+            isPrivate = appWitResponse["private"].AsBool;
+            createdAt = appWitResponse["created_at"].Value;
         }
 
-        public static WitApplication FromJson(JSONNode appJson)
+        public static WitApplication FromJson(WitResponseNode appWitResponse)
         {
             var app = new WitApplication();
-            app.Update(appJson);
+            app.Update(appWitResponse);
             return app;
         }
     }

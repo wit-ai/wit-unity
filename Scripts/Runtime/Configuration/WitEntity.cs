@@ -26,13 +26,13 @@ namespace com.facebook.witai.data
             return witConfiguration.GetEntityRequest(name);
         }
 
-        protected override void Update(JSONNode entityJson)
+        protected override void Update(WitResponseNode entityWitResponse)
         {
-            id = entityJson["id"].Value;
-            name = entityJson["name"].Value;
-            lookups = entityJson["lookups"].AsStringArray;
-            roles = entityJson["roles"].AsStringArray;
-            var keywordArray = entityJson["keywords"].AsArray;
+            id = entityWitResponse["id"].Value;
+            name = entityWitResponse["name"].Value;
+            lookups = entityWitResponse["lookups"].AsStringArray;
+            roles = entityWitResponse["roles"].AsStringArray;
+            var keywordArray = entityWitResponse["keywords"].AsArray;
             keywords = new WitKeyword[keywordArray.Count];
             for (int i = 0; i < keywordArray.Count; i++)
             {
@@ -41,10 +41,10 @@ namespace com.facebook.witai.data
             }
         }
 
-        public static WitEntity FromJson(JSONNode entityJson)
+        public static WitEntity FromJson(WitResponseNode entityWitResponse)
         {
             var entity = new WitEntity();
-            entity.Update(entityJson);
+            entity.Update(entityWitResponse);
             return entity;
         }
     }

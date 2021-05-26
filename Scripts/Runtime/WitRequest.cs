@@ -63,7 +63,7 @@ namespace com.facebook.witai
         private HttpWebResponse response;
 
         private Stream stream;
-        private JSONNode responseData;
+        private WitResponseNode responseData;
 
         private bool isActive;
 
@@ -97,7 +97,7 @@ namespace com.facebook.witai
         /// JSON data that was received as a response from the server after onResponse has been
         /// called
         /// </summary>
-        public JSONNode ResponseData => responseData;
+        public WitResponseNode ResponseData => responseData;
 
         private int statusCode;
         public int StatusCode => statusCode;
@@ -196,7 +196,7 @@ namespace com.facebook.witai
                     {
                         var stringResponse = streamReader.ReadToEnd();
                         onRawResponse?.Invoke(stringResponse);
-                        responseData = JSON.Parse(stringResponse);
+                        responseData = WitResponseJson.Parse(stringResponse);
                     }
 
                     responseStream.Close();

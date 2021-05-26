@@ -39,6 +39,6 @@ namespace com.facebook.witai.callbackhandlers
             wit.events.OnResponse.RemoveListener(OnHandleResponse);
         }
 
-        protected abstract void OnHandleResponse(JSONNode response);
+        protected abstract void OnHandleResponse(WitResponseNode response);
     }
 }

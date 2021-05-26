@@ -12,7 +12,7 @@ using UnityEngine.Events;
 namespace com.facebook.witai.events
 {
     [Serializable]
-    public class WitResponseEvent : UnityEvent<JSONNode>
+    public class WitResponseEvent : UnityEvent<WitResponseNode>
     {
     }
 }

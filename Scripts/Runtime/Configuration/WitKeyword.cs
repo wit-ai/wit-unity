@@ -18,7 +18,7 @@ namespace com.facebook.witai.data
         [SerializeField] public string keyword;
         [SerializeField] public string[] synonyms;
 
-        public static WitKeyword FromJson(JSONNode keywordNode)
+        public static WitKeyword FromJson(WitResponseNode keywordNode)
         {
             return new WitKeyword()
             {

@@ -4,22 +4,22 @@ namespace com.facebook.witai
 {
     public class WitResultUtilities
     {
-        public static string GetFirstSlot(JSONNode witResponse, string name)
+        public static string GetFirstSlot(WitResponseNode witResponse, string name)
         {
             return witResponse?["entities"]?[name]?[0]?["value"]?.Value;
         }
 
-        public static JSONNode GetFirstEntity(JSONNode witResponse, string name)
+        public static WitResponseNode GetFirstEntity(WitResponseNode witResponse, string name)
         {
             return witResponse?["entities"]?[name][0];
         }
 
-        public static string GetIntentName(JSONNode witResponse)
+        public static string GetIntentName(WitResponseNode witResponse)
         {
             return witResponse?["intents"]?[0]?["name"]?.Value;
         }
 
-        public static JSONNode GetFirstIntent(JSONNode witResponse)
+        public static WitResponseNode GetFirstIntent(WitResponseNode witResponse)
         {
             return witResponse?["intents"]?[0];
         }

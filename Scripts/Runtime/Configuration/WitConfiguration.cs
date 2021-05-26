@@ -50,7 +50,7 @@ namespace com.facebook.witai.data
             request.Request();
         }
 
-        private void OnUpdate(WitRequest request, Action<JSONNode> updateComponent)
+        private void OnUpdate(WitRequest request, Action<WitResponseNode> updateComponent)
         {
             if (request.StatusCode == 200)
             {
@@ -62,9 +62,9 @@ namespace com.facebook.witai.data
             }
         }
 
-        private void UpdateIntentList(JSONNode intentListJson)
+        private void UpdateIntentList(WitResponseNode intentListWitResponse)
         {
-            var intentList = intentListJson.AsArray;
+            var intentList = intentListWitResponse.AsArray;
             intents = new WitIntent[intentList.Count];
             for (int i = 0; i < intentList.Count; i++)
             {
@@ -75,9 +75,9 @@ namespace com.facebook.witai.data
             }
         }
 
-        private void UpdateEntityList(JSONNode entityListJson)
+        private void UpdateEntityList(WitResponseNode entityListWitResponse)
         {
-            var entityList = entityListJson.AsArray;
+            var entityList = entityListWitResponse.AsArray;
             entities = new WitEntity[entityList.Count];
             for (int i = 0; i < entityList.Count; i++)
             {
