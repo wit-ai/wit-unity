@@ -6,7 +6,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -14,10 +13,10 @@ using UnityEngine;
 
 namespace com.facebook.witai.callbackhandlers
 {
-    [CustomEditor(typeof(SimpleStringSlotHandler))]
-    public class SimpleStringSlotHandlerEditor : Editor
+    [CustomEditor(typeof(SimpleStringEntityHandler))]
+    public class SimpleStringEntityHandlerEditor : Editor
     {
-        private SimpleStringSlotHandler handler;
+        private SimpleStringEntityHandler handler;
         private string[] intentNames;
         private int intentIndex;
         private string[] entityNames;
@@ -25,7 +24,7 @@ namespace com.facebook.witai.callbackhandlers
 
         private void OnEnable()
         {
-            handler = target as SimpleStringSlotHandler;
+            handler = target as SimpleStringEntityHandler;
             handler.wit.Configuration.Update();
             intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
             intentIndex = Array.IndexOf(intentNames, handler.intent);
@@ -33,7 +32,7 @@ namespace com.facebook.witai.callbackhandlers
 
         public override void OnInspectorGUI()
         {
-            var handler = target as SimpleStringSlotHandler;
+            var handler = target as SimpleStringEntityHandler;
             var intentChanged = WitEditorUI.FallbackPopup(serializedObject,"intent", intentNames, ref intentIndex);
             if (intentChanged || intentNames.Length > 0 && null == entityNames)
             {
@@ -53,7 +52,7 @@ namespace com.facebook.witai.callbackhandlers
 
             GUILayout.Space(16);
 
-            var eventProperty = serializedObject.FindProperty("onIntentSlotTriggered");
+            var eventProperty = serializedObject.FindProperty("onIntentEntityTriggered");
             EditorGUILayout.PropertyField(eventProperty);
             serializedObject.ApplyModifiedProperties();
         }

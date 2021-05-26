@@ -12,7 +12,7 @@ using UnityEngine.Events;
 
 namespace com.facebook.witai.callbackhandlers
 {
-    public class SimpleStringSlotHandler : WitResponseHandler
+    public class SimpleStringEntityHandler : WitResponseHandler
     {
         [SerializeField] public string intent;
         [SerializeField] public string entity;
@@ -20,29 +20,29 @@ namespace com.facebook.witai.callbackhandlers
 
         [SerializeField] public string format;
 
-        [SerializeField] private StringSlotMatchEvent onIntentSlotTriggered
-            = new StringSlotMatchEvent();
+        [SerializeField] private StringEntityMatchEvent onIntentEntityTriggered
+            = new StringEntityMatchEvent();
 
-        public StringSlotMatchEvent OnIntentSlotTriggered => onIntentSlotTriggered;
+        public StringEntityMatchEvent OnIntentEntityTriggered => onIntentEntityTriggered;
 
         protected override void OnHandleResponse(WitResponseNode response)
         {
             var intentNode = WitResultUtilities.GetFirstIntent(response);
             if (intent == intentNode["name"].Value && intentNode["confidence"].AsFloat > confidence)
             {
-                var slotValue = WitResultUtilities.GetFirstSlot(response, entity);
+                var entityValue = WitResultUtilities.GetFirstEntityValue(response, entity);
                 if (!string.IsNullOrEmpty(format))
                 {
-                    onIntentSlotTriggered.Invoke(format.Replace("{value}", slotValue));
+                    onIntentEntityTriggered.Invoke(format.Replace("{value}", entityValue));
                 }
                 else
                 {
-                    onIntentSlotTriggered.Invoke(slotValue);
+                    onIntentEntityTriggered.Invoke(entityValue);
                 }
             }
         }
     }
 
     [Serializable]
-    public class StringSlotMatchEvent : UnityEvent<string> {}
+    public class StringEntityMatchEvent : UnityEvent<string> {}
 }
