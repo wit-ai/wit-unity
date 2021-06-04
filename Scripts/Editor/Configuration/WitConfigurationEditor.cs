@@ -20,25 +20,34 @@ public class WitConfigurationEditor : Editor
 
     private int selectedToolPanel;
 
-    private readonly string[] toolPanelNames = new []
+    private readonly string[] toolPanelNames = new[]
+    {
+        "Application",
+        "Intents",
+        "Entities"
+    };
+
+    private readonly string[] toolPanelNamesWithoutAppInfo = new[]
     {
         "Intents",
         "Entities"
     };
 
-    private const int TOOL_PANEL_INTENTS = 0;
-    private const int TOOL_PANEL_ENTITIES = 1;
+    private const int TOOL_PANEL_APP = 0;
+    private const int TOOL_PANEL_INTENTS = 1;
+    private const int TOOL_PANEL_ENTITIES = 2;
 
     private Editor applicationEditor;
     private Vector2 scroll;
+    private bool appConfigurationFoldout;
 
     private bool IsTokenValid => !string.IsNullOrEmpty(configuration.clientAccessToken) &&
                                  configuration.clientAccessToken.Length == 32;
 
-    private void OnEnable()
+    public void OnEnable()
     {
         configuration = target as WitConfiguration;
-        configuration.Update();
+        configuration.UpdateData();
     }
 
     public override void OnInspectorGUI()
@@ -46,39 +55,76 @@ public class WitConfigurationEditor : Editor
         configuration = target as WitConfiguration;
 
         GUILayout.BeginVertical(EditorStyles.helpBox);
-        GUILayout.Label("Application Configuration", EditorStyles.boldLabel);
 
         GUILayout.BeginHorizontal();
-        var token = EditorGUILayout.PasswordField("Client Access Token", configuration.clientAccessToken);
-        if (token != configuration.clientAccessToken)
+        appConfigurationFoldout = EditorGUILayout.Foldout(appConfigurationFoldout,
+            "Application Configuration");
+        if (!string.IsNullOrEmpty(configuration?.application?.name))
         {
-            configuration.clientAccessToken = token;
-
-            if (token.Length == 32)
-            {
-                configuration.Update();
-            }
-
-            EditorUtility.SetDirty(configuration);
-        }
-        if (IsTokenValid)
-        {
-            if (GUILayout.Button("Refresh", GUILayout.Width(75)))
-            {
-                configuration.Update();
-            }
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(configuration?.application?.name);
         }
 
         GUILayout.EndHorizontal();
+
+        if (appConfigurationFoldout || !IsTokenValid)
+        {
+            GUILayout.BeginHorizontal();
+            var token = EditorGUILayout.PasswordField("Client Access Token",
+                configuration.clientAccessToken);
+            if (token != configuration.clientAccessToken)
+            {
+                configuration.clientAccessToken = token;
+
+                if (token.Length == 32)
+                {
+                    configuration.UpdateData();
+                }
+
+                EditorUtility.SetDirty(configuration);
+            }
+
+            GUILayout.EndHorizontal();
+
+
+            if (GUILayout.Button("Get Configuration from IDE Token"))
+            {
+                configuration.clientAccessToken = WitAuthUtility.ClientToken;
+                if (WitAuthUtility.AppId != configuration.application.id)
+                {
+                    configuration.application = new WitApplication()
+                    {
+                        id = WitAuthUtility.AppId,
+                        witConfiguration = configuration
+                    };
+                }
+                configuration.UpdateData(() =>
+                {
+                    Repaint();
+                });
+                appConfigurationFoldout = false;
+            }
+        }
+
         GUILayout.EndVertical();
 
-        selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);
-        scroll = GUILayout.BeginScrollView(scroll, GUILayout.ExpandHeight(true));
-        switch (selectedToolPanel)
+        bool hasApplicationInfo = null != configuration?.application;
+
+        if (hasApplicationInfo)
         {
-            /*case TOOL_PANEL_APP:
-                DrawApplication();
-                break;*/
+            selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);
+        }
+        else
+        {
+            selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesWithoutAppInfo);
+        }
+
+        scroll = GUILayout.BeginScrollView(scroll, GUILayout.ExpandHeight(true));
+        switch (hasApplicationInfo ? selectedToolPanel : selectedToolPanel + 1)
+        {
+            case TOOL_PANEL_APP:
+                DrawApplication(configuration.application);
+                break;
             case TOOL_PANEL_INTENTS:
                 DrawIntents();
                 break;
@@ -90,14 +136,14 @@ public class WitConfigurationEditor : Editor
 
         if (GUILayout.Button("Open Wit.ai"))
         {
-            /*if (!string.IsNullOrEmpty(configuration.ActiveApplication?.id))
+            if (!string.IsNullOrEmpty(configuration.application?.id))
             {
-                Application.OpenURL($"https://wit.ai/apps/{configuration.ActiveApplication.id}");
+                Application.OpenURL($"https://wit.ai/apps/{configuration.application.id}");
             }
             else
-            {*/
+            {
                 Application.OpenURL("https://wit.ai");
-            //}
+            }
         }
     }
 
@@ -155,14 +201,21 @@ public class WitConfigurationEditor : Editor
 
     private void DrawApplication(WitApplication application)
     {
-        InfoField("Name", application.name);
-        InfoField("ID", application.id);
-        InfoField("Language", application.lang);
-        InfoField("Created", application.createdAt);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Private", GUILayout.Width(100));
-        GUILayout.Toggle(application.isPrivate, "");
-        GUILayout.EndHorizontal();
+        if (string.IsNullOrEmpty(application.name))
+        {
+            GUILayout.Label("Loading...");
+        }
+        else
+        {
+            InfoField("Name", application.name);
+            InfoField("ID", application.id);
+            InfoField("Language", application.lang);
+            InfoField("Created", application.createdAt);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Private", GUILayout.Width(100));
+            GUILayout.Toggle(application.isPrivate, "");
+            GUILayout.EndHorizontal();
+        }
     }
 
     #region UI Components

@@ -24,7 +24,7 @@ namespace com.facebook.witai.data
             return witConfiguration.GetIntentRequest(name);
         }
 
-        protected override void Update(WitResponseNode entityWitResponse)
+        protected override void UpdateData(WitResponseNode entityWitResponse)
         {
             id = entityWitResponse["id"].Value;
             name = entityWitResponse["name"].Value;
@@ -39,7 +39,7 @@ namespace com.facebook.witai.data
         public static WitIntent FromJson(WitResponseNode intentWitResponse)
         {
             var intent = new WitIntent();
-            intent.Update(intentWitResponse);
+            intent.UpdateData(intentWitResponse);
             return intent;
         }
     }
