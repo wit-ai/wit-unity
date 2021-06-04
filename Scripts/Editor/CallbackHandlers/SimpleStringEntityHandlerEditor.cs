@@ -25,7 +25,7 @@ namespace com.facebook.witai.callbackhandlers
         private void OnEnable()
         {
             handler = target as SimpleStringEntityHandler;
-            handler.wit.Configuration.Update();
+            handler.wit.Configuration.UpdateData();
             intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
             intentIndex = Array.IndexOf(intentNames, handler.intent);
         }

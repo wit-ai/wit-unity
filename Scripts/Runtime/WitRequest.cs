@@ -56,6 +56,7 @@ namespace com.facebook.witai
         private Stream activeStream;
 
         private string command;
+        private string path;
 
         public QueryParam[] queryParams;
 
@@ -106,11 +107,12 @@ namespace com.facebook.witai
         private bool isRequestStreamActive;
         public string StatusDescription => statusDescription;
 
-        public WitRequest(WitConfiguration configuration, string command,
+        public WitRequest(WitConfiguration configuration, string path,
             params QueryParam[] queryParams)
         {
             this.configuration = configuration;
-            this.command = command;
+            this.command = path.Split('/').First();
+            this.path = path;
             this.queryParams = queryParams;
         }
 
@@ -131,7 +133,7 @@ namespace com.facebook.witai
             UriBuilder uriBuilder = new UriBuilder();
             uriBuilder.Scheme = URI_SCHEME;
             uriBuilder.Host = URI_AUTHORITY;
-            uriBuilder.Path = command;
+            uriBuilder.Path = path;
 
             if (queryParams.Any())
             {
@@ -146,9 +148,28 @@ namespace com.facebook.witai
         private void StartRequest(Uri uri)
         {
             request = (HttpWebRequest) WebRequest.Create(uri);
-            request.Headers["Authorization"] = $"Bearer {configuration.clientAccessToken.Trim()}";
             request.Accept = $"application/vnd.wit.{WIT_API_VERSION}+json";
 
+            // Configure auth header
+            switch (command)
+            {
+                case "app":
+                case "apps":
+#if UNITY_EDITOR
+                    request.Headers["Authorization"] =
+                        $"Bearer {WitAuthUtility.ServerToken}";
+                    break;
+#else
+                    throw new Exception($"The {command} endpoint is not available outside the editor.");
+                    break;
+#endif
+                default:
+                    request.Headers["Authorization"] =
+                        $"Bearer {configuration.clientAccessToken.Trim()}";
+                    break;
+            }
+
+            // Configure additional headers
             switch (command)
             {
                 case "speech":
@@ -156,10 +177,6 @@ namespace com.facebook.witai
                         $"audio/raw;encoding={encoding};bits={bits};rate={samplerate};endian={endian.ToString().ToLower()}";
                     request.Method = "POST";
                     request.SendChunked = true;
-                    break;
-                case "apps":
-                    request.Headers["Authorization"] =
-                        $"Bearer {configuration.EditorToken.Trim()}";
                     break;
             }
 

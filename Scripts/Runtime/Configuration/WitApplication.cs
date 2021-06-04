@@ -26,7 +26,7 @@ namespace com.facebook.witai.data
             return witConfiguration.GetAppRequest(id);
         }
 
-        protected override void Update(WitResponseNode appWitResponse)
+        protected override void UpdateData(WitResponseNode appWitResponse)
         {
             id = appWitResponse["id"].Value;
             name = appWitResponse["name"].Value;
@@ -38,7 +38,7 @@ namespace com.facebook.witai.data
         public static WitApplication FromJson(WitResponseNode appWitResponse)
         {
             var app = new WitApplication();
-            app.Update(appWitResponse);
+            app.UpdateData(appWitResponse);
             return app;
         }
     }

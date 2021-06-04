@@ -16,28 +16,29 @@ namespace com.facebook.witai.data
     {
         [SerializeField] public WitConfiguration witConfiguration;
 
-        public void Update()
+        public void UpdateData(Action onUpdateComplete = null)
         {
             var request = OnCreateRequest();
-            request.onResponse += OnUpdate;
+            request.onResponse = (r) => OnUpdateData(r, onUpdateComplete);
             request.Request();
         }
 
         protected abstract WitRequest OnCreateRequest();
 
-        private void OnUpdate(WitRequest request)
+        private void OnUpdateData(WitRequest request, Action onUpdateComplete)
         {
-            request.onResponse -= OnUpdate;
             if (request.StatusCode == 200)
             {
-                Update(request.ResponseData);
+                UpdateData(request.ResponseData);
             }
             else
             {
                 Debug.LogError(request.StatusDescription);
             }
+
+            onUpdateComplete?.Invoke();
         }
 
-        protected abstract void Update(WitResponseNode data);
+        protected abstract void UpdateData(WitResponseNode data);
     }
 }

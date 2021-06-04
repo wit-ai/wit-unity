@@ -6,6 +6,7 @@
  */
 
 using System;
+using System.ComponentModel;
 using com.facebook.witai.lib;
 using UnityEngine;
 
@@ -18,39 +19,33 @@ namespace com.facebook.witai.data
     [CreateAssetMenu(fileName = "WitConfiguration", menuName = "Wit/Configuration", order = 1)]
     public class WitConfiguration : ScriptableObject
     {
-        [SerializeField] public string clientAccessToken;
+        [HideInInspector]
+        [SerializeField] public WitApplication application;
+
+        [ReadOnly(true)] [SerializeField] public string clientAccessToken;
 
         [SerializeField] public WitEntity[] entities;
         [SerializeField] public WitIntent[] intents;
 
-        public string EditorToken
-        {
-#if UNITY_EDITOR
-            get
-            {
-                return EditorPrefs.GetString("Wit::EditorToken", "");
-            }
-            set
-            {
-                EditorPrefs.SetString("Wit::EditorToken", value);
-            }
-#else
-            get => clientAccessToken;
-#endif
-        }
+        public WitApplication Application => application;
 
-        public void Update()
+        public void UpdateData(Action onUpdateComplete = null)
         {
             var request = this.ListIntentsRequest();
-            request.onResponse = (r) => OnUpdate(r, UpdateIntentList);
+            request.onResponse = (r) => OnUpdateData(r, UpdateIntentList, onUpdateComplete);
             request.Request();
 
             request = this.ListEntitiesRequest();
-            request.onResponse = (r) => OnUpdate(r, UpdateEntityList);
+            request.onResponse = (r) => OnUpdateData(r, UpdateEntityList, onUpdateComplete);
             request.Request();
+
+            if (null != application)
+            {
+                application.UpdateData(onUpdateComplete);
+            }
         }
 
-        private void OnUpdate(WitRequest request, Action<WitResponseNode> updateComponent)
+        private void OnUpdateData(WitRequest request, Action<WitResponseNode> updateComponent, Action onUpdateComplete)
         {
             if (request.StatusCode == 200)
             {
@@ -60,6 +55,8 @@ namespace com.facebook.witai.data
             {
                 Debug.LogError(request.StatusDescription);
             }
+
+            onUpdateComplete?.Invoke();
         }
 
         private void UpdateIntentList(WitResponseNode intentListWitResponse)
@@ -71,7 +68,7 @@ namespace com.facebook.witai.data
                 var intent = WitIntent.FromJson(intentList[i]);
                 intent.witConfiguration = this;
                 intents[i] = intent;
-                intent.Update();
+                intent.UpdateData();
             }
         }
 
@@ -84,7 +81,7 @@ namespace com.facebook.witai.data
                 var entity = WitEntity.FromJson(entityList[i]);
                 entity.witConfiguration = this;
                 entities[i] = entity;
-                entity.Update();
+                entity.UpdateData();
             }
         }
     }
