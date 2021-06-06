@@ -12,7 +12,7 @@ There are a couple ways you can install this plugin in Unity.
 2. Open the Package Manager by clicking on Window->Package Manager
 3. Click the + dropdown in the upper left corner of the package manager window
 4. Select "Add package from git url"
-5. In the url box enter "https://github.com/wit-ai/wit-unity"
+5. In the url box enter "https://github.com/wit-ai/wit-unity.git"
 
 ## License
 The license for wit-unity can be found in [LICENSE](https://github.com/wit-ai/wit-unity/blob/main/LICENSE) file in the root directory of this source tree.
