@@ -1,5 +1,18 @@
 {
   "name": "com.facebook.witai",
   "displayName": "Wit AI",
-  "version": "0.0.1"
+  "version": "0.0.2",
+  "samples": [
+    {
+      "displayName": "Resposne Debugger",
+      "description": "A scene with simple text UI to show wit responses.",
+      "path": "Samples/ResponseDebugger"
+    },
+    {
+      "displayName": "Shapes",
+      "description": "The sample code that goes with the Shapes tutorial.",
+      "path": "Samples/Shapes"
+    }
+  ],
+  "description": "wit-unity is the Unity SDK for Wit.ai. It provides convenience tools for activating wit and processing the responses that are returned."
 }
