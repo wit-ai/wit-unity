@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
 using com.facebook.witai.data;
 using com.facebook.witai.lib;
 using UnityEngine;
@@ -199,34 +200,47 @@ namespace com.facebook.witai
                 Debug.Log("Request stream was still open. Closing.");
                 CloseRequestStream();
             }
-            response = (HttpWebResponse) request.EndGetResponse(ar);
 
-            statusCode = (int) response.StatusCode;
-            statusDescription = response.StatusDescription;
-
-            if (response.StatusCode == HttpStatusCode.OK)
+            try
             {
-                try
-                {
-                    var responseStream = response.GetResponseStream();
-                    using (var streamReader = new StreamReader(responseStream))
-                    {
-                        var stringResponse = streamReader.ReadToEnd();
-                        onRawResponse?.Invoke(stringResponse);
-                        responseData = WitResponseJson.Parse(stringResponse);
-                    }
+                response = (HttpWebResponse) request.EndGetResponse(ar);
 
-                    responseStream.Close();
-                }
-                catch (Exception e)
+
+
+                statusCode = (int) response.StatusCode;
+                statusDescription = response.StatusDescription;
+
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    statusCode = -1;
-                    statusDescription = e.Message;
+                    try
+                    {
+                        var responseStream = response.GetResponseStream();
+                        using (var streamReader = new StreamReader(responseStream))
+                        {
+                            var stringResponse = streamReader.ReadToEnd();
+                            onRawResponse?.Invoke(stringResponse);
+                            responseData = WitResponseJson.Parse(stringResponse);
+                        }
+
+                        responseStream.Close();
+                    }
+                    catch (Exception e)
+                    {
+                        statusCode = -1;
+                        statusDescription = e.Message;
+                    }
                 }
+
+                response.Close();
+            }
+            catch (WebException e)
+            {
+                statusCode = (int) e.Status;
+                statusDescription = e.Message;
+                Debug.LogError(e);
             }
 
             isActive = false;
-            response.Close();
             onResponse?.Invoke(this);
         }
 

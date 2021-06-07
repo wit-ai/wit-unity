@@ -807,6 +807,8 @@ namespace com.facebook.witai.lib
     {
         private Dictionary<string, WitResponseNode> m_Dict = new Dictionary<string, WitResponseNode>();
 
+        public string[] ChildNodeNames => m_Dict.Keys.ToArray();
+
         public override WitResponseNode this[string aKey]
         {
             get
