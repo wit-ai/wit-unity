@@ -1,7 +1,12 @@
-using System;
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 using com.facebook.witai.data;
 using UnityEditor;
-using UnityEditor.PackageManager.UI;
 using UnityEngine;
 
 namespace com.facebook.witai
