@@ -31,18 +31,16 @@ namespace com.facebook.witai.data
 
         public void UpdateData(Action onUpdateComplete = null)
         {
-            var request = this.ListIntentsRequest();
-            request.onResponse = (r) => OnUpdateData(r, UpdateIntentList, onUpdateComplete);
-            request.Request();
-
-            request = this.ListEntitiesRequest();
-            request.onResponse = (r) => OnUpdateData(r, UpdateEntityList, onUpdateComplete);
-            request.Request();
-
-            if (null != application)
+            var intentRequest = this.ListIntentsRequest();
+            intentRequest.onResponse = (r) =>
             {
-                application.UpdateData(onUpdateComplete);
-            }
+                var entityRequest = this.ListEntitiesRequest();
+                entityRequest.onResponse =
+                    (er) => OnUpdateData(er, UpdateEntityList, onUpdateComplete);
+                OnUpdateData(r, UpdateIntentList, entityRequest.Request);
+            };
+
+            application?.UpdateData(intentRequest.Request);
         }
 
         private void OnUpdateData(WitRequest request, Action<WitResponseNode> updateComponent, Action onUpdateComplete)
@@ -53,7 +51,7 @@ namespace com.facebook.witai.data
             }
             else
             {
-                Debug.LogError(request.StatusDescription);
+                Debug.LogError($"Request for {request} failed: {request.StatusDescription}");
             }
 
             onUpdateComplete?.Invoke();
