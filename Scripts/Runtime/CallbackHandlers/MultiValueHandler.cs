@@ -45,7 +45,6 @@ namespace com.facebook.witai.callbackhandlers
         {
             if (IntentMatches(response) && ValueMatches(response))
             {
-                List<string> values = new List<string>();
                 for (int j = 0; j < formattedValueEvents.Length; j++)
                 {
                     var formatEvent = formattedValueEvents[j];
@@ -54,11 +53,18 @@ namespace com.facebook.witai.callbackhandlers
                     {
                         var reference = references[i];
                         var value = reference.GetStringValue(response);
-                        values.Add(value);
                         if (!string.IsNullOrEmpty(formatEvent.format))
                         {
-                            result = valueRegex.Replace(result, value, 1);
-                            result = result.Replace("{" + i + "}", value);
+                            if (!string.IsNullOrEmpty(value))
+                            {
+                                result = valueRegex.Replace(result, value, 1);
+                                result = result.Replace("{" + i + "}", value);
+                            }
+                            else if(result.Contains("{" + i + "}"))
+                            {
+                                result = "";
+                                break;
+                            }
                         }
                     }
 
@@ -66,6 +72,14 @@ namespace com.facebook.witai.callbackhandlers
                     {
                         formatEvent.onFormattedValueEvent?.Invoke(result);
                     }
+                }
+
+                List<string> values = new List<string>();
+                for (int i = 0; i < references.Length; i++)
+                {
+                    var reference = references[i];
+                    var value = reference.GetStringValue(response);
+                    values.Add(value);
                 }
 
                 onMultiValueEvent.Invoke(values.ToArray());

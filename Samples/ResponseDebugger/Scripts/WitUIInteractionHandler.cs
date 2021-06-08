@@ -86,5 +86,10 @@ namespace com.facebook.witai.samples.responsedebugger
             textArea.text = $"Sending \"{inputField.text}\" to Wit.ai for processing...";
             wit.Activate(inputField.text);
         }
+
+        public void LogResults(string[] parameters)
+        {
+            Debug.Log("Got the following entities back: " + string.Join(", ", parameters));
+        }
     }
 }
