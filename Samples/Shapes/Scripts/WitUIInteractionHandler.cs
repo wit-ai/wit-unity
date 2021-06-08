@@ -21,12 +21,12 @@ namespace com.facebook.witai.samples.shapes
 
         private void OnEnable()
         {
-            wit.onRequestStarted += OnRequestStarted;
+            wit.events.OnRequestCreated.AddListener(OnRequestStarted);
         }
 
         private void OnDisable()
         {
-            wit.onRequestStarted -= OnRequestStarted;
+            wit.events.OnRequestCreated.RemoveListener(OnRequestStarted);
         }
 
         private void OnRequestStarted(WitRequest r)

@@ -78,7 +78,7 @@ namespace com.facebook.witai.callbackhandlers
             for (int i = 0; i < valuePaths.Length && matches; i++)
             {
                 var matcher = valuePaths[i];
-                var value = references[i].GetStringValue(matcher.path);
+                var value = references[i].GetStringValue(response);
                 matches &= !matcher.contentRequired || !string.IsNullOrEmpty(value);
                 if (matcher.matchRequired)
                 {

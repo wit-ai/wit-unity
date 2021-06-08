@@ -35,12 +35,12 @@ namespace com.facebook.witai.samples.responsedebugger
 
         private void OnEnable()
         {
-            wit.onRequestStarted += OnRequestStarted;
+            wit.events.OnRequestCreated.AddListener(OnRequestStarted);
         }
 
         private void OnDisable()
         {
-            wit.onRequestStarted -= OnRequestStarted;
+            wit.events.OnRequestCreated.RemoveListener(OnRequestStarted);
         }
 
         private void OnRequestStarted(WitRequest request)

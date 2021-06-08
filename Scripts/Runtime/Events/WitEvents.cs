@@ -25,7 +25,15 @@ namespace com.facebook.witai.events
         [Tooltip("Called when the volume level of the mic input has changed")]
         public WitMicLevelChangedEvent OnMicLevelChanged = new WitMicLevelChangedEvent();
 
+        /// <summary>
+        /// Called when a request is created. This happens at the beginning of
+        /// an activation before the microphone is activated (if in use).
+        /// </summary>
         [Header("Activation/Deactivation Events")]
+        [Tooltip(
+            "Called when a request is created. This happens at the beginning of an activation before the microphone is activated (if in use)")]
+        public WitRequestCreatedEvent OnRequestCreated = new WitRequestCreatedEvent();
+
         [Tooltip("Called when the microphone has been activated during a Wit voice command activation")]
         public UnityEvent OnStartListening = new UnityEvent();
 
