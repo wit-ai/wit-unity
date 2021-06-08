@@ -24,10 +24,7 @@ namespace com.facebook.witai.callbackhandlers
         [SerializeField] public string[] valuePaths;
 
         [Header("Output")]
-        [Tooltip("Modify the string output, values can be inserted with {value} or {0}, {1}, {2}")]
-        [SerializeField] public string format;
-
-        [SerializeField] private ValueEvent onFormattedValueEvent = new ValueEvent();
+        [SerializeField] private FormattedValueEvents[] formattedValueEvents;
         [SerializeField] private MultiValueEvent onMultiValueEvent = new MultiValueEvent();
 
         private WitResponseReference[] references;
@@ -50,21 +47,26 @@ namespace com.facebook.witai.callbackhandlers
             if (intent == intentNode["name"].Value && intentNode["confidence"].AsFloat > confidence)
             {
                 List<string> values = new List<string>();
-                for (int i = 0; i < references.Length; i++)
+                for (int j = 0; j < formattedValueEvents.Length; j++)
                 {
-                    var reference = references[i];
-                    var value = reference.GetStringValue(response);
-                    values.Add(value);
-                    if (!string.IsNullOrEmpty(format))
+                    var formatEvent = formattedValueEvents[j];
+                    var result = formatEvent.format;
+                    for (int i = 0; i < references.Length; i++)
                     {
-                        format = valueRegex.Replace(format, value, 1);
-                        format = format.Replace("{" + i + "}", value);
+                        var reference = references[i];
+                        var value = reference.GetStringValue(response);
+                        values.Add(value);
+                        if (!string.IsNullOrEmpty(formatEvent.format))
+                        {
+                            result = valueRegex.Replace(result, value, 1);
+                            result = result.Replace("{" + i + "}", value);
+                        }
                     }
-                }
 
-                if (!string.IsNullOrEmpty(format))
-                {
-                    onFormattedValueEvent.Invoke(format);
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        formatEvent.onFormattedValueEvent?.Invoke(result);
+                    }
                 }
 
                 onMultiValueEvent.Invoke(values.ToArray());
@@ -74,4 +76,12 @@ namespace com.facebook.witai.callbackhandlers
 
     [Serializable]
     public class MultiValueEvent : UnityEvent<string[]> {}
+
+    [Serializable]
+    public class FormattedValueEvents
+    {
+        [Tooltip("Modify the string output, values can be inserted with {value} or {0}, {1}, {2}")]
+        public string format;
+        public ValueEvent onFormattedValueEvent = new ValueEvent();
+    }
 }
