@@ -21,7 +21,7 @@ namespace com.facebook.witai.callbackhandlers
         [Range(0, 1f)] [SerializeField] public float confidence = .6f;
 
         [Header("Value Matching")]
-        [SerializeField] public string[] valuePaths;
+        [SerializeField] public ValuePathMatcher[] valuePaths;
 
         [Header("Output")]
         [SerializeField] private FormattedValueEvents[] formattedValueEvents;
@@ -32,19 +32,18 @@ namespace com.facebook.witai.callbackhandlers
 
         private static Regex valueRegex = new Regex(Regex.Escape("{value}"), RegexOptions.Compiled);
 
-        private void Awake()
+        private void Start()
         {
             references = new WitResponseReference[valuePaths.Length];
             for (int i = 0; i < valuePaths.Length; i++)
             {
-                references[i] = WitResultUtilities.GetWitResponseReference(valuePaths[i]);
+                references[i] = WitResultUtilities.GetWitResponseReference(valuePaths[i].path);
             }
         }
 
         protected override void OnHandleResponse(WitResponseNode response)
         {
-            var intentNode = response.GetFirstIntent();
-            if (intent == intentNode["name"].Value && intentNode["confidence"].AsFloat > confidence)
+            if (IntentMatches(response) && ValueMatches(response))
             {
                 List<string> values = new List<string>();
                 for (int j = 0; j < formattedValueEvents.Length; j++)
@@ -72,6 +71,37 @@ namespace com.facebook.witai.callbackhandlers
                 onMultiValueEvent.Invoke(values.ToArray());
             }
         }
+
+        private bool ValueMatches(WitResponseNode response)
+        {
+            bool matches = true;
+            for (int i = 0; i < valuePaths.Length && matches; i++)
+            {
+                var matcher = valuePaths[i];
+                var value = references[i].GetStringValue(matcher.path);
+                matches &= !matcher.contentRequired || !string.IsNullOrEmpty(value);
+                if (matcher.matchRequired)
+                {
+                    if (matcher.useRegularExpression)
+                    {
+                        matches &= Regex.Match(value, matcher.matchValue).Success;
+                    }
+                    else
+                    {
+                        matches &= value == matcher.matchValue;
+                    }
+                }
+            }
+
+            return matches;
+        }
+
+        private bool IntentMatches(WitResponseNode response)
+        {
+            var intentNode = response.GetFirstIntent();
+            return intent == intentNode["name"].Value &&
+                   intentNode["confidence"].AsFloat > confidence;
+        }
     }
 
     [Serializable]
@@ -83,5 +113,20 @@ namespace com.facebook.witai.callbackhandlers
         [Tooltip("Modify the string output, values can be inserted with {value} or {0}, {1}, {2}")]
         public string format;
         public ValueEvent onFormattedValueEvent = new ValueEvent();
+    }
+
+    [Serializable]
+    public class ValuePathMatcher
+    {
+        [Tooltip("The path to a value within a WitResponseNode")]
+        public string path;
+        [Tooltip("Does this path need to have text in the value to be considered a match")]
+        public bool contentRequired = true;
+        [Tooltip("Should the value of this content match the value in Match Value to be considered a match")]
+        public bool matchRequired;
+        [Tooltip("Value used to compare with the result when Match Required is set")]
+        public string matchValue;
+        [Tooltip("If set the match value will be treated as a regular expression.")]
+        public bool useRegularExpression;
     }
 }
