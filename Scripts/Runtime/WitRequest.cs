@@ -232,6 +232,7 @@ namespace com.facebook.witai
                     }
                     catch (Exception e)
                     {
+                        Debug.LogError(e);
                         statusCode = -1;
                         statusDescription = e.Message;
                     }

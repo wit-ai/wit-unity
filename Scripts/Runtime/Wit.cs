@@ -39,6 +39,8 @@ namespace com.facebook.witai
 
         private ConcurrentQueue<Action> updateQueue = new ConcurrentQueue<Action>();
 
+        public Action<WitRequest> onRequestStarted;
+
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
         /// </summary>
@@ -117,12 +119,7 @@ namespace com.facebook.witai
         /// </summary>
         public void Activate()
         {
-            DoActivate();
-        }
-
-        public WitRequest DoActivate()
-        {
-            if (Active) return null;
+            if (Active) return;
 
             // Make sure we aren't checking activation time until
             // the mic starts recording.
@@ -133,7 +130,7 @@ namespace com.facebook.witai
             activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(StartMic);
             activeRequest.onResponse = QueueResult;
             activeRequest.Request();
-            return activeRequest;
+            onRequestStarted?.Invoke(activeRequest);
         }
 
         private void StartMic()
@@ -182,15 +179,12 @@ namespace com.facebook.witai
         /// <param name="transcription"></param>
         public void Activate(string transcription)
         {
-            DoActivate(transcription);
-        }
+            if (Active) return;
 
-        public WitRequest DoActivate(string transcription)
-        {
             activeRequest = Configuration.MessageRequest(transcription);
             activeRequest.onResponse = QueueResult;
             activeRequest.Request();
-            return activeRequest;
+            onRequestStarted?.Invoke(activeRequest);
         }
 
         /// <summary>

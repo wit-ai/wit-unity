@@ -247,9 +247,9 @@ namespace com.facebook.witai.utility
                 {
                     var valueHandler = Selection.activeGameObject.AddComponent<MultiValueHandler>();
                     valueHandler.intent = response.GetIntentName();
-                    valueHandler.valuePaths = new string[]
+                    valueHandler.valuePaths = new ValuePathMatcher[]
                     {
-                        path
+                        new ValuePathMatcher() { path = path}
                     };
                 });
 
@@ -327,7 +327,10 @@ namespace com.facebook.witai.utility
         private void AddNewEventHandlerPath(MultiValueHandler handler, string path)
         {
             Array.Resize(ref handler.valuePaths, handler.valuePaths.Length + 1);
-            handler.valuePaths[handler.valuePaths.Length - 1] = path;
+            handler.valuePaths[handler.valuePaths.Length - 1] = new ValuePathMatcher()
+            {
+                path = path
+            };
         }
 
         private void DrawArray(WitResponseArray childArray, string childPath)

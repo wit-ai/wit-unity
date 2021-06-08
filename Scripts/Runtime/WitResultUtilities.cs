@@ -146,12 +146,12 @@ namespace com.facebook.witai
 
         public override string GetStringValue(WitResponseNode response)
         {
-            if (null != child)
+            if (null != child && null != response?[key])
             {
                 return child.GetStringValue(response[key]);
             }
 
-            return response[key].Value;
+            return response?[key]?.Value;
         }
 
         public override int GetIntValue(WitResponseNode response)
