@@ -115,7 +115,12 @@ namespace com.facebook.witai
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public WitRequest Activate()
+        public void Activate()
+        {
+            DoActivate();
+        }
+
+        public WitRequest DoActivate()
         {
             if (Active) return null;
 
@@ -175,7 +180,12 @@ namespace com.facebook.witai
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="transcription"></param>
-        public WitRequest Activate(string transcription)
+        public void Activate(string transcription)
+        {
+            DoActivate(transcription);
+        }
+
+        public WitRequest DoActivate(string transcription)
         {
             activeRequest = Configuration.MessageRequest(transcription);
             activeRequest.onResponse = QueueResult;

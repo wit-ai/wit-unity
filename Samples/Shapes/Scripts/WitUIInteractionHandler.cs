@@ -38,7 +38,7 @@ public class WitUIInteractionHandler : MonoBehaviour
         else
         {
             textArea.text = "The mic is active, start speaking now.";
-            var request = wit.Activate();
+            var request = wit.DoActivate();
 
             // The raw response comes back on a different thread. We store the
             // message received for display on the next frame.
