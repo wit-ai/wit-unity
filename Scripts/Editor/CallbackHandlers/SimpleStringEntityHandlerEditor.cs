@@ -25,20 +25,32 @@ namespace com.facebook.witai.callbackhandlers
         private void OnEnable()
         {
             handler = target as SimpleStringEntityHandler;
-            handler.wit.Configuration.UpdateData();
-            intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
-            intentIndex = Array.IndexOf(intentNames, handler.intent);
+            if (handler && handler.wit)
+            {
+                handler.wit.Configuration.UpdateData();
+                intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
+                intentIndex = Array.IndexOf(intentNames, handler.intent);
+            }
         }
 
         public override void OnInspectorGUI()
         {
             var handler = target as SimpleStringEntityHandler;
-            var intentChanged = WitEditorUI.FallbackPopup(serializedObject,"intent", intentNames, ref intentIndex);
-            if (intentChanged || intentNames.Length > 0 && null == entityNames)
+            if (!handler) return;
+            if (!handler.wit)
             {
-                entityNames = handler.wit.Configuration.intents[intentIndex].entities
-                    .Select((e) => e.name).ToArray();
-                entityIndex = Array.IndexOf(entityNames, handler.entity);
+                GUILayout.Label("Wit component is not present in the scene. Add wit to scene to get intent and entity suggestions.", EditorStyles.helpBox);
+            }
+
+            var intentChanged = WitEditorUI.FallbackPopup(serializedObject,"intent", intentNames, ref intentIndex);
+            if (intentChanged || null != intentNames && intentNames.Length > 0 && null == entityNames)
+            {
+                var entities = handler?.wit?.Configuration?.intents[intentIndex]?.entities;
+                if (null != entities)
+                {
+                    entityNames = entities.Select((e) => e.name).ToArray();
+                    entityIndex = Array.IndexOf(entityNames, handler.entity);
+                }
             }
 
             WitEditorUI.FallbackPopup(serializedObject, "entity", entityNames, ref entityIndex);

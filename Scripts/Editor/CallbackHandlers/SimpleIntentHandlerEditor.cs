@@ -23,14 +23,25 @@ namespace com.facebook.witai.callbackhandlers
         private void OnEnable()
         {
             handler = target as SimpleIntentHandler;
-            handler.wit.Configuration.UpdateData();
-            intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
-            intentIndex = Array.IndexOf(intentNames, handler.intent);
         }
 
         public override void OnInspectorGUI()
         {
-            bool intentChanged = WitEditorUI.FallbackPopup(serializedObject, "intent",
+            if (!handler.wit)
+            {
+                GUILayout.Label(
+                    "Wit component is not present in the scene. Add wit to scene to get intent and entity suggestions.",
+                    EditorStyles.helpBox);
+            }
+
+            if (handler && handler.wit && null == intentNames)
+            {
+                handler.wit.Configuration.UpdateData();
+                intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
+                intentIndex = Array.IndexOf(intentNames, handler.intent);
+            }
+
+            WitEditorUI.FallbackPopup(serializedObject, "intent",
                 intentNames, ref intentIndex);
 
 

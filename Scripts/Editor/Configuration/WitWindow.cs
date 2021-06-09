@@ -44,8 +44,9 @@ namespace com.facebook.witai.configuration
 
         protected override void OnEnable()
         {
-            if (witEditor)
+            if (witConfiguration)
             {
+                witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.OnEnable();
             }
 
@@ -73,7 +74,7 @@ namespace com.facebook.witai.configuration
             }
             GUILayout.EndHorizontal();
 
-            if (configChanged)
+            if (configChanged && witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.OnEnable();

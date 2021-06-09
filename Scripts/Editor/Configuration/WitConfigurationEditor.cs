@@ -47,7 +47,10 @@ public class WitConfigurationEditor : Editor
     public void OnEnable()
     {
         configuration = target as WitConfiguration;
-        configuration.UpdateData();
+        configuration?.UpdateData(() =>
+        {
+            EditorUtility.SetDirty(configuration);
+        });
     }
 
     public override void OnInspectorGUI()
@@ -87,7 +90,7 @@ public class WitConfigurationEditor : Editor
             GUILayout.EndHorizontal();
 
 
-            if (GUILayout.Button("Get Configuration from IDE Token"))
+            if (configuration && GUILayout.Button("Get Configuration from IDE Token"))
             {
                 configuration.clientAccessToken = WitAuthUtility.ClientToken;
                 if (WitAuthUtility.AppId != configuration.application.id)
@@ -108,7 +111,7 @@ public class WitConfigurationEditor : Editor
 
         GUILayout.EndVertical();
 
-        bool hasApplicationInfo = null != configuration?.application;
+        bool hasApplicationInfo = configuration && null != configuration.application;
 
         if (hasApplicationInfo)
         {
@@ -119,7 +122,7 @@ public class WitConfigurationEditor : Editor
             selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesWithoutAppInfo);
         }
 
-        scroll = GUILayout.BeginScrollView(scroll, GUILayout.ExpandHeight(true));
+        scroll = GUILayout.BeginScrollView(scroll);
         switch (hasApplicationInfo ? selectedToolPanel : selectedToolPanel + 1)
         {
             case TOOL_PANEL_APP:
@@ -149,27 +152,42 @@ public class WitConfigurationEditor : Editor
 
     private void DrawEntities()
     {
-        BeginIndent();
-        for (int i = 0; i < configuration.entities.Length; i++)
+        if (null != configuration.entities)
         {
-            var entity = configuration.entities[i];
-            if (null != entity && Foldout("e:", entity.name))
+            if (configuration.entities.Length == 0)
             {
-                DrawEntity(entity);
+                GUILayout.Label("No entities available.");
+            }
+            else
+            {
+                BeginIndent();
+                for (int i = 0; i < configuration.entities.Length; i++)
+                {
+                    var entity = configuration.entities[i];
+                    if (null != entity && Foldout("e:", entity.name))
+                    {
+                        DrawEntity(entity);
+                    }
+                }
+
+                EndIndent();
             }
         }
-        EndIndent();
+        else
+        {
+            GUILayout.Label("Entities have not been loaded yet.", EditorStyles.helpBox);
+        }
     }
 
     private void DrawEntity(WitEntity entity)
     {
         InfoField("ID", entity.id);
-        if (entity.roles.Length > 0)
+        if (null != entity.roles && entity.roles.Length > 0)
         {
             EditorGUILayout.Popup("Roles", 0, entity.roles);
         }
 
-        if (entity.lookups.Length > 0)
+        if (null != entity.lookups && entity.lookups.Length > 0)
         {
             EditorGUILayout.Popup("Lookups", 0, entity.lookups);
         }
@@ -177,81 +195,99 @@ public class WitConfigurationEditor : Editor
 
     private void DrawIntents()
     {
-        BeginIndent();
-        for (int i = 0; i < configuration.intents.Length; i++)
+        if (null != configuration.intents)
         {
-            var intent = configuration.intents[i];
-            if (null != intent && Foldout("i:", intent.name))
+            if (configuration.intents.Length == 0)
             {
-                DrawIntent(intent);
+                GUILayout.Label("No intents available.");
+            }
+            else
+            {
+                BeginIndent();
+                for (int i = 0; i < configuration.intents.Length; i++)
+                {
+                    var intent = configuration.intents[i];
+                    if (null != intent && Foldout("i:", intent.name))
+                    {
+                        DrawIntent(intent);
+                    }
+                }
+
+                EndIndent();
             }
         }
-        EndIndent();
+        else
+
+        {
+            GUILayout.Label("Intents have not been loaded yet.", EditorStyles.helpBox);
+        }
     }
 
     private void DrawIntent(WitIntent intent)
-    {
-        InfoField("ID", intent.id);
-        if (intent.entities.Length > 0)
         {
-            var entityNames = intent.entities.Select(e => e.name).ToArray();
-            EditorGUILayout.Popup("Entities", 0, entityNames);
+            InfoField("ID", intent.id);
+            if (intent.entities.Length > 0)
+            {
+                var entityNames = intent.entities.Select(e => e.name).ToArray();
+                EditorGUILayout.Popup("Entities", 0, entityNames);
+            }
         }
-    }
 
-    private void DrawApplication(WitApplication application)
-    {
-        if (string.IsNullOrEmpty(application.name))
+        private void DrawApplication(WitApplication application)
         {
-            GUILayout.Label("Loading...");
+            if (string.IsNullOrEmpty(application.name))
+            {
+                GUILayout.Label("Loading...");
+            }
+            else
+            {
+                InfoField("Name", application.name);
+                InfoField("ID", application.id);
+                InfoField("Language", application.lang);
+                InfoField("Created", application.createdAt);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Private", GUILayout.Width(100));
+                GUILayout.Toggle(application.isPrivate, "");
+                GUILayout.EndHorizontal();
+            }
         }
-        else
+
+        #region UI Components
+
+        private void BeginIndent()
         {
-            InfoField("Name", application.name);
-            InfoField("ID", application.id);
-            InfoField("Language", application.lang);
-            InfoField("Created", application.createdAt);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Private", GUILayout.Width(100));
-            GUILayout.Toggle(application.isPrivate, "");
+            GUILayout.Space(10);
+            GUILayout.BeginVertical();
+        }
+
+        private void EndIndent()
+        {
+            GUILayout.EndVertical();
             GUILayout.EndHorizontal();
         }
-    }
 
-    #region UI Components
-    private void BeginIndent()
-    {
-        GUILayout.BeginHorizontal();
-        GUILayout.Space(10);
-        GUILayout.BeginVertical();
-    }
-
-    private void EndIndent()
-    {
-        GUILayout.EndVertical();
-        GUILayout.EndHorizontal();
-    }
-
-    private void InfoField(string name, string value)
-    {
-        GUILayout.BeginHorizontal();
-        GUILayout.Label(name, GUILayout.Width(100));
-        GUILayout.Label(value, "TextField");
-        GUILayout.EndHorizontal();
-    }
-
-    private bool Foldout(string keybase, string name)
-    {
-        string key = keybase + name;
-        bool show = false;
-        if (!foldouts.TryGetValue(key, out show))
+        private void InfoField(string name, string value)
         {
-            foldouts[key] = false;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, GUILayout.Width(100));
+            GUILayout.Label(value, "TextField");
+            GUILayout.EndHorizontal();
         }
 
-        show = EditorGUILayout.Foldout(show, name, true);
-        foldouts[key] = show;
-        return show;
+        private bool Foldout(string keybase, string name)
+        {
+            string key = keybase + name;
+            bool show = false;
+            if (!foldouts.TryGetValue(key, out show))
+            {
+                foldouts[key] = false;
+            }
+
+            show = EditorGUILayout.Foldout(show, name, true);
+            foldouts[key] = show;
+            return show;
+        }
+
+        #endregion
     }
-    #endregion
-}

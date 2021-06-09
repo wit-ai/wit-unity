@@ -108,6 +108,11 @@ namespace com.facebook.witai
         private bool isRequestStreamActive;
         public string StatusDescription => statusDescription;
 
+        public override string ToString()
+        {
+            return path;
+        }
+
         public WitRequest(WitConfiguration configuration, string path,
             params QueryParam[] queryParams)
         {
@@ -154,6 +159,7 @@ namespace com.facebook.witai
             // Configure auth header
             switch (command)
             {
+                case "entities":
                 case "app":
                 case "apps":
 #if UNITY_EDITOR
@@ -226,6 +232,7 @@ namespace com.facebook.witai
                     }
                     catch (Exception e)
                     {
+                        Debug.LogError(e);
                         statusCode = -1;
                         statusDescription = e.Message;
                     }
