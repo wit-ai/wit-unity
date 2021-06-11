@@ -47,6 +47,23 @@ namespace com.facebook.witai
         /// </summary>
         public const Endian endian = Endian.Little;
 
+        /// <summary>
+        /// Error code thrown when an exception is caught during processing or
+        /// some other general error happens that is not an error from the server
+        /// </summary>
+        public const int ERROR_CODE_GENERAL = -1;
+
+        /// <summary>
+        /// Error code returned when no configuration is defined
+        /// </summary>
+        public const int ERROR_CODE_NO_CONFIGURATIOON = -2;
+
+        /// <summary>
+        /// Error code returned when the client token has not been set in the
+        /// Wit configuration.
+        /// </summary>
+        public const int ERROR_CODE_NO_CLIENT_TOKEN = -3;
+
         const string URI_SCHEME = "https";
         const string URI_AUTHORITY = "api.wit.ai";
 
@@ -153,6 +170,24 @@ namespace com.facebook.witai
 
         private void StartRequest(Uri uri)
         {
+            if (!configuration)
+            {
+                statusDescription = "Configuration is not set. Cannot start request.";
+                Debug.LogError(statusDescription);
+                statusCode = ERROR_CODE_NO_CONFIGURATIOON;
+                onResponse?.Invoke(this);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(configuration.clientAccessToken))
+            {
+                statusDescription = "Client access token is not defined. Cannot start request.";
+                Debug.LogError(statusDescription);
+                statusCode = ERROR_CODE_NO_CLIENT_TOKEN;
+                onResponse?.Invoke(this);
+                return;
+            }
+
             request = (HttpWebRequest) WebRequest.Create(uri);
             request.Accept = $"application/vnd.wit.{WIT_API_VERSION}+json";
 
@@ -233,7 +268,7 @@ namespace com.facebook.witai
                     catch (Exception e)
                     {
                         Debug.LogError(e);
-                        statusCode = -1;
+                        statusCode = ERROR_CODE_GENERAL;
                         statusDescription = e.Message;
                     }
                 }
