@@ -73,15 +73,26 @@ namespace com.facebook.witai.callbackhandlers
                         formatEvent.onFormattedValueEvent?.Invoke(result);
                     }
                 }
+            }
 
-                List<string> values = new List<string>();
-                for (int i = 0; i < references.Length; i++)
+            // We want to invoke if at least one value was found. Anything that
+            // was missing will be empty, but we must have at least one value
+            // in the response for the invoke to happen.
+            bool valueFound = false;
+            List<string> values = new List<string>();
+            for (int i = 0; i < references.Length; i++)
+            {
+                var reference = references[i];
+                var value = reference.GetStringValue(response);
+                values.Add(value);
+                if (!string.IsNullOrEmpty(value))
                 {
-                    var reference = references[i];
-                    var value = reference.GetStringValue(response);
-                    values.Add(value);
+                    valueFound = true;
                 }
+            }
 
+            if (valueFound)
+            {
                 onMultiValueEvent.Invoke(values.ToArray());
             }
         }
