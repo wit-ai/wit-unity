@@ -56,7 +56,7 @@ namespace com.facebook.witai
         /// <summary>
         /// Error code returned when no configuration is defined
         /// </summary>
-        public const int ERROR_CODE_NO_CONFIGURATIOON = -2;
+        public const int ERROR_CODE_NO_CONFIGURATION = -2;
 
         /// <summary>
         /// Error code returned when the client token has not been set in the
@@ -174,7 +174,7 @@ namespace com.facebook.witai
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
                 Debug.LogError(statusDescription);
-                statusCode = ERROR_CODE_NO_CONFIGURATIOON;
+                statusCode = ERROR_CODE_NO_CONFIGURATION;
                 onResponse?.Invoke(this);
                 return;
             }
