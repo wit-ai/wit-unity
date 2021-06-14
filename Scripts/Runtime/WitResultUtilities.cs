@@ -40,7 +40,7 @@ namespace com.facebook.witai
 
             foreach (var nodeName in nodes)
             {
-                string[] arrayElements = nodeName.Split('[');
+                string[] arrayElements = SplitArrays(nodeName);
 
                 node = node[arrayElements[0]];
                 for (int i = 1; i < arrayElements.Length; i++)
@@ -62,7 +62,7 @@ namespace com.facebook.witai
 
             foreach (var nodeName in nodes)
             {
-                string[] arrayElements = nodeName.Split('[');
+                string[] arrayElements = SplitArrays(nodeName);
 
                 var childObject = new ObjectNodeReference();
                 childObject.key = arrayElements[0];
@@ -86,7 +86,7 @@ namespace com.facebook.witai
             string code = "witResponse";
             foreach (var nodeName in nodes)
             {
-                string[] arrayElements = nodeName.Split('[');
+                string[] arrayElements = SplitArrays(nodeName);
 
                 code += $"[\"{arrayElements[0]}\"]";
                 for (int i = 1; i < arrayElements.Length; i++)
@@ -97,6 +97,17 @@ namespace com.facebook.witai
 
             code += ".Value";
             return code;
+        }
+
+        private static string[] SplitArrays(string nodeName)
+        {
+            var nodes = nodeName.Split('[');
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                nodes[i] = nodes[i].Trim(']');
+            }
+
+            return nodes;
         }
     }
 
