@@ -43,34 +43,37 @@ namespace com.facebook.witai.callbackhandlers
 
         protected override void OnHandleResponse(WitResponseNode response)
         {
-            if (IntentMatches(response) && ValueMatches(response))
+            if (IntentMatches(response))
             {
-                for (int j = 0; j < formattedValueEvents.Length; j++)
+                if (ValueMatches(response))
                 {
-                    var formatEvent = formattedValueEvents[j];
-                    var result = formatEvent.format;
-                    for (int i = 0; i < references.Length; i++)
+                    for (int j = 0; j < formattedValueEvents.Length; j++)
                     {
-                        var reference = references[i];
-                        var value = reference.GetStringValue(response);
-                        if (!string.IsNullOrEmpty(formatEvent.format))
+                        var formatEvent = formattedValueEvents[j];
+                        var result = formatEvent.format;
+                        for (int i = 0; i < references.Length; i++)
                         {
-                            if (!string.IsNullOrEmpty(value))
+                            var reference = references[i];
+                            var value = reference.GetStringValue(response);
+                            if (!string.IsNullOrEmpty(formatEvent.format))
                             {
-                                result = valueRegex.Replace(result, value, 1);
-                                result = result.Replace("{" + i + "}", value);
-                            }
-                            else if(result.Contains("{" + i + "}"))
-                            {
-                                result = "";
-                                break;
+                                if (!string.IsNullOrEmpty(value))
+                                {
+                                    result = valueRegex.Replace(result, value, 1);
+                                    result = result.Replace("{" + i + "}", value);
+                                }
+                                else if (result.Contains("{" + i + "}"))
+                                {
+                                    result = "";
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    if (!string.IsNullOrEmpty(result))
-                    {
-                        formatEvent.onFormattedValueEvent?.Invoke(result);
+                        if (!string.IsNullOrEmpty(result))
+                        {
+                            formatEvent.onFormattedValueEvent?.Invoke(result);
+                        }
                     }
                 }
 

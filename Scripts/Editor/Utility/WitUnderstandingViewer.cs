@@ -31,6 +31,7 @@ namespace com.facebook.witai.utility
         private Vector2 scroll;
         private DateTime submitStart;
         private TimeSpan requestLength;
+        private string status;
 
         class Content
         {
@@ -53,6 +54,26 @@ namespace com.facebook.witai.utility
             window.Show();
         }
 
+        private void OnSelectionChange()
+        {
+            if (Selection.activeGameObject)
+            {
+                var wit = Selection.activeGameObject.GetComponent<Wit>();
+                if (wit)
+                {
+                    wit.events.OnResponse.AddListener((r) =>
+                    {
+                        response = r;
+                        var u = r["text"].Value;
+                        if (!string.IsNullOrEmpty(u))
+                        {
+                            utterance = u;
+                        }
+                    });
+                    status = $"Watching {wit.name} for responses.";
+                }
+            }
+        }
 
         protected override void OnDrawContent()
         {
@@ -128,6 +149,7 @@ namespace com.facebook.witai.utility
                 requestLength = DateTime.Now - submitStart;
                 response = r.ResponseData;
                 loading = false;
+                status = $"Response time: {requestLength}";
             };
             request.Request();
             loading = true;
@@ -149,7 +171,7 @@ namespace com.facebook.witai.utility
             GUILayout.EndScrollView();
 
             GUILayout.FlexibleSpace();
-            GUILayout.Label($"Response time: {requestLength}", WitStyles.BackgroundBlack25P);
+            GUILayout.Label(status, WitStyles.BackgroundBlack25P);
         }
 
         private void DrawResponseNode(WitResponseNode witResponseNode, string path = "")
@@ -163,15 +185,26 @@ namespace com.facebook.witai.utility
             }
         }
 
-        private void DrawNode(WitResponseNode childNode, string child, string path)
+        private void DrawNode(WitResponseNode childNode, string child, string path, bool isArrayElement = false)
         {
+            string childPath;
+
+            if (path.Length > 0)
+            {
+                childPath = isArrayElement ? $"{path}[{child}]" : $"{path}.{child}";
+            }
+            else
+            {
+                childPath = child;
+            }
+
             if (!string.IsNullOrEmpty(childNode.Value))
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(15 * EditorGUI.indentLevel);
                 if (GUILayout.Button($"{child} = {childNode.Value}", "Label"))
                 {
-                    ShowNodeMenu(childNode, $"{path}{child}");
+                    ShowNodeMenu(childNode, childPath);
                 }
 
                 GUILayout.EndHorizontal();
@@ -181,21 +214,16 @@ namespace com.facebook.witai.utility
                 var childObject = childNode.AsObject;
                 var childArray = childNode.AsArray;
 
-                var childPath = path;
-                childPath += child;
-
                 if ((null != childObject || null != childArray) && Foldout(childPath, child))
                 {
                     EditorGUI.indentLevel++;
                     if (null != childObject)
                     {
-                        childPath += ".";
                         DrawResponseNode(childNode, childPath);
                     }
 
                     if (null != childArray)
                     {
-                        childPath += "[";
                         DrawArray(childArray, childPath);
                     }
 
@@ -337,7 +365,7 @@ namespace com.facebook.witai.utility
         {
             for (int i = 0; i < childArray.Count; i++)
             {
-                DrawNode(childArray[i], i.ToString(), childPath);
+                DrawNode(childArray[i], i.ToString(), childPath, true);
             }
         }
 
