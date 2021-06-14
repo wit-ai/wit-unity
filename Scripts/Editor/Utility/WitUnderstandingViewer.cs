@@ -248,51 +248,20 @@ namespace com.facebook.witai.utility
             {
                 menu.AddSeparator("");
 
-                GUIContent label =
-                    new GUIContent("Add Value Match Handler to " + Selection.activeObject.name);
+                var label =
+                    new GUIContent($"Add response matcher to {Selection.activeObject.name}");
 
                 menu.AddItem(label, false, () =>
                 {
-                    var valueHandler = Selection.activeGameObject.AddComponent<ValueMatchHandler>();
+                    var valueHandler = Selection.activeGameObject.AddComponent<WitResponseMatcher>();
                     valueHandler.intent = response.GetIntentName();
-                    valueHandler.valueMatches = new ValueMatch[]
+                    valueHandler.valueMatchers = new ValuePathMatcher[]
                     {
-                        new ValueMatch()
-                        {
-                            path = path,
-                            expectedValue = node.Value
-                        }
-                    };
-                });
-                AddValueMatchUpdateItems(path, node.Value, menu);
-
-                menu.AddSeparator("");
-
-                label =
-                    new GUIContent("Add Multi Value Handler to " + Selection.activeObject.name);
-
-                menu.AddItem(label, false, () =>
-                {
-                    var valueHandler = Selection.activeGameObject.AddComponent<MultiValueHandler>();
-                    valueHandler.intent = response.GetIntentName();
-                    valueHandler.valuePaths = new ValuePathMatcher[]
-                    {
-                        new ValuePathMatcher() { path = path}
+                        new ValuePathMatcher() { path = path }
                     };
                 });
 
                 AddMultiValueUpdateItems(path, menu);
-
-                menu.AddSeparator("");
-
-                label = new GUIContent("Add Value Handler to " + Selection.activeObject.name);
-
-                menu.AddItem(label, false, () =>
-                {
-                    var valueHandler = Selection.activeGameObject.AddComponent<ValueHandler>();
-                    valueHandler.intent = response.GetIntentName();
-                    valueHandler.valuePath = path;
-                });
             }
 
             menu.ShowAsContext();
@@ -300,62 +269,38 @@ namespace com.facebook.witai.utility
 
         private void AddMultiValueUpdateItems(string path, GenericMenu menu)
         {
-            var mvhs = Selection.activeGameObject.GetComponents<MultiValueHandler>();
+
+            string name = path;
+            int index = path.LastIndexOf('.');
+            if (index > 0)
+            {
+                name = name.Substring(index + 1);
+            }
+
+            var mvhs = Selection.activeGameObject.GetComponents<WitResponseMatcher>();
             if (mvhs.Length > 1)
             {
                 for (int i = 0; i < mvhs.Length; i++)
                 {
                     var handler = mvhs[i];
                     menu.AddItem(
-                        new GUIContent("Add Value to Multi Value Handler/Handler " + (i + 1)),
-                        false, (h) => AddNewEventHandlerPath((MultiValueHandler) h, path), handler);
+                        new GUIContent($"Add {name} matcher to {Selection.activeGameObject.name}/Handler {(i + 1)}"),
+                        false, (h) => AddNewEventHandlerPath((WitResponseMatcher) h, path), handler);
                 }
             }
             else if (mvhs.Length == 1)
             {
                 var handler = mvhs[0];
                 menu.AddItem(
-                    new GUIContent("Add Value to Multi Value Handler"),
-                    false, (h) => AddNewEventHandlerPath((MultiValueHandler) h, path), handler);
+                    new GUIContent($"Add {name} matcher to {Selection.activeGameObject.name}'s Response Matcher"),
+                    false, (h) => AddNewEventHandlerPath((WitResponseMatcher) h, path), handler);
             }
         }
 
-        private void AddValueMatchUpdateItems(string path, string value, GenericMenu menu)
+        private void AddNewEventHandlerPath(WitResponseMatcher handler, string path)
         {
-            var mvhs = Selection.activeGameObject.GetComponents<ValueMatchHandler>();
-            if (mvhs.Length > 1)
-            {
-                for (int i = 0; i < mvhs.Length; i++)
-                {
-                    var handler = mvhs[i];
-                    menu.AddItem(
-                        new GUIContent("Add Match to Value Match Handler/Handler " + (i + 1)),
-                        false, (h) => AddNewValueMatchHandlerPath((ValueMatchHandler) h, path, value), handler);
-                }
-            }
-            else if (mvhs.Length == 1)
-            {
-                var handler = mvhs[0];
-                menu.AddItem(
-                    new GUIContent("Add Match to Value Match Handler"),
-                    false, (h) => AddNewValueMatchHandlerPath((ValueMatchHandler) h, path, value), handler);
-            }
-        }
-
-        private void AddNewValueMatchHandlerPath(ValueMatchHandler handler, string path, string value)
-        {
-            Array.Resize(ref handler.valueMatches, handler.valueMatches.Length + 1);
-            handler.valueMatches[handler.valueMatches.Length - 1] = new ValueMatch()
-            {
-                path = path,
-                expectedValue = value
-            };
-        }
-
-        private void AddNewEventHandlerPath(MultiValueHandler handler, string path)
-        {
-            Array.Resize(ref handler.valuePaths, handler.valuePaths.Length + 1);
-            handler.valuePaths[handler.valuePaths.Length - 1] = new ValuePathMatcher()
+            Array.Resize(ref handler.valueMatchers, handler.valueMatchers.Length + 1);
+            handler.valueMatchers[handler.valueMatchers.Length - 1] = new ValuePathMatcher()
             {
                 path = path
             };

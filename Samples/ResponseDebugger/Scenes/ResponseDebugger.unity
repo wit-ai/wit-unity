@@ -2750,7 +2750,7 @@ GameObject:
   - component: {fileID: 1681211059}
   - component: {fileID: 1681211060}
   m_Layer: 0
-  m_Name: Matcher
+  m_Name: WitResponseMatcherExample
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2785,17 +2785,17 @@ MonoBehaviour:
   wit: {fileID: 1571651510}
   intent: change_color
   confidence: 0.6
-  valuePaths:
+  valueMatchers:
   - path: entities.shape:shape[0.value
     contentRequired: 0
-    matchRequired: 0
+    matchMethod: 0
+    comparisonMethod: 0
     matchValue: 
-    useRegularExpression: 0
   - path: entities.color:color[0.value
     contentRequired: 0
-    matchRequired: 0
+    matchMethod: 0
+    comparisonMethod: 0
     matchValue: 
-    useRegularExpression: 0
   formattedValueEvents:
   - format: Found color {1}
     onFormattedValueEvent:
