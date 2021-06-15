@@ -1538,7 +1538,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -0.0021972656, y: 41.19995}
+  m_AnchoredPosition: {x: -0.001953125, y: 41.19995}
   m_SizeDelta: {x: -31.995483, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &616731560
@@ -2791,11 +2791,13 @@ MonoBehaviour:
     matchMethod: 0
     comparisonMethod: 0
     matchValue: 
+    floatingPointComparisonTolerance: 0.00009999999747378752
   - path: entities.color:color[0.value
     contentRequired: 0
     matchMethod: 0
     comparisonMethod: 0
     matchValue: 
+    floatingPointComparisonTolerance: 0.00009999999747378752
   formattedValueEvents:
   - format: Found color {1}
     onFormattedValueEvent:
