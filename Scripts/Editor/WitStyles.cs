@@ -42,6 +42,7 @@ namespace com.facebook.witai
         public static GUIContent titleContent;
         public static GUIContent welcomeTitleContent;
         public static GUIContent PasteIcon;
+        public static GUIContent EditIcon;
 
         static WitStyles()
         {
@@ -111,6 +112,7 @@ namespace com.facebook.witai
             welcomeTitleContent = new GUIContent("Welcome to Wit.ai", WitIcon);
 
             PasteIcon = EditorGUIUtility.IconContent("Clipboard");
+            EditIcon = EditorGUIUtility.IconContent("editicon.sml");
         }
     }
 }

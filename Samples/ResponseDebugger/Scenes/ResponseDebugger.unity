@@ -1538,7 +1538,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -0.0021972656, y: 41.19995}
+  m_AnchoredPosition: {x: -0.001953125, y: 41.19995}
   m_SizeDelta: {x: -31.995483, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &616731560
@@ -2750,7 +2750,7 @@ GameObject:
   - component: {fileID: 1681211059}
   - component: {fileID: 1681211060}
   m_Layer: 0
-  m_Name: Matcher
+  m_Name: WitResponseMatcherExample
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2785,17 +2785,19 @@ MonoBehaviour:
   wit: {fileID: 1571651510}
   intent: change_color
   confidence: 0.6
-  valuePaths:
+  valueMatchers:
   - path: entities.shape:shape[0.value
     contentRequired: 0
-    matchRequired: 0
+    matchMethod: 0
+    comparisonMethod: 0
     matchValue: 
-    useRegularExpression: 0
+    floatingPointComparisonTolerance: 0.00009999999747378752
   - path: entities.color:color[0.value
     contentRequired: 0
-    matchRequired: 0
+    matchMethod: 0
+    comparisonMethod: 0
     matchValue: 
-    useRegularExpression: 0
+    floatingPointComparisonTolerance: 0.00009999999747378752
   formattedValueEvents:
   - format: Found color {1}
     onFormattedValueEvent:
