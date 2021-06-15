@@ -109,13 +109,13 @@ namespace com.facebook.witai.callbackhandlers
                         matches &= value == matcher.matchValue;
                         break;
                     case MatchMethod.IntegerComparison:
-                        matches &= CompareInt(value, matcher.matchValue, matcher.comparisonMethod);
+                        matches &= CompareInt(value, matcher);
                         break;
                     case MatchMethod.FloatComparison:
-                        matches &= CompareFloat(value, matcher.matchValue, matcher.comparisonMethod);
+                        matches &= CompareFloat(value, matcher);
                         break;
                     case MatchMethod.DoubleComparison:
-                        matches &= CompareDouble(value, matcher.matchValue, matcher.comparisonMethod);
+                        matches &= CompareDouble(value, matcher);
                         break;
                 }
             }
@@ -123,8 +123,7 @@ namespace com.facebook.witai.callbackhandlers
             return matches;
         }
 
-        private bool CompareDouble(string value, string matchValue,
-            ComparisonMethod comparisonMethod)
+        private bool CompareDouble(string value, ValuePathMatcher matcher)
         {
             double dValue;
 
@@ -133,14 +132,14 @@ namespace com.facebook.witai.callbackhandlers
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.
-            double dMatchValue = double.Parse(matchValue);
+            double dMatchValue = double.Parse(matcher.matchValue);
 
-            switch (comparisonMethod)
+            switch (matcher.comparisonMethod)
             {
                 case ComparisonMethod.Equals:
-                    return Math.Abs(dValue - dMatchValue) < .0001f;
+                    return Math.Abs(dValue - dMatchValue) < matcher.floatingPointComparisonTolerance;
                 case ComparisonMethod.NotEquals:
-                    return Math.Abs(dValue - dMatchValue) > .0001f;
+                    return Math.Abs(dValue - dMatchValue) > matcher.floatingPointComparisonTolerance;
                 case ComparisonMethod.Greater:
                     return dValue > dMatchValue;
                 case ComparisonMethod.Less:
@@ -154,8 +153,7 @@ namespace com.facebook.witai.callbackhandlers
             return false;
         }
 
-        private bool CompareFloat(string value, string matchValue,
-            ComparisonMethod comparisonMethod)
+        private bool CompareFloat(string value, ValuePathMatcher matcher)
         {
             float dValue;
 
@@ -164,14 +162,16 @@ namespace com.facebook.witai.callbackhandlers
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.
-            float dMatchValue = float.Parse(matchValue);
+            float dMatchValue = float.Parse(matcher.matchValue);
 
-            switch (comparisonMethod)
+            switch (matcher.comparisonMethod)
             {
                 case ComparisonMethod.Equals:
-                    return Math.Abs(dValue - dMatchValue) < .0001f;
+                    return Math.Abs(dValue - dMatchValue) <
+                           matcher.floatingPointComparisonTolerance;
                 case ComparisonMethod.NotEquals:
-                    return Math.Abs(dValue - dMatchValue) > .0001f;
+                    return Math.Abs(dValue - dMatchValue) >
+                           matcher.floatingPointComparisonTolerance;
                 case ComparisonMethod.Greater:
                     return dValue > dMatchValue;
                 case ComparisonMethod.Less:
@@ -185,8 +185,7 @@ namespace com.facebook.witai.callbackhandlers
             return false;
         }
 
-        private bool CompareInt(string value, string matchValue,
-            ComparisonMethod comparisonMethod)
+        private bool CompareInt(string value, ValuePathMatcher matcher)
         {
             int dValue;
 
@@ -195,9 +194,9 @@ namespace com.facebook.witai.callbackhandlers
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.
-            int dMatchValue = int.Parse(matchValue);
+            int dMatchValue = int.Parse(matcher.matchValue);
 
-            switch (comparisonMethod)
+            switch (matcher.comparisonMethod)
             {
                 case ComparisonMethod.Equals:
                     return dValue == dMatchValue;
@@ -254,6 +253,9 @@ namespace com.facebook.witai.callbackhandlers
         public ComparisonMethod comparisonMethod;
         [Tooltip("Value used to compare with the result when Match Required is set")]
         public string matchValue;
+
+        [Tooltip("The variance allowed when comparing two floating point values for equality")]
+        public double floatingPointComparisonTolerance = .0001f;
     }
 
     public enum ComparisonMethod
