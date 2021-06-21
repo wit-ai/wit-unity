@@ -32,6 +32,7 @@ namespace com.facebook.witai.utility
         private DateTime submitStart;
         private TimeSpan requestLength;
         private string status;
+        private Wit wit;
 
         class Content
         {
@@ -54,24 +55,52 @@ namespace com.facebook.witai.utility
             window.Show();
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            SetWit(GameObject.FindObjectOfType<Wit>());
+        }
+
+        protected override void OnDisable()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        }
+
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode && !wit)
+            {
+                SetWit(FindObjectOfType<Wit>());
+            }
+        }
+
         private void OnSelectionChange()
         {
             if (Selection.activeGameObject)
             {
-                var wit = Selection.activeGameObject.GetComponent<Wit>();
-                if (wit)
+                wit = Selection.activeGameObject.GetComponent<Wit>();
+                SetWit(wit);
+            }
+        }
+
+        private void SetWit(Wit wit)
+        {
+            if (wit)
+            {
+                this.wit = wit;
+                wit.events.OnRequestCreated.AddListener((r) =>
                 {
-                    wit.events.OnResponse.AddListener((r) =>
-                    {
-                        response = r;
-                        var u = r["text"].Value;
-                        if (!string.IsNullOrEmpty(u))
-                        {
-                            utterance = u;
-                        }
-                    });
-                    status = $"Watching {wit.name} for responses.";
-                }
+                    submitStart = System.DateTime.Now;
+                    loading = true;
+                });
+                wit.events.OnError.AddListener((title, message) =>
+                {
+                    status = message;
+                    loading = false;
+                });
+                wit.events.OnResponse.AddListener(ShowResponse);
+                status = $"Watching {wit.name} for responses.";
             }
         }
 
@@ -126,6 +155,9 @@ namespace com.facebook.witai.utility
                     "Enter an utterance and hit submit to see what your app will return.");
                 GUILayout.EndVertical();
             }
+
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(status, WitStyles.BackgroundBlack25P);
         }
 
         private void SubmitUtterance()
@@ -136,23 +168,41 @@ namespace com.facebook.witai.utility
                 return;
             }
 
-            submitStart = System.DateTime.Now;
-
             // Hack to watch for loading to complete. Response does not
             // come back on the main thread so Repaint in onResponse in
             // the editor does nothing.
             EditorApplication.update += WatchForResponse;
 
-            var request = witConfiguration.MessageRequest(utterance);
-            request.onResponse = r =>
+            if (Application.isPlaying && !wit)
             {
-                requestLength = DateTime.Now - submitStart;
-                response = r.ResponseData;
-                loading = false;
-                status = $"Response time: {requestLength}";
-            };
-            request.Request();
-            loading = true;
+                SetDefaultWit();
+            }
+
+            if (wit && Application.isPlaying)
+            {
+                wit.Activate(utterance);
+            }
+            else
+            {
+                submitStart = System.DateTime.Now;
+                var request = witConfiguration.MessageRequest(utterance);
+                request.onResponse = (r) => ShowResponse(r.ResponseData);
+                request.Request();
+                loading = true;
+            }
+        }
+
+        private void SetDefaultWit()
+        {
+            SetWit(FindObjectOfType<Wit>());
+        }
+
+        private void ShowResponse(WitResponseNode r)
+        {
+            requestLength = DateTime.Now - submitStart;
+            response = r;
+            loading = false;
+            status = $"Response time: {requestLength}";
         }
 
         private void WatchForResponse()
@@ -169,9 +219,6 @@ namespace com.facebook.witai.utility
             scroll = GUILayout.BeginScrollView(scroll);
             DrawResponseNode(response);
             GUILayout.EndScrollView();
-
-            GUILayout.FlexibleSpace();
-            GUILayout.Label(status, WitStyles.BackgroundBlack25P);
         }
 
         private void DrawResponseNode(WitResponseNode witResponseNode, string path = "")

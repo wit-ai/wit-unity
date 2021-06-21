@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using com.facebook.witai.data;
 using UnityEditor;
 using UnityEngine;
@@ -30,6 +31,11 @@ namespace com.facebook.witai
         protected virtual void OnEnable()
         {
             RefreshConfigList();
+        }
+
+        protected virtual void OnDisable()
+        {
+
         }
 
         protected virtual void OnProjectChange()
