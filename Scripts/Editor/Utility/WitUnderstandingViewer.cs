@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using com.facebook.witai.callbackhandlers;
+using com.facebook.witai.data;
+using com.facebook.witai.Data;
 using com.facebook.witai.lib;
 using UnityEditor;
 using UnityEngine;
@@ -37,11 +39,18 @@ namespace com.facebook.witai.utility
         {
             public static GUIContent copyPath;
             public static GUIContent copyCode;
+            public static GUIContent createStringValue;
+            public static GUIContent createIntValue;
+            public static GUIContent createFloatValue;
 
             static Content()
             {
+                createStringValue = new GUIContent("Create Value Reference/Create String");
+                createIntValue = new GUIContent("Create Value Reference/Create Int");
+                createFloatValue = new GUIContent("Create Value Reference/Create Float");
+
                 copyPath = new GUIContent("Copy Path to Clipboard");
-                copyCode = new GUIContent("Generate Code on Clipboard");
+                copyCode = new GUIContent("Copy Code to Clipboard");
             }
         }
 
@@ -235,6 +244,10 @@ namespace com.facebook.witai.utility
         private void ShowNodeMenu(WitResponseNode node, string path)
         {
             GenericMenu menu = new GenericMenu();
+            menu.AddItem(Content.createStringValue, false, () => WitDataCreation.CreateStringValue(path));
+            menu.AddItem(Content.createIntValue, false, () => WitDataCreation.CreateIntValue(path));
+            menu.AddItem(Content.createFloatValue, false, () => WitDataCreation.CreateFloatValue(path));
+            menu.AddSeparator("");
             menu.AddItem(Content.copyPath, false, () =>
             {
                 EditorGUIUtility.systemCopyBuffer = path;

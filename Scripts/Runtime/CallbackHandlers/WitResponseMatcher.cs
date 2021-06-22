@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using com.facebook.witai.data;
 using com.facebook.witai.lib;
 using UnityEngine;
 using UnityEngine.Events;
@@ -29,19 +30,9 @@ namespace com.facebook.witai.callbackhandlers
         [SerializeField] private FormattedValueEvents[] formattedValueEvents;
         [SerializeField] private MultiValueEvent onMultiValueEvent = new MultiValueEvent();
 
-        private WitResponseReference[] references;
-
 
         private static Regex valueRegex = new Regex(Regex.Escape("{value}"), RegexOptions.Compiled);
 
-        private void Start()
-        {
-            references = new WitResponseReference[valueMatchers.Length];
-            for (int i = 0; i < valueMatchers.Length; i++)
-            {
-                references[i] = WitResultUtilities.GetWitResponseReference(valueMatchers[i].path);
-            }
-        }
 
         protected override void OnHandleResponse(WitResponseNode response)
         {
@@ -53,9 +44,9 @@ namespace com.facebook.witai.callbackhandlers
                     {
                         var formatEvent = formattedValueEvents[j];
                         var result = formatEvent.format;
-                        for (int i = 0; i < references.Length; i++)
+                        for (int i = 0; i < valueMatchers.Length; i++)
                         {
-                            var reference = references[i];
+                            var reference = valueMatchers[i].Reference;
                             var value = reference.GetStringValue(response);
                             if (!string.IsNullOrEmpty(formatEvent.format))
                             {
@@ -80,10 +71,9 @@ namespace com.facebook.witai.callbackhandlers
                 }
 
                 List<string> values = new List<string>();
-                for (int i = 0; i < references.Length; i++)
+                for (int i = 0; i < valueMatchers.Length; i++)
                 {
-                    var reference = references[i];
-                    var value = reference.GetStringValue(response);
+                    var value = valueMatchers[i].Reference.GetStringValue(response);
                     values.Add(value);
                 }
 
@@ -97,7 +87,7 @@ namespace com.facebook.witai.callbackhandlers
             for (int i = 0; i < valueMatchers.Length && matches; i++)
             {
                 var matcher = valueMatchers[i];
-                var value = references[i].GetStringValue(response);
+                var value = matcher.Reference.GetStringValue(response);
                 matches &= !matcher.contentRequired || !string.IsNullOrEmpty(value);
 
                 switch (matcher.matchMethod)
@@ -245,6 +235,8 @@ namespace com.facebook.witai.callbackhandlers
     {
         [Tooltip("The path to a value within a WitResponseNode")]
         public string path;
+        [Tooltip("A reference to a wit value object")]
+        public WitValue witValueReference;
         [Tooltip("Does this path need to have text in the value to be considered a match")]
         public bool contentRequired = true;
         [Tooltip("If set the match value will be treated as a regular expression.")]
@@ -256,6 +248,22 @@ namespace com.facebook.witai.callbackhandlers
 
         [Tooltip("The variance allowed when comparing two floating point values for equality")]
         public double floatingPointComparisonTolerance = .0001f;
+
+        private WitResponseReference pathReference;
+        public WitResponseReference Reference
+        {
+            get
+            {
+                if (witValueReference) return witValueReference.Reference;
+
+                if (null == pathReference || pathReference.path != path)
+                {
+                    pathReference = WitResultUtilities.GetWitResponseReference(path);
+                }
+
+                return pathReference;
+            }
+        }
     }
 
     public enum ComparisonMethod

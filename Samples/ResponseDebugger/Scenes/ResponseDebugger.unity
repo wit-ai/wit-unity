@@ -2786,13 +2786,13 @@ MonoBehaviour:
   intent: change_color
   confidence: 0.6
   valueMatchers:
-  - path: entities.shape:shape[0.value
+  - path: entities.shape:shape[0].value
     contentRequired: 0
     matchMethod: 0
     comparisonMethod: 0
     matchValue: 
     floatingPointComparisonTolerance: 0.00009999999747378752
-  - path: entities.color:color[0.value
+  - path: entities.color:color[0].value
     contentRequired: 0
     matchMethod: 0
     comparisonMethod: 0

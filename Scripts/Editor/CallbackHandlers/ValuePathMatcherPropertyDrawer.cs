@@ -6,6 +6,7 @@
  */
 
 using System.Collections.Generic;
+using com.facebook.witai.data;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ namespace com.facebook.witai.callbackhandlers
 
         class Properties
         {
+            public const string witValueRef = "witValueReference";
             public const string path = "path";
             public const string contentRequired = "contentRequired";
             public const string matchMethod = "matchMethod";
@@ -30,6 +32,22 @@ namespace com.facebook.witai.callbackhandlers
 
         private Dictionary<string, bool> foldouts =
             new Dictionary<string, bool>();
+
+        private string GetPropertyPath(SerializedProperty property)
+        {
+            var valueRefProp = property.FindPropertyRelative(Properties.witValueRef);
+            if (valueRefProp.objectReferenceValue)
+            {
+                return ((WitValue) valueRefProp.objectReferenceValue).path;
+            }
+            return property.FindPropertyRelative(Properties.path).stringValue;
+        }
+
+        private bool IsEditingProperty(SerializedProperty property)
+        {
+            var path = GetPropertyPath(property);
+            return path == currentEditPath || string.IsNullOrEmpty(path);
+        }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -72,18 +90,19 @@ namespace com.facebook.witai.callbackhandlers
 
         private bool IsExpanded(SerializedProperty property)
         {
-            return foldouts.TryGetValue(property.propertyPath, out bool value) && value;
+            return foldouts.TryGetValue(GetPropertyPath(property), out bool value) && value;
         }
 
         private bool Foldout(Rect rect, SerializedProperty property)
         {
-            if (!foldouts.TryGetValue(property.propertyPath, out var value))
+            var path = GetPropertyPath(property);
+            if (!foldouts.TryGetValue(path, out var value))
             {
-                foldouts[property.propertyPath] = false;
+                foldouts[path] = false;
             }
 
-            foldouts[property.propertyPath] = EditorGUI.Foldout(rect, value, "");
-            return foldouts[property.propertyPath];
+            foldouts[path] = EditorGUI.Foldout(rect, value, "");
+            return foldouts[path];
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -92,42 +111,83 @@ namespace com.facebook.witai.callbackhandlers
             rect.height = EditorGUIUtility.singleLineHeight;
             var path = property.FindPropertyRelative(Properties.path);
 
-            var editIconWidth = 16;
+            var valueRefProp = property.FindPropertyRelative(Properties.witValueRef);
+            var editIconWidth = 24;
             var pathRect = new Rect(rect);
             pathRect.width -= editIconWidth;
-            if (currentEditPath == property.propertyPath || string.IsNullOrEmpty(path.stringValue))
+            var pathValue = GetPropertyPath(property);
+            if (IsEditingProperty(property))
             {
-                var value = EditorGUI.TextField(pathRect, path.stringValue);
-                if (value != path.stringValue)
+                if (!valueRefProp.objectReferenceValue)
                 {
-                    currentEditPath = property.propertyPath;
-                    path.stringValue = value;
+                    pathRect.width -= WitStyles.IconButtonWidth;
+                    var value = EditorGUI.TextField(pathRect, path.stringValue);
+                    if (value != path.stringValue)
+                    {
+                        path.stringValue = value;
+                    }
+
+                    pathRect.width += WitStyles.IconButtonWidth;
+
+                    var pickerRect = new Rect(pathRect);
+                    pickerRect.x = pathRect.x + pathRect.width - 20;
+                    pickerRect.width = 20;
+                    if (GUI.Button(pickerRect, WitStyles.ObjectPickerIcon, "Label"))
+                    {
+                        var id = EditorGUIUtility.GetControlID(FocusType.Passive) + 100;
+                        EditorGUIUtility.ShowObjectPicker<WitValue>(
+                            (WitValue) valueRefProp.objectReferenceValue, false, "", id);
+                    }
+                }
+                else
+                {
+                    EditorGUI.PropertyField(pathRect, valueRefProp, new GUIContent());
+                }
+
+                if (Event.current.commandName == "ObjectSelectorClosed")
+                {
+                    valueRefProp.objectReferenceValue = EditorGUIUtility.GetObjectPickerObject();
+                }
+
+                pathValue = GetPropertyPath(property);
+                if (pathValue != currentEditPath)
+                {
+                    foldouts[currentEditPath] = false;
+                    currentEditPath = GetPropertyPath(property);
+                    foldouts[currentEditPath] = true;
                 }
             }
             else
             {
-                EditorGUI.LabelField(pathRect, path.stringValue);
+                if (valueRefProp.objectReferenceValue)
+                {
+                    EditorGUI.LabelField(pathRect, valueRefProp.objectReferenceValue.name);
+                }
+                else
+                {
+                    EditorGUI.LabelField(pathRect, path.stringValue);
+                }
             }
 
             var editRect = new Rect(rect);
-            editRect.x = pathRect.x + pathRect.width;
+            editRect.x = pathRect.x + pathRect.width + 8;
 
             if (Foldout(rect, property))
             {
                 if (GUI.Button(editRect, WitStyles.EditIcon, "Label"))
                 {
-                    if (currentEditPath == property.propertyPath)
+                    if (currentEditPath == pathValue)
                     {
                         currentEditPath = null;
                     }
                     else
                     {
-                        currentEditPath = property.propertyPath;
+                        currentEditPath = pathValue;
                     }
                 }
 
-                rect.x += 20;
-                rect.width -= 20;
+                rect.x += WitStyles.IconButtonWidth;
+                rect.width -= WitStyles.IconButtonWidth;
                 rect.y += rect.height;
                 EditorGUI.PropertyField(rect, property.FindPropertyRelative(Properties.contentRequired));
                 rect.y += rect.height;
