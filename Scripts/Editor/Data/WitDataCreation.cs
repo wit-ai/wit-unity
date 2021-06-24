@@ -17,6 +17,27 @@ namespace com.facebook.witai.Data
     {
         const string PATH_KEY = "Facebook::Wit::ValuePath";
 
+        public static WitConfiguration FindDefaultWitConfig()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
+            if(guids.Length > 0)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
+            }
+
+            return null;
+        }
+
+        [MenuItem("Assets/Create/Wit/Add Wit to Scene")]
+        public static void AddWitToScene()
+        {
+            var witGo = new GameObject();
+            witGo.name = "Wit";
+            var wit = witGo.AddComponent<Wit>();
+            wit.Configuration = FindDefaultWitConfig();
+        }
+
         [MenuItem("Assets/Create/Wit/Values/String Value")]
         public static void WitStringValue()
         {

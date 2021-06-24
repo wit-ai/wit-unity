@@ -110,6 +110,7 @@ namespace com.facebook.witai.utility
                 });
                 wit.events.OnResponse.AddListener(ShowResponse);
                 status = $"Watching {wit.name} for responses.";
+                Repaint();
             }
         }
 
