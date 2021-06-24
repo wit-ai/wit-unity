@@ -43,6 +43,9 @@ namespace com.facebook.witai
         public static GUIContent welcomeTitleContent;
         public static GUIContent PasteIcon;
         public static GUIContent EditIcon;
+        public static GUIContent ObjectPickerIcon;
+
+        public const int IconButtonWidth = 20;
 
         static WitStyles()
         {
@@ -113,6 +116,7 @@ namespace com.facebook.witai
 
             PasteIcon = EditorGUIUtility.IconContent("Clipboard");
             EditIcon = EditorGUIUtility.IconContent("editicon.sml");
+            ObjectPickerIcon = EditorGUIUtility.IconContent("d_Record Off");
         }
     }
 }

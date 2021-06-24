@@ -9,7 +9,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.WebSockets;
 using com.facebook.witai.data;
 using com.facebook.witai.lib;
 using UnityEngine;

@@ -57,20 +57,29 @@ namespace com.facebook.witai
 
             string[] nodes = path.Trim('.').Split('.');
 
-            var rootNode = new WitResponseReference();
+            var rootNode = new WitResponseReference()
+            {
+                path = path
+            };
             var node = rootNode;
 
             foreach (var nodeName in nodes)
             {
                 string[] arrayElements = SplitArrays(nodeName);
 
-                var childObject = new ObjectNodeReference();
+                var childObject = new ObjectNodeReference()
+                {
+                    path = path
+                };
                 childObject.key = arrayElements[0];
                 node.child = childObject;
                 node = childObject;
                 for (int i = 1; i < arrayElements.Length; i++)
                 {
-                    var childIndex = new ArrayNodeReference();
+                    var childIndex = new ArrayNodeReference()
+                    {
+                        path = path
+                    };
                     childIndex.index = int.Parse(arrayElements[i]);
                     node.child = childIndex;
                     node = childIndex;
@@ -114,6 +123,7 @@ namespace com.facebook.witai
     public class WitResponseReference
     {
         public WitResponseReference child;
+        public string path;
 
         public virtual string GetStringValue(WitResponseNode response)
         {
@@ -123,6 +133,11 @@ namespace com.facebook.witai
         public virtual int GetIntValue(WitResponseNode response)
         {
             return child.GetIntValue(response);
+        }
+
+        public virtual float GetFloatValue(WitResponseNode response)
+        {
+            return child.GetFloatValue(response);
         }
     }
 
@@ -145,6 +160,16 @@ namespace com.facebook.witai
             if (null != child)
             {
                 return child.GetIntValue(response[index]);
+            }
+
+            return response[index].AsInt;
+        }
+
+        public override float GetFloatValue(WitResponseNode response)
+        {
+            if (null != child)
+            {
+                return child.GetFloatValue(response[index]);
             }
 
             return response[index].AsInt;
@@ -173,6 +198,16 @@ namespace com.facebook.witai
             }
 
             return response[key].AsInt;
+        }
+
+        public override float GetFloatValue(WitResponseNode response)
+        {
+            if (null != child)
+            {
+                return child.GetFloatValue(response[key]);
+            }
+
+            return response[key].AsFloat;
         }
     }
 }
