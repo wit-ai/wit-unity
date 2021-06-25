@@ -68,7 +68,6 @@ namespace com.facebook.witai.samples.shapes
             if (wit.Active) wit.Deactivate();
             else
             {
-                textArea.text = "The mic is active, start speaking now.";
                 wit.Activate();
             }
         }

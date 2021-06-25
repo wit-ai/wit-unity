@@ -213,6 +213,7 @@ namespace com.facebook.witai.utility
             response = r;
             loading = false;
             status = $"Response time: {requestLength}";
+            Repaint();
         }
 
         private void WatchForResponse()

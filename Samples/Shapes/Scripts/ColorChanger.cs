@@ -27,17 +27,17 @@ namespace com.facebook.witai.demo
 
                 if (ColorUtility.TryParseHtmlString(colorString, out var color))
                 {
-                    if (!string.IsNullOrEmpty(shapeString))
-                    {
-                        var shape = transform.Find(shapeString);
-                        if(shape) SetColor(shape, color);
-                    }
-                    else
+                    if (string.IsNullOrEmpty(shapeString))
                     {
                         for (int i = 0; i < transform.childCount; i++)
                         {
                             SetColor(transform.GetChild(i), color);
                         }
+                    }
+                    else
+                    {
+                        var shape = transform.Find(shapeString);
+                        if(shape) SetColor(shape, color);
                     }
                 }
             }
