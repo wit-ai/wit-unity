@@ -16,7 +16,9 @@ using UnityEditor;
 
 namespace com.facebook.witai.data
 {
+    #if !WIT_DISABLE_UI
     [CreateAssetMenu(fileName = "WitConfiguration", menuName = "Wit/Configuration", order = 1)]
+    #endif
     public class WitConfiguration : ScriptableObject
     {
         [HideInInspector]

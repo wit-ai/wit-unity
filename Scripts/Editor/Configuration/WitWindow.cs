@@ -18,12 +18,14 @@ namespace com.facebook.witai.configuration
             ? WindowStyles.Editor
             : WindowStyles.Themed;
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Window/Wit/Wit Configuration")]
         public static void ShowWindow()
         {
             WitWindow window = GetWindow<WitWindow>("Welcome to Wit.ai");
             window.maxSize = new Vector2(450, 686);
         }
+        #endif
 
         private Texture2D tex;
         private bool manualToken;

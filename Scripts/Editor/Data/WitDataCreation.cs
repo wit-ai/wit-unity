@@ -29,7 +29,9 @@ namespace com.facebook.witai.Data
             return null;
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Add Wit to Scene")]
+        #endif
         public static void AddWitToScene()
         {
             var witGo = new GameObject();
@@ -38,7 +40,9 @@ namespace com.facebook.witai.Data
             wit.Configuration = FindDefaultWitConfig();
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/String Value")]
+        #endif
         public static void WitStringValue()
         {
             CreateStringValue("");
@@ -51,7 +55,9 @@ namespace com.facebook.witai.Data
             return asset;
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/Float Value")]
+        #endif
         public static void WitFloatValue()
         {
             CreateFloatValue("");
@@ -64,7 +70,9 @@ namespace com.facebook.witai.Data
             return asset;
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/Int Value")]
+        #endif
         public static void WitIntValue()
         {
             CreateStringValue("");

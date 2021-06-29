@@ -13,7 +13,9 @@ using UnityEngine;
 
 namespace com.facebook.witai.callbackhandlers
 {
+    #if !WIT_DISABLE_UI
     [CustomEditor(typeof(SimpleIntentHandler))]
+    #endif
     public class SimpleIntentHandlerEditor : Editor
     {
         private SimpleIntentHandler handler;

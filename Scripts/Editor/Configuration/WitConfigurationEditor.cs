@@ -11,7 +11,9 @@ using com.facebook.witai.data;
 using UnityEditor;
 using UnityEngine;
 
+#if !WIT_DISABLE_UI
 [CustomEditor(typeof(WitConfiguration))]
+#endif
 public class WitConfigurationEditor : Editor
 {
     private WitConfiguration configuration;
