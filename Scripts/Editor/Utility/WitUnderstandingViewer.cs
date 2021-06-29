@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using com.facebook.witai.callbackhandlers;
-using com.facebook.witai.data;
 using com.facebook.witai.Data;
 using com.facebook.witai.lib;
 using UnityEditor;
@@ -55,7 +54,9 @@ namespace com.facebook.witai.utility
             }
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Window/Wit/Understanding Viewer")]
+        #endif
         static void Init()
         {
             WitUnderstandingViewer window = EditorWindow.GetWindow(typeof(WitUnderstandingViewer)) as WitUnderstandingViewer;
@@ -110,6 +111,7 @@ namespace com.facebook.witai.utility
                 });
                 wit.events.OnResponse.AddListener(ShowResponse);
                 status = $"Watching {wit.name} for responses.";
+                Repaint();
             }
         }
 
@@ -212,6 +214,7 @@ namespace com.facebook.witai.utility
             response = r;
             loading = false;
             status = $"Response time: {requestLength}";
+            Repaint();
         }
 
         private void WatchForResponse()

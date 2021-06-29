@@ -10,7 +10,6 @@ using UnityEngine;
 
 namespace com.facebook.witai.data
 {
-    [CreateAssetMenu(fileName = "WitValue", menuName = "WitValue")]
     public abstract class WitValue : ScriptableObject
     {
         [SerializeField] public string path;

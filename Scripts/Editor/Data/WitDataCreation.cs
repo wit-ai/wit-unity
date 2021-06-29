@@ -17,7 +17,32 @@ namespace com.facebook.witai.Data
     {
         const string PATH_KEY = "Facebook::Wit::ValuePath";
 
+        public static WitConfiguration FindDefaultWitConfig()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
+            if(guids.Length > 0)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
+            }
+
+            return null;
+        }
+
+        #if !WIT_DISABLE_UI
+        [MenuItem("Assets/Create/Wit/Add Wit to Scene")]
+        #endif
+        public static void AddWitToScene()
+        {
+            var witGo = new GameObject();
+            witGo.name = "Wit";
+            var wit = witGo.AddComponent<Wit>();
+            wit.Configuration = FindDefaultWitConfig();
+        }
+
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/String Value")]
+        #endif
         public static void WitStringValue()
         {
             CreateStringValue("");
@@ -30,7 +55,9 @@ namespace com.facebook.witai.Data
             return asset;
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/Float Value")]
+        #endif
         public static void WitFloatValue()
         {
             CreateFloatValue("");
@@ -43,7 +70,9 @@ namespace com.facebook.witai.Data
             return asset;
         }
 
+        #if !WIT_DISABLE_UI
         [MenuItem("Assets/Create/Wit/Values/Int Value")]
+        #endif
         public static void WitIntValue()
         {
             CreateStringValue("");

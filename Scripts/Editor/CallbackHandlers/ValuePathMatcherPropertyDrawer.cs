@@ -12,7 +12,9 @@ using UnityEngine;
 
 namespace com.facebook.witai.callbackhandlers
 {
+    #if !WIT_DISABLE_UI
     [CustomPropertyDrawer(typeof(ValuePathMatcher))]
+    #endif
     public class ValuePathMatcherPropertyDrawer : PropertyDrawer
     {
         private string currentEditPath;

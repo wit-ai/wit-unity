@@ -47,7 +47,15 @@ namespace com.facebook.witai.samples.shapes
 
         public void OnResponse(WitResponseNode response)
         {
-            if (!showJson) textArea.text = response["text"];
+            if (!string.IsNullOrEmpty(response["text"]))
+            {
+                textArea.text = "I heard: " + response["text"];
+            }
+            else
+            {
+                textArea.text =
+                    "Try pressing the Activate button and saying \"Make the cube red\"";
+            }
         }
 
         public void OnError(string error, string message)
@@ -60,7 +68,6 @@ namespace com.facebook.witai.samples.shapes
             if (wit.Active) wit.Deactivate();
             else
             {
-                textArea.text = "The mic is active, start speaking now.";
                 wit.Activate();
             }
         }
