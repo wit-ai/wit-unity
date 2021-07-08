@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Text;
 using com.facebook.witai.data;
 
 namespace com.facebook.witai
@@ -60,13 +61,26 @@ namespace com.facebook.witai
         }
 
         /// <summary>
+        /// Requests a list of utterances
+        /// </summary>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        public static WitRequest ListUtterancesRequest(this WitConfiguration config)
+        {
+            return new WitRequest(config, "utterances");
+        }
+
+        #region IDE Only Requests
+        #if UNITY_EDITOR
+
+        /// <summary>
         /// Requests a list of available entites
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
         public static WitRequest ListEntitiesRequest(this WitConfiguration config)
         {
-            return new WitRequest(config, "entities");
+            return new WitRequest(config, "entities", true);
         }
 
         /// <summary>
@@ -77,17 +91,7 @@ namespace com.facebook.witai
         /// <returns></returns>
         public static WitRequest GetEntityRequest(this WitConfiguration config, string entityName)
         {
-            return new WitRequest(config, $"entities/{entityName}");
-        }
-
-        /// <summary>
-        /// Requests a list of utterances
-        /// </summary>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public static WitRequest ListUtterancesRequest(this WitConfiguration config)
-        {
-            return new WitRequest(config, "utterances");
+            return new WitRequest(config, $"entities/{entityName}", true);
         }
 
         /// <summary>
@@ -97,7 +101,7 @@ namespace com.facebook.witai
         /// <returns></returns>
         public static WitRequest ListAppsRequest(this WitConfiguration config, int limit, int offset = 0)
         {
-            return new WitRequest(config, "apps",
+            return new WitRequest(config, "apps", true,
                 QueryParam("limit", limit.ToString()),
                 QueryParam("offset", offset.ToString()));
         }
@@ -110,7 +114,27 @@ namespace com.facebook.witai
         /// <returns></returns>
         public static WitRequest GetAppRequest(this WitConfiguration config, string appId)
         {
-            return new WitRequest(config, $"apps/{appId}");
+            return new WitRequest(config, $"apps/{appId}", true);
         }
+
+        /// <summary>
+        /// Requests a client token for an application
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="appId">The id of the app as it is defined in wit.ai</param>
+        /// <param name="refresh">Should the token be refreshed</param>
+        /// <returns></returns>
+        public static WitRequest GetClientToken(this WitConfiguration config, string appId, bool refresh = false)
+        {
+            var request = new WitRequest(config, $"apps/{appId}/client_tokens", true)
+            {
+                postContentType = "application/json",
+                postData = Encoding.ASCII.GetBytes("{\"refresh\"=" + refresh.ToString().ToLower() + "\"}")
+            };
+
+            return request;
+        }
+        #endif
+        #endregion
     }
 }

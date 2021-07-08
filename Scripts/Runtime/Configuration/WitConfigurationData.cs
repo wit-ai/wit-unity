@@ -39,6 +39,6 @@ namespace com.facebook.witai.data
             onUpdateComplete?.Invoke();
         }
 
-        protected abstract void UpdateData(WitResponseNode data);
+        public abstract void UpdateData(WitResponseNode data);
     }
 }

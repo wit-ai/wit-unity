@@ -6,18 +6,44 @@
  */
 
 using System;
+using System.Runtime.CompilerServices;
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEngine;
+
 #endif
 
 public class WitAuthUtility
 {
     public static bool IsIDETokenValid => Tokens.Length == 3;
+
+    private static string ideToken;
     public static string IDEToken
     {
 #if UNITY_EDITOR
-        get { return EditorPrefs.GetString("Wit::IDEToken", ""); }
-        set { EditorPrefs.SetString("Wit::IDEToken", value); }
+        get
+        {
+            if (null == ideToken)
+            {
+                try
+                {
+                    ideToken = EditorPrefs.GetString("Wit::IDEToken", "");
+                }
+                catch (Exception e)
+                {
+                    // This will happen if we don't prime the ide token on the main thread and
+                    // we access the server token editorpref value in a request.
+                    Debug.LogError(e.Message);
+                }
+            }
+
+            return ideToken;
+        }
+        set
+        {
+            ideToken = value;
+            EditorPrefs.SetString("Wit::IDEToken", ideToken);
+        }
 #else
             get => "";
 #endif
@@ -35,21 +61,62 @@ public class WitAuthUtility
 #endif
     }
 
+    public bool IsServerTokenValid
+    {
+        get
+        {
+            var token = ServerToken;
+            return null != token && token.Length == 20;
+        }
+    }
+
+    private static string serverToken;
     public static string ServerToken
     {
 #if UNITY_EDITOR
-        get => Tokens.Length >= 2 ? Tokens[1] : null;
+        get
+        {
+            if (null == serverToken)
+            {
+                try
+                {
+                    serverToken = EditorPrefs.GetString("Wit::ServerToken", "");
+                }
+                catch (Exception e)
+                {
+                    // This will happen if we don't prime the server token on the main thread and
+                    // we access the server token editorpref value in a request.
+                    Debug.LogError(e.Message);
+                }
+            }
+
+            if (string.IsNullOrEmpty(serverToken) && Tokens.Length >= 2)
+            {
+                serverToken = Tokens[1];
+            }
+
+            return serverToken;
+        }
+        set
+        {
+            serverToken = value;
+            EditorPrefs.SetString("Wit::ServerToken", serverToken);
+        }
 #else
         get => "";
 #endif
     }
 
-    public static string ClientToken
+    public static void InitEditorTokens()
     {
-#if UNITY_EDITOR
-        get => Tokens.Length >= 3 ? Tokens[2] : null;
-#else
-        get => "";
-#endif
+        if (null == serverToken)
+        {
+            serverToken = EditorPrefs.GetString("Wit::ServerToken", "");
+        }
+
+        if (null == ideToken)
+        {
+            ideToken = EditorPrefs.GetString("Wit::IDEToken", "");
+        }
     }
 }

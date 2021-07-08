@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using com.facebook.witai;
 using com.facebook.witai.data;
 using UnityEditor;
 using UnityEngine;
@@ -48,6 +49,7 @@ public class WitConfigurationEditor : Editor
 
     public void OnEnable()
     {
+        WitAuthUtility.InitEditorTokens();
         configuration = target as WitConfiguration;
         configuration?.UpdateData(() =>
         {
@@ -92,22 +94,13 @@ public class WitConfigurationEditor : Editor
             GUILayout.EndHorizontal();
 
 
-            if (configuration && GUILayout.Button("Get Configuration from IDE Token"))
+            if (configuration && GUILayout.Button("Get Configuration"))
             {
-                configuration.clientAccessToken = WitAuthUtility.ClientToken;
-                if (WitAuthUtility.AppId != configuration.application.id)
-                {
-                    configuration.application = new WitApplication()
-                    {
-                        id = WitAuthUtility.AppId,
-                        witConfiguration = configuration
-                    };
-                }
-                configuration.UpdateData(() =>
+                configuration.FetchAppConfigFromServerToken(() =>
                 {
                     Repaint();
+                    appConfigurationFoldout = false;
                 });
-                appConfigurationFoldout = false;
             }
         }
 

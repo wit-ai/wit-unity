@@ -85,6 +85,9 @@ namespace com.facebook.witai
 
         private bool isActive;
 
+        public byte[] postData;
+        public string postContentType;
+
         /// <summary>
         /// Callback called when a response is received from the server
         /// </summary>
@@ -122,6 +125,7 @@ namespace com.facebook.witai
 
         private string statusDescription;
         private bool isRequestStreamActive;
+        private bool isServerAuthRequired;
         public string StatusDescription => statusDescription;
 
         public override string ToString()
@@ -133,6 +137,16 @@ namespace com.facebook.witai
             params QueryParam[] queryParams)
         {
             this.configuration = configuration;
+            this.command = path.Split('/').First();
+            this.path = path;
+            this.queryParams = queryParams;
+        }
+
+        public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
+            params QueryParam[] queryParams)
+        {
+            this.configuration = configuration;
+            this.isServerAuthRequired = isServerAuthRequired;
             this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
@@ -178,7 +192,7 @@ namespace com.facebook.witai
                 return;
             }
 
-            if (string.IsNullOrEmpty(configuration.clientAccessToken))
+            if (!isServerAuthRequired && string.IsNullOrEmpty(configuration.clientAccessToken))
             {
                 statusDescription = "Client access token is not defined. Cannot start request.";
                 Debug.LogError(statusDescription);
@@ -190,24 +204,21 @@ namespace com.facebook.witai
             request = (HttpWebRequest) WebRequest.Create(uri);
             request.Accept = $"application/vnd.wit.{WIT_API_VERSION}+json";
 
-            // Configure auth header
-            switch (command)
+            if (isServerAuthRequired)
             {
-                case "entities":
-                case "app":
-                case "apps":
-#if UNITY_EDITOR
-                    request.Headers["Authorization"] =
-                        $"Bearer {WitAuthUtility.ServerToken}";
-                    break;
-#else
-                    throw new Exception($"The {command} endpoint is not available outside the editor.");
-                    break;
-#endif
-                default:
-                    request.Headers["Authorization"] =
-                        $"Bearer {configuration.clientAccessToken.Trim()}";
-                    break;
+                request.Headers["Authorization"] =
+                    $"Bearer {WitAuthUtility.ServerToken}";
+            }
+            else
+            {
+                request.Headers["Authorization"] =
+                    $"Bearer {configuration.clientAccessToken.Trim()}";
+            }
+
+            if (null != postContentType)
+            {
+                request.Method = "POST";
+                request.ContentType = postContentType;
             }
 
             // Configure additional headers
@@ -288,6 +299,11 @@ namespace com.facebook.witai
         private void HandleRequestStream(IAsyncResult ar)
         {
             stream = request.EndGetRequestStream(ar);
+            if (null != postData)
+            {
+                stream.Write(postData, 0, postData.Length);
+            }
+
             if (null == onInputStreamReady)
             {
                 CloseRequestStream();

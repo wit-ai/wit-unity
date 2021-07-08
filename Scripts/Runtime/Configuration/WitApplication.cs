@@ -26,7 +26,7 @@ namespace com.facebook.witai.data
             return witConfiguration.GetAppRequest(id);
         }
 
-        protected override void UpdateData(WitResponseNode appWitResponse)
+        public override void UpdateData(WitResponseNode appWitResponse)
         {
             id = appWitResponse["id"].Value;
             name = appWitResponse["name"].Value;

@@ -46,6 +46,8 @@ namespace com.facebook.witai.configuration
 
         protected override void OnEnable()
         {
+            WitAuthUtility.InitEditorTokens();
+
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
@@ -95,13 +97,7 @@ namespace com.facebook.witai.configuration
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
 
-                asset.application = new WitApplication()
-                {
-                    id = WitAuthUtility.AppId,
-                    witConfiguration = asset
-                };
-                asset.application.UpdateData();
-                asset.clientAccessToken = WitAuthUtility.ClientToken;
+                asset.FetchAppConfigFromServerToken(Repaint);
 
                 path = path.Substring(Application.dataPath.Length - 6);
                 AssetDatabase.CreateAsset(asset, path);
