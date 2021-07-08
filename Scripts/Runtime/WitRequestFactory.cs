@@ -126,10 +126,12 @@ namespace com.facebook.witai
         /// <returns></returns>
         public static WitRequest GetClientToken(this WitConfiguration config, string appId, bool refresh = false)
         {
+            var postString = "{\"refresh\":" + refresh.ToString().ToLower() + "}";
+            var postData = Encoding.UTF8.GetBytes(postString);
             var request = new WitRequest(config, $"apps/{appId}/client_tokens", true)
             {
                 postContentType = "application/json",
-                postData = Encoding.ASCII.GetBytes("{\"refresh\"=" + refresh.ToString().ToLower() + "\"}")
+                postData = postData
             };
 
             return request;

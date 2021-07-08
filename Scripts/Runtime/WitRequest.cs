@@ -219,6 +219,7 @@ namespace com.facebook.witai
             {
                 request.Method = "POST";
                 request.ContentType = postContentType;
+                request.ContentLength = postData.Length;
             }
 
             // Configure additional headers
@@ -302,17 +303,19 @@ namespace com.facebook.witai
             if (null != postData)
             {
                 stream.Write(postData, 0, postData.Length);
-            }
-
-            if (null == onInputStreamReady)
-            {
                 CloseRequestStream();
             }
             else
             {
-                onInputStreamReady.Invoke(this);
+                if (null == onInputStreamReady)
+                {
+                    CloseRequestStream();
+                }
+                else
+                {
+                    onInputStreamReady.Invoke(this);
+                }
             }
-
         }
 
         /// <summary>

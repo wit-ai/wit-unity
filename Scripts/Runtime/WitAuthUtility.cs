@@ -61,12 +61,12 @@ public class WitAuthUtility
 #endif
     }
 
-    public bool IsServerTokenValid
+    public static bool IsServerTokenValid
     {
         get
         {
             var token = ServerToken;
-            return null != token && token.Length == 20;
+            return null != token && token.Length == 32;
         }
     }
 

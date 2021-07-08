@@ -99,7 +99,7 @@ namespace com.facebook.witai
             Label.wordWrap = true;
 
             LabelHeader = new GUIStyle(Label);
-            LabelHeader.fontSize = 64;
+            LabelHeader.fontSize = 48;
 
             LabelHeader2 = new GUIStyle(Label);
             LabelHeader2.fontSize = 32;
