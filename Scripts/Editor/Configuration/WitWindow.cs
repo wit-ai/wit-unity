@@ -61,6 +61,7 @@ namespace com.facebook.witai.configuration
         {
             // Recommended max size based on EditorWindow.maxSize doc for resizable window.
             maxSize = new Vector2(4000, 4000);
+            titleContent = new GUIContent("Wit Configuration");
 
             GUILayout.BeginVertical(EditorStyles.helpBox);
             var token = EditorGUILayout.PasswordField("Server Access Token", WitAuthUtility.ServerToken);
