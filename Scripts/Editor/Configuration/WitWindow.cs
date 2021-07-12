@@ -78,7 +78,7 @@ namespace com.facebook.witai.configuration
             }
             GUILayout.EndHorizontal();
 
-            if (configChanged && witConfiguration || !witEditor)
+            if (witConfiguration && (configChanged || !witEditor))
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.OnEnable();
