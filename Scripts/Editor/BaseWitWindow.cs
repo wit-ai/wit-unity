@@ -65,7 +65,7 @@ namespace com.facebook.witai
         protected virtual void OnGUI()
         {
             minSize = new Vector2(450, 300);
-            DrawHeader();
+            DrawHeader(WindowStyle == WindowStyles.Themed ? WitStyles.BackgroundWhite : WitStyles.BackgroundWitDark);
 
             if (WindowStyle == WindowStyles.Themed)
             {
@@ -84,7 +84,7 @@ namespace com.facebook.witai
 
         protected void DrawHeader(GUIStyle headerBackground = null)
         {
-            GUILayout.BeginVertical(null == headerBackground ? WitStyles.BackgroundWhite25P : headerBackground);
+            GUILayout.BeginVertical(null == headerBackground ? WitStyles.BackgroundWhite : headerBackground);
             GUILayout.Space(16);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();

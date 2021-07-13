@@ -84,5 +84,78 @@ namespace com.facebook.witai.data
                 entity.UpdateData();
             }
         }
+
+        #if UNITY_EDITOR
+        /// <summary>
+        /// Gets the app info and client id that is associated with the server token being used
+        /// </summary>
+        /// <param name="action"></param>
+        public void FetchAppConfigFromServerToken(Action action)
+        {
+            FetchApplicationFromServerToken(() =>
+            {
+                FetchClientToken(() =>
+                {
+                    UpdateData(action);
+                });
+            });
+        }
+
+        private void FetchApplicationFromServerToken(Action response)
+        {
+            var listRequest = this.ListAppsRequest(10000);
+            listRequest.onResponse = (r) =>
+            {
+                if (r.StatusCode == 200)
+                {
+                    var applications = r.ResponseData.AsArray;
+                    for (int i = 0; i < applications.Count; i++)
+                    {
+                        if (applications[i]["is_app_for_token"].AsBool)
+                        {
+                            if (null != application)
+                            {
+                                application.UpdateData(applications[i]);
+                            }
+                            else
+                            {
+                                application = WitApplication.FromJson(applications[i]);
+                            }
+
+                            break;
+                        }
+                    }
+
+                    response?.Invoke();
+                }
+                else
+                {
+                    Debug.LogError(r.StatusDescription);
+                }
+            };
+            listRequest.Request();
+        }
+
+        private void FetchClientToken(Action action)
+        {
+            if (!string.IsNullOrEmpty(application?.id))
+            {
+                var tokenRequest = this.GetClientToken(application.id);
+                tokenRequest.onResponse = (r) =>
+                {
+                    if (r.StatusCode == 200)
+                    {
+                        clientAccessToken = r.ResponseData["client_token"];
+                        action?.Invoke();
+                    }
+                    else
+                    {
+                        Debug.LogError(r.StatusDescription);
+                    }
+                };
+                tokenRequest.Request();
+            }
+        }
+#endif
     }
 }

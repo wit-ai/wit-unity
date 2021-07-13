@@ -14,7 +14,7 @@ namespace com.facebook.witai.configuration
 {
     public class WitWindow : BaseWitWindow
     {
-        protected override WindowStyles WindowStyle => WitAuthUtility.IsIDETokenValid
+        protected override WindowStyles WindowStyle => WitAuthUtility.IsServerTokenValid
             ? WindowStyles.Editor
             : WindowStyles.Themed;
 
@@ -34,7 +34,7 @@ namespace com.facebook.witai.configuration
 
         protected override void OnDrawContent()
         {
-            if (!WitAuthUtility.IsIDETokenValid)
+            if (!WitAuthUtility.IsServerTokenValid)
             {
                 DrawWelcome();
             }
@@ -46,6 +46,8 @@ namespace com.facebook.witai.configuration
 
         protected override void OnEnable()
         {
+            WitAuthUtility.InitEditorTokens();
+
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
@@ -59,12 +61,13 @@ namespace com.facebook.witai.configuration
         {
             // Recommended max size based on EditorWindow.maxSize doc for resizable window.
             maxSize = new Vector2(4000, 4000);
+            titleContent = new GUIContent("Wit Configuration");
 
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            var token = EditorGUILayout.PasswordField("IDE Token", WitAuthUtility.IDEToken);
-            if (token != WitAuthUtility.IDEToken)
+            var token = EditorGUILayout.PasswordField("Server Access Token", WitAuthUtility.ServerToken);
+            if (token != WitAuthUtility.ServerToken)
             {
-                WitAuthUtility.IDEToken = token;
+                WitAuthUtility.ServerToken = token;
                 RefreshContent();
             }
 
@@ -76,7 +79,7 @@ namespace com.facebook.witai.configuration
             }
             GUILayout.EndHorizontal();
 
-            if (configChanged && witConfiguration)
+            if (witConfiguration && (configChanged || !witEditor))
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.OnEnable();
@@ -95,13 +98,7 @@ namespace com.facebook.witai.configuration
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
 
-                asset.application = new WitApplication()
-                {
-                    id = WitAuthUtility.AppId,
-                    witConfiguration = asset
-                };
-                asset.application.UpdateData();
-                asset.clientAccessToken = WitAuthUtility.ClientToken;
+                asset.FetchAppConfigFromServerToken(Repaint);
 
                 path = path.Substring(Application.dataPath.Length - 6);
                 AssetDatabase.CreateAsset(asset, path);
@@ -129,17 +126,17 @@ namespace com.facebook.witai.configuration
             BeginCenter(296);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Paste your IDE Token here", WitStyles.Label);
+            GUILayout.Label("Paste your Server Access Token here", WitStyles.Label);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(WitStyles.PasteIcon, WitStyles.Label))
             {
-                WitAuthUtility.IDEToken = EditorGUIUtility.systemCopyBuffer;
+                WitAuthUtility.ServerToken = EditorGUIUtility.systemCopyBuffer;
             }
             GUILayout.EndHorizontal();
-            var token = EditorGUILayout.PasswordField(WitAuthUtility.IDEToken, WitStyles.TextField);
-            if (token != WitAuthUtility.IDEToken)
+            var token = EditorGUILayout.PasswordField(WitAuthUtility.ServerToken, WitStyles.TextField);
+            if (token != WitAuthUtility.ServerToken)
             {
-                WitAuthUtility.IDEToken = token;
+                WitAuthUtility.ServerToken = token;
             }
             EndCenter();
 

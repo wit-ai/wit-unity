@@ -22,12 +22,13 @@ namespace com.facebook.witai
         public static Texture2D TextureWitBlueBg;
         public static Texture2D TextureFBBlue;
         public static Texture2D TextureTextField;
-
+        public static Texture2D TextureWitDark;
         public static GUIStyle BackgroundWhite;
         public static GUIStyle BackgroundWhite25P;
         public static GUIStyle BackgroundBlack25P;
         public static GUIStyle BackgroundWitBlue;
         public static GUIStyle BackgroundFBBlue;
+        public static GUIStyle BackgroundWitDark;
 
         public static GUIStyle LabelHeader;
         public static GUIStyle LabelHeader2;
@@ -77,6 +78,10 @@ namespace com.facebook.witai
             TextureTextField.SetPixel(0, 0, new Color(.85f, .85f, .95f));
             TextureTextField.Apply();
 
+            TextureWitDark = new Texture2D(1, 1);
+            TextureWitDark.SetPixel(0,0, new Color(0.267f, 0.286f, 0.31f));
+            TextureWitDark.Apply();
+
             BackgroundWhite = new GUIStyle();
             BackgroundWhite.normal.background = TextureWhite;
 
@@ -90,6 +95,9 @@ namespace com.facebook.witai
             BackgroundBlack25P.normal.background = TextureBlack25P;
             BackgroundBlack25P.normal.textColor = Color.white;
 
+            BackgroundWitDark = new GUIStyle();
+            BackgroundWitDark.normal.background = TextureWitDark;
+
             FacebookButton = new GUIStyle(EditorStyles.miniButton);
             FacebookButton.normal.background = TextureWitBlueBg;
 
@@ -99,7 +107,7 @@ namespace com.facebook.witai
             Label.wordWrap = true;
 
             LabelHeader = new GUIStyle(Label);
-            LabelHeader.fontSize = 64;
+            LabelHeader.fontSize = 48;
 
             LabelHeader2 = new GUIStyle(Label);
             LabelHeader2.fontSize = 32;
