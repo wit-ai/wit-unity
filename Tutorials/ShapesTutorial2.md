@@ -88,25 +88,18 @@ Once you’ve logged in, you’ll be taken to your apps page ([https://wit.ai/ap
 
 Click the **New App** button.
 
-
-![alt_text](images/image13.png "image_tooltip")
+![img27]https://user-images.githubusercontent.com/6325818/125677503-d6c4e08a-99e7-4385-8479-b1b525617a27.png)
 
 
 Provide a name for your app.  As a general rule, you should use lowercase characters with underscores separating words and numbers.
 
+![image4](https://user-images.githubusercontent.com/6325818/125677623-009df5fa-5114-4c2d-a061-a0d9e917b61e.png)
 
-![alt_text](images/image14.png "image_tooltip")
-
-
- \
 Choose **Create** and your new application’s **Understanding** page will be displayed.
 
 
  
-
-
-![alt_text](images/image15.png "image_tooltip")
- \
+![image5](https://user-images.githubusercontent.com/6325818/125677647-edaba7fd-8a4d-4134-81c4-4aaad8027afd.png)
 
 
 
@@ -120,15 +113,12 @@ In this tutorial, you want to control the color of the shapes you’ve created. 
 Choose **Intents **under the **Management **section of the left bar, and then click **+ Intent**. 
 
 
-![alt_text](images/image16.png "image_tooltip")
+![image18](https://user-images.githubusercontent.com/6325818/125677772-a4a15607-3ec5-4922-8e5b-7a5fe695b657.png)
 
 
 Under the **New custom intent**, enter the name of your intent (in this case “change_color”), and then choose **Next**.
 
-
-
-![alt_text](images/image17.png "image_tooltip")
-
+![image6](https://user-images.githubusercontent.com/6325818/125678065-d0b5afb4-6bdd-4d59-bfbf-7a213ab37f17.png)
 
 Once you have created your intent, you now need to train the Wit.ai model. 
 
@@ -139,16 +129,11 @@ With an intent in place, you can now add an utterance. Utterances are phrases th
 
 Choose the **Understanding **tab on the left. In the **Utterance** field, enter “make the cube green.” This will be the first phrase you’ll use to train your Wit app. When the user gives a command such as “make the cube green” or “the cube should be green,” you should get a callback in Unity with the name of the shape to change and its new color.
 
-
-
-![alt_text](images/image18.png "image_tooltip")
-
+![image31](https://user-images.githubusercontent.com/6325818/125678164-973d4448-5418-4dab-a375-096ce08c6764.png)
 
 With your first utterance, you need to either choose an existing intent from the dropdown box or add an intent. In this case, choose the “change_color” intent you created earlier.
 
-
-![alt_text](images/image19.png "image_tooltip")
-
+![image12](https://user-images.githubusercontent.com/6325818/125678227-9d6606f2-74cb-4cd7-8534-113ba9c2ac67.png)
 
 You also want to label parts of the utterance that are important and assign it an _entity_ type to train the Wit app to identify them. In this case, the words “cube” and “green” 
 
@@ -157,34 +142,21 @@ After training the app, it will also start to automatically recognize some entit
 To do this, under **Utterance**, highlight “cube” and then enter “shape” in the **Entity for “cube”** field. Click **+ Create Entity**.
 
 
-![alt_text](images/image20.png "image_tooltip")
-
+![image16](https://user-images.githubusercontent.com/6325818/125678374-e3ed4cfa-b855-41c6-811e-e5fe9d931979.png)
 
 “Cube” is now highlighted with the same color shown for the entity.
 
-
-
-
-![alt_text](images/image21.png "image_tooltip")
-
+![image25](https://user-images.githubusercontent.com/6325818/125678410-d6aeb196-f212-4c53-ba73-ca84c994360c.png)
 
 Now add a color entity using the same process. 
 
-
-
-
-![alt_text](images/image22.png "image_tooltip")
-
+![image30](https://user-images.githubusercontent.com/6325818/125678523-b62d4cfe-9d6c-4250-8e1a-b44940f004ea.png)
 
 Click **Train and Validate** to train your app. 
 
 After training, the **Utterance **field will start to identify entities that are included. While it may successfully populate the intent from the start, it can sometimes miss on matching what goes in the entities. If this is an issue, try training several phrases and then tweaking the NLU’s mistakes along the way. Highlight the word that should be matched and set the correct entity. You can then click the **X** next to the incorrect entities to remove them.
 
-
-
-![alt_text](images/image23.png "image_tooltip")
-
-
+![image28](https://user-images.githubusercontent.com/6325818/125678447-04910502-5df8-4c98-b2b1-5250d9bbe974.png)
 
 ### Improve Matches and Provide Synonyms
 
@@ -194,27 +166,16 @@ Note: This may improve the precision of your app, but not the recall. For more i
 
 To do this, open the **Entities **tab under **Management**. 
 
-
-
-
-
-![alt_text](images/image24.png "image_tooltip")
-
+![image23](https://user-images.githubusercontent.com/6325818/125678581-f127cee5-7895-4a46-a598-16be557770ac.png)
 
 Choose a shape entity to open the entity configuration page.
 
-
-
-
-![alt_text](images/image25.png "image_tooltip")
+![image26](https://user-images.githubusercontent.com/6325818/125678795-70950faa-a4c7-4068-9d37-96c67c8b240f.png)
 
 
 **Lookup Strategies**, select **Keywords**, and then add the names and likely synonyms of each shape. In the **Keyword** field, make sure you match the case of the game object you created in Unity, so it can find that game object when the intent callback is triggered.  
 
-
-
-
-![alt_text](images/image26.png "image_tooltip")
+![image14](https://user-images.githubusercontent.com/6325818/125678839-276179b0-0412-4eb7-ac1a-4dafcac292fb.png)
 
 
 Notice the extra synonym for cylinder. This permits you to get the text “cylinder” back from the intent callback if a user says “tube.”
@@ -226,9 +187,7 @@ Now we need to add the main Wit component to your scene.
 
 Add a new GameObject to your scene and name it “Wit.” Then, add a Wit component to that GameObject.
 
-
-
-![alt_text](images/image27.png "image_tooltip")
+![image17](https://user-images.githubusercontent.com/6325818/125678904-fd784dfe-8c17-4d23-8c68-102fc941f3a4.png)
 
 
 Set the configuration of the Wit component to use the configuration you created. Wit is now ready to be used in your scene. 
@@ -240,18 +199,13 @@ To see how an interaction might behave in Unity, you can test your utterances in
 
 Select **Window **→ **Wit **→ **Understanding Viewer**.
 
-
-
-![alt_text](images/image28.png "image_tooltip")
-
+![understanding view](https://user-images.githubusercontent.com/6325818/125678937-f66b29d7-11ca-4986-8001-4bb5302157e3.png)
 
 Enter “the cube should be red” in the **Utterance **field and click **Submit**. 
 
 The result returned from the utterance can be seen below in JSON. You can browse the hierarchy of the data that is returned here.
 
-
-
-![alt_text](images/image29.png "image_tooltip")
+![image37](https://user-images.githubusercontent.com/6325818/125679011-1627fb01-dbbb-4365-a06d-9b14c9a17c5b.png)
 
 
 Under the **entities **→ **color:color** node, for example, you can select **value = red**. You can use this to copy either the data path or a code segment that directly accesses the data via a WitResponseData node. If you’ve selected a game object, you’ll also see options to add components to the game object that will receive callbacks when they match this intent.
@@ -263,34 +217,27 @@ Next, you’ll match the response on the “change_color” intent when it has c
 
 Create a game object under the Wit game object you added earlier to your scene and call it “Color Handler.” Select **Window **→ **Wit **→ **Understanding Viewer** to return to the Wit Understanding window. Under the **value = red** node, select **Add Multi Value Handler to Color Handler**. 
 
-
-
-![alt_text](images/image30.png "image_tooltip")
+![multi value handler](https://user-images.githubusercontent.com/6325818/125679066-2230abc1-4065-4002-9bc3-b0a4d91ffd46.png)
 
 
 Under the **shape:shape** node, find the shape value. 
 
 With the “Color Handler” game object still selected, choose **Add value to the Multi Value Handler**.
 
-
-
-
-![alt_text](images/image31.png "image_tooltip")
+![other multi value handler](https://user-images.githubusercontent.com/6325818/125679206-3aadcf25-f462-4a35-a068-7e7fc2685e04.png)
 
 
 In the **Multi Value Handler**, two paths should now be listed under **Value Paths**.
 
-
-![alt_text](images/image32.png "image_tooltip")
+![image38](https://user-images.githubusercontent.com/6325818/125679285-5ce272c6-1330-42d5-bca7-e3a2e4f1e1d3.png)
 
 
 These values are the paths you can manually enter to get the entity values. 
 
 
-    _witResponse["entities"]["shape:shape"][0]["value"].Value_
+    witResponse["entities"]["shape:shape"][0]["value"].Value
 
-
-    _witResponse["entities"]["color:color"][0]["value"].Value_
+    witResponse["entities"]["color:color"][0]["value"].Value
 
 You can also reference these values directly using the **Copy Code to Clipboard** option.
 
@@ -335,19 +282,13 @@ Add this script to the Shapes game object we created earlier.
 Click the Color Handler game object and locate the **On Multi Value Event (String[])** at the bottom of the component. Choose **+** to add a new event callback. 
 
 
-
-
-![alt_text](images/image33.png "image_tooltip")
-
+![image39](https://user-images.githubusercontent.com/6325818/125679396-b9abbd7c-f7fa-4ead-b252-f9a6445f406c.png)
 
 Drag the Shapes object to the object field and select **ColorChanger **→ **UpdateColor **from the function dropdown. Ensure that you select the dynamic method, so it gets populated with the entity results.
 
 
     
-
-
-![alt_text](images/image34.png "image_tooltip")
-
+![img10](https://user-images.githubusercontent.com/6325818/125679436-68cc6041-ee1a-441b-a76c-caf89ee980f9.png)
 
 
 ## Activation
@@ -396,38 +337,24 @@ public class WitActivation : MonoBehaviour
 
 It is helpful to provide visual feedback to the user, telling them when the microphone is active, and they can tell the shapes to change colors. The simplest way to provide that feedback is to show some text when the microphone is active. This can be done by creating a text UI that tells the user how to activate the microphone and is then updated with the current status. The Wit object has a fold out that contains all of the lifecycle events of a Wit activation.
 
-
-
-
-![alt_text](images/image35.png "image_tooltip")
-
+![image21](https://user-images.githubusercontent.com/6325818/125679572-1ed51cfd-bf62-4b5c-b48b-95f5c468d50c.png)
 
 Here you’ll set the text of a text object to “Listening…” when the microphone is active and then back to “Press the spacebar to begin listening” when the microphone is closed. Start by adding a Text Mesh Pro text field to the scene and setting it to “Press the spacebar to activate.”
 
 
-
-![alt_text](images/image36.png "image_tooltip")
-
+![image32](https://user-images.githubusercontent.com/6325818/125679733-8b28918b-303c-4172-9f22-6ec30368b06e.png)
 
 Next, add callbacks to the **OnStartListening**, **OnStoppedListening**, and **OnResponse** events on the Wit game object. Drag the Text Mesh Pro object into the object field for each of these events and then select the text field from the function dropdown menu. For **OnStartListening**, set the text to “Listening,” for **OnStoppedListening**, set the text to “Processing,” and for **OnResponse**, return to the default text.
 
 
+![image36](https://user-images.githubusercontent.com/6325818/125679796-c7e7211a-d269-4475-bdb6-34460054111c.png)
 
-
-![alt_text](images/image37.png "image_tooltip")
-
-
-
-
-![alt_text](images/image38.png "image_tooltip")
-
+![image11](https://user-images.githubusercontent.com/6325818/125679817-3f41e6e0-00eb-44ee-a13c-acef808c8962.png)
 
 With this done, the project is complete. Press the **Play **button, and once Unity enters play mode, you can press the spacebar to activate Assistant. You can then say “Make the cube red” and the cube will turn red. If you want to see the data come in after a voice command, open the understanding viewer and select the Wit object. This will link the Wit object to the **Understanding Viewer** and all responses will be displayed there.
 
 
-
-![alt_text](images/image39.png "image_tooltip")
-
+![image3](https://user-images.githubusercontent.com/6325818/125679846-d6c8fcb9-0e97-4eb9-bd9f-6976cb8b04ca.png)
 
 
 # Improving Your Results
@@ -440,9 +367,7 @@ At the start, your initial results may not be very accurate, and you may have to
 * Use Wit.ai’s Unity SDK under controlled conditions like a Quest, where you can tweak the microphone sensitivity to work well with the device. 
 * Return to the Wit.ai Understanding page and listen to the log of attempted utterances. You can then enter the correct transcription to help train Wit.ai to better recognize your voice commands.
 
-
-
-![alt_text](images/image40.png "image_tooltip")
+![image34](https://user-images.githubusercontent.com/6325818/125679889-5118fd6a-c750-42b4-baf3-8442a5abf473.png)
 
 
 * Manually enter additional phrases, colors, and so on, into the training portion of Understanding. For example, adding common color names to bias results toward words that are colors supported by the app.
