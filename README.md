@@ -15,7 +15,7 @@ There are a couple ways you can install this plugin in Unity.
 5. In the url box enter "https://github.com/wit-ai/wit-unity.git"
 
 #### Post Install Setup
-Once you have installed the Wit plugin you will need to add your project's IDE Token to your project.
+Once you have installed the Wit plugin you will need to add your project's server token to your project.
 1. Open the Wit configuration window by clicking on Window->Wit->WitConfiguration in the menu bar.
 2. Go to the [Wit.ai](http://wit.ai) website manually or by clicking on "Continue With Facebook" 
 <image src="https://user-images.githubusercontent.com/645359/125703060-59d62659-1dd6-442f-a92d-d8ec142c53d8.png" width=300>
