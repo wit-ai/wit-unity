@@ -18,7 +18,7 @@ In Unity Hub (version 2019.4.x or later), use the **3D** template to create a ne
 
 Under **Window**, choose **Package Manager**.
 
-<img width="241" alt="image29_cool" src="https://user-images.githubusercontent.com/6325818/125675615-1f9b84be-2901-4426-a4b0-f68652013225.png">
+![img](https://user-images.githubusercontent.com/6325818/125675615-1f9b84be-2901-4426-a4b0-f68652013225.png)
 
 
 Click the **+** in the upper right corner and then choose **Add package from git URL**.
@@ -45,7 +45,7 @@ Add four basic shapes to the Shapes game object: a cube, sphere, capsule, and cy
 
 ## Configuring Unity
 
-Open the Wit Configuration window under **Window **→ **Wit **→ **Wit Configuration**.    
+Open the Wit Configuration window under **Window** → **Wit** → **Wit Configuration**.    
 
 ![image](https://user-images.githubusercontent.com/6325818/125676355-34f24cd4-a880-4930-ac13-949cb95a093b.png)
 
@@ -57,7 +57,7 @@ In the Wit configuration window, click **Continue With Facebook** to open up [ht
 
 ## Configuring Wit.ai
 
-Now you need to get the server token that Unity needs to connect to Wit.ai from your application’s **Settings **tab. This token will allow Unity to get information about your app and set up your client token for you, which is then used to make requests when voice or text commands are activated. To get this token, choose the **Settings** tab under **Management**.
+Now you need to get the server token that Unity needs to connect to Wit.ai from your application’s **Settings** tab. This token will allow Unity to get information about your app and set up your client token for you, which is then used to make requests when voice or text commands are activated. To get this token, choose the **Settings** tab under **Management**.
 
 ![image19](https://user-images.githubusercontent.com/6325818/125676759-83e384df-366a-4cca-a9eb-09cb49b344c2.png)
 
@@ -69,7 +69,7 @@ As soon as a valid token is recognized, the post setup configuration page is dis
 
 Now you need to create a Wit configuration scriptable object. On the Wit Configuration page, click **Create**. 
 
-You will be prompted to save your configuration in your **Assets **directory. Close the Wit Configuration page.
+You will be prompted to save your configuration in your **Assets** directory. Close the Wit Configuration page.
 
 
 # Creating and Training Your Wit App
@@ -88,7 +88,7 @@ Once you’ve logged in, you’ll be taken to your apps page ([https://wit.ai/ap
 
 Click the **New App** button.
 
-![img27]https://user-images.githubusercontent.com/6325818/125677503-d6c4e08a-99e7-4385-8479-b1b525617a27.png)
+![img27](https://user-images.githubusercontent.com/6325818/125677503-d6c4e08a-99e7-4385-8479-b1b525617a27.png)
 
 
 Provide a name for your app.  As a general rule, you should use lowercase characters with underscores separating words and numbers.
@@ -110,7 +110,7 @@ In this tutorial, you want to control the color of the shapes you’ve created. 
 
 ### Creating a New Intent
 
-Choose **Intents **under the **Management **section of the left bar, and then click **+ Intent**. 
+Choose **Intents** under the **Management** section of the left bar, and then click **+ Intent**. 
 
 
 ![image18](https://user-images.githubusercontent.com/6325818/125677772-a4a15607-3ec5-4922-8e5b-7a5fe695b657.png)
@@ -127,7 +127,7 @@ Once you have created your intent, you now need to train the Wit.ai model.
 
 With an intent in place, you can now add an utterance. Utterances are phrases that a user may use to change the color of one of the shapes, and you use these to begin training your app. 
 
-Choose the **Understanding **tab on the left. In the **Utterance** field, enter “make the cube green.” This will be the first phrase you’ll use to train your Wit app. When the user gives a command such as “make the cube green” or “the cube should be green,” you should get a callback in Unity with the name of the shape to change and its new color.
+Choose the **Understanding** tab on the left. In the **Utterance** field, enter “make the cube green.” This will be the first phrase you’ll use to train your Wit app. When the user gives a command such as “make the cube green” or “the cube should be green,” you should get a callback in Unity with the name of the shape to change and its new color.
 
 ![image31](https://user-images.githubusercontent.com/6325818/125678164-973d4448-5418-4dab-a375-096ce08c6764.png)
 
@@ -154,7 +154,7 @@ Now add a color entity using the same process.
 
 Click **Train and Validate** to train your app. 
 
-After training, the **Utterance **field will start to identify entities that are included. While it may successfully populate the intent from the start, it can sometimes miss on matching what goes in the entities. If this is an issue, try training several phrases and then tweaking the NLU’s mistakes along the way. Highlight the word that should be matched and set the correct entity. You can then click the **X** next to the incorrect entities to remove them.
+After training, the **Utterance** field will start to identify entities that are included. While it may successfully populate the intent from the start, it can sometimes miss on matching what goes in the entities. If this is an issue, try training several phrases and then tweaking the NLU’s mistakes along the way. Highlight the word that should be matched and set the correct entity. You can then click the **X** next to the incorrect entities to remove them.
 
 ![image28](https://user-images.githubusercontent.com/6325818/125678447-04910502-5df8-4c98-b2b1-5250d9bbe974.png)
 
@@ -164,7 +164,7 @@ You can further improve the accuracy of your app by including synonyms for your 
 
 Note: This may improve the precision of your app, but not the recall. For more information, see [Which entity should I use?](https://wit.ai/docs/recipes#which-entity-should-you-use) in the Wit.ai documentation.
 
-To do this, open the **Entities **tab under **Management**. 
+To do this, open the **Entities** tab under **Management**. 
 
 ![image23](https://user-images.githubusercontent.com/6325818/125678581-f127cee5-7895-4a46-a598-16be557770ac.png)
 
@@ -197,25 +197,25 @@ Set the configuration of the Wit component to use the configuration you created.
 
 To see how an interaction might behave in Unity, you can test your utterances in the Editor. You can also use this tool to grab the intents, entity values, or confidence values you want to use to react to an intent. 
 
-Select **Window **→ **Wit **→ **Understanding Viewer**.
+Select **Window** → **Wit** → **Understanding Viewer**.
 
 ![understanding view](https://user-images.githubusercontent.com/6325818/125678937-f66b29d7-11ca-4986-8001-4bb5302157e3.png)
 
-Enter “the cube should be red” in the **Utterance **field and click **Submit**. 
+Enter “the cube should be red” in the **Utterance** field and click **Submit**. 
 
 The result returned from the utterance can be seen below in JSON. You can browse the hierarchy of the data that is returned here.
 
 ![image37](https://user-images.githubusercontent.com/6325818/125679011-1627fb01-dbbb-4365-a06d-9b14c9a17c5b.png)
 
 
-Under the **entities **→ **color:color** node, for example, you can select **value = red**. You can use this to copy either the data path or a code segment that directly accesses the data via a WitResponseData node. If you’ve selected a game object, you’ll also see options to add components to the game object that will receive callbacks when they match this intent.
+Under the **entities** → **color:color** node, for example, you can select **value = red**. You can use this to copy either the data path or a code segment that directly accesses the data via a WitResponseData node. If you’ve selected a game object, you’ll also see options to add components to the game object that will receive callbacks when they match this intent.
 
 
 ## Consuming Your Entity Values
 
 Next, you’ll match the response on the “change_color” intent when it has color and shape values. 
 
-Create a game object under the Wit game object you added earlier to your scene and call it “Color Handler.” Select **Window **→ **Wit **→ **Understanding Viewer** to return to the Wit Understanding window. Under the **value = red** node, select **Add Multi Value Handler to Color Handler**. 
+Create a game object under the Wit game object you added earlier to your scene and call it “Color Handler.” Select **Window** → **Wit** → **Understanding Viewer** to return to the Wit Understanding window. Under the **value = red** node, select **Add Multi Value Handler to Color Handler**. 
 
 ![multi value handler](https://user-images.githubusercontent.com/6325818/125679066-2230abc1-4065-4002-9bc3-b0a4d91ffd46.png)
 
@@ -284,7 +284,7 @@ Click the Color Handler game object and locate the **On Multi Value Event (Strin
 
 ![image39](https://user-images.githubusercontent.com/6325818/125679396-b9abbd7c-f7fa-4ead-b252-f9a6445f406c.png)
 
-Drag the Shapes object to the object field and select **ColorChanger **→ **UpdateColor **from the function dropdown. Ensure that you select the dynamic method, so it gets populated with the entity results.
+Drag the Shapes object to the object field and select **ColorChanger** → **UpdateColor** from the function dropdown. Ensure that you select the dynamic method, so it gets populated with the entity results.
 
 
     
@@ -351,7 +351,7 @@ Next, add callbacks to the **OnStartListening**, **OnStoppedListening**, and **O
 
 ![image11](https://user-images.githubusercontent.com/6325818/125679817-3f41e6e0-00eb-44ee-a13c-acef808c8962.png)
 
-With this done, the project is complete. Press the **Play **button, and once Unity enters play mode, you can press the spacebar to activate Assistant. You can then say “Make the cube red” and the cube will turn red. If you want to see the data come in after a voice command, open the understanding viewer and select the Wit object. This will link the Wit object to the **Understanding Viewer** and all responses will be displayed there.
+With this done, the project is complete. Press the **Play** button, and once Unity enters play mode, you can press the spacebar to activate Assistant. You can then say “Make the cube red” and the cube will turn red. If you want to see the data come in after a voice command, open the understanding viewer and select the Wit object. This will link the Wit object to the **Understanding Viewer** and all responses will be displayed there.
 
 
 ![image3](https://user-images.githubusercontent.com/6325818/125679846-d6c8fcb9-0e97-4eb9-bd9f-6976cb8b04ca.png)
