@@ -31,6 +31,7 @@ namespace com.facebook.witai.data
 
         public WitApplication Application => application;
 
+        #if UNITY_EDITOR
         public void UpdateData(Action onUpdateComplete = null)
         {
             var intentRequest = this.ListIntentsRequest();
@@ -85,7 +86,6 @@ namespace com.facebook.witai.data
             }
         }
 
-        #if UNITY_EDITOR
         /// <summary>
         /// Gets the app info and client id that is associated with the server token being used
         /// </summary>

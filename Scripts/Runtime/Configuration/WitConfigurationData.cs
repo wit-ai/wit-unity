@@ -16,6 +16,7 @@ namespace com.facebook.witai.data
     {
         [SerializeField] public WitConfiguration witConfiguration;
 
+        #if UNITY_EDITOR
         public void UpdateData(Action onUpdateComplete = null)
         {
             var request = OnCreateRequest();
@@ -40,5 +41,6 @@ namespace com.facebook.witai.data
         }
 
         public abstract void UpdateData(WitResponseNode data);
+        #endif
     }
 }

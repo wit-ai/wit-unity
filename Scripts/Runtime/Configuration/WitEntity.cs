@@ -21,6 +21,7 @@ namespace com.facebook.witai.data
         [SerializeField] public string[] roles;
         [SerializeField] public WitKeyword[] keywords;
 
+        #if UNITY_EDITOR
         protected override WitRequest OnCreateRequest()
         {
             return witConfiguration.GetEntityRequest(name);
@@ -47,5 +48,6 @@ namespace com.facebook.witai.data
             entity.UpdateData(entityWitResponse);
             return entity;
         }
+        #endif
     }
 }

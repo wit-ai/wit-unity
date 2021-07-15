@@ -19,6 +19,7 @@ namespace com.facebook.witai.data
         [SerializeField] public string name;
         [SerializeField] public WitEntity[] entities;
 
+        #if UNITY_EDITOR
         protected override WitRequest OnCreateRequest()
         {
             return witConfiguration.GetIntentRequest(name);
@@ -42,5 +43,6 @@ namespace com.facebook.witai.data
             intent.UpdateData(intentWitResponse);
             return intent;
         }
+        #endif
     }
 }

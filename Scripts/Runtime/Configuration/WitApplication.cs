@@ -21,6 +21,7 @@ namespace com.facebook.witai.data
         [SerializeField] public bool isPrivate;
         [SerializeField] public string createdAt;
 
+        #if UNITY_EDITOR
         protected override WitRequest OnCreateRequest()
         {
             return witConfiguration.GetAppRequest(id);
@@ -41,5 +42,6 @@ namespace com.facebook.witai.data
             app.UpdateData(appWitResponse);
             return app;
         }
+        #endif
     }
 }
