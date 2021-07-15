@@ -15,8 +15,6 @@ using UnityEngine;
 
 public class WitAuthUtility
 {
-    public static bool IsIDETokenValid => Tokens.Length == 3;
-
     private static string ideToken;
     public static string IDEToken
     {
@@ -107,6 +105,7 @@ public class WitAuthUtility
 #endif
     }
 
+#if UNITY_EDITOR
     public static void InitEditorTokens()
     {
         if (null == serverToken)
@@ -119,4 +118,5 @@ public class WitAuthUtility
             ideToken = EditorPrefs.GetString("Wit::IDEToken", "");
         }
     }
+#endif
 }

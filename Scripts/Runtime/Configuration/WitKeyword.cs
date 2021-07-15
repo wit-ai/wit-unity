@@ -18,6 +18,7 @@ namespace com.facebook.witai.data
         [SerializeField] public string keyword;
         [SerializeField] public string[] synonyms;
 
+        #if UNITY_EDITOR
         public static WitKeyword FromJson(WitResponseNode keywordNode)
         {
             return new WitKeyword()
@@ -26,5 +27,6 @@ namespace com.facebook.witai.data
                 synonyms = keywordNode["synonyms"].AsStringArray
             };
         }
+        #endif
     }
 }
