@@ -8,6 +8,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using com.facebook.witai.data;
 using com.facebook.witai.events;
@@ -29,6 +30,12 @@ namespace com.facebook.witai
         [Range(0, 10f)]
         [SerializeField] private float maxRecordingTime = 10;
 
+        [Header("Sound Activation")]
+        [SerializeField] private float soundWakeThreshold = .01f;
+        [Range(10, 500)]
+        [SerializeField] private int sampleLengthInMs = 10;
+        [SerializeField] private float micBufferLengthInSeconds = 1;
+
         [Tooltip("Events that will fire before, during and after an activation")]
         [SerializeField] public WitEvents events = new WitEvents();
 
@@ -38,6 +45,17 @@ namespace com.facebook.witai
         private WitRequest activeRequest;
 
         private ConcurrentQueue<Action> updateQueue = new ConcurrentQueue<Action>();
+
+        private bool isSoundWakeActive;
+        private RingBuffer<byte> micDataBuffer;
+        private RingBuffer<byte>.Marker lastSampleMarker;
+        private byte[] writeBuffer;
+
+        public enum ActivationMode
+        {
+            ImmediateActivate,
+            SoundActivate
+        }
 
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
@@ -78,14 +96,51 @@ namespace com.facebook.witai
             }
 
             events?.OnMicLevelChanged?.Invoke(levelMax);
-            if (null != activeRequest && activeRequest.IsActive)
+
+            if (null != micDataBuffer)
             {
-                byte[] sampleBytes = Convert(sample);
-                activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
+                if (isSoundWakeActive && levelMax > soundWakeThreshold)
+                {
+                    lastSampleMarker = micDataBuffer.CreateMarker();
+                }
+
+                if (null != lastSampleMarker)
+                {
+                    byte[] data = Convert(sample);
+                    micDataBuffer.Push(data, 0, data.Length);
+                }
             }
-            else
+
+            if (null != activeRequest && activeRequest.IsRequestStreamActive)
+            {
+                if (null != micDataBuffer && micDataBuffer.Capacity > 0)
+                {
+                    if (null == writeBuffer)
+                    {
+                        writeBuffer = new byte[sample.Length * 2];
+                    }
+
+                    // Flush the marker buffer to catch up
+                    int read;
+                    while ((read = lastSampleMarker.Read(writeBuffer, 0, writeBuffer.Length)) > 0)
+                    {
+                        activeRequest.Write(writeBuffer, 0, read);
+                    }
+                }
+                else
+                {
+                    byte[] sampleBytes = Convert(sample);
+                    activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
+                }
+            }
+            else if(!isSoundWakeActive)
             {
                 Deactivate();
+            }
+            else if (isSoundWakeActive && levelMax > soundWakeThreshold)
+            {
+                isSoundWakeActive = false;
+                ActivateImmediately();
             }
         }
 
@@ -112,30 +167,64 @@ namespace com.facebook.witai
             }
         }
 
+        public void Activate()
+        {
+            Activate(ActivationMode.ImmediateActivate);
+        }
+
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate()
+        public void Activate(ActivationMode activationMode)
         {
             if (Active) return;
 
+            switch (activationMode)
+            {
+                case ActivationMode.ImmediateActivate:
+                    ActivateImmediately();
+                    break;
+                case ActivationMode.SoundActivate:
+                    ActivateSoundWake();
+                    break;
+            }
+        }
+
+        private void ActivateSoundWake()
+        {
+            if (!micInput.IsRecording)
+            {
+                if (null == micDataBuffer)
+                {
+                    micDataBuffer = new RingBuffer<byte>((int) Mathf.Ceil( 2 * micBufferLengthInSeconds * 1000 * sampleLengthInMs));
+                }
+                micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
+                isSoundWakeActive = true;
+            }
+        }
+
+        public void ActivateImmediately()
+        {
             // Make sure we aren't checking activation time until
             // the mic starts recording.
             activationTime = float.PositiveInfinity;
             lastMinVolumeLevelTime = float.PositiveInfinity;
 
             activeRequest = Configuration.SpeechRequest();
-            activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(StartMic);
+            activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(OnWitReadyForData);
             activeRequest.onResponse = QueueResult;
             events.OnRequestCreated?.Invoke(activeRequest);
             activeRequest.Request();
         }
 
-        private void StartMic()
+        private void OnWitReadyForData()
         {
             activationTime = Time.time;
             lastMinVolumeLevelTime = Time.time;
-            micInput.StartRecording(WitRequest.samplerate);
+            if (!micInput.IsRecording)
+            {
+                micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
+            }
         }
 
         /// <summary>
@@ -146,6 +235,9 @@ namespace com.facebook.witai
             if (!Active) return;
             micInput.StopRecording();
             activeRequest.CloseRequestStream();
+            writeBuffer = null;
+            lastSampleMarker = null;
+            if(null != micDataBuffer) micDataBuffer.Clear();
         }
 
         static byte[] Convert(float[] samples)

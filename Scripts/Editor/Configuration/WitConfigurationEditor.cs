@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using com.facebook.witai;
 using com.facebook.witai.data;
+using com.facebook.witai.utility;
 using UnityEditor;
 using UnityEngine;
 
@@ -53,7 +54,7 @@ public class WitConfigurationEditor : Editor
         configuration = target as WitConfiguration;
         configuration?.UpdateData(() =>
         {
-            EditorUtility.SetDirty(configuration);
+            EditorForegroundRunner.Run(() => EditorUtility.SetDirty(configuration));
         });
     }
 
@@ -98,7 +99,7 @@ public class WitConfigurationEditor : Editor
             {
                 configuration.FetchAppConfigFromServerToken(() =>
                 {
-                    Repaint();
+                    EditorForegroundRunner.Run(Repaint);
                     appConfigurationFoldout = false;
                 });
             }

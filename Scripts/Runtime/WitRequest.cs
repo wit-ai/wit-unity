@@ -125,6 +125,8 @@ namespace com.facebook.witai
 
         private string statusDescription;
         private bool isRequestStreamActive;
+        public bool IsRequestStreamActive => IsActive && isRequestStreamActive;
+
         private bool isServerAuthRequired;
         public string StatusDescription => statusDescription;
 
@@ -325,12 +327,16 @@ namespace com.facebook.witai
         /// </summary>
         public void CloseRequestStream()
         {
-            if (isRequestStreamActive)
+            if (null != stream)
             {
-                stream?.Dispose();
-                isRequestStreamActive = false;
-                stream = null;
+                lock (stream)
+                {
+                    stream?.Dispose();
+                    stream = null;
+                }
             }
+
+            isRequestStreamActive = false;
         }
 
         /// <summary>
@@ -348,7 +354,14 @@ namespace com.facebook.witai
                 throw new IOException(
                     "Request is not active. Call Request() on the WitRequest and wait for the onInputStreamReady callback before attempting to send data.");
             }
-            stream.Write(data, offset, length);
+
+            if (null != stream)
+            {
+                lock (stream)
+                {
+                    stream.Write(data, offset, length);
+                }
+            }
         }
     }
 }

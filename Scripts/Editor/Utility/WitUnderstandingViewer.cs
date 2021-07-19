@@ -214,7 +214,7 @@ namespace com.facebook.witai.utility
             response = r;
             loading = false;
             status = $"Response time: {requestLength}";
-            Repaint();
+            EditorForegroundRunner.Run(Repaint);
         }
 
         private void WatchForResponse()
