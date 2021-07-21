@@ -24,18 +24,10 @@ namespace com.facebook.witai.Inspectors
             {
                 var wit = (Wit) target;
 
-                GUILayout.BeginHorizontal();
                 if (GUILayout.Button("Activate"))
                 {
                     wit.Activate();
                 }
-
-                if (GUILayout.Button("Sound Activate"))
-                {
-                    wit.Activate(Wit.ActivationMode.SoundActivate);
-                }
-
-                GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
                 activationMessage = GUILayout.TextField(activationMessage);

@@ -50,12 +50,7 @@ namespace com.facebook.witai
         private RingBuffer<byte> micDataBuffer;
         private RingBuffer<byte>.Marker lastSampleMarker;
         private byte[] writeBuffer;
-
-        public enum ActivationMode
-        {
-            ImmediateActivate,
-            SoundActivate
-        }
+        private bool minKeepAliveWasHit;
 
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
@@ -70,6 +65,8 @@ namespace com.facebook.witai
             get => configuration;
             set => configuration = value;
         }
+
+        public bool MicActive => micInput.IsRecording;
 
         private void Awake()
         {
@@ -93,6 +90,7 @@ namespace com.facebook.witai
             if (levelMax > minKeepAliveVolume)
             {
                 lastMinVolumeLevelTime = Time.time;
+                minKeepAliveWasHit = true;
             }
 
             events?.OnMicLevelChanged?.Invoke(levelMax);
@@ -167,37 +165,19 @@ namespace com.facebook.witai
             }
         }
 
-        public void Activate()
-        {
-            Activate(ActivationMode.ImmediateActivate);
-        }
-
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate(ActivationMode activationMode)
-        {
-            if (Active) return;
-
-            switch (activationMode)
-            {
-                case ActivationMode.ImmediateActivate:
-                    ActivateImmediately();
-                    break;
-                case ActivationMode.SoundActivate:
-                    ActivateSoundWake();
-                    break;
-            }
-        }
-
-        private void ActivateSoundWake()
+        public void Activate()
         {
             if (!micInput.IsRecording)
             {
-                if (null == micDataBuffer)
+                if (null == micDataBuffer && micBufferLengthInSeconds > 0)
                 {
                     micDataBuffer = new RingBuffer<byte>((int) Mathf.Ceil( 2 * micBufferLengthInSeconds * 1000 * sampleLengthInMs));
                 }
+
+                minKeepAliveWasHit = false;
                 micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
                 isSoundWakeActive = true;
             }
@@ -238,6 +218,11 @@ namespace com.facebook.witai
             writeBuffer = null;
             lastSampleMarker = null;
             if(null != micDataBuffer) micDataBuffer.Clear();
+            if (minKeepAliveWasHit)
+            {
+                events.OnMicDataSent?.Invoke();
+                minKeepAliveWasHit = false;
+            }
         }
 
         static byte[] Convert(float[] samples)

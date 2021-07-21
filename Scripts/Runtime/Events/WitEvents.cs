@@ -40,5 +40,8 @@ namespace com.facebook.witai.events
         [Tooltip(
             "Called when the microphone has stopped recording during a Wit voice command activation")]
         public UnityEvent OnStoppedListening = new UnityEvent();
+
+        [Tooltip("Fired when recording stops, the minimum volume threshold was hit, and data is being sent to the server.")]
+        public UnityEvent OnMicDataSent = new UnityEvent();
     }
 }
