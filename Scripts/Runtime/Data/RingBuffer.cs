@@ -52,11 +52,6 @@ namespace com.facebook.witai.data
                     bufferDataIndex += read;
                     index += read;
                     if (index > buffer.Length) index -= buffer.Length;
-                    Debug.Log($"Read {read} bytes into provided buffer.");
-                }
-                else
-                {
-                    Debug.Log("Buffer is no longer valid.");
                 }
 
 
