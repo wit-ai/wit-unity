@@ -229,7 +229,7 @@ namespace com.facebook.witai
             {
                 case "speech":
                     request.ContentType =
-                        $"audio/raw;encoding={encoding};bits={bits};rate={samplerate};endian={endian.ToString().ToLower()}";
+                        $"audio/raw;rate={samplerate / 1000}k;bits={bits};encoding={encoding};endian={endian.ToString().ToLower()}";
                     request.Method = "POST";
                     request.SendChunked = true;
                     break;
