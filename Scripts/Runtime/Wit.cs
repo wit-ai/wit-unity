@@ -212,16 +212,22 @@ namespace com.facebook.witai
         /// </summary>
         public void Deactivate()
         {
-            if (!Active) return;
-            micInput.StopRecording();
-            activeRequest.CloseRequestStream();
+            if (micInput.IsRecording)
+            {
+                micInput.StopRecording();
+            }
+            if (null != micDataBuffer) micDataBuffer.Clear();
             writeBuffer = null;
             lastSampleMarker = null;
-            if(null != micDataBuffer) micDataBuffer.Clear();
-            if (minKeepAliveWasHit)
+            minKeepAliveWasHit = false;
+
+            if (Active)
             {
-                events.OnMicDataSent?.Invoke();
-                minKeepAliveWasHit = false;
+                activeRequest.CloseRequestStream();
+                if (minKeepAliveWasHit)
+                {
+                    events.OnMicDataSent?.Invoke();
+                }
             }
         }
 
