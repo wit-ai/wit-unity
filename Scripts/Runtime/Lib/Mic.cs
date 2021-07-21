@@ -105,6 +105,11 @@ namespace com.facebook.witai.lib
         public event Action OnStartRecording;
 
         /// <summary>
+        /// Invoked when an AudioClip couldn't be created to start recording.
+        /// </summary>
+        public event Action OnStartRecordingFailed;
+
+        /// <summary>
         /// Invoked everytime an audio frame is collected. Includes the frame.
         /// </summary>
         public event Action<int, float[], float> OnSampleReady;
@@ -183,11 +188,18 @@ namespace com.facebook.witai.lib
             AudioClip = Microphone.Start(CurrentDeviceName, true, 1, Frequency);
             Sample = new float[Frequency / 1000 * SampleDurationMS * AudioClip.channels];
 
-            StartCoroutine(ReadRawAudio());
+            if (AudioClip)
+            {
+                StartCoroutine(ReadRawAudio());
 
-            Debug.Log("Started recording with " + CurrentDeviceName);
-            if (OnStartRecording != null)
-                OnStartRecording.Invoke();
+                Debug.Log("Started recording with " + CurrentDeviceName);
+                if (OnStartRecording != null)
+                    OnStartRecording.Invoke();
+            }
+            else
+            {
+                OnStartRecordingFailed.Invoke();
+            }
         }
 
         /// <summary>
@@ -221,7 +233,7 @@ namespace com.facebook.witai.lib
             {
                 bool isNewDataAvailable = true;
 
-                while (isNewDataAvailable)
+                while (isNewDataAvailable && AudioClip)
                 {
                     int currPos = Microphone.GetPosition(CurrentDeviceName);
                     if (currPos < prevPos)

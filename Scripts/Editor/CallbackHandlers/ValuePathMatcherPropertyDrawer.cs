@@ -152,7 +152,7 @@ namespace com.facebook.witai.callbackhandlers
                 }
 
                 pathValue = GetPropertyPath(property);
-                if (pathValue != currentEditPath)
+                if (pathValue != currentEditPath && null != currentEditPath)
                 {
                     foldouts[currentEditPath] = false;
                     currentEditPath = GetPropertyPath(property);
