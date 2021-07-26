@@ -67,6 +67,7 @@ namespace com.facebook.witai
         const string URI_AUTHORITY = "api.wit.ai";
 
         const string WIT_API_VERSION = "20200513";
+        private const string WIT_SDK_VERSION = "0.0.6";
 
         private WitConfiguration configuration;
 
@@ -229,11 +230,14 @@ namespace com.facebook.witai
             {
                 case "speech":
                     request.ContentType =
-                        $"audio/raw;rate={samplerate / 1000}k;encoding={encoding};bits={bits};endian={endian.ToString().ToLower()}";
+                        $"audio/raw;bits={bits};rate={samplerate / 1000}k;encoding={encoding};endian={endian.ToString().ToLower()}";
                     request.Method = "POST";
                     request.SendChunked = true;
                     break;
             }
+
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{Application.productName},{SystemInfo.operatingSystem},{SystemInfo.deviceModel},{SystemInfo.deviceName}";
+            Debug.Log("User agent: " + request.UserAgent);
 
             isActive = true;
             statusCode = 0;
