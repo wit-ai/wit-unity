@@ -51,6 +51,9 @@ namespace com.facebook.witai
         private RingBuffer<byte>.Marker lastSampleMarker;
         private byte[] writeBuffer;
         private bool minKeepAliveWasHit;
+        #if DEBUG_SAMPLE
+        private FileStream sampleFile;
+        #endif
 
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
@@ -106,6 +109,9 @@ namespace com.facebook.witai
                 {
                     byte[] data = Convert(sample);
                     micDataBuffer.Push(data, 0, data.Length);
+                    #if DEBUG_SAMPLE
+                    sampleFile.Write(data, 0, data.Length);
+                    #endif
                 }
             }
 
@@ -178,6 +184,13 @@ namespace com.facebook.witai
                 }
 
                 minKeepAliveWasHit = false;
+
+                #if DEBUG_SAMPLE
+                var file = Application.dataPath + "/test.pcm";
+                sampleFile = File.Open(file, FileMode.Create);
+                Debug.Log("Writing recording to file: " + file);
+                #endif
+
                 micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
                 isSoundWakeActive = true;
             }
@@ -215,6 +228,10 @@ namespace com.facebook.witai
             if (micInput.IsRecording)
             {
                 micInput.StopRecording();
+
+                #if DEBUG_SAMPLE
+                sampleFile.Close();
+                #endif
             }
             if (null != micDataBuffer) micDataBuffer.Clear();
             writeBuffer = null;
