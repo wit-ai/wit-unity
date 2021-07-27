@@ -43,5 +43,15 @@ namespace com.facebook.witai.events
 
         [Tooltip("Fired when recording stops, the minimum volume threshold was hit, and data is being sent to the server.")]
         public UnityEvent OnMicDataSent = new UnityEvent();
+
+        [Tooltip("Fired when the minimum wake threshold is hit after an activation")]
+        public UnityEvent OnMinimumWakeThresholdHit = new UnityEvent();
+
+        [Header("Transcription Events")]
+        [Tooltip("Message fired when a partial transcription has been received.")]
+        public WitTranscriptionEvent OnPartialTranscription = new WitTranscriptionEvent();
+
+        [Tooltip("Message received when a complete transcription is received.")]
+        public WitTranscriptionEvent OnFullTranscription = new WitTranscriptionEvent();
     }
-}
+ }

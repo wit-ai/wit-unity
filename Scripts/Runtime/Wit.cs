@@ -8,10 +8,10 @@
 using UnityEngine;
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Net;
 using com.facebook.witai.data;
 using com.facebook.witai.events;
+using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
 
 namespace com.facebook.witai
@@ -36,6 +36,12 @@ namespace com.facebook.witai
         [SerializeField] private int sampleLengthInMs = 10;
         [SerializeField] private float micBufferLengthInSeconds = 1;
 
+        [Header("Custom Transcription")]
+        [Tooltip("If true, the audio recorded in the activation will be sent to Wit.ai for processing. If a custom transcription provider is set and this is false, only the transcription will be sent to Wit.ai for processing")]
+        [SerializeField] private bool sendAudioToWit = true;
+        [SerializeField] private CustomTranscriptionProvider customTranscriptionProvider;
+
+        [Space(16)]
         [Tooltip("Events that will fire before, during and after an activation")]
         [SerializeField] public WitEvents events = new WitEvents();
 
@@ -51,6 +57,10 @@ namespace com.facebook.witai
         private RingBuffer<byte>.Marker lastSampleMarker;
         private byte[] writeBuffer;
         private bool minKeepAliveWasHit;
+        private bool isActive;
+
+        private ITranscriptionProvider activeTranscriptionProvider;
+
         #if DEBUG_SAMPLE
         private FileStream sampleFile;
         #endif
@@ -58,7 +68,9 @@ namespace com.facebook.witai
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
         /// </summary>
-        public bool Active => null != activeRequest && activeRequest.IsActive;
+        public bool Active => isActive || IsRequestActive;
+
+        private bool IsRequestActive => null != activeRequest && activeRequest.IsActive;
 
         /// <summary>
         /// Gets/Sets the wit configuration to be used for activations.
@@ -69,10 +81,42 @@ namespace com.facebook.witai
             set => configuration = value;
         }
 
+        /// <summary>
+        /// Gets/Sets a custom transcription provider. This can be used to replace any built in asr
+        /// with an on device model or other provided source
+        /// </summary>
+        public ITranscriptionProvider TranscriptionProvider
+        {
+            get => activeTranscriptionProvider;
+            set
+            {
+                if (null != activeTranscriptionProvider)
+                {
+                    activeTranscriptionProvider.OnFullTranscription.RemoveListener(
+                        OnFullTranscription);
+                    activeTranscriptionProvider.OnPartialTranscription.RemoveListener(
+                        OnPartialTranscription);
+                }
+                activeTranscriptionProvider = value;
+
+                activeTranscriptionProvider.OnFullTranscription.AddListener(
+                    OnFullTranscription);
+                activeTranscriptionProvider.OnPartialTranscription.AddListener(
+                    OnPartialTranscription);
+            }
+        }
+
         public bool MicActive => micInput.IsRecording;
+
+        public bool ShouldSendMicData => sendAudioToWit || null == activeTranscriptionProvider;
 
         private void Awake()
         {
+            if (null == activeTranscriptionProvider && customTranscriptionProvider)
+            {
+                TranscriptionProvider = customTranscriptionProvider;
+            }
+
             micInput = gameObject.AddComponent<Mic>();
         }
 
@@ -115,7 +159,7 @@ namespace com.facebook.witai
                 }
             }
 
-            if (null != activeRequest && activeRequest.IsRequestStreamActive)
+            if (IsRequestActive && activeRequest.IsRequestStreamActive)
             {
                 if (null != micDataBuffer && micDataBuffer.Capacity > 0)
                 {
@@ -143,11 +187,21 @@ namespace com.facebook.witai
             }
             else if (isSoundWakeActive && levelMax > soundWakeThreshold)
             {
+                events.OnMinimumWakeThresholdHit?.Invoke();
                 isSoundWakeActive = false;
                 ActivateImmediately();
             }
         }
 
+        private void OnFullTranscription(string transcription)
+        {
+            events.OnFullTranscription?.Invoke(transcription);
+        }
+
+        private void OnPartialTranscription(string transcription)
+        {
+            events.OnPartialTranscription.Invoke(transcription);
+        }
 
         private void Update()
         {
@@ -156,14 +210,14 @@ namespace com.facebook.witai
                 if (updateQueue.TryDequeue(out var result)) result.Invoke();
             }
 
-            if (Active && micInput.IsRecording)
+            if (micInput.IsRecording)
             {
                 if (Time.time - lastMinVolumeLevelTime >= minKeepAliveTime)
                 {
                     Debug.Log("Deactivated input due to inactivity.");
                     Deactivate();
                 }
-                else if (Time.time - activationTime >= maxRecordingTime)
+                else if (IsRequestActive && Time.time - activationTime >= maxRecordingTime)
                 {
                     Debug.Log("Deactivated due to time limit.");
                     Deactivate();
@@ -194,20 +248,39 @@ namespace com.facebook.witai
                 micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
                 isSoundWakeActive = true;
             }
+
+            if (!isActive)
+            {
+                activeTranscriptionProvider?.Activate();
+                isActive = true;
+
+                lastMinVolumeLevelTime = float.PositiveInfinity;
+            }
         }
 
         public void ActivateImmediately()
         {
             // Make sure we aren't checking activation time until
-            // the mic starts recording.
+            // the mic starts recording. If we're already recording for a live
+            // recording, we just triggered an activation so we will reset the
+            // last minvolumetime to ensure a minimum time from activation time
             activationTime = float.PositiveInfinity;
             lastMinVolumeLevelTime = float.PositiveInfinity;
 
-            activeRequest = Configuration.SpeechRequest();
-            activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(OnWitReadyForData);
-            activeRequest.onResponse = QueueResult;
-            events.OnRequestCreated?.Invoke(activeRequest);
-            activeRequest.Request();
+            if (ShouldSendMicData)
+            {
+                activeRequest = Configuration.SpeechRequest();
+                activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(OnWitReadyForData);
+                activeRequest.onResponse = QueueResult;
+                events.OnRequestCreated?.Invoke(activeRequest);
+                activeRequest.Request();
+            }
+
+            if (!isActive)
+            {
+                activeTranscriptionProvider?.Activate();
+                isActive = true;
+            }
         }
 
         private void OnWitReadyForData()
@@ -238,13 +311,21 @@ namespace com.facebook.witai
             lastSampleMarker = null;
             minKeepAliveWasHit = false;
 
-            if (Active)
+            activeTranscriptionProvider?.Deactivate();
+
+            if (isActive)
             {
-                activeRequest.CloseRequestStream();
-                if (minKeepAliveWasHit)
+                if (IsRequestActive)
                 {
-                    events.OnMicDataSent?.Invoke();
+
+                    activeRequest.CloseRequestStream();
+                    if (minKeepAliveWasHit)
+                    {
+                        events.OnMicDataSent?.Invoke();
+                    }
                 }
+
+                isActive = false;
             }
         }
 
