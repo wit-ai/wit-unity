@@ -139,7 +139,7 @@ namespace com.facebook.witai
             }
             else if(!isSoundWakeActive)
             {
-                Deactivate();
+                DeactivateRequest();
             }
             else if (isSoundWakeActive && levelMax > soundWakeThreshold)
             {
@@ -161,12 +161,14 @@ namespace com.facebook.witai
                 if (Time.time - lastMinVolumeLevelTime >= minKeepAliveTime)
                 {
                     Debug.Log("Deactivated input due to inactivity.");
-                    Deactivate();
+                    DeactivateRequest();
+                    events.OnStoppedListeningDueToInactivity?.Invoke();
                 }
                 else if (Time.time - activationTime >= maxRecordingTime)
                 {
                     Debug.Log("Deactivated due to time limit.");
-                    Deactivate();
+                    DeactivateRequest();
+                    events.OnStoppedListeningDueToTimeout?.Invoke();
                 }
             }
         }
@@ -224,6 +226,17 @@ namespace com.facebook.witai
         /// Stop listening and submit the collected microphone data to wit for processing.
         /// </summary>
         public void Deactivate()
+        {
+            var recording = micInput.IsRecording;
+            DeactivateRequest();
+
+            if (recording)
+            {
+                events.OnStoppedListeningDueToDeactivation?.Invoke();
+            }
+        }
+
+        private void DeactivateRequest()
         {
             if (micInput.IsRecording)
             {
