@@ -41,6 +41,17 @@ namespace com.facebook.witai.events
             "Called when the microphone has stopped recording during a Wit voice command activation")]
         public UnityEvent OnStoppedListening = new UnityEvent();
 
+        [Tooltip(
+            "Called when the microphone input volume has been below the volume threshold for the specified duration.")]
+        public UnityEvent OnStoppedListeningDueToInactivity = new UnityEvent();
+
+        [Tooltip(
+            "The microphone has stopped recording because maximum recording time has been hit")]
+        public UnityEvent OnStoppedListeningDueToTimeout = new UnityEvent();
+
+        [Tooltip("The microphone was stopped from manual deactivation")]
+        public UnityEvent OnStoppedListeningDueToDeactivation = new UnityEvent();
+
         [Tooltip("Fired when recording stops, the minimum volume threshold was hit, and data is being sent to the server.")]
         public UnityEvent OnMicDataSent = new UnityEvent();
     }
