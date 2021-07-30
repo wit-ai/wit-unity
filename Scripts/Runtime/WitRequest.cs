@@ -67,7 +67,7 @@ namespace com.facebook.witai
         const string URI_AUTHORITY = "api.wit.ai";
 
         const string WIT_API_VERSION = "20200513";
-        private const string WIT_SDK_VERSION = "0.0.6";
+        private const string WIT_SDK_VERSION = "0.0.7";
 
         private WitConfiguration configuration;
 
