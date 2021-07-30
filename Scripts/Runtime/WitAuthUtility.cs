@@ -15,50 +15,6 @@ using UnityEngine;
 
 public class WitAuthUtility
 {
-    private static string ideToken;
-    public static string IDEToken
-    {
-#if UNITY_EDITOR
-        get
-        {
-            if (null == ideToken)
-            {
-                try
-                {
-                    ideToken = EditorPrefs.GetString("Wit::IDEToken", "");
-                }
-                catch (Exception e)
-                {
-                    // This will happen if we don't prime the ide token on the main thread and
-                    // we access the server token editorpref value in a request.
-                    Debug.LogError(e.Message);
-                }
-            }
-
-            return ideToken;
-        }
-        set
-        {
-            ideToken = value;
-            EditorPrefs.SetString("Wit::IDEToken", ideToken);
-        }
-#else
-            get => "";
-#endif
-    }
-
-    private static string[] Tokens =>
-        IDEToken.Split(new string[] {"::"}, StringSplitOptions.RemoveEmptyEntries);
-
-    public static string AppId
-    {
-#if UNITY_EDITOR
-        get => Tokens.Length >= 1 ? Tokens[0] : null;
-#else
-        get => "";
-#endif
-    }
-
     public static bool IsServerTokenValid
     {
         get
@@ -88,11 +44,6 @@ public class WitAuthUtility
                 }
             }
 
-            if (string.IsNullOrEmpty(serverToken) && Tokens.Length >= 2)
-            {
-                serverToken = Tokens[1];
-            }
-
             return serverToken;
         }
         set
@@ -111,11 +62,6 @@ public class WitAuthUtility
         if (null == serverToken)
         {
             serverToken = EditorPrefs.GetString("Wit::ServerToken", "");
-        }
-
-        if (null == ideToken)
-        {
-            ideToken = EditorPrefs.GetString("Wit::IDEToken", "");
         }
     }
 #endif

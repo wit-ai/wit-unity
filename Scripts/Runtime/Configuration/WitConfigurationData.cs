@@ -19,6 +19,12 @@ namespace com.facebook.witai.data
         #if UNITY_EDITOR
         public void UpdateData(Action onUpdateComplete = null)
         {
+            if (!witConfiguration)
+            {
+                onUpdateComplete?.Invoke();
+                return;
+            }
+
             var request = OnCreateRequest();
             request.onResponse = (r) => OnUpdateData(r, onUpdateComplete);
             request.Request();

@@ -139,6 +139,7 @@ namespace com.facebook.witai
         public WitRequest(WitConfiguration configuration, string path,
             params QueryParam[] queryParams)
         {
+            if (!configuration) throw new ArgumentException("Configuration is not set.");
             this.configuration = configuration;
             this.command = path.Split('/').First();
             this.path = path;
@@ -148,6 +149,7 @@ namespace com.facebook.witai
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
             params QueryParam[] queryParams)
         {
+            if (!configuration) throw new ArgumentException("Configuration is not set.");
             this.configuration = configuration;
             this.isServerAuthRequired = isServerAuthRequired;
             this.command = path.Split('/').First();
@@ -237,7 +239,6 @@ namespace com.facebook.witai
             }
 
             request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{Application.productName},{SystemInfo.operatingSystem},{SystemInfo.deviceModel},{SystemInfo.deviceName}";
-            Debug.Log("User agent: " + request.UserAgent);
 
             isActive = true;
             statusCode = 0;

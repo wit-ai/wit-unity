@@ -8,7 +8,6 @@
 using UnityEngine;
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Net;
 using com.facebook.witai.data;
 using com.facebook.witai.events;
