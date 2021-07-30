@@ -37,16 +37,19 @@ namespace com.facebook.witai.data
             // Don't update while we're in playmode in the editor
             if (EditorApplication.isPlaying) return;
 
-            var intentRequest = this.ListIntentsRequest();
-            intentRequest.onResponse = (r) =>
+            if (!string.IsNullOrEmpty(WitAuthUtility.ServerToken))
             {
-                var entityRequest = this.ListEntitiesRequest();
-                entityRequest.onResponse =
-                    (er) => OnUpdateData(er, UpdateEntityList, onUpdateComplete);
-                OnUpdateData(r, UpdateIntentList, entityRequest.Request);
-            };
+                var intentRequest = this.ListIntentsRequest();
+                intentRequest.onResponse = (r) =>
+                {
+                    var entityRequest = this.ListEntitiesRequest();
+                    entityRequest.onResponse =
+                        (er) => OnUpdateData(er, UpdateEntityList, onUpdateComplete);
+                    OnUpdateData(r, UpdateIntentList, entityRequest.Request);
+                };
 
-            application?.UpdateData(intentRequest.Request);
+                application?.UpdateData(intentRequest.Request);
+            }
         }
 
         private void OnUpdateData(WitRequest request, Action<WitResponseNode> updateComponent, Action onUpdateComplete)

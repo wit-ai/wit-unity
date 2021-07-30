@@ -45,6 +45,7 @@ namespace com.facebook.witai
         public static GUIContent PasteIcon;
         public static GUIContent EditIcon;
         public static GUIContent ObjectPickerIcon;
+        public static GUIStyle ImageIcon;
 
         public const int IconButtonWidth = 20;
 
@@ -118,6 +119,10 @@ namespace com.facebook.witai
             TextField = new GUIStyle(EditorStyles.textField);
             TextField.normal.background = TextureTextField;
             TextField.normal.textColor = Color.black;
+
+            ImageIcon = new GUIStyle(EditorStyles.label);
+            ImageIcon.fixedWidth = 16;
+            ImageIcon.fixedHeight = 16;
 
             titleContent = new GUIContent("Wit.ai", WitIcon);
             welcomeTitleContent = new GUIContent("Welcome to Wit.ai", WitIcon);

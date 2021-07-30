@@ -31,6 +31,8 @@ namespace com.facebook.witai.configuration
         private bool manualToken;
         private Vector2 scroll;
         private WitConfigurationEditor witEditor;
+        private string serverToken;
+        private bool welcomeSizeSet;
 
         protected override void OnDrawContent()
         {
@@ -60,16 +62,33 @@ namespace com.facebook.witai.configuration
         private void DrawWit()
         {
             // Recommended max size based on EditorWindow.maxSize doc for resizable window.
-            maxSize = new Vector2(4000, 4000);
+            if (welcomeSizeSet)
+            {
+                welcomeSizeSet = false;
+                maxSize = new Vector2(4000, 4000);
+            }
+
             titleContent = new GUIContent("Wit Configuration");
 
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            var token = EditorGUILayout.PasswordField("Server Access Token", WitAuthUtility.ServerToken);
-            if (token != WitAuthUtility.ServerToken)
+            GUILayout.BeginHorizontal();
+            if (null == serverToken)
             {
-                WitAuthUtility.ServerToken = token;
+                serverToken = WitAuthUtility.ServerToken;
+            }
+            serverToken = EditorGUILayout.PasswordField("Server Access Token", serverToken);
+            if (GUILayout.Button(WitStyles.PasteIcon, WitStyles.ImageIcon))
+            {
+                serverToken = EditorGUIUtility.systemCopyBuffer;
+                WitAuthUtility.ServerToken = serverToken;
                 RefreshContent();
             }
+            if (GUILayout.Button("Relink", GUILayout.Width(75)))
+            {
+                WitAuthUtility.ServerToken = serverToken;
+                RefreshContent();
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             var configChanged = DrawWitConfigurationPopup();
@@ -113,8 +132,15 @@ namespace com.facebook.witai.configuration
         private void DrawWelcome()
         {
             titleContent = WitStyles.welcomeTitleContent;
-            minSize = new Vector2(450, 686);
-            maxSize = new Vector2(450, 686);
+
+            if (!welcomeSizeSet)
+            {
+                minSize = new Vector2(450, 686);
+                maxSize = new Vector2(450, 686);
+                welcomeSizeSet = true;
+            }
+
+            scroll = GUILayout.BeginScrollView(scroll);
 
             GUILayout.Label("Build Natural Language Experiences", WitStyles.LabelHeader);
             GUILayout.Label(
@@ -130,14 +156,29 @@ namespace com.facebook.witai.configuration
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(WitStyles.PasteIcon, WitStyles.Label))
             {
-                WitAuthUtility.ServerToken = EditorGUIUtility.systemCopyBuffer;
+                serverToken = EditorGUIUtility.systemCopyBuffer;
+                WitAuthUtility.ServerToken = serverToken;
+                if (WitAuthUtility.IsServerTokenValid)
+                {
+                    RefreshContent();
+                }
             }
             GUILayout.EndHorizontal();
-            var token = EditorGUILayout.PasswordField(WitAuthUtility.ServerToken, WitStyles.TextField);
-            if (token != WitAuthUtility.ServerToken)
+            if (null == serverToken)
             {
-                WitAuthUtility.ServerToken = token;
+                serverToken = WitAuthUtility.ServerToken;
             }
+            GUILayout.BeginHorizontal();
+            serverToken = EditorGUILayout.PasswordField(serverToken, WitStyles.TextField);
+            if (GUILayout.Button("Link", GUILayout.Width(75)))
+            {
+                WitAuthUtility.ServerToken = serverToken;
+                if (WitAuthUtility.IsServerTokenValid)
+                {
+                    RefreshContent();
+                }
+            }
+            GUILayout.EndHorizontal();
             EndCenter();
 
             BeginCenter();
@@ -162,6 +203,7 @@ namespace com.facebook.witai.configuration
             GUILayout.Space(16);
 
             EndCenter();
+            GUILayout.EndScrollView();
         }
     }
 }

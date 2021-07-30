@@ -1,3 +1,8 @@
+0.0.7 (July 29, 2021)
+* Improve link UI
+* Fix missing config errors
+* Add new events for mic stop to indicate the reason it stopped
+
 0.0.6 (July 7, 2021)
 * Added a ringbuffer so we can keep the mic active until the user speaks
 * Activation now opens the mic. Data is not sent until a minimum threshold is achieved
