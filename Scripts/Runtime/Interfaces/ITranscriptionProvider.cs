@@ -6,6 +6,7 @@
  */
 
 using com.facebook.witai.events;
+using UnityEngine.Events;
 
 namespace com.facebook.witai.interfaces
 {
@@ -25,6 +26,26 @@ namespace com.facebook.witai.interfaces
         /// Callback used to notify Wit subscribers of a full transcription
         /// </summary>
         WitTranscriptionEvent OnFullTranscription { get; }
+
+        /// <summary>
+        /// Callback used to notify Wit subscribers when the mic is active and transcription has begun
+        /// </summary>
+        UnityEvent OnStoppedListening { get; }
+
+        /// <summary>
+        /// Callback used to notify Wit subscribers when the mic is inactive and transcription has stopped
+        /// </summary>
+        UnityEvent OnStartListening { get; }
+
+        /// <summary>
+        /// Callback used to notify Wit subscribers on mic volume level changes
+        /// </summary>
+        WitMicLevelChangedEvent OnMicLevelChanged { get; }
+
+        /// <summary>
+        /// Tells Wit if the mic input levels from the transcription service should be used directly
+        /// </summary>
+        bool OverrideMicLevel { get; }
 
         /// <summary>
         /// Called when wit is activated

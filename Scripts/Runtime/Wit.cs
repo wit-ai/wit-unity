@@ -96,13 +96,27 @@ namespace com.facebook.witai
                         OnFullTranscription);
                     activeTranscriptionProvider.OnPartialTranscription.RemoveListener(
                         OnPartialTranscription);
+                    activeTranscriptionProvider.OnMicLevelChanged.RemoveListener(OnTranscriptionMicLevelChanged);
+                    activeTranscriptionProvider.OnStartListening.RemoveListener(
+                        OnStartListening);
+                    activeTranscriptionProvider.OnStoppedListening.RemoveListener(
+                        OnStoppedListening);
                 }
                 activeTranscriptionProvider = value;
 
-                activeTranscriptionProvider.OnFullTranscription.AddListener(
-                    OnFullTranscription);
-                activeTranscriptionProvider.OnPartialTranscription.AddListener(
-                    OnPartialTranscription);
+                if (null != activeTranscriptionProvider)
+                {
+                    activeTranscriptionProvider.OnFullTranscription.AddListener(
+                        OnFullTranscription);
+                    activeTranscriptionProvider.OnPartialTranscription.AddListener(
+                        OnPartialTranscription);
+                    activeTranscriptionProvider.OnMicLevelChanged.AddListener(
+                        OnTranscriptionMicLevelChanged);
+                    activeTranscriptionProvider.OnStartListening.AddListener(
+                        OnStartListening);
+                    activeTranscriptionProvider.OnStoppedListening.AddListener(
+                        OnStoppedListening);
+                }
             }
         }
 
@@ -123,24 +137,23 @@ namespace com.facebook.witai
         private void OnEnable()
         {
             micInput.OnSampleReady += OnSampleReady;
-            micInput.OnStartRecording += () => events?.OnStartListening?.Invoke();
-            micInput.OnStopRecording += () => events?.OnStoppedListening?.Invoke();
+            micInput.OnStartRecording += OnStartListening;
+            micInput.OnStopRecording += OnStoppedListening;
         }
 
         private void OnDisable()
         {
             micInput.OnSampleReady -= OnSampleReady;
+            micInput.OnStartRecording -= OnStartListening;
+            micInput.OnStopRecording -= OnStoppedListening;
         }
 
         private void OnSampleReady(int sampleCount, float[] sample, float levelMax)
         {
-            if (levelMax > minKeepAliveVolume)
+            if (null == TranscriptionProvider || !TranscriptionProvider.OverrideMicLevel)
             {
-                lastMinVolumeLevelTime = Time.time;
-                minKeepAliveWasHit = true;
+                OnMicLevelChanged(levelMax);
             }
-
-            events?.OnMicLevelChanged?.Invoke(levelMax);
 
             if (null != micDataBuffer)
             {
@@ -195,12 +208,43 @@ namespace com.facebook.witai
 
         private void OnFullTranscription(string transcription)
         {
+            DeactivateRequest();
             events.OnFullTranscription?.Invoke(transcription);
+            SendTranscription(transcription);
         }
 
         private void OnPartialTranscription(string transcription)
         {
             events.OnPartialTranscription.Invoke(transcription);
+        }
+
+        private void OnTranscriptionMicLevelChanged(float level)
+        {
+            if (null != TranscriptionProvider && TranscriptionProvider.OverrideMicLevel)
+            {
+                OnMicLevelChanged(level);
+            }
+        }
+
+        private void OnMicLevelChanged(float level)
+        {
+            if (level > minKeepAliveVolume)
+            {
+                lastMinVolumeLevelTime = Time.time;
+                minKeepAliveWasHit = true;
+            }
+            events.OnMicLevelChanged?.Invoke(level);
+        }
+
+        private void OnStoppedListening()
+        {
+            events?.OnStoppedListening?.Invoke();
+        }
+
+
+        private void OnStartListening()
+        {
+            events?.OnStartListening?.Invoke();
         }
 
         private void Update()
@@ -232,7 +276,7 @@ namespace com.facebook.witai
         /// </summary>
         public void Activate()
         {
-            if (!micInput.IsRecording)
+            if (!micInput.IsRecording && ShouldSendMicData)
             {
                 if (null == micDataBuffer && micBufferLengthInSeconds > 0)
                 {
@@ -373,6 +417,12 @@ namespace com.facebook.witai
         {
             if (Active) return;
 
+            SendTranscription(transcription);
+        }
+
+        private void SendTranscription(string transcription)
+        {
+            isActive = true;
             activeRequest = Configuration.MessageRequest(transcription);
             activeRequest.onResponse = QueueResult;
             events.OnRequestCreated?.Invoke(activeRequest);
