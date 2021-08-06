@@ -131,6 +131,10 @@ namespace com.facebook.witai
         private bool isServerAuthRequired;
         public string StatusDescription => statusDescription;
 
+        private static string operatingSystem;
+        private static string deviceModel;
+        private static string deviceName;
+
         public override string ToString()
         {
             return path;
@@ -144,6 +148,10 @@ namespace com.facebook.witai
             this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
+
+            if (null == operatingSystem) operatingSystem = SystemInfo.operatingSystem;
+            if (null == deviceModel) deviceModel = SystemInfo.deviceModel;
+            if (null == deviceName) deviceName = SystemInfo.deviceName;
         }
 
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
@@ -238,7 +246,7 @@ namespace com.facebook.witai
                     break;
             }
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{Application.productName},{SystemInfo.operatingSystem},{SystemInfo.deviceModel},{SystemInfo.deviceName}";
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{deviceName}";
 
             isActive = true;
             statusCode = 0;

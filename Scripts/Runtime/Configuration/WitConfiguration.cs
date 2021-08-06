@@ -34,9 +34,6 @@ namespace com.facebook.witai.data
         #if UNITY_EDITOR
         public void UpdateData(Action onUpdateComplete = null)
         {
-            // Don't update while we're in playmode in the editor
-            if (EditorApplication.isPlaying) return;
-
             if (!string.IsNullOrEmpty(WitAuthUtility.ServerToken))
             {
                 var intentRequest = this.ListIntentsRequest();
