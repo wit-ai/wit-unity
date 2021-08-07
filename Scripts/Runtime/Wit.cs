@@ -381,8 +381,10 @@ namespace com.facebook.witai
                         events.OnMicDataSent?.Invoke();
                     }
                 }
-
-                isActive = false;
+                else
+                {
+                    isActive = false;
+                }
             }
         }
 
@@ -462,6 +464,7 @@ namespace com.facebook.witai
             }
 
             activeRequest = null;
+            isActive = false;
         }
     }
 }
