@@ -446,11 +446,17 @@ namespace com.facebook.witai
         /// <param name="request"></param>
         private void HandleResult(WitRequest request)
         {
+            isActive = false;
             if (request.StatusCode == (int) HttpStatusCode.OK)
             {
                 if (null != request.ResponseData)
                 {
                     events?.OnResponse?.Invoke(request.ResponseData);
+                    var text = request.ResponseData["text"];
+                    if (null == activeTranscriptionProvider && !string.IsNullOrEmpty(text))
+                    {
+                        events?.OnFullTranscription.Invoke(text);
+                    }
                 }
                 else
                 {
@@ -464,7 +470,6 @@ namespace com.facebook.witai
             }
 
             activeRequest = null;
-            isActive = false;
         }
     }
 }

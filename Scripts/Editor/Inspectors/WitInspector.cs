@@ -15,6 +15,7 @@ namespace com.facebook.witai.Inspectors
     public class WitInspector : Editor
     {
         private string activationMessage;
+        private Wit wit;
 
         public override void OnInspectorGUI()
         {
@@ -22,20 +23,51 @@ namespace com.facebook.witai.Inspectors
 
             if (Application.isPlaying)
             {
-                var wit = (Wit) target;
+                wit = (Wit) target;
 
-                if (GUILayout.Button("Activate"))
+                if (wit.Active)
                 {
-                    wit.Activate();
-                }
+                    if (GUILayout.Button("Deactivate"))
+                    {
+                        wit.Deactivate();
+                    }
 
-                GUILayout.BeginHorizontal();
-                activationMessage = GUILayout.TextField(activationMessage);
-                if (GUILayout.Button("Send"))
-                {
-                    wit.Activate(activationMessage);
+                    if (wit.MicActive)
+                    {
+                        GUILayout.Label("Listening...");
+                    }
+                    else
+                    {
+                        GUILayout.Label("Processing...");
+                    }
                 }
-                GUILayout.EndHorizontal();
+                else
+                {
+                    if (GUILayout.Button("Activate"))
+                    {
+                        wit.Activate();
+                        EditorApplication.update += UpdateWhileActive;
+                    }
+
+                    GUILayout.BeginHorizontal();
+                    activationMessage = GUILayout.TextField(activationMessage);
+                    if (GUILayout.Button("Send", GUILayout.Width(50)))
+                    {
+                        wit.Activate(activationMessage);
+                        EditorApplication.update += UpdateWhileActive;
+                    }
+
+                    GUILayout.EndHorizontal();
+                }
+            }
+        }
+
+        private void UpdateWhileActive()
+        {
+            Repaint();
+            if (!wit.Active)
+            {
+                EditorApplication.update -= UpdateWhileActive;
             }
         }
     }
