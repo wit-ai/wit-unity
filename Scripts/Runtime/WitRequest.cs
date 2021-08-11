@@ -9,9 +9,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using com.facebook.witai.data;
 using com.facebook.witai.lib;
+using log4net.Util;
 using UnityEngine;
+using SystemInfo = UnityEngine.SystemInfo;
 
 namespace com.facebook.witai
 {
@@ -66,8 +69,8 @@ namespace com.facebook.witai
         const string URI_SCHEME = "https";
         const string URI_AUTHORITY = "api.wit.ai";
 
-        const string WIT_API_VERSION = "20200513";
-        private const string WIT_SDK_VERSION = "0.0.7";
+        const string WIT_API_VERSION = "20210806";
+        private const string WIT_SDK_VERSION = "0.0.9";
 
         private WitConfiguration configuration;
 
@@ -108,6 +111,24 @@ namespace com.facebook.witai
         /// and test UI, not for regular use.
         /// </summary>
         public Action<string> onRawResponse;
+
+        /// <summary>
+        /// Returns a partial utterance from an in process request
+        ///
+        /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
+        /// values or other interactions from this callback. This is intended to be used for demo
+        /// and test UI, not for regular use.
+        /// </summary>
+        public Action<string> onPartialTranscription;
+
+        /// <summary>
+        /// Returns a partial utterance from a completed request
+        ///
+        /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
+        /// values or other interactions from this callback. This is intended to be used for demo
+        /// and test UI, not for regular use.
+        /// </summary>
+        public Action<string> onFullTranscription;
 
         /// <summary>
         /// Returns true if a request is pending. Will return false after data has been populated
@@ -262,12 +283,6 @@ namespace com.facebook.witai
 
         private void HandleResponse(IAsyncResult ar)
         {
-            if (null != stream)
-            {
-                Debug.Log("Request stream was still open. Closing.");
-                CloseRequestStream();
-            }
-
             try
             {
                 response = (HttpWebResponse) request.EndGetResponse(ar);
@@ -282,11 +297,25 @@ namespace com.facebook.witai
                     try
                     {
                         var responseStream = response.GetResponseStream();
-                        using (var streamReader = new StreamReader(responseStream))
+                        int ct = 1;
+
+                        byte[] buffer = new byte[10240];
+                        int bytes = 0;
+                        string stringResponse = "";
+                        while((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0) {
+                            Debug.Log($"Read {bytes} bytes.");
+                            stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
+                            if (stringResponse.Length > 0)
+                            {
+                                responseData = WitResponseJson.Parse(stringResponse);
+                                onPartialTranscription?.Invoke(responseData["text"]);
+                            }
+                        }
+
+                        if (stringResponse.Length > 0)
                         {
-                            var stringResponse = streamReader.ReadToEnd();
+                            onFullTranscription?.Invoke(responseData["text"]);
                             onRawResponse?.Invoke(stringResponse);
-                            responseData = WitResponseJson.Parse(stringResponse);
                         }
 
                         responseStream.Close();
@@ -306,6 +335,12 @@ namespace com.facebook.witai
                 statusCode = (int) e.Status;
                 statusDescription = e.Message;
                 Debug.LogError(e);
+            }
+
+            if (null != stream)
+            {
+                Debug.Log("Request stream was still open. Closing.");
+                CloseRequestStream();
             }
 
             isActive = false;

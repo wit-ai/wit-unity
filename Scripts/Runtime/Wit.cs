@@ -316,6 +316,10 @@ namespace com.facebook.witai
             if (ShouldSendMicData)
             {
                 activeRequest = Configuration.SpeechRequest();
+                activeRequest.onPartialTranscription =
+                    s => updateQueue.Enqueue(() => OnPartialTranscription(s));
+                activeRequest.onFullTranscription =
+                    s => updateQueue.Enqueue(() => OnFullTranscription(s));
                 activeRequest.onInputStreamReady = (r) => updateQueue.Enqueue(OnWitReadyForData);
                 activeRequest.onResponse = QueueResult;
                 events.OnRequestCreated?.Invoke(activeRequest);
