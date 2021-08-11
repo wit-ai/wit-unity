@@ -23,7 +23,7 @@ namespace com.facebook.witai
 
         [Header("Keepalive")]
         [Tooltip("The minimum volume from the mic needed to keep the activation alive")]
-        [SerializeField] private float minKeepAliveVolume = .01f;
+        [SerializeField] private float minKeepAliveVolume = .0005f;
         [Tooltip("The amount of time an activation will be kept open after volume is under the keep alive threshold")]
         [SerializeField] private float minKeepAliveTime = 2f;
         [Tooltip("The maximum amount of time the mic will stay active")]
@@ -31,7 +31,7 @@ namespace com.facebook.witai
         [SerializeField] private float maxRecordingTime = 10;
 
         [Header("Sound Activation")]
-        [SerializeField] private float soundWakeThreshold = .01f;
+        [SerializeField] private float soundWakeThreshold = .0005f;
         [Range(10, 500)]
         [SerializeField] private int sampleLengthInMs = 10;
         [SerializeField] private float micBufferLengthInSeconds = 1;

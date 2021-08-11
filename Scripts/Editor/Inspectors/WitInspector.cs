@@ -6,6 +6,7 @@
  */
 
 using System.Security.Cryptography.X509Certificates;
+using com.facebook.witai.events;
 using UnityEditor;
 using UnityEngine;
 
@@ -16,6 +17,10 @@ namespace com.facebook.witai.Inspectors
     {
         private string activationMessage;
         private Wit wit;
+        private float micMin;
+        private float micMax;
+        private string lastTranscription;
+        private float micCurrent;
 
         public override void OnInspectorGUI()
         {
@@ -45,21 +50,50 @@ namespace com.facebook.witai.Inspectors
                 {
                     if (GUILayout.Button("Activate"))
                     {
+                        InitializeActivationLogging();
                         wit.Activate();
-                        EditorApplication.update += UpdateWhileActive;
                     }
 
                     GUILayout.BeginHorizontal();
                     activationMessage = GUILayout.TextField(activationMessage);
                     if (GUILayout.Button("Send", GUILayout.Width(50)))
                     {
+                        InitializeActivationLogging();
                         wit.Activate(activationMessage);
-                        EditorApplication.update += UpdateWhileActive;
                     }
 
                     GUILayout.EndHorizontal();
                 }
+
+                GUILayout.Label("Last Transcription", EditorStyles.boldLabel);
+                GUILayout.TextArea(lastTranscription);
+
+                GUILayout.Label("Mic Status", EditorStyles.boldLabel);
+                GUILayout.Label($"Mic range: {micMin.ToString("F5")} - {micMax.ToString("F5")}");
+                GUILayout.Label($"Mic current: {micCurrent.ToString("F5")}");
             }
+        }
+
+        private void InitializeActivationLogging()
+        {
+            wit.events.OnFullTranscription.AddListener(UpdateTranscription);
+            wit.events.OnPartialTranscription.AddListener(UpdateTranscription);
+            wit.events.OnMicLevelChanged.AddListener(OnMicLevelChanged);
+            micMin = Mathf.Infinity;
+            micMax = Mathf.NegativeInfinity;
+            EditorApplication.update += UpdateWhileActive;
+        }
+
+        private void OnMicLevelChanged(float volume)
+        {
+            micCurrent = volume;
+            micMin = Mathf.Min(volume, micMin);
+            micMax = Mathf.Max(volume, micMax);
+        }
+
+        private void UpdateTranscription(string transcription)
+        {
+            lastTranscription = transcription;
         }
 
         private void UpdateWhileActive()
@@ -68,6 +102,9 @@ namespace com.facebook.witai.Inspectors
             if (!wit.Active)
             {
                 EditorApplication.update -= UpdateWhileActive;
+                wit.events.OnFullTranscription.RemoveListener(UpdateTranscription);
+                wit.events.OnPartialTranscription.RemoveListener(UpdateTranscription);
+                wit.events.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
             }
         }
     }
