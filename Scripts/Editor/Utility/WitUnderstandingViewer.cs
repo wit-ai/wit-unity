@@ -18,6 +18,7 @@ namespace com.facebook.witai.utility
     public class WitUnderstandingViewer : BaseWitWindow
     {
         [SerializeField] private Texture2D witHeader;
+        [SerializeField] private string responseText;
         private string utterance;
         private bool loading;
         private WitResponseNode response;
@@ -70,6 +71,10 @@ namespace com.facebook.witai.utility
             base.OnEnable();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             SetWit(GameObject.FindObjectOfType<Wit>());
+            if (!string.IsNullOrEmpty(responseText))
+            {
+                response = WitResponseNode.Parse(responseText);
+            }
         }
 
         protected override void OnDisable()
@@ -131,7 +136,7 @@ namespace com.facebook.witai.utility
 
             GUILayout.BeginHorizontal();
             utterance = EditorGUILayout.TextField("Utterance", utterance);
-            if (GUILayout.Button("Submit") && !loading || !initSubmitted && submitted && !string.IsNullOrEmpty(utterance))
+            if (GUILayout.Button("Submit") && !loading)
             {
                 if (!string.IsNullOrEmpty(utterance))
                 {
@@ -212,6 +217,7 @@ namespace com.facebook.witai.utility
         {
             requestLength = DateTime.Now - submitStart;
             response = r;
+            responseText = r.ToString();
             loading = false;
             status = $"Response time: {requestLength}";
             EditorForegroundRunner.Run(Repaint);
