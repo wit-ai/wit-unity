@@ -303,7 +303,6 @@ namespace com.facebook.witai
                         int bytes = 0;
                         string stringResponse = "";
                         while((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0) {
-                            Debug.Log($"Read {bytes} bytes.");
                             stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
                             if (stringResponse.Length > 0)
                             {
