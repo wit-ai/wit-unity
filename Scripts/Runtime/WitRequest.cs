@@ -13,7 +13,6 @@ using System.Net;
 using System.Text;
 using com.facebook.witai.data;
 using com.facebook.witai.lib;
-using log4net.Util;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
 
