@@ -4,7 +4,7 @@
   "version": "0.0.9",
   "samples": [
     {
-      "displayName": "Resposne Debugger",
+      "displayName": "Response Debugger",
       "description": "A scene with simple text UI to show wit responses.",
       "path": "Samples/ResponseDebugger"
     },

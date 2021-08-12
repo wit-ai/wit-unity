@@ -6,6 +6,7 @@
  */
 
 using System;
+using System.CodeDom;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -122,7 +123,7 @@ namespace com.facebook.witai
         public Action<string> onPartialTranscription;
 
         /// <summary>
-        /// Returns a partial utterance from a completed request
+        /// Returns a full utterance from a completed request
         ///
         /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
         /// values or other interactions from this callback. This is intended to be used for demo
@@ -307,7 +308,11 @@ namespace com.facebook.witai
                             if (stringResponse.Length > 0)
                             {
                                 responseData = WitResponseJson.Parse(stringResponse);
-                                onPartialTranscription?.Invoke(responseData["text"]);
+                                var transcription = responseData["text"];
+                                if (!string.IsNullOrEmpty(transcription))
+                                {
+                                    onPartialTranscription?.Invoke(transcription);
+                                }
                             }
                         }
 
@@ -343,6 +348,14 @@ namespace com.facebook.witai
             }
 
             isActive = false;
+
+            var error = responseData["error"];
+            if (!string.IsNullOrEmpty(error))
+            {
+                statusDescription = error;
+                statusCode = responseData["code"].AsInt;
+            }
+
             onResponse?.Invoke(this);
         }
 
