@@ -115,18 +115,14 @@ namespace com.facebook.witai
         /// <summary>
         /// Returns a partial utterance from an in process request
         ///
-        /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
-        /// values or other interactions from this callback. This is intended to be used for demo
-        /// and test UI, not for regular use.
+        /// NOTE: This response comes back on a different thread.
         /// </summary>
         public Action<string> onPartialTranscription;
 
         /// <summary>
         /// Returns a full utterance from a completed request
         ///
-        /// NOTE: This response comes back on a different thread. Do not attempt ot set UI control
-        /// values or other interactions from this callback. This is intended to be used for demo
-        /// and test UI, not for regular use.
+        /// NOTE: This response comes back on a different thread.
         /// </summary>
         public Action<string> onFullTranscription;
 
@@ -351,8 +347,8 @@ namespace com.facebook.witai
             var error = responseData["error"];
             if (!string.IsNullOrEmpty(error))
             {
-                statusDescription = error;
-                statusCode = responseData["code"].AsInt;
+                statusDescription = $"Error: {responseData["code"]}. {error}";
+                statusCode = 500;
             }
 
             onResponse?.Invoke(this);
