@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Security.Cryptography.X509Certificates;
-using com.facebook.witai.events;
 using UnityEditor;
 using UnityEngine;
 
 namespace com.facebook.witai.Inspectors
 {
+#if !WIT_DISABLE_UI
     [CustomEditor(typeof(Wit))]
+#endif
     public class WitInspector : Editor
     {
         private string activationMessage;
