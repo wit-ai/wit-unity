@@ -8,7 +8,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai.Inspectors
+namespace com.facebook.witai.inspectors
 {
 #if !WIT_DISABLE_UI
     [CustomEditor(typeof(Wit))]
