@@ -46,7 +46,7 @@ namespace com.facebook.witai
         [SerializeField] public WitEvents events = new WitEvents();
 
         private float activationTime;
-        private Mic micInput;
+        private IAudioInputSource micInput;
         private float lastMinVolumeLevelTime;
         private WitRequest activeRequest;
 
@@ -131,7 +131,13 @@ namespace com.facebook.witai
                 TranscriptionProvider = customTranscriptionProvider;
             }
 
-            micInput = gameObject.AddComponent<Mic>();
+
+            micInput = GetComponent<IAudioInputSource>();
+            if (micInput == null)
+            {
+                micInput = gameObject.AddComponent<Mic>();
+            }
+
         }
 
         private void OnEnable()
@@ -294,7 +300,7 @@ namespace com.facebook.witai
                 Debug.Log("Writing recording to file: " + file);
                 #endif
 
-                micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
+                micInput.StartRecording(sampleLen: sampleLengthInMs);
                 isSoundWakeActive = true;
             }
 
@@ -319,6 +325,7 @@ namespace com.facebook.witai
             if (ShouldSendMicData)
             {
                 activeRequest = Configuration.SpeechRequest();
+                activeRequest.audioEncoding = micInput.AudioEncoding;
                 activeRequest.onPartialTranscription =
                     s => updateQueue.Enqueue(() => OnPartialTranscription(s));
                 activeRequest.onFullTranscription =
@@ -342,7 +349,7 @@ namespace com.facebook.witai
             lastMinVolumeLevelTime = Time.time;
             if (!micInput.IsRecording)
             {
-                micInput.StartRecording(WitRequest.samplerate, sampleLen: sampleLengthInMs);
+                micInput.StartRecording(sampleLengthInMs);
             }
         }
 

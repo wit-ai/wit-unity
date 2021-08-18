@@ -7,6 +7,7 @@
 
 using System.Text;
 using com.facebook.witai.data;
+using com.facebook.witai.interfaces;
 
 namespace com.facebook.witai
 {

@@ -23,11 +23,14 @@ using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
+using com.facebook.witai.data;
+using com.facebook.witai.interfaces;
 
 namespace com.facebook.witai.lib
 {
     [RequireComponent(typeof(AudioSource))]
-    public class Mic : MonoBehaviour
+    public class Mic : MonoBehaviour, IAudioInputSource
     {
         // ================================================
 
@@ -40,9 +43,9 @@ namespace com.facebook.witai.lib
         public bool IsRecording { get; private set; }
 
         /// <summary>
-        /// The frequency at which the mic is operating
+        /// Settings used to encode audio. Defaults to optimal server settings
         /// </summary>
-        public int Frequency { get; private set; }
+        public AudioEncoding AudioEncoding { get; } = new AudioEncoding();
 
         /// <summary>
         /// Last populated audio sample
@@ -59,7 +62,7 @@ namespace com.facebook.witai.lib
         /// </summary>
         public int SampleLength
         {
-            get { return Frequency * SampleDurationMS / 1000; }
+            get { return AudioEncoding.samplerate * SampleDurationMS / 1000; }
         }
 
         /// <summary>
@@ -171,22 +174,21 @@ namespace com.facebook.witai.lib
         {
             Microphone.End(CurrentDeviceName);
             CurrentDeviceIndex = index;
-            StartRecording(Frequency, SampleDurationMS);
+            StartRecording(SampleDurationMS);
         }
 
         /// <summary>
         /// Starts to stream the input of the current Mic device
         /// </summary>
-        public void StartRecording(int frequency = 16000, int sampleLen = 10)
+        public void StartRecording(int sampleLen = 10)
         {
             StopRecording();
             IsRecording = true;
 
-            Frequency = frequency;
             SampleDurationMS = sampleLen;
 
-            AudioClip = Microphone.Start(CurrentDeviceName, true, 1, Frequency);
-            Sample = new float[Frequency / 1000 * SampleDurationMS * AudioClip.channels];
+            AudioClip = Microphone.Start(CurrentDeviceName, true, 1, AudioEncoding.samplerate);
+            Sample = new float[AudioEncoding.samplerate / 1000 * SampleDurationMS * AudioClip.channels];
 
             if (AudioClip)
             {
