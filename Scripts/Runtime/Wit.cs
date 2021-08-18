@@ -210,7 +210,10 @@ namespace com.facebook.witai
         {
             DeactivateRequest();
             events.OnFullTranscription?.Invoke(transcription);
-            SendTranscription(transcription);
+            if (customTranscriptionProvider)
+            {
+                SendTranscription(transcription);
+            }
         }
 
         private void OnPartialTranscription(string transcription)

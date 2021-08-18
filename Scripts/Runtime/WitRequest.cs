@@ -6,7 +6,6 @@
  */
 
 using System;
-using System.CodeDom;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -201,11 +200,13 @@ namespace com.facebook.witai
             uriBuilder.Host = URI_AUTHORITY;
             uriBuilder.Path = path;
 
+            uriBuilder.Query = $"v={WIT_API_VERSION}";
+
             if (queryParams.Any())
             {
                 var p = queryParams.Select(par =>
                     $"{par.key}={Uri.EscapeDataString(par.value)}");
-                uriBuilder.Query = string.Join("&", p);
+                uriBuilder.Query += "&" + string.Join("&", p);
             }
 
             StartRequest(uriBuilder.Uri);
@@ -232,7 +233,6 @@ namespace com.facebook.witai
             }
 
             request = (HttpWebRequest) WebRequest.Create(uri);
-            request.Accept = $"application/vnd.wit.{WIT_API_VERSION}+json";
 
             if (isServerAuthRequired)
             {
