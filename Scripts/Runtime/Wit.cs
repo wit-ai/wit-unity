@@ -14,37 +14,18 @@ using com.facebook.witai.data;
 using com.facebook.witai.events;
 using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
+using UnityEngine.Serialization;
 
 namespace com.facebook.witai
 {
     public class Wit : MonoBehaviour
     {
+        [FormerlySerializedAs("configuration")]
         [Tooltip("The configuration that will be used when activating wit. This includes api key.")]
-        [SerializeField] private WitConfiguration configuration;
+        [SerializeField] private WitConfiguration appConfiguration;
 
-        [Header("Keepalive")]
-        [Tooltip("The minimum volume from the mic needed to keep the activation alive")]
-        [SerializeField] private float minKeepAliveVolume = .0005f;
-        [Tooltip("The amount of time an activation will be kept open after volume is under the keep alive threshold")]
-        [SerializeField] private float minKeepAliveTime = 2f;
-        [Tooltip("The amount of time an activation will be kept open after words have been detected in the live transcription")]
-        [SerializeField] private float minTranscriptionKeepAliveTime = 1f;
-        [Tooltip("The maximum amount of time the mic will stay active")]
-        [Range(0, 10f)]
-        [SerializeField] private float maxRecordingTime = 10;
+        [SerializeField] private WitRuntimeConfiguration runtimeConfiguration = new WitRuntimeConfiguration();
 
-        [Header("Sound Activation")]
-        [SerializeField] private float soundWakeThreshold = .0005f;
-        [Range(10, 500)]
-        [SerializeField] private int sampleLengthInMs = 10;
-        [SerializeField] private float micBufferLengthInSeconds = 1;
-
-        [Header("Custom Transcription")]
-        [Tooltip("If true, the audio recorded in the activation will be sent to Wit.ai for processing. If a custom transcription provider is set and this is false, only the transcription will be sent to Wit.ai for processing")]
-        [SerializeField] private bool sendAudioToWit = true;
-        [SerializeField] private CustomTranscriptionProvider customTranscriptionProvider;
-
-        [Space(16)]
         [Tooltip("Events that will fire before, during and after an activation")]
         [SerializeField] public WitEvents events = new WitEvents();
 
@@ -85,8 +66,8 @@ namespace com.facebook.witai
         /// </summary>
         public WitConfiguration Configuration
         {
-            get => configuration;
-            set => configuration = value;
+            get => appConfiguration;
+            set => appConfiguration = value;
         }
 
         /// <summary>
@@ -130,13 +111,14 @@ namespace com.facebook.witai
 
         public bool MicActive => micInput.IsRecording;
 
-        public bool ShouldSendMicData => sendAudioToWit || null == activeTranscriptionProvider;
+        public bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit || null == activeTranscriptionProvider;
 
         private void Awake()
         {
-            if (null == activeTranscriptionProvider && customTranscriptionProvider)
+            if (null == activeTranscriptionProvider &&
+                runtimeConfiguration.customTranscriptionProvider)
             {
-                TranscriptionProvider = customTranscriptionProvider;
+                TranscriptionProvider = runtimeConfiguration.customTranscriptionProvider;
             }
 
 
@@ -149,7 +131,7 @@ namespace com.facebook.witai
 
         private void OnEnable()
         {
-            if (!configuration)
+            if (!appConfiguration)
             {
                 Debug.LogError("Wit configuration is not set on your Wit component. Requests cannot be made without a configuration. Wit will be disabled at runtime until the configuration has been set.");
                 enabled = false;
@@ -177,7 +159,7 @@ namespace com.facebook.witai
 
             if (null != micDataBuffer)
             {
-                if (isSoundWakeActive && levelMax > soundWakeThreshold)
+                if (isSoundWakeActive && levelMax > runtimeConfiguration.soundWakeThreshold)
                 {
                     lastSampleMarker = micDataBuffer.CreateMarker();
                 }
@@ -217,14 +199,14 @@ namespace com.facebook.witai
 
                 if (receivedTranscription)
                 {
-                    if(Time.time - lastWordTime > minTranscriptionKeepAliveTime)
+                    if(Time.time - lastWordTime > runtimeConfiguration.minTranscriptionKeepAliveTime)
                     {
                         Debug.Log("Deactivated due to inactivity. No new words detected.");
                         DeactivateRequest();
                         events.OnStoppedListeningDueToInactivity?.Invoke();
                     }
                 }
-                else if (Time.time - lastMinVolumeLevelTime > minKeepAliveTime)
+                else if (Time.time - lastMinVolumeLevelTime > runtimeConfiguration.minKeepAliveTime)
                 {
                     Debug.Log("Deactivated input due to inactivity.");
                     DeactivateRequest();
@@ -235,7 +217,7 @@ namespace com.facebook.witai
             {
                 DeactivateRequest();
             }
-            else if (isSoundWakeActive && levelMax > soundWakeThreshold)
+            else if (isSoundWakeActive && levelMax > runtimeConfiguration.soundWakeThreshold)
             {
                 events.OnMinimumWakeThresholdHit?.Invoke();
                 isSoundWakeActive = false;
@@ -247,7 +229,7 @@ namespace com.facebook.witai
         {
             DeactivateRequest();
             events.OnFullTranscription?.Invoke(transcription);
-            if (customTranscriptionProvider)
+            if (runtimeConfiguration.customTranscriptionProvider)
             {
                 SendTranscription(transcription);
             }
@@ -270,7 +252,7 @@ namespace com.facebook.witai
 
         private void OnMicLevelChanged(float level)
         {
-            if (level > minKeepAliveVolume)
+            if (level > runtimeConfiguration.minKeepAliveVolume)
             {
                 lastMinVolumeLevelTime = Time.time;
                 minKeepAliveWasHit = true;
@@ -299,7 +281,7 @@ namespace com.facebook.witai
 
         private IEnumerator DeactivateDueToTimeLimit()
         {
-            yield return new WaitForSeconds(maxRecordingTime);
+            yield return new WaitForSeconds(runtimeConfiguration.maxRecordingTime);
             Debug.Log("Deactivated due to time limit.");
             DeactivateRequest();
             events.OnStoppedListeningDueToTimeout?.Invoke();
@@ -313,9 +295,11 @@ namespace com.facebook.witai
         {
             if (!micInput.IsRecording && ShouldSendMicData)
             {
-                if (null == micDataBuffer && micBufferLengthInSeconds > 0)
+                if (null == micDataBuffer && runtimeConfiguration.micBufferLengthInSeconds > 0)
                 {
-                    micDataBuffer = new RingBuffer<byte>((int) Mathf.Ceil( 2 * micBufferLengthInSeconds * 1000 * sampleLengthInMs));
+                    micDataBuffer = new RingBuffer<byte>((int) Mathf.Ceil( 2 *
+                        runtimeConfiguration.micBufferLengthInSeconds * 1000 *
+                        runtimeConfiguration.sampleLengthInMs));
                 }
 
                 minKeepAliveWasHit = false;
@@ -326,7 +310,7 @@ namespace com.facebook.witai
                 Debug.Log("Writing recording to file: " + file);
                 #endif
 
-                micInput.StartRecording(sampleLen: sampleLengthInMs);
+                micInput.StartRecording(sampleLen: runtimeConfiguration.sampleLengthInMs);
                 isSoundWakeActive = true;
             }
 
@@ -378,7 +362,7 @@ namespace com.facebook.witai
             lastMinVolumeLevelTime = Time.time;
             if (!micInput.IsRecording)
             {
-                micInput.StartRecording(sampleLengthInMs);
+                micInput.StartRecording(runtimeConfiguration.sampleLengthInMs);
             }
         }
 
