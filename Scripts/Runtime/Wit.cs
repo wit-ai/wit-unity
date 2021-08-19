@@ -142,6 +142,13 @@ namespace com.facebook.witai
 
         private void OnEnable()
         {
+            if (!configuration)
+            {
+                Debug.LogError("Wit configuration is not set on your Wit component. Requests cannot be made without a configuration. Wit will be disabled at runtime until the configuration has been set.");
+                enabled = false;
+                return;
+            }
+
             micInput.OnSampleReady += OnSampleReady;
             micInput.OnStartRecording += OnStartListening;
             micInput.OnStopRecording += OnStoppedListening;
