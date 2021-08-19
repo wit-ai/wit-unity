@@ -50,7 +50,7 @@ namespace com.facebook.witai
         private bool receivedTranscription;
         private float lastWordTime;
 
-#if DEBUG_SAMPLE
+        #if DEBUG_SAMPLE
         private FileStream sampleFile;
         #endif
 
@@ -199,14 +199,14 @@ namespace com.facebook.witai
 
                 if (receivedTranscription)
                 {
-                    if(Time.time - lastWordTime > runtimeConfiguration.minTranscriptionKeepAliveTime)
+                    if(Time.time - lastWordTime > runtimeConfiguration.minTranscriptionKeepAliveTimeInSeconds)
                     {
                         Debug.Log("Deactivated due to inactivity. No new words detected.");
                         DeactivateRequest();
                         events.OnStoppedListeningDueToInactivity?.Invoke();
                     }
                 }
-                else if (Time.time - lastMinVolumeLevelTime > runtimeConfiguration.minKeepAliveTime)
+                else if (Time.time - lastMinVolumeLevelTime > runtimeConfiguration.minKeepAliveTimeInSeconds)
                 {
                     Debug.Log("Deactivated input due to inactivity.");
                     DeactivateRequest();

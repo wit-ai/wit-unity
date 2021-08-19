@@ -8,6 +8,7 @@
 using System;
 using com.facebook.witai.interfaces;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace com.facebook.witai.data
 {
@@ -19,17 +20,19 @@ namespace com.facebook.witai.data
         [SerializeField]
         public float minKeepAliveVolume = .0005f;
 
+        [FormerlySerializedAs("minKeepAliveTime")]
         [Tooltip(
-            "The amount of time an activation will be kept open after volume is under the keep alive threshold")]
+            "The amount of time in seconds an activation will be kept open after volume is under the keep alive threshold")]
         [SerializeField]
-        public float minKeepAliveTime = 2f;
+        public float minKeepAliveTimeInSeconds = 2f;
 
+        [FormerlySerializedAs("minTranscriptionKeepAliveTime")]
         [Tooltip(
-            "The amount of time an activation will be kept open after words have been detected in the live transcription")]
+            "The amount of time in seconds an activation will be kept open after words have been detected in the live transcription")]
         [SerializeField]
-        public float minTranscriptionKeepAliveTime = 1f;
+        public float minTranscriptionKeepAliveTimeInSeconds = 1f;
 
-        [Tooltip("The maximum amount of time the mic will stay active")]
+        [Tooltip("The maximum amount of time in seconds the mic will stay active")]
         [Range(0, 10f)]
         [SerializeField]
         public float maxRecordingTime = 10;

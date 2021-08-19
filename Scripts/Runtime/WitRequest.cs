@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using com.facebook.witai.data;
-using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
