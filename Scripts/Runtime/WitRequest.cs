@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using com.facebook.witai.data;
+using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
@@ -25,29 +26,6 @@ namespace com.facebook.witai
     /// </summary>
     public class WitRequest
     {
-        public enum Endian
-        {
-            Big,
-            Little
-        }
-
-        /// <summary>
-        /// The expected encoding of the mic pcm data
-        /// </summary>
-        public const string encoding = "signed-integer";
-        /// <summary>
-        /// The number of bits per sample
-        /// </summary>
-        public const int bits = 16;
-        /// <summary>
-        /// The sample rate used to capture audio
-        /// </summary>
-        public const int samplerate = 16000;
-        /// <summary>
-        /// The endianess of the data
-        /// </summary>
-        public const Endian endian = Endian.Little;
-
         /// <summary>
         /// Error code thrown when an exception is caught during processing or
         /// some other general error happens that is not an error from the server
@@ -69,7 +47,7 @@ namespace com.facebook.witai
         const string URI_AUTHORITY = "api.wit.ai";
 
         const string WIT_API_VERSION = "20210806";
-        private const string WIT_SDK_VERSION = "0.0.9";
+        private const string WIT_SDK_VERSION = "0.0.10";
 
         private WitConfiguration configuration;
 
@@ -136,6 +114,11 @@ namespace com.facebook.witai
         /// called
         /// </summary>
         public WitResponseNode ResponseData => responseData;
+
+        /// <summary>
+        /// Encoding settings for audio based requests
+        /// </summary>
+        public AudioEncoding audioEncoding = new AudioEncoding();
 
         private int statusCode;
         public int StatusCode => statusCode;
@@ -256,8 +239,7 @@ namespace com.facebook.witai
             switch (command)
             {
                 case "speech":
-                    request.ContentType =
-                        $"audio/raw;bits={bits};rate={samplerate / 1000}k;encoding={encoding};endian={endian.ToString().ToLower()}";
+                    request.ContentType = audioEncoding.ToString();
                     request.Method = "POST";
                     request.SendChunked = true;
                     break;
