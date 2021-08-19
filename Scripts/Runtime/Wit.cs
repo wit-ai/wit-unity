@@ -7,6 +7,7 @@
 
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Net;
 using com.facebook.witai.data;
@@ -26,6 +27,8 @@ namespace com.facebook.witai
         [SerializeField] private float minKeepAliveVolume = .0005f;
         [Tooltip("The amount of time an activation will be kept open after volume is under the keep alive threshold")]
         [SerializeField] private float minKeepAliveTime = 2f;
+        [Tooltip("The amount of time an activation will be kept open after words have been detected in the live transcription")]
+        [SerializeField] private float minTranscriptionKeepAliveTime = 1f;
         [Tooltip("The maximum amount of time the mic will stay active")]
         [Range(0, 10f)]
         [SerializeField] private float maxRecordingTime = 10;
@@ -60,8 +63,13 @@ namespace com.facebook.witai
         private bool isActive;
 
         private ITranscriptionProvider activeTranscriptionProvider;
+        private Coroutine timeLimitCoroutine;
 
-        #if DEBUG_SAMPLE
+        // Transcription based endpointing
+        private bool receivedTranscription;
+        private float lastWordTime;
+
+#if DEBUG_SAMPLE
         private FileStream sampleFile;
         #endif
 
@@ -137,7 +145,6 @@ namespace com.facebook.witai
             {
                 micInput = gameObject.AddComponent<Mic>();
             }
-
         }
 
         private void OnEnable()
@@ -206,6 +213,23 @@ namespace com.facebook.witai
                     byte[] sampleBytes = Convert(sample);
                     activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
                 }
+
+
+                if (receivedTranscription)
+                {
+                    if(Time.time - lastWordTime > minTranscriptionKeepAliveTime)
+                    {
+                        Debug.Log("Deactivated due to inactivity. No new words detected.");
+                        DeactivateRequest();
+                        events.OnStoppedListeningDueToInactivity?.Invoke();
+                    }
+                }
+                else if (Time.time - lastMinVolumeLevelTime > minKeepAliveTime)
+                {
+                    Debug.Log("Deactivated input due to inactivity.");
+                    DeactivateRequest();
+                    events.OnStoppedListeningDueToInactivity?.Invoke();
+                }
             }
             else if(!isSoundWakeActive)
             {
@@ -231,6 +255,8 @@ namespace com.facebook.witai
 
         private void OnPartialTranscription(string transcription)
         {
+            receivedTranscription = true;
+            lastWordTime = Time.time;
             events.OnPartialTranscription.Invoke(transcription);
         }
 
@@ -269,22 +295,15 @@ namespace com.facebook.witai
             {
                 if (updateQueue.TryDequeue(out var result)) result.Invoke();
             }
+        }
 
-            if (micInput.IsRecording)
-            {
-                if (Time.time - lastMinVolumeLevelTime >= minKeepAliveTime)
-                {
-                    Debug.Log("Deactivated input due to inactivity.");
-                    DeactivateRequest();
-                    events.OnStoppedListeningDueToInactivity?.Invoke();
-                }
-                else if (IsRequestActive && Time.time - activationTime >= maxRecordingTime)
-                {
-                    Debug.Log("Deactivated due to time limit.");
-                    DeactivateRequest();
-                    events.OnStoppedListeningDueToTimeout?.Invoke();
-                }
-            }
+        private IEnumerator DeactivateDueToTimeLimit()
+        {
+            yield return new WaitForSeconds(maxRecordingTime);
+            Debug.Log("Deactivated due to time limit.");
+            DeactivateRequest();
+            events.OnStoppedListeningDueToTimeout?.Invoke();
+            timeLimitCoroutine = null;
         }
 
         /// <summary>
@@ -328,6 +347,8 @@ namespace com.facebook.witai
             // last minvolumetime to ensure a minimum time from activation time
             activationTime = float.PositiveInfinity;
             lastMinVolumeLevelTime = float.PositiveInfinity;
+            lastWordTime = float.PositiveInfinity;
+            receivedTranscription = false;
 
             if (ShouldSendMicData)
             {
@@ -341,6 +362,7 @@ namespace com.facebook.witai
                 activeRequest.onResponse = QueueResult;
                 events.OnRequestCreated?.Invoke(activeRequest);
                 activeRequest.Request();
+                timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             }
 
             if (!isActive)
@@ -376,6 +398,12 @@ namespace com.facebook.witai
 
         private void DeactivateRequest()
         {
+            if (null != timeLimitCoroutine)
+            {
+                StopCoroutine(timeLimitCoroutine);
+                timeLimitCoroutine = null;
+            }
+
             if (micInput.IsRecording)
             {
                 micInput.StopRecording();
