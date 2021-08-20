@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using com.facebook.witai.data;
-using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
@@ -276,7 +275,7 @@ namespace com.facebook.witai
                     {
                         var responseStream = response.GetResponseStream();
                         string stringResponse = "";
-                        if (command == "speech")
+                        if (response.Headers["Transfer-Encoding"] == "chunked")
                         {
                             int ct = 1;
 
