@@ -275,28 +275,41 @@ namespace com.facebook.witai
                     try
                     {
                         var responseStream = response.GetResponseStream();
-                        int ct = 1;
-
-                        byte[] buffer = new byte[10240];
-                        int bytes = 0;
                         string stringResponse = "";
-                        while((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0) {
-                            stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
-                            if (stringResponse.Length > 0)
+                        if (command == "speech")
+                        {
+                            int ct = 1;
+
+                            byte[] buffer = new byte[10240];
+                            int bytes = 0;
+                            while ((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0)
                             {
-                                responseData = WitResponseJson.Parse(stringResponse);
-                                var transcription = responseData["text"];
-                                if (!string.IsNullOrEmpty(transcription))
+                                stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
+                                if (stringResponse.Length > 0)
                                 {
-                                    onPartialTranscription?.Invoke(transcription);
+                                    responseData = WitResponseJson.Parse(stringResponse);
+                                    var transcription = responseData["text"];
+                                    if (!string.IsNullOrEmpty(transcription))
+                                    {
+                                        onPartialTranscription?.Invoke(transcription);
+                                    }
                                 }
                             }
-                        }
 
-                        if (stringResponse.Length > 0)
+                            if (stringResponse.Length > 0)
+                            {
+                                onFullTranscription?.Invoke(responseData["text"]);
+                                onRawResponse?.Invoke(stringResponse);
+                            }
+                        }
+                        else
                         {
-                            onFullTranscription?.Invoke(responseData["text"]);
-                            onRawResponse?.Invoke(stringResponse);
+                            using (StreamReader reader = new StreamReader(responseStream))
+                            {
+                                stringResponse = reader.ReadToEnd();
+                                onRawResponse?.Invoke(stringResponse);
+                                responseData = WitResponseJson.Parse(stringResponse);
+                            }
                         }
 
                         responseStream.Close();

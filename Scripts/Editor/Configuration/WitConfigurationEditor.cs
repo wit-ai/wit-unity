@@ -52,10 +52,13 @@ public class WitConfigurationEditor : Editor
     {
         WitAuthUtility.InitEditorTokens();
         configuration = target as WitConfiguration;
-        configuration?.UpdateData(() =>
+        if (!string.IsNullOrEmpty(configuration?.clientAccessToken))
         {
-            EditorForegroundRunner.Run(() => EditorUtility.SetDirty(configuration));
-        });
+            configuration?.UpdateData(() =>
+            {
+                EditorForegroundRunner.Run(() => EditorUtility.SetDirty(configuration));
+            });
+        }
     }
 
     public override void OnInspectorGUI()
