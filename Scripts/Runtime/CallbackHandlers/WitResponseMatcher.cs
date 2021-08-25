@@ -208,8 +208,19 @@ namespace com.facebook.witai.callbackhandlers
         private bool IntentMatches(WitResponseNode response)
         {
             var intentNode = response.GetFirstIntent();
-            return intent == intentNode["name"].Value &&
-                   intentNode["confidence"].AsFloat > confidence;
+
+            if (intent == intentNode["name"].Value)
+            {
+                var actualConfidence = intentNode["confidence"].AsFloat;
+                if (actualConfidence > confidence)
+                {
+                    return true;
+                }
+
+                Debug.Log($"{intent} matched, but confidence ({actualConfidence.ToString("F")}) was below threshold ({confidence.ToString("F")})");
+            }
+
+            return false;
         }
     }
 
