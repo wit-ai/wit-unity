@@ -227,6 +227,7 @@ namespace com.facebook.witai
 
         private void OnFullTranscription(string transcription)
         {
+            Debug.Log("[AARON] got final transcription: " + transcription);
             DeactivateRequest();
             events.OnFullTranscription?.Invoke(transcription);
             if (runtimeConfiguration.customTranscriptionProvider)
@@ -485,11 +486,6 @@ namespace com.facebook.witai
                 if (null != request.ResponseData)
                 {
                     events?.OnResponse?.Invoke(request.ResponseData);
-                    var text = request.ResponseData["text"];
-                    if (null == activeTranscriptionProvider && !string.IsNullOrEmpty(text))
-                    {
-                        events?.OnFullTranscription.Invoke(text);
-                    }
                 }
                 else
                 {
