@@ -69,10 +69,27 @@ namespace com.facebook.witai.lib
         /// </summary>
         public AudioClip AudioClip { get; private set; }
 
+        private List<string> devices;
+
         /// <summary>
         /// List of all the available Mic devices
         /// </summary>
-        public List<string> Devices { get; private set; }
+        public List<string> Devices
+        {
+            get
+            {
+                if (null == devices)
+                {
+                    devices = new List<string>();
+                    foreach (var device in Microphone.devices)
+                    {
+                        devices.Add(device);
+                    }
+                }
+
+                return devices;
+            }
+        }
 
         /// <summary>
         /// Index of the current Mic device in m_Devices
@@ -154,15 +171,7 @@ namespace com.facebook.witai.lib
 
         void Awake()
         {
-            UpdateDevices();
             CurrentDeviceIndex = 0;
-        }
-
-        public void UpdateDevices()
-        {
-            Devices = new List<string>();
-            foreach (var device in Microphone.devices)
-                Devices.Add(device);
         }
 
         /// <summary>

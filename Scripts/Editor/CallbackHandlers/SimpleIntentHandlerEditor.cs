@@ -36,7 +36,7 @@ namespace com.facebook.witai.callbackhandlers
                     EditorStyles.helpBox);
             }
 
-            if (handler && handler.wit && null == intentNames)
+            if (handler && handler.wit && null == intentNames && handler.wit.Configuration)
             {
                 handler.wit.Configuration.UpdateData();
                 intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();

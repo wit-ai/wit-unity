@@ -20,7 +20,8 @@ namespace com.facebook.witai.callbackhandlers
     {
         [Header("Intent")]
         [SerializeField] public string intent;
-        [Range(0, 1f)] [SerializeField] public float confidence = .6f;
+        [FormerlySerializedAs("confidence")]
+        [Range(0, 1f), SerializeField] public float confidenceThreshold = .6f;
 
         [FormerlySerializedAs("valuePaths")]
         [Header("Value Matching")]
@@ -208,8 +209,19 @@ namespace com.facebook.witai.callbackhandlers
         private bool IntentMatches(WitResponseNode response)
         {
             var intentNode = response.GetFirstIntent();
-            return intent == intentNode["name"].Value &&
-                   intentNode["confidence"].AsFloat > confidence;
+
+            if (intent == intentNode["name"].Value)
+            {
+                var actualConfidence = intentNode["confidence"].AsFloat;
+                if (actualConfidence > confidenceThreshold)
+                {
+                    return true;
+                }
+
+                Debug.Log($"{intent} matched, but confidence ({actualConfidence.ToString("F")}) was below threshold ({confidenceThreshold.ToString("F")})");
+            }
+
+            return false;
         }
     }
 
