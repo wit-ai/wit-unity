@@ -101,23 +101,43 @@ namespace com.facebook.witai.utility
 
         private void SetWit(Wit wit)
         {
+            if (this.wit)
+            {
+                wit.events.OnRequestCreated.RemoveListener(OnRequestCreated);
+                wit.events.OnError.RemoveListener(OnError);
+                wit.events.OnResponse.RemoveListener(ShowResponse);
+                wit.events.OnFullTranscription.RemoveListener(ShowTranscription);
+                wit.events.OnPartialTranscription.RemoveListener(ShowTranscription);
+            }
             if (wit)
             {
                 this.wit = wit;
-                wit.events.OnRequestCreated.AddListener((r) =>
-                {
-                    submitStart = System.DateTime.Now;
-                    loading = true;
-                });
-                wit.events.OnError.AddListener((title, message) =>
-                {
-                    status = message;
-                    loading = false;
-                });
+                wit.events.OnRequestCreated.AddListener(OnRequestCreated);
+                wit.events.OnError.AddListener(OnError);
                 wit.events.OnResponse.AddListener(ShowResponse);
+                wit.events.OnFullTranscription.AddListener(ShowTranscription);
+                wit.events.OnPartialTranscription.AddListener(ShowTranscription);
                 status = $"Watching {wit.name} for responses.";
                 Repaint();
             }
+        }
+
+        private void OnError(string title, string message)
+        {
+            status = message;
+            loading = false;
+        }
+
+        private void OnRequestCreated(WitRequest request)
+        {
+            submitStart = System.DateTime.Now;
+            loading = true;
+        }
+
+        private void ShowTranscription(string transcription)
+        {
+            utterance = transcription;
+            Repaint();
         }
 
         protected override void OnDrawContent()
@@ -134,9 +154,10 @@ namespace com.facebook.witai.utility
                 }
             }
 
-            GUILayout.BeginHorizontal();
             utterance = EditorGUILayout.TextField("Utterance", utterance);
-            if (GUILayout.Button("Submit") && !loading)
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Send", GUILayout.Width(75)) && !loading)
             {
                 if (!string.IsNullOrEmpty(utterance))
                 {
@@ -150,6 +171,20 @@ namespace com.facebook.witai.utility
                     response = null;
                 }
             }
+
+            if (EditorApplication.isPlaying)
+            {
+                if (!wit.Active && GUILayout.Button("Activate", GUILayout.Width(75)))
+                {
+                    wit.Activate();
+                }
+
+                if (wit.Active && GUILayout.Button("Deactivate", GUILayout.Width(75)))
+                {
+                    wit.Deactivate();
+                }
+            }
+
             GUILayout.EndHorizontal();
 
             if (loading)

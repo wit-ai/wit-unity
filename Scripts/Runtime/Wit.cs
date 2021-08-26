@@ -121,7 +121,6 @@ namespace com.facebook.witai
                 TranscriptionProvider = runtimeConfiguration.customTranscriptionProvider;
             }
 
-
             micInput = GetComponent<IAudioInputSource>();
             if (micInput == null)
             {
@@ -137,6 +136,14 @@ namespace com.facebook.witai
                 enabled = false;
                 return;
             }
+
+            #if UNITY_EDITOR
+            // Make sure we have a mic input after a script recompile
+            if (null == micInput)
+            {
+                micInput = GetComponent<IAudioInputSource>();
+            }
+            #endif
 
             micInput.OnSampleReady += OnSampleReady;
             micInput.OnStartRecording += OnStartListening;
@@ -227,7 +234,6 @@ namespace com.facebook.witai
 
         private void OnFullTranscription(string transcription)
         {
-            Debug.Log("[AARON] got final transcription: " + transcription);
             DeactivateRequest();
             events.OnFullTranscription?.Invoke(transcription);
             if (runtimeConfiguration.customTranscriptionProvider)
