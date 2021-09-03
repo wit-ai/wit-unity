@@ -37,7 +37,11 @@ namespace com.facebook.witai.Data
             var witGo = new GameObject();
             witGo.name = "Wit";
             var wit = witGo.AddComponent<Wit>();
-            wit.Configuration = FindDefaultWitConfig();
+            var runtimeConfiguration = new WitRuntimeConfiguration()
+            {
+                witConfiguration = FindDefaultWitConfig()
+            };
+            wit.RuntimeConfiguration = runtimeConfiguration;
         }
 
         #if !WIT_DISABLE_UI

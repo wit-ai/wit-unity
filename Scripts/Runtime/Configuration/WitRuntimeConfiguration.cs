@@ -15,6 +15,10 @@ namespace com.facebook.witai.data
     [Serializable]
     public class WitRuntimeConfiguration
     {
+        [Tooltip("Configuration for the application used in this instance of Wit.ai services")]
+        [SerializeField]
+        public WitConfiguration witConfiguration;
+
         [Header("Keepalive")]
         [Tooltip("The minimum volume from the mic needed to keep the activation alive")]
         [SerializeField]

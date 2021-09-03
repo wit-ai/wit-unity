@@ -34,7 +34,9 @@ namespace com.facebook.witai.utility
         private DateTime submitStart;
         private TimeSpan requestLength;
         private string status;
-        private Wit wit;
+        private VoiceService wit;
+
+        public bool HasWit => null != wit;
 
         class Content
         {
@@ -70,7 +72,7 @@ namespace com.facebook.witai.utility
         {
             base.OnEnable();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            SetWit(GameObject.FindObjectOfType<Wit>());
+            SetWit(GameObject.FindObjectOfType<VoiceService>());
             if (!string.IsNullOrEmpty(responseText))
             {
                 response = WitResponseNode.Parse(responseText);
@@ -84,9 +86,9 @@ namespace com.facebook.witai.utility
 
         private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.EnteredPlayMode && !wit)
+            if (state == PlayModeStateChange.EnteredPlayMode && !HasWit)
             {
-                SetWit(FindObjectOfType<Wit>());
+                SetWit(FindObjectOfType<VoiceService>());
             }
         }
 
@@ -94,14 +96,14 @@ namespace com.facebook.witai.utility
         {
             if (Selection.activeGameObject)
             {
-                wit = Selection.activeGameObject.GetComponent<Wit>();
+                wit = Selection.activeGameObject.GetComponent<VoiceService>();
                 SetWit(wit);
             }
         }
 
-        private void SetWit(Wit wit)
+        private void SetWit(VoiceService wit)
         {
-            if (this.wit)
+            if (HasWit)
             {
                 wit.events.OnRequestCreated.RemoveListener(OnRequestCreated);
                 wit.events.OnError.RemoveListener(OnError);
@@ -109,7 +111,7 @@ namespace com.facebook.witai.utility
                 wit.events.OnFullTranscription.RemoveListener(ShowTranscription);
                 wit.events.OnPartialTranscription.RemoveListener(ShowTranscription);
             }
-            if (wit)
+            if (null != wit)
             {
                 this.wit = wit;
                 wit.events.OnRequestCreated.AddListener(OnRequestCreated);
@@ -172,7 +174,7 @@ namespace com.facebook.witai.utility
                 }
             }
 
-            if (EditorApplication.isPlaying)
+            if (EditorApplication.isPlaying && wit)
             {
                 if (!wit.Active && GUILayout.Button("Activate", GUILayout.Width(75)))
                 {
@@ -224,7 +226,7 @@ namespace com.facebook.witai.utility
             // the editor does nothing.
             EditorApplication.update += WatchForResponse;
 
-            if (Application.isPlaying && !wit)
+            if (Application.isPlaying && !HasWit)
             {
                 SetDefaultWit();
             }
@@ -245,7 +247,7 @@ namespace com.facebook.witai.utility
 
         private void SetDefaultWit()
         {
-            SetWit(FindObjectOfType<Wit>());
+            SetWit(FindObjectOfType<VoiceService>());
         }
 
         private void ShowResponse(WitResponseNode r)

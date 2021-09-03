@@ -27,6 +27,7 @@ namespace com.facebook.witai
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
 
+        protected virtual string HeaderLink => null;
 
         protected virtual void OnEnable()
         {
@@ -65,7 +66,7 @@ namespace com.facebook.witai
         protected virtual void OnGUI()
         {
             minSize = new Vector2(450, 300);
-            DrawHeader(WindowStyle == WindowStyles.Themed ? WitStyles.BackgroundWhite : WitStyles.BackgroundWitDark);
+            DrawHeader();
 
             if (WindowStyle == WindowStyles.Themed)
             {
@@ -82,15 +83,27 @@ namespace com.facebook.witai
 
         protected abstract void OnDrawContent();
 
-        protected void DrawHeader(GUIStyle headerBackground = null)
+        protected void DrawHeader()
         {
-            GUILayout.BeginVertical(null == headerBackground ? WitStyles.BackgroundWhite : headerBackground);
+            var headerBackground = WindowStyle == WindowStyles.Themed
+                ? WitStyles.BackgroundWhite
+                : WitStyles.BackgroundWitDark;
+            DrawHeader(headerBackground, HeaderLink);
+        }
+
+        public static void DrawHeader(GUIStyle headerBackground = null, string headerLink = null)
+        {
+            GUILayout.BeginVertical(null == headerBackground
+                ? WitStyles.BackgroundWitDark
+                : headerBackground);
             GUILayout.Space(16);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(WitStyles.MainHeader, "Label"))
             {
-                Application.OpenURL("https://wit.ai");
+                Application.OpenURL(!string.IsNullOrEmpty(headerLink)
+                    ? headerLink
+                    : "https://wit.ai");
             }
 
             GUILayout.FlexibleSpace();

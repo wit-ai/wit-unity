@@ -44,11 +44,13 @@ public class WitConfigurationEditor : Editor
     private Editor applicationEditor;
     private Vector2 scroll;
     private bool appConfigurationFoldout;
+    private bool initialized = false;
+    public bool drawHeader = true;
 
     private bool IsTokenValid => !string.IsNullOrEmpty(configuration.clientAccessToken) &&
                                  configuration.clientAccessToken.Length == 32;
 
-    public void OnEnable()
+    private void Initialize()
     {
         WitAuthUtility.InitEditorTokens();
         configuration = target as WitConfiguration;
@@ -64,6 +66,22 @@ public class WitConfigurationEditor : Editor
     public override void OnInspectorGUI()
     {
         configuration = target as WitConfiguration;
+        if (!initialized)
+        {
+            Initialize();
+            initialized = true;
+        }
+
+        if (drawHeader)
+        {
+            string link = null;
+            if (configuration && null != configuration.application &&
+                !string.IsNullOrEmpty(configuration.application.id))
+            {
+                link = $"https://wit.ai/apps/{configuration.application.id}/settings";
+            }
+            BaseWitWindow.DrawHeader(headerLink: link);
+        }
 
         GUILayout.BeginVertical(EditorStyles.helpBox);
 
