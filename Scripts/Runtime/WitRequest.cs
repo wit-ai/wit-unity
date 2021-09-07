@@ -45,8 +45,8 @@ namespace com.facebook.witai
         const string URI_SCHEME = "https";
         const string URI_AUTHORITY = "api.wit.ai";
 
-        const string WIT_API_VERSION = "20210806";
-        private const string WIT_SDK_VERSION = "0.0.11";
+        const string WIT_API_VERSION = "20210915";
+        private const string WIT_SDK_VERSION = "0.0.12";
 
         private WitConfiguration configuration;
 
@@ -277,8 +277,6 @@ namespace com.facebook.witai
                         string stringResponse = "";
                         if (response.Headers["Transfer-Encoding"] == "chunked")
                         {
-                            int ct = 1;
-
                             byte[] buffer = new byte[10240];
                             int bytes = 0;
                             while ((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0)
