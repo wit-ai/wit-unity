@@ -11,23 +11,18 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Net;
 using com.facebook.witai.data;
-using com.facebook.witai.events;
 using com.facebook.witai.interfaces;
 using com.facebook.witai.lib;
 using UnityEngine.Serialization;
 
 namespace com.facebook.witai
 {
-    public class Wit : MonoBehaviour
+    public class Wit : VoiceService, IWitRuntimeConfigProvider
     {
+        [Header("Wit Configuration")]
         [FormerlySerializedAs("configuration")]
         [Tooltip("The configuration that will be used when activating wit. This includes api key.")]
-        [SerializeField] private WitConfiguration appConfiguration;
-
         [SerializeField] private WitRuntimeConfiguration runtimeConfiguration = new WitRuntimeConfiguration();
-
-        [Tooltip("Events that will fire before, during and after an activation")]
-        [SerializeField] public WitEvents events = new WitEvents();
 
         private float activationTime;
         private IAudioInputSource micInput;
@@ -57,24 +52,21 @@ namespace com.facebook.witai
         /// <summary>
         /// Returns true if wit is currently active and listening with the mic
         /// </summary>
-        public bool Active => isActive || IsRequestActive;
+        public override bool Active => isActive || IsRequestActive;
 
-        private bool IsRequestActive => null != activeRequest && activeRequest.IsActive;
+        public override bool IsRequestActive => null != activeRequest && activeRequest.IsActive;
 
-        /// <summary>
-        /// Gets/Sets the wit configuration to be used for activations.
-        /// </summary>
-        public WitConfiguration Configuration
+        public WitRuntimeConfiguration RuntimeConfiguration
         {
-            get => appConfiguration;
-            set => appConfiguration = value;
+            get => runtimeConfiguration;
+            set => runtimeConfiguration = value;
         }
 
         /// <summary>
         /// Gets/Sets a custom transcription provider. This can be used to replace any built in asr
         /// with an on device model or other provided source
         /// </summary>
-        public ITranscriptionProvider TranscriptionProvider
+        public override ITranscriptionProvider TranscriptionProvider
         {
             get => activeTranscriptionProvider;
             set
@@ -109,9 +101,9 @@ namespace com.facebook.witai
             }
         }
 
-        public bool MicActive => micInput.IsRecording;
+        public override bool MicActive => micInput.IsRecording;
 
-        public bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit || null == activeTranscriptionProvider;
+        public override bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit || null == activeTranscriptionProvider;
 
         private void Awake()
         {
@@ -130,7 +122,7 @@ namespace com.facebook.witai
 
         private void OnEnable()
         {
-            if (!appConfiguration)
+            if (!runtimeConfiguration.witConfiguration)
             {
                 Debug.LogError("Wit configuration is not set on your Wit component. Requests cannot be made without a configuration. Wit will be disabled at runtime until the configuration has been set.");
                 enabled = false;
@@ -298,7 +290,7 @@ namespace com.facebook.witai
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate()
+        public override void Activate()
         {
             if (!micInput.IsRecording && ShouldSendMicData)
             {
@@ -330,7 +322,7 @@ namespace com.facebook.witai
             }
         }
 
-        public void ActivateImmediately()
+        public override void ActivateImmediately()
         {
             // Make sure we aren't checking activation time until
             // the mic starts recording. If we're already recording for a live
@@ -343,7 +335,7 @@ namespace com.facebook.witai
 
             if (ShouldSendMicData)
             {
-                activeRequest = Configuration.SpeechRequest();
+                activeRequest = RuntimeConfiguration.witConfiguration.SpeechRequest();
                 activeRequest.audioEncoding = micInput.AudioEncoding;
                 activeRequest.onPartialTranscription =
                     s => updateQueue.Enqueue(() => OnPartialTranscription(s));
@@ -376,7 +368,7 @@ namespace com.facebook.witai
         /// <summary>
         /// Stop listening and submit the collected microphone data to wit for processing.
         /// </summary>
-        public void Deactivate()
+        public override void Deactivate()
         {
             var recording = micInput.IsRecording;
             DeactivateRequest();
@@ -455,7 +447,7 @@ namespace com.facebook.witai
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="transcription"></param>
-        public void Activate(string transcription)
+        public override void Activate(string transcription)
         {
             if (Active) return;
 
@@ -465,7 +457,7 @@ namespace com.facebook.witai
         private void SendTranscription(string transcription)
         {
             isActive = true;
-            activeRequest = Configuration.MessageRequest(transcription);
+            activeRequest = RuntimeConfiguration.witConfiguration.MessageRequest(transcription);
             activeRequest.onResponse = QueueResult;
             events.OnRequestCreated?.Invoke(activeRequest);
             activeRequest.Request();
@@ -506,5 +498,10 @@ namespace com.facebook.witai
 
             activeRequest = null;
         }
+    }
+
+    public interface IWitRuntimeConfigProvider
+    {
+        WitRuntimeConfiguration RuntimeConfiguration { get; }
     }
 }

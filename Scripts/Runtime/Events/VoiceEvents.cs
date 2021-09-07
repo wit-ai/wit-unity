@@ -12,7 +12,7 @@ using UnityEngine.Events;
 namespace com.facebook.witai.events
 {
     [Serializable]
-    public class WitEvents
+    public class VoiceEvents
     {
         [Header("Activation Result Events")]
         [Tooltip("Called when a response from wit has been received")]

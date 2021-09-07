@@ -27,11 +27,16 @@ namespace com.facebook.witai.callbackhandlers
         private void OnEnable()
         {
             handler = target as SimpleStringEntityHandler;
-            if (handler && handler.wit && handler.wit.Configuration)
+            if (handler && handler.wit && null == intentNames)
             {
-                handler.wit.Configuration.UpdateData();
-                intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
-                intentIndex = Array.IndexOf(intentNames, handler.intent);
+                if (handler.wit is IWitRuntimeConfigProvider provider &&
+                    null != provider.RuntimeConfiguration &&
+                    provider.RuntimeConfiguration.witConfiguration)
+                {
+                    provider.RuntimeConfiguration.witConfiguration.UpdateData();
+                    intentNames = provider.RuntimeConfiguration.witConfiguration.intents.Select(i => i.name).ToArray();
+                    intentIndex = Array.IndexOf(intentNames, handler.intent);
+                }
             }
         }
 
@@ -45,13 +50,22 @@ namespace com.facebook.witai.callbackhandlers
             }
 
             var intentChanged = WitEditorUI.FallbackPopup(serializedObject,"intent", intentNames, ref intentIndex);
-            if (intentChanged || null != intentNames && intentNames.Length > 0 && null == entityNames)
+            if (intentChanged ||
+                null != intentNames && intentNames.Length > 0 && null == entityNames)
             {
-                var entities = handler?.wit?.Configuration?.intents[intentIndex]?.entities;
-                if (null != entities)
+                if (handler && handler.wit && null == intentNames)
                 {
-                    entityNames = entities.Select((e) => e.name).ToArray();
-                    entityIndex = Array.IndexOf(entityNames, handler.entity);
+                    if (handler.wit is IWitRuntimeConfigProvider provider &&
+                        null != provider.RuntimeConfiguration &&
+                        provider.RuntimeConfiguration.witConfiguration)
+                    {
+                        var entities = provider.RuntimeConfiguration.witConfiguration.intents[intentIndex]?.entities;
+                        if (null != entities)
+                        {
+                            entityNames = entities.Select((e) => e.name).ToArray();
+                            entityIndex = Array.IndexOf(entityNames, handler.entity);
+                        }
+                    }
                 }
             }
 

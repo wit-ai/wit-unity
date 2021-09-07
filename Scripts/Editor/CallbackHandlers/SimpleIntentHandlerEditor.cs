@@ -36,11 +36,14 @@ namespace com.facebook.witai.callbackhandlers
                     EditorStyles.helpBox);
             }
 
-            if (handler && handler.wit && null == intentNames && handler.wit.Configuration)
+            if (handler && handler.wit && null == intentNames)
             {
-                handler.wit.Configuration.UpdateData();
-                intentNames = handler.wit.Configuration.intents.Select(i => i.name).ToArray();
-                intentIndex = Array.IndexOf(intentNames, handler.intent);
+                if (handler.wit is IWitRuntimeConfigProvider provider && null != provider.RuntimeConfiguration && provider.RuntimeConfiguration.witConfiguration)
+                {
+                    provider.RuntimeConfiguration.witConfiguration.UpdateData();
+                    intentNames = provider.RuntimeConfiguration.witConfiguration.intents.Select(i => i.name).ToArray();
+                    intentIndex = Array.IndexOf(intentNames, handler.intent);
+                }
             }
 
             WitEditorUI.FallbackPopup(serializedObject, "intent",

@@ -27,6 +27,20 @@ namespace com.facebook.witai.configuration
         }
         #endif
 
+        protected override string HeaderLink
+        {
+            get
+            {
+                if (null != witConfiguration && null != witConfiguration.application &&
+                    !string.IsNullOrEmpty(witConfiguration.application.id))
+                {
+                    return $"https://wit.ai/apps/{witConfiguration.application.id}/settings";
+                }
+
+                return null;
+            }
+        }
+
         private Texture2D tex;
         private bool manualToken;
         private Vector2 scroll;
@@ -53,7 +67,7 @@ namespace com.facebook.witai.configuration
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
-                witEditor.OnEnable();
+                witEditor.drawHeader = false;
             }
 
             RefreshConfigList();
@@ -101,7 +115,7 @@ namespace com.facebook.witai.configuration
             if (witConfiguration && (configChanged || !witEditor))
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
-                witEditor.OnEnable();
+                witEditor.drawHeader = false;
             }
 
             if(witConfiguration && witEditor) witEditor.OnInspectorGUI();

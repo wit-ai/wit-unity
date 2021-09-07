@@ -338,11 +338,14 @@ namespace com.facebook.witai
 
             isActive = false;
 
-            var error = responseData["error"];
-            if (!string.IsNullOrEmpty(error))
+            if (null != responseData)
             {
-                statusDescription = $"Error: {responseData["code"]}. {error}";
-                statusCode = 500;
+                var error = responseData["error"];
+                if (!string.IsNullOrEmpty(error))
+                {
+                    statusDescription = $"Error: {responseData["code"]}. {error}";
+                    statusCode = 500;
+                }
             }
 
             onResponse?.Invoke(this);

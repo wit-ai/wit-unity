@@ -12,16 +12,16 @@ namespace com.facebook.witai.callbackhandlers
 {
     public abstract class WitResponseHandler : MonoBehaviour
     {
-        [SerializeField] public Wit wit;
+        [SerializeField] public VoiceService wit;
 
         private void OnValidate()
         {
-            if (!wit) wit = FindObjectOfType<Wit>();
+            if (!wit) wit = FindObjectOfType<VoiceService>();
         }
 
         private void OnEnable()
         {
-            if (!wit) wit = FindObjectOfType<Wit>();
+            if (!wit) wit = FindObjectOfType<VoiceService>();
             if (!wit)
             {
                 Debug.LogError("Wit not found in scene. Disabling " + GetType().Name + " on " +
