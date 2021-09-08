@@ -28,18 +28,21 @@ public class WitConfigurationEditor : Editor
     {
         "Application",
         "Intents",
-        "Entities"
+        "Entities",
+        "Traits"
     };
 
     private readonly string[] toolPanelNamesWithoutAppInfo = new[]
     {
         "Intents",
-        "Entities"
+        "Entities",
+        "Traits"
     };
 
     private const int TOOL_PANEL_APP = 0;
     private const int TOOL_PANEL_INTENTS = 1;
     private const int TOOL_PANEL_ENTITIES = 2;
+    private const int TOOL_PANEL_TRAITS = 3;
 
     private Editor applicationEditor;
     private Vector2 scroll;
@@ -150,6 +153,9 @@ public class WitConfigurationEditor : Editor
             case TOOL_PANEL_ENTITIES:
                 DrawEntities();
                 break;
+            case TOOL_PANEL_TRAITS:
+                DrawTraits();
+                break;
         }
         GUILayout.EndScrollView();
 
@@ -166,26 +172,89 @@ public class WitConfigurationEditor : Editor
         }
     }
 
+    private void DrawTraits()
+    {
+        var traits = configuration.traits;
+        if (null != traits)
+        {
+            var n = traits.Length;
+            if (n == 0)
+            {
+                GUILayout.Label("No traits available.");
+            }
+            else
+            {
+                BeginIndent();
+                for (int i = 0; i < n; i++) {
+                    var trait = traits[i];
+                    if (null != trait && Foldout("t:", trait.name))
+                    {
+                        DrawTrait(trait);
+                    }
+                }
+                EndIndent();
+            }
+        }
+        else
+        {
+            GUILayout.Label("Traits have not been loaded yet.", EditorStyles.helpBox);
+        }
+    }
+
+    private void DrawTrait(WitTrait trait)
+    {
+        InfoField("ID", trait.id);
+        InfoField("Name", trait.name);
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("Values", GUILayout.Width(100));
+        GUILayout.EndHorizontal();
+        var values = trait.values;
+        var n = values.Length;
+        if (n == 0) {
+            GUILayout.Label("No values available.");
+        }
+        else
+        {
+            BeginIndent();
+            for (int i = 0; i < n; i++)
+            {
+                var value = values[i];
+                if (null != value && Foldout("v:", value.value))
+                {
+                    DrawTraitValue(value);
+                }
+            }
+            EndIndent();
+        }
+    }
+
+    private void DrawTraitValue(WitTraitValue traitValue)
+    {
+        InfoField("ID", traitValue.id);
+        InfoField("Value", traitValue.value);
+    }
+
     private void DrawEntities()
     {
-        if (null != configuration.entities)
+        var entities = configuration.entities;
+        if (null != entities)
         {
-            if (configuration.entities.Length == 0)
+            var n = entities.Length;
+            if (n == 0)
             {
                 GUILayout.Label("No entities available.");
             }
             else
             {
                 BeginIndent();
-                for (int i = 0; i < configuration.entities.Length; i++)
+                for (int i = 0; i < n; i++)
                 {
-                    var entity = configuration.entities[i];
+                    var entity = entities[i];
                     if (null != entity && Foldout("e:", entity.name))
                     {
                         DrawEntity(entity);
                     }
                 }
-
                 EndIndent();
             }
         }
@@ -211,18 +280,20 @@ public class WitConfigurationEditor : Editor
 
     private void DrawIntents()
     {
-        if (null != configuration.intents)
+        var intents = configuration.intents;
+        if (null != intents)
         {
-            if (configuration.intents.Length == 0)
+            var n = intents.Length;
+            if (n == 0)
             {
                 GUILayout.Label("No intents available.");
             }
             else
             {
                 BeginIndent();
-                for (int i = 0; i < configuration.intents.Length; i++)
+                for (int i = 0; i < n; i++)
                 {
-                    var intent = configuration.intents[i];
+                    var intent = intents[i];
                     if (null != intent && Foldout("i:", intent.name))
                     {
                         DrawIntent(intent);
@@ -233,77 +304,77 @@ public class WitConfigurationEditor : Editor
             }
         }
         else
-
         {
             GUILayout.Label("Intents have not been loaded yet.", EditorStyles.helpBox);
         }
     }
 
     private void DrawIntent(WitIntent intent)
+    {
+        InfoField("ID", intent.id);
+        var entities = intent.entities;
+        if (entities.Length > 0)
         {
-            InfoField("ID", intent.id);
-            if (intent.entities.Length > 0)
-            {
-                var entityNames = intent.entities.Select(e => e.name).ToArray();
-                EditorGUILayout.Popup("Entities", 0, entityNames);
-            }
+            var entityNames = entities.Select(e => e.name).ToArray();
+            EditorGUILayout.Popup("Entities", 0, entityNames);
         }
-
-        private void DrawApplication(WitApplication application)
-        {
-            if (string.IsNullOrEmpty(application.name))
-            {
-                GUILayout.Label("Loading...");
-            }
-            else
-            {
-                InfoField("Name", application.name);
-                InfoField("ID", application.id);
-                InfoField("Language", application.lang);
-                InfoField("Created", application.createdAt);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Private", GUILayout.Width(100));
-                GUILayout.Toggle(application.isPrivate, "");
-                GUILayout.EndHorizontal();
-            }
-        }
-
-        #region UI Components
-
-        private void BeginIndent()
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(10);
-            GUILayout.BeginVertical();
-        }
-
-        private void EndIndent()
-        {
-            GUILayout.EndVertical();
-            GUILayout.EndHorizontal();
-        }
-
-        private void InfoField(string name, string value)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(name, GUILayout.Width(100));
-            GUILayout.Label(value, "TextField");
-            GUILayout.EndHorizontal();
-        }
-
-        private bool Foldout(string keybase, string name)
-        {
-            string key = keybase + name;
-            bool show = false;
-            if (!foldouts.TryGetValue(key, out show))
-            {
-                foldouts[key] = false;
-            }
-
-            show = EditorGUILayout.Foldout(show, name, true);
-            foldouts[key] = show;
-            return show;
-        }
-
-        #endregion
     }
+
+    private void DrawApplication(WitApplication application)
+    {
+        if (string.IsNullOrEmpty(application.name))
+        {
+            GUILayout.Label("Loading...");
+        }
+        else
+        {
+            InfoField("Name", application.name);
+            InfoField("ID", application.id);
+            InfoField("Language", application.lang);
+            InfoField("Created", application.createdAt);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Private", GUILayout.Width(100));
+            GUILayout.Toggle(application.isPrivate, "");
+            GUILayout.EndHorizontal();
+        }
+    }
+
+    #region UI Components
+
+    private void BeginIndent()
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Space(10);
+        GUILayout.BeginVertical();
+    }
+
+    private void EndIndent()
+    {
+        GUILayout.EndVertical();
+        GUILayout.EndHorizontal();
+    }
+
+    private void InfoField(string name, string value)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(name, GUILayout.Width(100));
+        GUILayout.Label(value, "TextField");
+        GUILayout.EndHorizontal();
+    }
+
+    private bool Foldout(string keybase, string name)
+    {
+        string key = keybase + name;
+        bool show = false;
+        if (!foldouts.TryGetValue(key, out show))
+        {
+            foldouts[key] = false;
+        }
+
+        show = EditorGUILayout.Foldout(show, name, true);
+        foldouts[key] = show;
+        return show;
+    }
+
+    #endregion
+}

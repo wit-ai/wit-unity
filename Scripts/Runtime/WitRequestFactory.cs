@@ -40,6 +40,9 @@ namespace com.facebook.witai
             return new WitRequest(config, "speech", QueryParam("n", maxBestIntents.ToString()));
         }
 
+        #region IDE Only Requests
+        #if UNITY_EDITOR
+
         /// <summary>
         /// Requests a list of intents available under this configuration
         /// </summary>
@@ -71,9 +74,6 @@ namespace com.facebook.witai
             return new WitRequest(config, "utterances");
         }
 
-        #region IDE Only Requests
-        #if UNITY_EDITOR
-
         /// <summary>
         /// Requests a list of available entites
         /// </summary>
@@ -93,6 +93,27 @@ namespace com.facebook.witai
         public static WitRequest GetEntityRequest(this WitConfiguration config, string entityName)
         {
             return new WitRequest(config, $"entities/{entityName}", true);
+        }
+
+        /// <summary>
+        /// Requests a list of available traits
+        /// </summary>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        public static WitRequest ListTraitsRequest(this WitConfiguration config)
+        {
+            return new WitRequest(config, "traits", true);
+        }
+
+        /// <summary>
+        /// Requests details of a specific trait
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="traitName">The name of the trait as it is defined in wit.ai</param>
+        /// <returns></returns>
+        public static WitRequest GetTraitRequest(this WitConfiguration config, string traitName)
+        {
+            return new WitRequest(config, $"traits/{traitName}", true);
         }
 
         /// <summary>
