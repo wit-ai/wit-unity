@@ -219,7 +219,7 @@ namespace com.facebook.witai
             if (isServerAuthRequired)
             {
                 request.Headers["Authorization"] =
-                    $"Bearer {WitAuthUtility.ServerToken}";
+                    $"Bearer {WitAuthUtility.AppServerToken}";
             }
             else
             {

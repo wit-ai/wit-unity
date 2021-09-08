@@ -25,6 +25,41 @@ public class WitAuthUtility
     }
 
     private static string serverToken;
+    private static string appServerToken;
+    private static string appIdentifier;
+
+    public static string AppServerToken
+    {
+#if UNITY_EDITOR
+        get
+        {
+            if (string.IsNullOrEmpty(appIdentifier)) appIdentifier = Application.identifier;
+            if (null == appServerToken)
+            {
+                try
+                {
+                    appServerToken = EditorPrefs.GetString("Wit::ServerToken::" + appIdentifier, ServerToken);
+                }
+                catch (Exception e)
+                {
+                    // This will happen if we don't prime the server token on the main thread and
+                    // we access the server token editorpref value in a request.
+                    Debug.LogError(e.Message);
+                }
+            }
+
+            return appServerToken;
+        }
+        set
+        {
+            appServerToken = value;
+            EditorPrefs.SetString("Wit::ServerToken::" + Application.identifier, appServerToken);
+        }
+#else
+        get => "";
+#endif
+    }
+
     public static string ServerToken
     {
 #if UNITY_EDITOR
