@@ -23,7 +23,7 @@
  * - the parser ignores data types. Each value is a string.
  * - only double quotes (") are used for quoting strings.
  * - values and names are not restricted to quoted strings. They simply add up and are trimmed.
- * - There are only 3 types: arrays(JSONArray), objects(JSONClass) and values(JSONData)
+ * - There are only 3 types: arrays(WitResponseArray), objects(WitResponseClass) and values(WitResponseData)
  * - provides "casting" properties to easily convert to / from those types:
  *   int / float / double / bool
  * - provides a common interface for each node so no explicit casting is required.
