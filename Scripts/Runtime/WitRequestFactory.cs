@@ -30,6 +30,9 @@ namespace com.facebook.witai
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("q", query));
+            if(requestOptions.nBestIntents != -1){
+                queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
+            }
             if(requestOptions.entityListProvider != null){
                 queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
             }
@@ -40,12 +43,13 @@ namespace com.facebook.witai
         /// Creates a request for nlu processing that includes a data stream for mic data
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="maxBestIntents"></param>
         /// <returns></returns>
-        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, int maxBestIntents = 1)
+        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
-            queryParams.Add(QueryParam("n", maxBestIntents.ToString()));
+            if(requestOptions.nBestIntents != -1){
+                queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
+            }
             if(requestOptions.entityListProvider != null){
                 queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
             }

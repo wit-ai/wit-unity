@@ -53,15 +53,15 @@ namespace com.facebook.witai
         /// <summary>
         /// Send text data for NLU processing
         /// </summary>
-        /// <param name="transcription"></param>
-        public abstract void Activate(string transcription);
+        /// <param name="text"></param>
+        public abstract void Activate(string text);
         
         /// <summary>
         /// Send text data for NLU processing with custom request options.
         /// </summary>
-        /// <param name="transcription"></param>
+        /// <param name="text"></param>
         /// <param name="requestOptions"></param>
-        public abstract void Activate(string transcription, WitRequestOptions requestOptions);
+        public abstract void Activate(string text, WitRequestOptions requestOptions);
     }
 
     public interface IVoiceService
@@ -101,15 +101,15 @@ namespace com.facebook.witai
         /// <summary>
         /// Send text data for NLU processing
         /// </summary>
-        /// <param name="transcription"></param>
+        /// <param name="text"></param>
         void Activate(string transcription);
         
         /// <summary>
         /// Send text data for NLU processing with custom request options.
         /// </summary>
-        /// <param name="transcription"></param>
+        /// <param name="text"></param>
         /// <param name="requestOptions"></param>
-        void Activate(string transcription, WitRequestOptions requestOptions);
+        void Activate(string text, WitRequestOptions requestOptions);
 
     }
 }

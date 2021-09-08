@@ -18,9 +18,9 @@ using UnityEngine.Serialization;
 
 namespace com.facebook.witai
 {
-
 	public class WitRequestOptions
     {
-        public IEntityListProvider  entityListProvider;
+        public IEntityListProvider entityListProvider;
+        public int nBestIntents = -1;
     }
 }

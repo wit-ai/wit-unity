@@ -12,11 +12,9 @@ namespace com.facebook.witai.interfaces
 {
     public interface IEntityListProvider
     {
-
         /// <summary>
         /// Used to get Dynamic Entities
         /// </summary>
         string ToJSON();
-
     }
 }
