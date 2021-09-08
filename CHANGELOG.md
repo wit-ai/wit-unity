@@ -1,3 +1,6 @@
+0.0.12 (September 7, 2021)
+* Upgrade API version to 20210922
+
 0.0.7 (July 29, 2021)
 * Improve link UI
 * Fix missing config errors
