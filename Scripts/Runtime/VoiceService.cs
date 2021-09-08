@@ -35,8 +35,15 @@ namespace com.facebook.witai
         /// Activate the microphone and send data for NLU processing.
         /// </summary>
         public abstract void Activate();
+        
+        /// <summary>
+        /// Activate the microphone and send data for NLU processing.
+        /// </summary>
+        /// <param name="requestOptions"></param>
+        public abstract void Activate(WitRequestOptions requestOptions);
 
         public abstract void ActivateImmediately();
+        public abstract void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
         /// Stop listening and submit the collected microphone data for processing.
@@ -48,6 +55,13 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="transcription"></param>
         public abstract void Activate(string transcription);
+        
+        /// <summary>
+        /// Send text data for NLU processing with custom request options.
+        /// </summary>
+        /// <param name="transcription"></param>
+        /// <param name="requestOptions"></param>
+        public abstract void Activate(string transcription, WitRequestOptions requestOptions);
     }
 
     public interface IVoiceService
@@ -70,7 +84,14 @@ namespace com.facebook.witai
         /// </summary>
         void Activate();
 
+        /// <summary>
+        /// Activate the microphone and send data for NLU processing with custom request options.
+        /// </summary>
+        /// <param name="requestOptions"></param>
+        void Activate(WitRequestOptions requestOptions);
+
         void ActivateImmediately();
+        void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
         /// Stop listening and submit the collected microphone data for processing.
@@ -82,5 +103,13 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="transcription"></param>
         void Activate(string transcription);
+        
+        /// <summary>
+        /// Send text data for NLU processing with custom request options.
+        /// </summary>
+        /// <param name="transcription"></param>
+        /// <param name="requestOptions"></param>
+        void Activate(string transcription, WitRequestOptions requestOptions);
+
     }
 }
