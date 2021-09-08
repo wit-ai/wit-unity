@@ -43,6 +43,7 @@ namespace com.facebook.witai
         public abstract void Activate(WitRequestOptions requestOptions);
 
         public abstract void ActivateImmediately();
+        public abstract void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
         /// Stop listening and submit the collected microphone data for processing.
@@ -90,6 +91,7 @@ namespace com.facebook.witai
         void Activate(WitRequestOptions requestOptions);
 
         void ActivateImmediately();
+        void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
         /// Stop listening and submit the collected microphone data for processing.

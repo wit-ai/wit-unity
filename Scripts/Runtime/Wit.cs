@@ -336,7 +336,7 @@ namespace com.facebook.witai
         {
             ActivateImmediately(new WitRequestOptions());
         }
-        public void ActivateImmediately(WitRequestOptions requestOptions)
+        public override void ActivateImmediately(WitRequestOptions requestOptions)
         {
             // Make sure we aren't checking activation time until
             // the mic starts recording. If we're already recording for a live
