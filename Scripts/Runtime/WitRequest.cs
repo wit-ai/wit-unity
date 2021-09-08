@@ -244,7 +244,7 @@ namespace com.facebook.witai
                     break;
             }
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{deviceName}";
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel}";
 
             isActive = true;
             statusCode = 0;
