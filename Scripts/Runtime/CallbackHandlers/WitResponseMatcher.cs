@@ -209,6 +209,10 @@ namespace com.facebook.witai.callbackhandlers
         private bool IntentMatches(WitResponseNode response)
         {
             var intentNode = response.GetFirstIntent();
+            if (string.IsNullOrEmpty(intent))
+            {
+                return true;
+            }
 
             if (intent == intentNode["name"].Value)
             {
