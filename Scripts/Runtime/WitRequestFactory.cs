@@ -30,6 +30,9 @@ namespace com.facebook.witai
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("q", query));
+            if(requestOptions.nBestIntents != -1){
+                queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
+            }
             if(requestOptions.entityListProvider != null){
                 queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
             }
