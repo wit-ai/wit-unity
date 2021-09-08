@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the license found in the
@@ -12,18 +12,18 @@ using UnityEngine;
 namespace com.facebook.witai.data
 {
     [Serializable]
-    public class WitKeyword
+    public class WitTraitValue
     {
-        [SerializeField] public string keyword;
-        [SerializeField] public string[] synonyms;
+        [SerializeField] public string id;
+        [SerializeField] public string value;
 
         #if UNITY_EDITOR
-        public static WitKeyword FromJson(WitResponseNode keywordNode)
+        public static WitTraitValue FromJson(WitResponseNode traitValueNode)
         {
-            return new WitKeyword()
+            return new WitTraitValue()
             {
-                keyword = keywordNode["keyword"],
-                synonyms = keywordNode["synonyms"].AsStringArray
+                id = traitValueNode["id"],
+                value = traitValueNode["value"]
             };
         }
         #endif

@@ -28,6 +28,7 @@ namespace com.facebook.witai.data
 
         [SerializeField] public WitEntity[] entities;
         [SerializeField] public WitIntent[] intents;
+        [SerializeField] public WitTrait[] traits;
 
         public WitApplication Application => application;
 
@@ -36,16 +37,21 @@ namespace com.facebook.witai.data
         {
             if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken))
             {
-                var intentRequest = this.ListIntentsRequest();
-                intentRequest.onResponse = (r) =>
+                var intentsRequest = this.ListIntentsRequest();
+                intentsRequest.onResponse = (r) =>
                 {
-                    var entityRequest = this.ListEntitiesRequest();
-                    entityRequest.onResponse =
-                        (er) => OnUpdateData(er, UpdateEntityList, onUpdateComplete);
-                    OnUpdateData(r, UpdateIntentList, entityRequest.Request);
+                    var entitiesRequest = this.ListEntitiesRequest();
+                    entitiesRequest.onResponse = (er) =>
+                    {
+                        var traitsRequest = this.ListTraitsRequest();
+                        traitsRequest.onResponse =
+                          (tr) => OnUpdateData(tr, UpdateTraitList, onUpdateComplete);
+                        OnUpdateData(er, UpdateEntityList, traitsRequest.Request);
+                    };
+                    OnUpdateData(r, UpdateIntentList, entitiesRequest.Request);
                 };
 
-                application?.UpdateData(intentRequest.Request);
+                application?.UpdateData(intentsRequest.Request);
             }
         }
 
@@ -66,8 +72,9 @@ namespace com.facebook.witai.data
         private void UpdateIntentList(WitResponseNode intentListWitResponse)
         {
             var intentList = intentListWitResponse.AsArray;
-            intents = new WitIntent[intentList.Count];
-            for (int i = 0; i < intentList.Count; i++)
+            var n = intentList.Count;
+            intents = new WitIntent[n];
+            for (int i = 0; i < n; i++)
             {
                 var intent = WitIntent.FromJson(intentList[i]);
                 intent.witConfiguration = this;
@@ -79,13 +86,27 @@ namespace com.facebook.witai.data
         private void UpdateEntityList(WitResponseNode entityListWitResponse)
         {
             var entityList = entityListWitResponse.AsArray;
-            entities = new WitEntity[entityList.Count];
-            for (int i = 0; i < entityList.Count; i++)
+            var n = entityList.Count;
+            entities = new WitEntity[n];
+            for (int i = 0; i < n; i++)
             {
                 var entity = WitEntity.FromJson(entityList[i]);
                 entity.witConfiguration = this;
                 entities[i] = entity;
                 entity.UpdateData();
+            }
+        }
+
+        private void UpdateTraitList(WitResponseNode traitListWitResponse)
+        {
+            var traitList = traitListWitResponse.AsArray;
+            var n = traitList.Count;
+            traits = new WitTrait[n];
+            for (int i = 0; i < n; i++) {
+                var trait = WitTrait.FromJson(traitList[i]);
+                trait.witConfiguration = this;
+                traits[i] = trait;
+                trait.UpdateData();
             }
         }
 

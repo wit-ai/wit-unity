@@ -38,7 +38,6 @@ namespace com.facebook.witai.data
             for (int i = 0; i < keywordArray.Count; i++)
             {
                 keywords[i] = WitKeyword.FromJson(keywordArray[i]);
-                keywords[i].witConfiguration = witConfiguration;
             }
         }
 
