@@ -295,10 +295,11 @@ namespace com.facebook.witai
         {
             Activate(new WitRequestOptions());
         }
-            /// <summary>
+        
+        /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate(WitRequestOptions requestOptions)
+        public override void Activate(WitRequestOptions requestOptions)
         {
             if (!micInput.IsRecording && ShouldSendMicData)
             {
@@ -460,6 +461,7 @@ namespace com.facebook.witai
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="transcription"></param>
+        /// <param name="requestOptions"></param>
         public override void Activate(string transcription, WitRequestOptions requestOptions)
         {
             if (Active) return;
@@ -471,7 +473,7 @@ namespace com.facebook.witai
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="transcription"></param>
-        public void Activate(string transcription)
+        public override void Activate(string transcription)
         {
             Activate(transcription, new WitRequestOptions());
         }

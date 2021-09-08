@@ -31,7 +31,7 @@ namespace com.facebook.witai
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("q", query));
             if(requestOptions.entityListProvider != null){
-                queryParams.Add(QueryParam("dynamic_entities", requestOptions.entityListProvider.ToJSON()));
+                queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
             }
             return new WitRequest(config, "message", queryParams.ToArray());
         }
@@ -47,7 +47,7 @@ namespace com.facebook.witai
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("n", maxBestIntents.ToString()));
             if(requestOptions.entityListProvider != null){
-                queryParams.Add(QueryParam("dynamic_entities", requestOptions.entityListProvider.ToJSON()));
+                queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
             }
             return new WitRequest(config, "speech", queryParams.ToArray());
         }
