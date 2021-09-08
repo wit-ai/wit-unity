@@ -19,8 +19,8 @@ using UnityEngine.Serialization;
 
 
 namespace com.facebook.witai
-{
-
+{   
+    [Serializable]
 	public class WitSimpleEntityList : IEntityListProvider
     {
         public List<string> keywords;
@@ -34,12 +34,7 @@ namespace com.facebook.witai
 
         public string ToJSON() 
           {
-            List<string> keywordJSON = new List<string>();
-            foreach (string keyword in keywords)
-            {
-              keywordJSON.Add("{\"keyword\":\"" +keyword+ "\",\"synonyms\":[\""+keyword+"\"]}");
-            }
-            return "{\"" +entity+ "\":["+ string.Join(",", keywordJSON) + "]}";
+            return JsonUtility.ToJson(this);
           }
     }
 }
