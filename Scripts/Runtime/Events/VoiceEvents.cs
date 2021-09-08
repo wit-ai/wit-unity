@@ -14,7 +14,6 @@ namespace com.facebook.witai.events
     [Serializable]
     public class VoiceEvents
     {
-        public string instancename;
         [Header("Activation Result Events")]
         [Tooltip("Called when a response from wit has been received")]
         public WitResponseEvent OnResponse = new WitResponseEvent();
