@@ -16,7 +16,7 @@ namespace com.facebook.witai.inspectors
     public class WitInspector : Editor
     {
         private string activationMessage;
-        private Wit wit;
+        private VoiceService wit;
         private float micMin;
         private float micMax;
         private string lastTranscription;
@@ -28,7 +28,7 @@ namespace com.facebook.witai.inspectors
 
             if (Application.isPlaying)
             {
-                wit = (Wit) target;
+                wit = (VoiceService) target;
 
                 if (wit.Active)
                 {

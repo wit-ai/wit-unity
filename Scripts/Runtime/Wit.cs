@@ -122,12 +122,6 @@ namespace com.facebook.witai
 
         private void OnEnable()
         {
-            if (!runtimeConfiguration.witConfiguration)
-            {
-                Debug.LogError("Wit configuration is not set on your Wit component. Requests cannot be made without a configuration. Wit will be disabled at runtime until the configuration has been set.");
-                enabled = false;
-                return;
-            }
 
             #if UNITY_EDITOR
             // Make sure we have a mic input after a script recompile
@@ -272,6 +266,13 @@ namespace com.facebook.witai
 
         private void Update()
         {
+            if (!runtimeConfiguration.witConfiguration)
+            {
+                Debug.LogError(
+                    "Wit configuration is not set on your Wit component. Requests cannot be made without a configuration. Wit will be disabled at runtime until the configuration has been set.");
+                enabled = false;
+                return;
+            }
             if (updateQueue.Count > 0)
             {
                 if (updateQueue.TryDequeue(out var result)) result.Invoke();

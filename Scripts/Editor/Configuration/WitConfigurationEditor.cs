@@ -99,11 +99,11 @@ public class WitConfigurationEditor : Editor
         if (appConfigurationFoldout || !IsTokenValid)
         {
             GUILayout.BeginHorizontal();
-            var token = EditorGUILayout.PasswordField("Client Access Token",
-                configuration.clientAccessToken);
-            if (token != configuration.clientAccessToken)
+            var token = EditorGUILayout.PasswordField("Server Access Token",
+                WitAuthUtility.AppServerToken);
+            if (token != WitAuthUtility.AppServerToken)
             {
-                configuration.clientAccessToken = token;
+                WitAuthUtility.AppServerToken = token;
 
                 if (token.Length == 32)
                 {
@@ -115,8 +115,7 @@ public class WitConfigurationEditor : Editor
 
             GUILayout.EndHorizontal();
 
-
-            if (configuration && GUILayout.Button("Get Configuration"))
+            if(configuration && GUILayout.Button("Refresh Application Configuration"))
             {
                 configuration.FetchAppConfigFromServerToken(() =>
                 {
