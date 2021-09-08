@@ -4,10 +4,12 @@
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
+using UnityEngine;
 using System.Text;
 using com.facebook.witai.data;
 using com.facebook.witai.interfaces;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace com.facebook.witai
 {
@@ -24,9 +26,14 @@ namespace com.facebook.witai
         /// <param name="config"></param>
         /// <param name="query">Text string to process with the NLU</param>
         /// <returns></returns>
-        public static WitRequest MessageRequest(this WitConfiguration config, string query)
+        public static WitRequest MessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions)
         {
-            return new WitRequest(config, "message", QueryParam("q", query));
+            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
+            queryParams.Add(QueryParam("q", query));
+            if(requestOptions.entityListProvider != null){
+                queryParams.Add(QueryParam("dynamic_entities", requestOptions.entityListProvider.ToJSON()));
+            }
+            return new WitRequest(config, "message", queryParams.ToArray());
         }
 
         /// <summary>
@@ -35,9 +42,14 @@ namespace com.facebook.witai
         /// <param name="config"></param>
         /// <param name="maxBestIntents"></param>
         /// <returns></returns>
-        public static WitRequest SpeechRequest(this WitConfiguration config, int maxBestIntents = 1)
+        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, int maxBestIntents = 1)
         {
-            return new WitRequest(config, "speech", QueryParam("n", maxBestIntents.ToString()));
+            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
+            queryParams.Add(QueryParam("n", maxBestIntents.ToString()));
+            if(requestOptions.entityListProvider != null){
+                queryParams.Add(QueryParam("dynamic_entities", requestOptions.entityListProvider.ToJSON()));
+            }
+            return new WitRequest(config, "speech", queryParams.ToArray());
         }
 
         /// <summary>
