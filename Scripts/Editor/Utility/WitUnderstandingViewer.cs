@@ -24,12 +24,6 @@ namespace com.facebook.witai.utility
         private WitResponseNode response;
         private Dictionary<string, bool> foldouts;
 
-        [NonSerialized]
-        private bool initSubmitted;
-
-        [SerializeField]
-        private bool submitted;
-
         private Vector2 scroll;
         private DateTime submitStart;
         private TimeSpan requestLength;
@@ -119,7 +113,7 @@ namespace com.facebook.witai.utility
                 wit.events.OnResponse.AddListener(ShowResponse);
                 wit.events.OnFullTranscription.AddListener(ShowTranscription);
                 wit.events.OnPartialTranscription.AddListener(ShowTranscription);
-                status = $"Watching {wit.name} for responses.";
+                status = "Enter an utterance and hit Send to see what your app will return.";
                 Repaint();
             }
         }
@@ -151,7 +145,7 @@ namespace com.facebook.witai.utility
                 if (!witConfiguration)
                 {
                     GUILayout.Label(
-                        "A wit configuration must be available and selected to test utterances.", EditorStyles.helpBox);
+                        "A Wit configuration must be available and selected to test utterances.", EditorStyles.helpBox);
                     return;
                 }
             }
@@ -163,8 +157,6 @@ namespace com.facebook.witai.utility
             {
                 if (!string.IsNullOrEmpty(utterance))
                 {
-                    submitted = true;
-                    initSubmitted = true;
                     SubmitUtterance();
                 }
                 else
@@ -205,7 +197,7 @@ namespace com.facebook.witai.utility
             {
                 GUILayout.BeginVertical(EditorStyles.helpBox);
                 GUILayout.Label(
-                    "Enter an utterance and hit submit to see what your app will return.");
+                    "Enter an utterance and hit Send to see what your app will return.");
                 GUILayout.EndVertical();
             }
 
