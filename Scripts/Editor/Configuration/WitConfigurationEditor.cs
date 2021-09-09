@@ -24,12 +24,17 @@ public class WitConfigurationEditor : Editor
 
     private int selectedToolPanel;
 
-    private readonly string[] toolPanelNames = new[]
+    public string[] toolPanelNames = new[]
     {
         "Application",
         "Intents",
         "Entities",
         "Traits"
+    };
+
+    public string[] toolPanelNamesOnlyAppInfo = new[]
+    {
+        "Application"
     };
 
     private readonly string[] toolPanelNamesWithoutAppInfo = new[]
@@ -134,7 +139,11 @@ public class WitConfigurationEditor : Editor
 
         if (hasApplicationInfo)
         {
-            selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);
+            if(!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32){
+                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
+            }else{
+                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
+            }
         }
         else
         {

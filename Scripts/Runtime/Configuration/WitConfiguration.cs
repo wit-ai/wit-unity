@@ -35,7 +35,7 @@ namespace com.facebook.witai.data
         #if UNITY_EDITOR
         public void UpdateData(Action onUpdateComplete = null)
         {
-            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken))
+            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
             {
                 var intentsRequest = this.ListIntentsRequest();
                 intentsRequest.onResponse = (r) =>
