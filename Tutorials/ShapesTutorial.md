@@ -351,7 +351,7 @@ Next, add callbacks to the **OnStartListening**, **OnStoppedListening**, and **O
 
 ![image11](https://user-images.githubusercontent.com/6325818/125679817-3f41e6e0-00eb-44ee-a13c-acef808c8962.png)
 
-With this done, the project is complete. Press the **Play** button, and once Unity enters play mode, you can press the spacebar to activate Assistant. You can then say “Make the cube red” and the cube will turn red. If you want to see the data come in after a voice command, open the understanding viewer and select the Wit object. This will link the Wit object to the **Understanding Viewer** and all responses will be displayed there.
+With this done, the project is complete. Press the **Play** button, and once Unity enters play mode, you can press the spacebar to activate your voice experience. You can then say “Make the cube red” and the cube will turn red. If you want to see the data come in after a voice command, open the understanding viewer and select the Wit object. This will link the Wit object to the **Understanding Viewer** and all responses will be displayed there.
 
 
 ![image3](https://user-images.githubusercontent.com/6325818/125679846-d6c8fcb9-0e97-4eb9-bd9f-6976cb8b04ca.png)
