@@ -24,7 +24,7 @@ public class WitConfigurationEditor : Editor
 
     private int selectedToolPanel;
 
-    private string[] toolPanelNames = new[]
+    private readonly string[] toolPanelNames = new[]
     {
         "Application",
         "Intents",
@@ -32,7 +32,7 @@ public class WitConfigurationEditor : Editor
         "Traits"
     };
 
-    private string[] toolPanelNamesOnlyAppInfo = new[]
+    private readonly string[] toolPanelNamesOnlyAppInfo = new[]
     {
         "Application"
     };
