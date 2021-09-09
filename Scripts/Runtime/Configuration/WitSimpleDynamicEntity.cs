@@ -11,19 +11,18 @@ using com.facebook.witai.lib;
 
 namespace com.facebook.witai
 {
-    public class WitSimpleEntityList : IEntityListProvider
+    public class WitSimpleDynamicEntity : IDynamicEntitiesProvider
     {
         public List<string> keywords;
         public string entity;
 
-        public WitSimpleEntityList(string entityIdentifier, List<string> words)
+        public WitSimpleDynamicEntity(string entityIdentifier, List<string> words)
         {
             entity = entityIdentifier;
             keywords = words;
         }
 
-        public string ToJSON()
-        {
+        public KeyValuePair<string, WitResponseArray> GetEntityPair() {
             var keywordEntries = new WitResponseArray();
             foreach (string keyword in keywords)
             {
@@ -36,10 +35,14 @@ namespace com.facebook.witai
 
                 keywordEntries.Add(keywordEntry);
             }
+            return new KeyValuePair<string, WitResponseArray>(entity, keywordEntries);
+        }
 
+        public string ToJSON()
+        {
+            KeyValuePair<string, WitResponseArray> pair = this.GetEntityPair();
             var root = new WitResponseClass();
-            root.Add(entity, keywordEntries);
-
+            root.Add(pair.Key, pair.Value);
             return root.ToString();
         }
     }
