@@ -5,22 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using UnityEngine;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Net;
-using com.facebook.witai.data;
-using com.facebook.witai.events;
 using com.facebook.witai.interfaces;
-using com.facebook.witai.lib;
-using UnityEngine.Serialization;
 
 
 namespace com.facebook.witai
 {
-	public class WitSimpleEntityList : IEntityListProvider
+    public class WitSimpleEntityList : IEntityListProvider
     {
         public List<string> keywords;
         public string entity;
@@ -31,7 +22,7 @@ namespace com.facebook.witai
             keywords = words;
         }
 
-        public string ToJSON() 
+        public string ToJSON()
           {
             List<string> keywordJSON = new List<string>();
             foreach (string keyword in keywords)
