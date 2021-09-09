@@ -14,7 +14,7 @@ using UnityEditor;
 using UnityEngine;
 
 #if !WIT_DISABLE_UI
-[CustomEditor(typeof(WitConfiguration))]
+[CustomEditor(typeof(WitConfiguration), true)]
 #endif
 public class WitConfigurationEditor : Editor
 {

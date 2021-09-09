@@ -43,10 +43,10 @@ namespace com.facebook.witai.configuration
 
         private Texture2D tex;
         private bool manualToken;
-        private Vector2 scroll;
-        private WitConfigurationEditor witEditor;
-        private string serverToken;
-        private bool welcomeSizeSet;
+        protected Vector2 scroll;
+        protected WitConfigurationEditor witEditor;
+        protected string serverToken;
+        protected bool welcomeSizeSet;
 
         protected override void OnDrawContent()
         {
@@ -73,7 +73,7 @@ namespace com.facebook.witai.configuration
             RefreshConfigList();
         }
 
-        private void DrawWit()
+        protected virtual void DrawWit()
         {
             // Recommended max size based on EditorWindow.maxSize doc for resizable window.
             if (welcomeSizeSet)
@@ -114,6 +114,9 @@ namespace com.facebook.witai.configuration
 
             if (witConfiguration && (configChanged || !witEditor))
             {
+                WitConfiguration config = (WitConfiguration) witConfiguration;
+                Debug.Log(config.GetType());
+                Debug.Log(Editor.CreateEditor(config).GetType());
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
             }
@@ -143,7 +146,7 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        private void DrawWelcome()
+        protected virtual void DrawWelcome()
         {
             titleContent = WitStyles.welcomeTitleContent;
 
