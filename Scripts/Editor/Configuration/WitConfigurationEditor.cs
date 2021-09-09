@@ -139,7 +139,8 @@ public class WitConfigurationEditor : Editor
 
         if (hasApplicationInfo)
         {
-            if(!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32){
+            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
+            {
                 selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
             }else{
                 selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
@@ -337,14 +338,22 @@ public class WitConfigurationEditor : Editor
         }
         else
         {
-            InfoField("Name", application.name);
-            InfoField("ID", application.id);
-            InfoField("Language", application.lang);
-            InfoField("Created", application.createdAt);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Private", GUILayout.Width(100));
-            GUILayout.Toggle(application.isPrivate, "");
-            GUILayout.EndHorizontal();
+            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
+            {
+                InfoField("Name", application.name);
+                InfoField("ID", application.id);
+                InfoField("Language", application.lang);
+                InfoField("Created", application.createdAt);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Private", GUILayout.Width(100));
+                GUILayout.Toggle(application.isPrivate, "");
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                InfoField("Name", application.name);
+                InfoField("Language", application.lang);
+            }   
         }
     }
 
