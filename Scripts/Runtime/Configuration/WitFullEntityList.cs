@@ -11,27 +11,30 @@ using com.facebook.witai.lib;
 
 namespace com.facebook.witai
 {
-    public class WitSimpleEntityList : IEntityListProvider
+    public class WitFullEntityList : IEntityListProvider
     {
-        public List<string> keywords;
         public string entity;
+        public Dictionary<string, List<string>> keywordsToSynonyms;
 
-        public WitSimpleEntityList(string entityIdentifier, List<string> words)
+        public WitFullEntityList(string entity, Dictionary<string, List<string>> keywordsToSynonyms)
         {
-            entity = entityIdentifier;
-            keywords = words;
+            this.entity = entity;
+            this.keywordsToSynonyms = keywordsToSynonyms;
         }
 
         public string ToJSON()
         {
             var keywordEntries = new WitResponseArray();
-            foreach (string keyword in keywords)
+            foreach (var keywordToSynonyms in keywordsToSynonyms)
             {
                 var synonyms = new WitResponseArray();
-                synonyms.Add(new WitResponseData(keyword));
+                foreach (string synonym in keywordToSynonyms.Value)
+                {
+                    synonyms.Add(new WitResponseData(synonym));
+                }
 
                 var keywordEntry = new WitResponseClass();
-                keywordEntry.Add("keyword", new WitResponseData(keyword));
+                keywordEntry.Add("keyword", new WitResponseData(keywordToSynonyms.Key));
                 keywordEntry.Add("synonyms", synonyms);
 
                 keywordEntries.Add(keywordEntry);
