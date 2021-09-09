@@ -24,12 +24,19 @@ namespace com.facebook.witai
 
         public string ToJSON()
           {
-            List<string> keywordJSON = new List<string>();
+            var allEntitiesArray = new WitResponseArray();
+            var root = new WitResponseClass();
+            root.Add(entity, allEntitiesArray);
             foreach (string keyword in keywords)
             {
-                keywordJSON.Add("{\"keyword\":\"" + keyword + "\",\"synonyms\":[\""+ keyword +"\"]}");
+                var keywordJson = new WitResponseClass();
+                var synonymsArray = new WitResponseArray();
+                keywordJson.Add("keyword",new WitResponseData(keyword));
+                synonymsArray.Add(new WitResponseData(keyword));
+                keywordJson.Add("synonyms",synonymsArray);
+                allEntitiesArray.Add(keywordJson);
             }
-            return "{\"" +entity+ "\":["+ string.Join(",", keywordJSON) + "]}";
+            return root.ToString();
           }
     }
 }
