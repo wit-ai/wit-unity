@@ -115,8 +115,6 @@ namespace com.facebook.witai.configuration
             if (witConfiguration && (configChanged || !witEditor))
             {
                 WitConfiguration config = (WitConfiguration) witConfiguration;
-                Debug.Log(config.GetType());
-                Debug.Log(Editor.CreateEditor(config).GetType());
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
             }
