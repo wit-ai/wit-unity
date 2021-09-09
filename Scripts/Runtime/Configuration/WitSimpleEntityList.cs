@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using com.facebook.witai.interfaces;
-
+using com.facebook.witai.lib;
 
 namespace com.facebook.witai
 {
