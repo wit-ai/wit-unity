@@ -10,6 +10,7 @@ using System.Linq;
 using com.facebook.witai;
 using com.facebook.witai.data;
 using com.facebook.witai.utility;
+using com.facebook.witai.interfaces;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,6 +19,8 @@ using UnityEngine;
 #endif
 public class WitConfigurationEditor : Editor
 {
+	public IApplicationDrawer appDrawer = new WitApplicationDrawer();
+
     private WitConfiguration configuration;
 
     private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
@@ -334,29 +337,7 @@ public class WitConfigurationEditor : Editor
 
     private void DrawApplication(WitApplication application)
     {
-        if (string.IsNullOrEmpty(application.name))
-        {
-            GUILayout.Label("Loading...");
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
-            {
-                InfoField("Name", application.name);
-                InfoField("ID", application.id);
-                InfoField("Language", application.lang);
-                InfoField("Created", application.createdAt);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Private", GUILayout.Width(100));
-                GUILayout.Toggle(application.isPrivate, "");
-                GUILayout.EndHorizontal();
-            }
-            else
-            {
-                InfoField("Name", application.name);
-                InfoField("Language", application.lang);
-            }   
-        }
+    	appDrawer.DrawApplication(application);
     }
 
     #region UI Components

@@ -60,16 +60,18 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        protected override void OnEnable()
-        {
-            WitAuthUtility.InitEditorTokens();
-
+        protected virtual void setWitEditor(){
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
             }
+        }
 
+        protected override void OnEnable()
+        {
+            WitAuthUtility.InitEditorTokens();
+            setWitEditor();
             RefreshConfigList();
         }
 
@@ -115,8 +117,7 @@ namespace com.facebook.witai.configuration
             if (witConfiguration && (configChanged || !witEditor))
             {
                 WitConfiguration config = (WitConfiguration) witConfiguration;
-                witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
-                witEditor.drawHeader = false;
+                setWitEditor();
             }
 
             if(witConfiguration && witEditor) witEditor.OnInspectorGUI();
