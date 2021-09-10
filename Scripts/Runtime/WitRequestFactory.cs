@@ -30,12 +30,17 @@ namespace com.facebook.witai
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("q", query));
-            if(requestOptions.nBestIntents != -1){
+
+            if (-1 != requestOptions.nBestIntents)
+            {
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
-            if(requestOptions.entityListProvider != null){
-                queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
+
+            if (null != requestOptions.dynamicEntities)
+            {
+                queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
+
             return new WitRequest(config, "message", queryParams.ToArray());
         }
 
@@ -47,12 +52,17 @@ namespace com.facebook.witai
         public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
-            if(requestOptions.nBestIntents != -1){
+
+            if (-1 != requestOptions.nBestIntents)
+            {
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
-            if(requestOptions.entityListProvider != null){
-                queryParams.Add(QueryParam("entities", requestOptions.entityListProvider.ToJSON()));
+
+            if (null != requestOptions.dynamicEntities)
+            {
+                queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
+
             return new WitRequest(config, "speech", queryParams.ToArray());
         }
 

@@ -5,15 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.events;
-using UnityEngine.Events;
-
 namespace com.facebook.witai.interfaces
 {
-    public interface IEntityListProvider
+    public interface IDynamicEntitiesProvider
     {
         /// <summary>
-        /// Used to get Dynamic Entities
+        /// Used to get dynamic entities
         /// </summary>
         string ToJSON();
     }
