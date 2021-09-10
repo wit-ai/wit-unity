@@ -8,7 +8,7 @@ using com.facebook.witai.data;
 
 namespace com.facebook.witai.interfaces
 {
-    public interface IApplicationDrawer
+    public interface IApplicationDetailProvider
     {
     	void DrawApplication(WitApplication application);
     }

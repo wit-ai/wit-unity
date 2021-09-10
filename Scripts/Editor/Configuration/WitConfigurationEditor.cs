@@ -19,7 +19,7 @@ using UnityEngine;
 #endif
 public class WitConfigurationEditor : Editor
 {
-	public IApplicationDrawer appDrawer = new WitApplicationDrawer();
+	public IApplicationDetailProvider appDrawer = new WitApplicationDetailProvider();
 
     private WitConfiguration configuration;
 

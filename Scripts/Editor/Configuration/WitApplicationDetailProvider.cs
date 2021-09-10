@@ -11,7 +11,7 @@ using com.facebook.witai.data;
 using com.facebook.witai.utility;
 using com.facebook.witai.interfaces;
 
-public class WitApplicationDrawer : IApplicationDrawer
+public class WitApplicationDetailProvider : IApplicationDetailProvider
 {
     public void DrawApplication(WitApplication application)
     {
