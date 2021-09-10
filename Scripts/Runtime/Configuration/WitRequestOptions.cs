@@ -11,7 +11,7 @@ namespace com.facebook.witai
 {
     public class WitRequestOptions
     {
-        public IEntityListProvider entityListProvider;
+        public IDynamicEntitiesProvider dynamicEntities;
         public int nBestIntents = -1;
     }
 }
