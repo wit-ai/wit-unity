@@ -142,7 +142,9 @@ public class WitConfigurationEditor : Editor
             if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
             {
                 selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
-            }else{
+            }
+            else
+            {
                 selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
             }
         }
