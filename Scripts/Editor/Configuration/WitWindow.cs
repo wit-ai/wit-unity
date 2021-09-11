@@ -6,7 +6,7 @@
  */
 
 using System;
-using com.facebook.witai.data;
+using com.facebook.witai.inspectors;
 using UnityEditor;
 using UnityEngine;
 
@@ -131,18 +131,9 @@ namespace com.facebook.witai.configuration
 
         private void CreateConfiguration()
         {
-            var path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath,
-                "WitConfiguration", "asset");
-            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
+            var asset = WitConfigurationEditor.CreateWitConfiguration(Repaint);
+            if (asset)
             {
-                WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
-
-               asset.FetchAppConfigFromServerToken(WitAuthUtility.ServerToken, Repaint);
-
-                path = path.Substring(Application.dataPath.Length - 6);
-                AssetDatabase.CreateAsset(asset, path);
-                AssetDatabase.SaveAssets();
-
                 RefreshConfigList();
                 witConfigIndex = Array.IndexOf(witConfigs, asset);
                 witConfiguration = asset;
