@@ -147,9 +147,9 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static WitRequest ListAppsRequest(this WitConfiguration config, int limit, int offset = 0)
+        public static WitRequest ListAppsRequest(string serverToken, int limit, int offset = 0)
         {
-            return new WitRequest(config, "apps", true,
+            return new WitRequest(serverToken, "apps",
                 QueryParam("limit", limit.ToString()),
                 QueryParam("offset", offset.ToString()));
         }

@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using com.facebook.witai;
+using com.facebook.witai.configuration;
 using com.facebook.witai.data;
 using com.facebook.witai.utility;
 using UnityEditor;
@@ -49,15 +51,17 @@ public class WitConfigurationEditor : Editor
     private bool appConfigurationFoldout;
     private bool initialized = false;
     public bool drawHeader = true;
+    private string currentToken;
 
     private bool IsTokenValid => !string.IsNullOrEmpty(configuration.clientAccessToken) &&
                                  configuration.clientAccessToken.Length == 32;
 
-    private void Initialize()
+    public void Initialize()
     {
         WitAuthUtility.InitEditorTokens();
         configuration = target as WitConfiguration;
-        if (!string.IsNullOrEmpty(configuration?.clientAccessToken))
+        currentToken = WitAuthUtility.GetAppServerToken(configuration);
+        if (WitAuthUtility.IsServerTokenValid(currentToken) && !string.IsNullOrEmpty(configuration?.clientAccessToken))
         {
             configuration?.UpdateData(() =>
             {
@@ -68,8 +72,7 @@ public class WitConfigurationEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        configuration = target as WitConfiguration;
-        if (!initialized)
+        if (!initialized || configuration != target)
         {
             Initialize();
             initialized = true;
@@ -102,29 +105,28 @@ public class WitConfigurationEditor : Editor
         if (appConfigurationFoldout || !IsTokenValid)
         {
             GUILayout.BeginHorizontal();
-            var token = EditorGUILayout.PasswordField("Server Access Token",
-                WitAuthUtility.AppServerToken);
-            if (token != WitAuthUtility.AppServerToken)
+            var token = EditorGUILayout.PasswordField("Server Access Token", currentToken);
+            if (token != currentToken)
             {
-                WitAuthUtility.AppServerToken = token;
-
-                if (token.Length == 32)
-                {
-                    configuration.UpdateData();
-                }
-
-                EditorUtility.SetDirty(configuration);
+                currentToken = token;
             }
 
+            if(configuration && GUILayout.Button("Refresh", GUILayout.Width(75)))
+            {
+                RefreshAppData(WitAuthUtility.GetAppId(currentToken), currentToken);
+            }
             GUILayout.EndHorizontal();
 
-            if(configuration && GUILayout.Button("Refresh Application Configuration"))
+            if (configuration)
             {
-                configuration.FetchAppConfigFromServerToken(() =>
+                var clientToken =
+                    EditorGUILayout.PasswordField("Client Access Token",
+                        configuration.clientAccessToken);
+                if (clientToken != configuration.clientAccessToken)
                 {
-                    EditorForegroundRunner.Run(Repaint);
-                    appConfigurationFoldout = false;
-                });
+                    configuration.clientAccessToken = clientToken;
+                    EditorUtility.SetDirty(configuration);
+                }
             }
         }
 
@@ -170,6 +172,83 @@ public class WitConfigurationEditor : Editor
                 Application.OpenURL("https://wit.ai");
             }
         }
+    }
+
+    private void RefreshAppData(string appId, string token = "")
+    {
+        var refreshToken = WitAuthUtility.GetAppServerToken(appId, token);
+        if (string.IsNullOrEmpty(refreshToken) &&
+            string.IsNullOrEmpty(appId) && !string.IsNullOrEmpty(configuration?.application?.id))
+        {
+            refreshToken = WitAuthUtility.GetAppServerToken(configuration.application.id, WitAuthUtility.ServerToken);
+            appId = WitAuthUtility.GetAppId(refreshToken);
+            if (string.IsNullOrEmpty(appId))
+            {
+                UpdateTokenData(refreshToken, () =>
+                {
+                    appId = WitAuthUtility.GetAppId(refreshToken);
+                    if (appId == configuration.application.id)
+                    {
+                        configuration.FetchAppConfigFromServerToken(refreshToken, () =>
+                        {
+                            currentToken = refreshToken;
+                            EditorForegroundRunner.Run(Repaint);
+                            appConfigurationFoldout = false;
+                        });
+                    }
+                });
+                return;
+            }
+
+            if (appId == configuration.application.id)
+            {
+                refreshToken = WitAuthUtility.ServerToken;
+            }
+        }
+
+        if(currentToken != refreshToken)
+        {
+            currentToken = refreshToken;
+        }
+
+        configuration.FetchAppConfigFromServerToken(refreshToken, () =>
+        {
+            currentToken = refreshToken;
+            EditorForegroundRunner.Run(Repaint);
+            appConfigurationFoldout = false;
+        });
+    }
+
+    public static void UpdateTokenData(string serverToken, Action updateComplete = null)
+    {
+        if (!WitAuthUtility.IsServerTokenValid(serverToken)) return;
+
+        var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
+        listRequest.onResponse = (r) =>
+        {
+            if (r.StatusCode == 200)
+            {
+                var applications = r.ResponseData.AsArray;
+                for (int i = 0; i < applications.Count; i++)
+                {
+                    if (applications[i]["is_app_for_token"].AsBool)
+                    {
+                        var application = WitApplication.FromJson(applications[i]);
+                        EditorForegroundRunner.Run(() =>
+                        {
+                            WitAuthUtility.SetAppServerToken(application.id, serverToken);
+                            updateComplete?.Invoke();
+                        });
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError(r.StatusDescription);
+            }
+        };
+        listRequest.Request();
     }
 
     private void DrawTraits()

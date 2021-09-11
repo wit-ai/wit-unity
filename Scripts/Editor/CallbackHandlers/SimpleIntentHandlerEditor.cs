@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using com.facebook.witai.configuration;
 using UnityEditor;
 using UnityEngine;
 
