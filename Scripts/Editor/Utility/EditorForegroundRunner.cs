@@ -10,6 +10,8 @@ namespace com.facebook.witai.utility
 
         public static void Run(Action action)
         {
+            if (null == action) return;
+
             foregroundQueue.Enqueue(action);
             EditorApplication.update += FlushQueue;
         }

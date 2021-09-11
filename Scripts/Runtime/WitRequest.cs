@@ -132,6 +132,8 @@ namespace com.facebook.witai
         private static string operatingSystem;
         private static string deviceModel;
         private static string deviceName;
+        private bool configurationRequired;
+        private string serverToken;
 
         public override string ToString()
         {
@@ -142,6 +144,7 @@ namespace com.facebook.witai
             params QueryParam[] queryParams)
         {
             if (!configuration) throw new ArgumentException("Configuration is not set.");
+            configurationRequired = true;
             this.configuration = configuration;
             this.command = path.Split('/').First();
             this.path = path;
@@ -155,12 +158,28 @@ namespace com.facebook.witai
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
             params QueryParam[] queryParams)
         {
-            if (!configuration) throw new ArgumentException("Configuration is not set.");
+            if (!isServerAuthRequired && !configuration)
+                throw new ArgumentException("Configuration is not set.");
+            configurationRequired = true;
             this.configuration = configuration;
             this.isServerAuthRequired = isServerAuthRequired;
             this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
+            if (isServerAuthRequired)
+            {
+                serverToken = WitAuthUtility.GetAppServerToken(configuration?.application?.id);
+            }
+        }
+
+        public WitRequest(string serverToken, string path, params QueryParam[] queryParams)
+        {
+            configurationRequired = false;
+            this.isServerAuthRequired = true;
+            this.command = path.Split('/').First();
+            this.path = path;
+            this.queryParams = queryParams;
+            this.serverToken = serverToken;
         }
 
         /// <summary>
@@ -196,7 +215,7 @@ namespace com.facebook.witai
 
         private void StartRequest(Uri uri)
         {
-            if (!configuration)
+            if (!configuration && configurationRequired)
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
                 Debug.LogError(statusDescription);
@@ -219,7 +238,7 @@ namespace com.facebook.witai
             if (isServerAuthRequired)
             {
                 request.Headers["Authorization"] =
-                    $"Bearer {WitAuthUtility.AppServerToken}";
+                    $"Bearer {serverToken}";
             }
             else
             {

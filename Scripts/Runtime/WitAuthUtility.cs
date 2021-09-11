@@ -6,7 +6,9 @@
  */
 
 using System;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using com.facebook.witai;
+using com.facebook.witai.data;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
@@ -15,13 +17,17 @@ using UnityEngine;
 
 public class WitAuthUtility
 {
-    public static bool IsServerTokenValid
+    public static ITokenValidationProvider tokenValidator = new DefaultTokenValidatorProvider();
+
+    public static bool IsServerTokenValid()
     {
-        get
-        {
-            var token = ServerToken;
-            return null != token && token.Length == 32;
-        }
+        var token = ServerToken;
+        return tokenValidator.IsServerTokenValid(token);
+    }
+
+    public static bool IsServerTokenValid(string token)
+    {
+        return tokenValidator.IsServerTokenValid(token);
     }
 
     public static bool IsAppServerTokenValid
@@ -34,39 +40,39 @@ public class WitAuthUtility
     }
 
     private static string serverToken;
-    private static string appServerToken;
-    private static string appIdentifier;
 
-    public static string AppServerToken
+    public static string GetAppServerToken(WitConfiguration configuration, string defaultValue = "")
+    {
+        return GetAppServerToken(configuration?.application?.id, defaultValue);
+    }
+
+    public static string GetAppServerToken(string appId, string defaultValue = "")
     {
 #if UNITY_EDITOR
-        get
-        {
-            if (string.IsNullOrEmpty(appIdentifier)) appIdentifier = Application.identifier;
-            if (null == appServerToken)
-            {
-                try
-                {
-                    appServerToken = EditorPrefs.GetString("Wit::ServerToken::" + appIdentifier, ServerToken);
-                }
-                catch (Exception e)
-                {
-                    // This will happen if we don't prime the server token on the main thread and
-                    // we access the server token editorpref value in a request.
-                    Debug.LogError(e.Message);
-                }
-            }
-
-            return appServerToken;
-        }
-        set
-        {
-            appServerToken = value;
-            EditorPrefs.SetString("Wit::ServerToken::" + Application.identifier, appServerToken);
-        }
+        return EditorPrefs.GetString("Wit::AppIdToToken::" + appId, defaultValue);
 #else
-        get => "";
+        return "";
 #endif
+    }
+
+    public static string GetAppId(string serverToken, string defaultValue = "")
+    {
+#if UNITY_EDITOR
+        return EditorPrefs.GetString("Wit::TokenToAppId::" + serverToken, defaultValue);
+#else
+        return "";
+#endif
+    }
+
+    public static void SetAppServerToken(string appId, string token)
+    {
+        EditorPrefs.SetString("Wit::AppIdToToken::" + appId, token);
+        EditorPrefs.SetString("Wit::TokenToAppId::" + token, appId);
+    }
+
+    private static void SavePrefs()
+    {
+
     }
 
     public static string ServerToken
@@ -98,6 +104,25 @@ public class WitAuthUtility
 #else
         get => "";
 #endif
+    }
+
+    public class DefaultTokenValidatorProvider : ITokenValidationProvider
+    {
+        public bool IsTokenValid(string appId, string token)
+        {
+            return IsServerTokenValid(token);
+        }
+
+        public bool IsServerTokenValid(string serverToken)
+        {
+            return null != serverToken && serverToken.Length == 32;
+        }
+    }
+
+    public interface ITokenValidationProvider
+    {
+        bool IsTokenValid(string appId, string token);
+        bool IsServerTokenValid(string serverToken);
     }
 
 #if UNITY_EDITOR
