@@ -30,15 +30,6 @@ public class WitAuthUtility
         return tokenValidator.IsServerTokenValid(token);
     }
 
-    public static bool IsAppServerTokenValid
-    {
-        get
-        {
-            var token = appServerToken;
-            return null != token && token.Length == 32;
-        }
-    }
-
     private static string serverToken;
 
     public static string GetAppServerToken(WitConfiguration configuration, string defaultValue = "")

@@ -131,17 +131,20 @@ namespace com.facebook.witai.configuration
             GUILayout.EndVertical();
         }
 
-        private void CreateConfiguration()
+        protected virtual void CreateConfiguration()
         {
+            Debug.Log("hi");
             var path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath,
                 "WitConfiguration", "asset");
             if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
-
-                if (!string.IsNullOrEmpty(asset.application.id))
+                Debug.Log("hello");
+                Debug.Log(asset);
+                Debug.Log(asset.application);
+                if (!string.IsNullOrEmpty(serverToken))
                 {
-                    asset.FetchAppConfigFromServerToken(asset.application.id, Repaint);
+                    asset.FetchAppConfigFromServerToken(serverToken, Repaint);
                 }
 
                 path = path.Substring(Application.dataPath.Length - 6);
@@ -151,6 +154,7 @@ namespace com.facebook.witai.configuration
                 RefreshConfigList();
                 witConfigIndex = Array.IndexOf(witConfigs, asset);
                 witConfiguration = asset;
+                setWitEditor();
             }
         }
 

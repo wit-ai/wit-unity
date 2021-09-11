@@ -144,14 +144,19 @@ public class WitConfigurationEditor : Editor
 
         if (hasApplicationInfo)
         {
-            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken) && WitAuthUtility.AppServerToken.Length == 32)
-            {
-                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
-            }
-            else
-            {
-                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
-            }
+            selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
+
+            // Debug.Log("hello world");
+            // Debug.Log(WitAuthUtility.GetAppServerToken(configuration));
+            // Debug.Log(WitAuthUtility.IsServerTokenValid(WitAuthUtility.GetAppServerToken(configuration)));
+            // if (WitAuthUtility.IsServerTokenValid(WitAuthUtility.GetAppServerToken(configuration)))
+            // {
+            //     selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
+            // }
+            // else
+            // {
+            //     selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
+            // }
         }
         else
         {
