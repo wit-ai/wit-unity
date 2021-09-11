@@ -133,20 +133,12 @@ namespace com.facebook.witai.configuration
 
         protected virtual void CreateConfiguration()
         {
-            Debug.Log("hi");
             var path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath,
                 "WitConfiguration", "asset");
             if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
-                Debug.Log("hello");
-                Debug.Log(asset);
-                Debug.Log(asset.application);
-                if (!string.IsNullOrEmpty(serverToken))
-                {
-                    asset.FetchAppConfigFromServerToken(serverToken, Repaint);
-                }
-
+                asset.FetchAppConfigFromServerToken(serverToken, Repaint);
                 path = path.Substring(Application.dataPath.Length - 6);
                 AssetDatabase.CreateAsset(asset, path);
                 AssetDatabase.SaveAssets();
