@@ -24,6 +24,15 @@ public class WitAuthUtility
         }
     }
 
+    public static bool IsAppServerTokenValid
+    {
+        get
+        {
+            var token = appServerToken;
+            return null != token && token.Length == 32;
+        }
+    }
+
     private static string serverToken;
     private static string appServerToken;
     private static string appIdentifier;
