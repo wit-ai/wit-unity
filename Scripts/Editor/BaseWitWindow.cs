@@ -6,6 +6,7 @@
  */
 
 using System;
+using com.facebook.witai.configuration;
 using com.facebook.witai.data;
 using UnityEditor;
 using UnityEngine;
