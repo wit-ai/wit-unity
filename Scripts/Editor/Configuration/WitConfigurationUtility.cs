@@ -16,7 +16,7 @@ namespace com.facebook.witai.configuration
     public static class WitConfigurationUtility
     {
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         public static void UpdateData(this WitConfiguration configuration,
             Action onUpdateComplete = null)
         {
@@ -51,7 +51,8 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        private static void OnUpdateData(WitRequest request, Action<WitResponseNode> updateComponent, Action onUpdateComplete)
+        private static void OnUpdateData(WitRequest request,
+            Action<WitResponseNode> updateComponent, Action onUpdateComplete)
         {
             if (request.StatusCode == 200)
             {
@@ -65,7 +66,8 @@ namespace com.facebook.witai.configuration
             EditorForegroundRunner.Run(onUpdateComplete);
         }
 
-        private static void UpdateIntentList(this WitConfiguration configuration, WitResponseNode intentListWitResponse)
+        private static void UpdateIntentList(this WitConfiguration configuration,
+            WitResponseNode intentListWitResponse)
         {
             var intentList = intentListWitResponse.AsArray;
             var n = intentList.Count;
@@ -79,7 +81,8 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        private static void UpdateEntityList(this WitConfiguration configuration, WitResponseNode entityListWitResponse)
+        private static void UpdateEntityList(this WitConfiguration configuration,
+            WitResponseNode entityListWitResponse)
         {
             var entityList = entityListWitResponse.AsArray;
             var n = entityList.Count;
@@ -93,12 +96,14 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        public static void UpdateTraitList(this WitConfiguration configuration, WitResponseNode traitListWitResponse)
+        public static void UpdateTraitList(this WitConfiguration configuration,
+            WitResponseNode traitListWitResponse)
         {
             var traitList = traitListWitResponse.AsArray;
             var n = traitList.Count;
             configuration.traits = new WitTrait[n];
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < n; i++)
+            {
                 var trait = WitTrait.FromJson(traitList[i]);
                 trait.witConfiguration = configuration;
                 configuration.traits[i] = trait;
@@ -111,12 +116,17 @@ namespace com.facebook.witai.configuration
         /// </summary>
         /// <param name="serverToken">The server token to use to get the app config</param>
         /// <param name="action"></param>
-        public static void FetchAppConfigFromServerToken(this WitConfiguration configuration, string serverToken, Action action)
+        public static void FetchAppConfigFromServerToken(this WitConfiguration configuration,
+            string serverToken, Action action)
         {
             if (WitAuthUtility.IsServerTokenValid(serverToken))
             {
                 FetchApplicationFromServerToken(configuration, serverToken,
-                    () => { FetchClientToken(configuration, () => { configuration.UpdateData(action); }); });
+                    () =>
+                    {
+                        FetchClientToken(configuration,
+                            () => { configuration.UpdateData(action); });
+                    });
             }
             else
             {
@@ -124,7 +134,8 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        private static void FetchApplicationFromServerToken(WitConfiguration configuration, string serverToken, Action response)
+        private static void FetchApplicationFromServerToken(WitConfiguration configuration,
+            string serverToken, Action response)
         {
             var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
             listRequest.onResponse = (r) =>
@@ -142,7 +153,8 @@ namespace com.facebook.witai.configuration
                             }
                             else
                             {
-                                configuration.application = WitApplication.FromJson(applications[i]);
+                                configuration.application =
+                                    WitApplication.FromJson(applications[i]);
                             }
 
                             EditorForegroundRunner.Run(() =>
@@ -154,7 +166,6 @@ namespace com.facebook.witai.configuration
                             break;
                         }
                     }
-
                 }
                 else
                 {

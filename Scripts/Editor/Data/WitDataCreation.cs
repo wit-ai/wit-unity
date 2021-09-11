@@ -8,6 +8,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using com.facebook.witai.data;
+using com.facebook.witai.inspectors;
 using UnityEditor;
 using UnityEngine;
 
@@ -117,6 +118,14 @@ namespace com.facebook.witai.Data
                 AssetDatabase.CreateAsset(asset, filePath);
                 AssetDatabase.SaveAssets();
             }
+        }
+
+#if !WIT_DISABLE_UI
+        [MenuItem("Assets/Create/Wit/Configuration")]
+#endif
+        public static void CreateWitConfiguration()
+        {
+            WitConfigurationEditor.CreateWitConfiguration(null);
         }
     }
 }
