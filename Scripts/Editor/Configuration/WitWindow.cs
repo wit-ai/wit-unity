@@ -137,10 +137,7 @@ namespace com.facebook.witai.configuration
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
 
-                if (!string.IsNullOrEmpty(asset.application.id))
-                {
-                    asset.FetchAppConfigFromServerToken(asset.application.id, Repaint);
-                }
+               asset.FetchAppConfigFromServerToken(WitAuthUtility.ServerToken, Repaint);
 
                 path = path.Substring(Application.dataPath.Length - 6);
                 AssetDatabase.CreateAsset(asset, path);
