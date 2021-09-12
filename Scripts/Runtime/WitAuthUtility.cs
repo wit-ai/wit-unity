@@ -6,8 +6,6 @@
  */
 
 using System;
-using System.Collections.Generic;
-using com.facebook.witai;
 using com.facebook.witai.data;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -21,8 +19,7 @@ public class WitAuthUtility
 
     public static bool IsServerTokenValid()
     {
-        var token = ServerToken;
-        return tokenValidator.IsServerTokenValid(token);
+        return tokenValidator.IsServerTokenValid(ServerToken);
     }
 
     public static bool IsServerTokenValid(string token)
@@ -57,8 +54,10 @@ public class WitAuthUtility
 
     public static void SetAppServerToken(string appId, string token)
     {
+#if UNITY_EDITOR
         EditorPrefs.SetString("Wit::AppIdToToken::" + appId, token);
         EditorPrefs.SetString("Wit::TokenToAppId::" + token, appId);
+#endif
     }
 
     private static void SavePrefs()
