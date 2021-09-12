@@ -19,11 +19,11 @@ using UnityEngine;
 namespace com.facebook.witai.inspectors
 {
 #if !WIT_DISABLE_UI
-    [CustomEditor(typeof(WitConfiguration))]
+[CustomEditor(typeof(WitConfiguration))]
 #endif
     public class WitConfigurationEditor : Editor
     {
-    	public IApplicationDetailProvider appDrawer = new WitApplicationDetailProvider();
+        public IApplicationDetailProvider appDrawer = new WitApplicationDetailProvider();
 
         private WitConfiguration configuration;
 
