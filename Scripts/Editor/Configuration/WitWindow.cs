@@ -60,7 +60,8 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        protected virtual void setWitEditor(){
+        protected virtual void setWitEditor()
+        {
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
