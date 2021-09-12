@@ -6,15 +6,16 @@
  */
 
 using System;
-using com.facebook.witai.data;
+using com.facebook.witai.inspectors;
 using UnityEditor;
 using UnityEngine;
+using com.facebook.witai.data;
 
 namespace com.facebook.witai.configuration
 {
     public class WitWindow : BaseWitWindow
     {
-        protected override WindowStyles WindowStyle => WitAuthUtility.IsServerTokenValid
+        protected override WindowStyles WindowStyle => WitAuthUtility.IsServerTokenValid()
             ? WindowStyles.Editor
             : WindowStyles.Themed;
 
@@ -50,7 +51,7 @@ namespace com.facebook.witai.configuration
 
         protected override void OnDrawContent()
         {
-            if (!WitAuthUtility.IsServerTokenValid)
+            if (!WitAuthUtility.IsServerTokenValid())
             {
                 DrawWelcome();
             }
@@ -60,16 +61,20 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        protected override void OnEnable()
+        protected virtual void setWitEditor()
         {
-            WitAuthUtility.InitEditorTokens();
-
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
+                witEditor.Initialize();
             }
+        }
 
+        protected override void OnEnable()
+        {
+            WitAuthUtility.InitEditorTokens();
+            setWitEditor();
             RefreshConfigList();
         }
 
@@ -99,6 +104,11 @@ namespace com.facebook.witai.configuration
             }
             if (GUILayout.Button("Relink", GUILayout.Width(75)))
             {
+                if (WitAuthUtility.IsServerTokenValid(serverToken))
+                {
+                    WitConfigurationEditor.UpdateTokenData(serverToken, RefreshContent);
+                }
+
                 WitAuthUtility.ServerToken = serverToken;
                 RefreshContent();
             }
@@ -115,8 +125,7 @@ namespace com.facebook.witai.configuration
             if (witConfiguration && (configChanged || !witEditor))
             {
                 WitConfiguration config = (WitConfiguration) witConfiguration;
-                witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
-                witEditor.drawHeader = false;
+                setWitEditor();
             }
 
             if(witConfiguration && witEditor) witEditor.OnInspectorGUI();
@@ -124,23 +133,15 @@ namespace com.facebook.witai.configuration
             GUILayout.EndVertical();
         }
 
-        private void CreateConfiguration()
+        protected virtual void CreateConfiguration()
         {
-            var path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath,
-                "WitConfiguration", "asset");
-            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
+            var asset = WitConfigurationEditor.CreateWitConfiguration(serverToken, Repaint);
+            if (asset)
             {
-                WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
-
-                asset.FetchAppConfigFromServerToken(Repaint);
-
-                path = path.Substring(Application.dataPath.Length - 6);
-                AssetDatabase.CreateAsset(asset, path);
-                AssetDatabase.SaveAssets();
-
                 RefreshConfigList();
                 witConfigIndex = Array.IndexOf(witConfigs, asset);
                 witConfiguration = asset;
+                setWitEditor();
             }
         }
 
@@ -173,7 +174,7 @@ namespace com.facebook.witai.configuration
             {
                 serverToken = EditorGUIUtility.systemCopyBuffer;
                 WitAuthUtility.ServerToken = serverToken;
-                if (WitAuthUtility.IsServerTokenValid)
+                if (WitAuthUtility.IsServerTokenValid())
                 {
                     RefreshContent();
                 }
@@ -188,7 +189,7 @@ namespace com.facebook.witai.configuration
             if (GUILayout.Button("Link", GUILayout.Width(75)))
             {
                 WitAuthUtility.ServerToken = serverToken;
-                if (WitAuthUtility.IsServerTokenValid)
+                if (WitAuthUtility.IsServerTokenValid())
                 {
                     RefreshContent();
                 }

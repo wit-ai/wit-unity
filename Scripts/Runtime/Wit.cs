@@ -225,7 +225,7 @@ namespace com.facebook.witai
             events.OnFullTranscription?.Invoke(transcription);
             if (runtimeConfiguration.customTranscriptionProvider)
             {
-                SendTranscription(transcription);
+                SendTranscription(transcription, new WitRequestOptions());
             }
         }
 
@@ -258,7 +258,6 @@ namespace com.facebook.witai
         {
             events?.OnStoppedListening?.Invoke();
         }
-
 
         private void OnStartListening()
         {
@@ -296,7 +295,7 @@ namespace com.facebook.witai
         {
             Activate(new WitRequestOptions());
         }
-        
+
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
@@ -337,6 +336,7 @@ namespace com.facebook.witai
         {
             ActivateImmediately(new WitRequestOptions());
         }
+
         public override void ActivateImmediately(WitRequestOptions requestOptions)
         {
             // Make sure we aren't checking activation time until
@@ -461,34 +461,26 @@ namespace com.facebook.witai
         /// <summary>
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
-        /// <param name="transcription"></param>
+        /// <param name="text"></param>
         /// <param name="requestOptions"></param>
-        public override void Activate(string transcription, WitRequestOptions requestOptions)
+        public override void Activate(string text, WitRequestOptions requestOptions)
         {
             if (Active) return;
 
-            SendTranscription(transcription, requestOptions);
+            SendTranscription(text, requestOptions);
         }
 
          /// <summary>
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
-        /// <param name="transcription"></param>
-        public override void Activate(string transcription)
+        /// <param name="text"></param>
+        public override void Activate(string text)
         {
-            Activate(transcription, new WitRequestOptions());
-        }
-
-        private void SendTranscription(string transcription)
-        {
-            SendTranscription(transcription, new WitRequestOptions());
+            Activate(text, new WitRequestOptions());
         }
 
         private void SendTranscription(string transcription, WitRequestOptions requestOptions)
         {
-            if(requestOptions == null){
-                requestOptions = new WitRequestOptions();
-            }
             isActive = true;
             activeRequest = RuntimeConfiguration.witConfiguration.MessageRequest(transcription, requestOptions);
             activeRequest.onResponse = QueueResult;
