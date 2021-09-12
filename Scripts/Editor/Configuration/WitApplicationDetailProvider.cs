@@ -21,17 +21,14 @@ public class WitApplicationDetailProvider : IApplicationDetailProvider
         }
         else
         {
-            if (!string.IsNullOrEmpty(WitAuthUtility.AppServerToken))
-            {
-                InfoField("Name", application.name);
-                InfoField("ID", application.id);
-                InfoField("Language", application.lang);
-                InfoField("Created", application.createdAt);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Private", GUILayout.Width(100));
-                GUILayout.Toggle(application.isPrivate, "");
-                GUILayout.EndHorizontal();
-            }
+            InfoField("Name", application.name);
+            InfoField("ID", application.id);
+            InfoField("Language", application.lang);
+            InfoField("Created", application.createdAt);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Private", GUILayout.Width(100));
+            GUILayout.Toggle(application.isPrivate, "");
+            GUILayout.EndHorizontal();
         }
     }
 

@@ -6,8 +6,8 @@ namespace com.facebook.witai
 {
     public abstract class VoiceService : MonoBehaviour, IVoiceService
     {
-        [Tooltip("Events that will fire before, during and after an activation")]
-        [SerializeField] public VoiceEvents events = new VoiceEvents();
+        [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
+        public VoiceEvents events = new VoiceEvents();
 
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
@@ -29,13 +29,14 @@ namespace com.facebook.witai
             get => events;
             set => events = value;
         }
+
         public abstract bool ShouldSendMicData { get; }
 
         /// <summary>
         /// Activate the microphone and send data for NLU processing.
         /// </summary>
         public abstract void Activate();
-        
+
         /// <summary>
         /// Activate the microphone and send data for NLU processing.
         /// </summary>
@@ -55,7 +56,7 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="text"></param>
         public abstract void Activate(string text);
-        
+
         /// <summary>
         /// Send text data for NLU processing with custom request options.
         /// </summary>
@@ -103,7 +104,7 @@ namespace com.facebook.witai
         /// </summary>
         /// <param name="text"></param>
         void Activate(string transcription);
-        
+
         /// <summary>
         /// Send text data for NLU processing with custom request options.
         /// </summary>
