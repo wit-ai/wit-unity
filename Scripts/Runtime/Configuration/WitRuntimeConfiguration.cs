@@ -37,9 +37,9 @@ namespace com.facebook.witai.data
         public float minTranscriptionKeepAliveTimeInSeconds = 1f;
 
         [Tooltip("The maximum amount of time in seconds the mic will stay active")]
-        [Range(0, 10f)]
+        [Range(0, 20f)]
         [SerializeField]
-        public float maxRecordingTime = 10;
+        public float maxRecordingTime = 20;
 
         [Header("Sound Activation")] [SerializeField]
         public float soundWakeThreshold = .0005f;
