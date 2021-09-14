@@ -9,6 +9,7 @@ using System;
 using com.facebook.witai.inspectors;
 using UnityEditor;
 using UnityEngine;
+using com.facebook.witai.data;
 
 namespace com.facebook.witai.configuration
 {
@@ -43,10 +44,10 @@ namespace com.facebook.witai.configuration
 
         private Texture2D tex;
         private bool manualToken;
-        private Vector2 scroll;
-        private WitConfigurationEditor witEditor;
-        private string serverToken;
-        private bool welcomeSizeSet;
+        protected Vector2 scroll;
+        protected WitConfigurationEditor witEditor;
+        protected string serverToken;
+        protected bool welcomeSizeSet;
 
         protected override void OnDrawContent()
         {
@@ -60,21 +61,24 @@ namespace com.facebook.witai.configuration
             }
         }
 
-        protected override void OnEnable()
+        protected virtual void SetWitEditor()
         {
-            WitAuthUtility.InitEditorTokens();
-
             if (witConfiguration)
             {
                 witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
                 witEditor.Initialize();
             }
+        }
 
+        protected override void OnEnable()
+        {
+            WitAuthUtility.InitEditorTokens();
+            SetWitEditor();
             RefreshConfigList();
         }
 
-        private void DrawWit()
+        protected virtual void DrawWit()
         {
             // Recommended max size based on EditorWindow.maxSize doc for resizable window.
             if (welcomeSizeSet)
@@ -120,8 +124,8 @@ namespace com.facebook.witai.configuration
 
             if (witConfiguration && (configChanged || !witEditor))
             {
-                witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
-                witEditor.drawHeader = false;
+                WitConfiguration config = (WitConfiguration) witConfiguration;
+                SetWitEditor();
             }
 
             if(witConfiguration && witEditor) witEditor.OnInspectorGUI();
@@ -129,18 +133,19 @@ namespace com.facebook.witai.configuration
             GUILayout.EndVertical();
         }
 
-        private void CreateConfiguration()
+        protected virtual void CreateConfiguration()
         {
-            var asset = WitConfigurationEditor.CreateWitConfiguration(Repaint);
+            var asset = WitConfigurationEditor.CreateWitConfiguration(serverToken, Repaint);
             if (asset)
             {
                 RefreshConfigList();
                 witConfigIndex = Array.IndexOf(witConfigs, asset);
                 witConfiguration = asset;
+                SetWitEditor();
             }
         }
 
-        private void DrawWelcome()
+        protected virtual void DrawWelcome()
         {
             titleContent = WitStyles.welcomeTitleContent;
 

@@ -137,7 +137,7 @@ namespace com.facebook.witai
 
             if (changed || witConfigs.Length > 0 && !witConfiguration)
             {
-                if (witConfigIndex < 0)
+                if (witConfigIndex < 0 || witConfigIndex >= witConfigs.Length)
                 {
                     witConfigIndex = 0;
                 }

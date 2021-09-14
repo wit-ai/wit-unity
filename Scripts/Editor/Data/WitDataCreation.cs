@@ -125,7 +125,7 @@ namespace com.facebook.witai.Data
 #endif
         public static void CreateWitConfiguration()
         {
-            WitConfigurationEditor.CreateWitConfiguration(null);
+            WitConfigurationEditor.CreateWitConfiguration(WitAuthUtility.ServerToken, null);
         }
     }
 }

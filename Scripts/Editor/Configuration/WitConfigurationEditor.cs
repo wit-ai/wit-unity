@@ -12,6 +12,7 @@ using com.facebook.witai;
 using com.facebook.witai.configuration;
 using com.facebook.witai.data;
 using com.facebook.witai.utility;
+using com.facebook.witai.interfaces;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,6 +23,8 @@ namespace com.facebook.witai.inspectors
 #endif
     public class WitConfigurationEditor : Editor
     {
+        public IApplicationDetailProvider appDrawer = new WitApplicationDetailProvider();
+
         private WitConfiguration configuration;
 
         private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
@@ -34,6 +37,11 @@ namespace com.facebook.witai.inspectors
             "Intents",
             "Entities",
             "Traits"
+        };
+
+        private readonly string[] toolPanelNamesOnlyAppInfo = new[]
+        {
+            "Application"
         };
 
         private readonly string[] toolPanelNamesWithoutAppInfo = new[]
@@ -60,11 +68,10 @@ namespace com.facebook.witai.inspectors
 
         public void Initialize()
         {
-            WitAuthUtility.InitEditorTokens();
-            configuration = target as WitConfiguration;
-            currentToken = WitAuthUtility.GetAppServerToken(configuration);
-            if (WitAuthUtility.IsServerTokenValid(currentToken) &&
-                !string.IsNullOrEmpty(configuration?.clientAccessToken))
+        WitAuthUtility.InitEditorTokens();
+        configuration = target as WitConfiguration;
+        currentToken = WitAuthUtility.GetAppServerToken(configuration);
+        if (WitAuthUtility.IsServerTokenValid(currentToken) && !string.IsNullOrEmpty(configuration?.clientAccessToken))
             {
                 configuration?.UpdateData(() =>
                 {
@@ -106,6 +113,8 @@ namespace com.facebook.witai.inspectors
 
             GUILayout.EndHorizontal();
 
+            bool hasApplicationInfo = configuration && null != configuration.application;
+
             if (appConfigurationFoldout || !IsTokenValid)
             {
                 GUILayout.BeginHorizontal();
@@ -134,19 +143,22 @@ namespace com.facebook.witai.inspectors
                     }
                 }
             }
-
             GUILayout.EndVertical();
-
-            bool hasApplicationInfo = configuration && null != configuration.application;
 
             if (hasApplicationInfo)
             {
-                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);
+                if (configuration.application.id != null && !configuration.application.id.StartsWith("voice"))
+                {
+                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
+                }
+                else
+                {
+                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
+                }
             }
             else
             {
-                selectedToolPanel =
-                    GUILayout.Toolbar(selectedToolPanel, toolPanelNamesWithoutAppInfo);
+                selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesWithoutAppInfo);
             }
 
             scroll = GUILayout.BeginScrollView(scroll);
@@ -357,6 +369,11 @@ namespace com.facebook.witai.inspectors
             }
         }
 
+        private void DrawApplication(WitApplication application)
+        {
+            appDrawer.DrawApplication(application);
+        }
+
         private void DrawEntity(WitEntity entity)
         {
             InfoField("ID", entity.id);
@@ -413,25 +430,6 @@ namespace com.facebook.witai.inspectors
             }
         }
 
-        private void DrawApplication(WitApplication application)
-        {
-            if (string.IsNullOrEmpty(application.name))
-            {
-                GUILayout.Label("Loading...");
-            }
-            else
-            {
-                InfoField("Name", application.name);
-                InfoField("ID", application.id);
-                InfoField("Language", application.lang);
-                InfoField("Created", application.createdAt);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Private", GUILayout.Width(100));
-                GUILayout.Toggle(application.isPrivate, "");
-                GUILayout.EndHorizontal();
-            }
-        }
-
         #region UI Components
 
         private void BeginIndent()
@@ -471,7 +469,7 @@ namespace com.facebook.witai.inspectors
 
         #endregion
 
-        public static WitConfiguration CreateWitConfiguration(Action onCreationComplete)
+        public static WitConfiguration CreateWitConfiguration(string serverToken, Action onCreationComplete)
         {
             var path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath,
                 "WitConfiguration", "asset");
@@ -479,7 +477,7 @@ namespace com.facebook.witai.inspectors
             {
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
 
-                asset.FetchAppConfigFromServerToken(WitAuthUtility.ServerToken, onCreationComplete);
+                asset.FetchAppConfigFromServerToken(serverToken, onCreationComplete);
 
                 path = path.Substring(Application.dataPath.Length - 6);
                 AssetDatabase.CreateAsset(asset, path);
