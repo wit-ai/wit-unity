@@ -146,13 +146,32 @@ namespace Facebook.WitAi.Data
             }
         }
 
-        public Marker CreateMarker()
+        public Marker CreateMarker(int offset = 0)
         {
+            var markerPosition = bufferDataLength + offset;
+            if (markerPosition < 0)
+            {
+                markerPosition = 0;
+            }
+
+            Debug.Log("Creating marker at " + bufferDataLength + " offset to " + markerPosition);
+
+            int bufIndex = bufferIndex + offset;
+            if (bufIndex < 0)
+            {
+                bufIndex = buffer.Length + bufIndex;
+            }
+
+            if (bufIndex > buffer.Length)
+            {
+                bufIndex = bufIndex - buffer.Length;
+            }
+
             var marker = new Marker()
             {
                 buffer = this,
-                bufferDataIndex = bufferDataLength,
-                index = bufferIndex
+                bufferDataIndex = markerPosition,
+                index = bufIndex
             };
             return marker;
         }

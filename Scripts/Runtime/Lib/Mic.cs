@@ -174,15 +174,39 @@ namespace Facebook.WitAi.Lib
             CurrentDeviceIndex = 0;
         }
 
+        private void OnEnable()
+        {
+            StartMicrophone();
+        }
+
+        private void OnDisable()
+        {
+            StopMicrophone();
+        }
+
         /// <summary>
         /// Changes to a Mic device for Recording
         /// </summary>
         /// <param name="index">The index of the Mic device. Refer to <see cref="Devices"/></param>
         public void ChangeDevice(int index)
         {
-            Microphone.End(CurrentDeviceName);
+            StopMicrophone();
             CurrentDeviceIndex = index;
-            StartRecording(SampleDurationMS);
+            StartMicrophone();
+        }
+
+        private void StartMicrophone()
+        {
+            Debug.Log("[Mic] Reserved mic " + CurrentDeviceName);
+            AudioClip = Microphone.Start(CurrentDeviceName, true, 1, AudioEncoding.samplerate);
+        }
+
+        private void StopMicrophone()
+        {
+            Debug.Log("[Mic] Released mic " + CurrentDeviceName);
+            Microphone.End(CurrentDeviceName);
+            Destroy(AudioClip);
+            AudioClip = null;
         }
 
         /// <summary>
@@ -191,18 +215,27 @@ namespace Facebook.WitAi.Lib
         public void StartRecording(int sampleLen = 10)
         {
             StopRecording();
+
+            if (!Microphone.IsRecording(CurrentDeviceName))
+            {
+                Debug.Log("[Mic] " + CurrentDeviceName + " was not started when starting recording, restarting mic.");
+                StartMicrophone();
+            }
+
             IsRecording = true;
 
             SampleDurationMS = sampleLen;
 
-            AudioClip = Microphone.Start(CurrentDeviceName, true, 1, AudioEncoding.samplerate);
             Sample = new float[AudioEncoding.samplerate / 1000 * SampleDurationMS * AudioClip.channels];
 
             if (AudioClip)
             {
                 StartCoroutine(ReadRawAudio());
 
-                Debug.Log("Started recording with " + CurrentDeviceName);
+                // Make sure we seek before we start reading data
+                Microphone.GetPosition(CurrentDeviceName);
+
+                Debug.Log("[Mic] Started recording with " + CurrentDeviceName);
                 if (OnStartRecording != null)
                     OnStartRecording.Invoke();
             }
@@ -217,17 +250,13 @@ namespace Facebook.WitAi.Lib
         /// </summary>
         public void StopRecording()
         {
-            if (!Microphone.IsRecording(CurrentDeviceName)) return;
+            if (!IsRecording) return;
 
             IsRecording = false;
 
-            Microphone.End(CurrentDeviceName);
-            Destroy(AudioClip);
-            AudioClip = null;
-
             StopCoroutine(ReadRawAudio());
 
-            Debug.Log("Stopped recording with " + CurrentDeviceName);
+            Debug.Log("[Mic] Stopped recording with " + CurrentDeviceName);
             if (OnStopRecording != null)
                 OnStopRecording.Invoke();
         }
@@ -239,7 +268,7 @@ namespace Facebook.WitAi.Lib
             int prevPos = 0;
             float[] temp = new float[Sample.Length];
 
-            while (AudioClip != null && Microphone.IsRecording(CurrentDeviceName))
+            while (AudioClip != null && Microphone.IsRecording(CurrentDeviceName) && IsRecording)
             {
                 bool isNewDataAvailable = true;
 
