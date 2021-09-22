@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     public abstract class WitResponseHandler : MonoBehaviour
     {

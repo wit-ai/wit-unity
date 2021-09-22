@@ -6,34 +6,31 @@
  */
 
 using System.Collections.Generic;
-using com.facebook.witai.interfaces;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi.Data.Entities
 {
-    public class WitDynamicEntity : IDynamicEntitiesProvider
+    public class WitSimpleDynamicEntity : IDynamicEntitiesProvider
     {
+        public List<string> keywords;
         public string entity;
-        public Dictionary<string, List<string>> keywordsToSynonyms;
 
-        public WitDynamicEntity(string entity, Dictionary<string, List<string>> keywordsToSynonyms)
+        public WitSimpleDynamicEntity(string entityIdentifier, List<string> words)
         {
-            this.entity = entity;
-            this.keywordsToSynonyms = keywordsToSynonyms;
+            entity = entityIdentifier;
+            keywords = words;
         }
 
         public KeyValuePair<string, WitResponseArray> GetEntityPair() {
             var keywordEntries = new WitResponseArray();
-            foreach (var keywordToSynonyms in keywordsToSynonyms)
+            foreach (string keyword in keywords)
             {
                 var synonyms = new WitResponseArray();
-                foreach (string synonym in keywordToSynonyms.Value)
-                {
-                    synonyms.Add(new WitResponseData(synonym));
-                }
+                synonyms.Add(new WitResponseData(keyword));
 
                 var keywordEntry = new WitResponseClass();
-                keywordEntry.Add("keyword", new WitResponseData(keywordToSynonyms.Key));
+                keywordEntry.Add("keyword", new WitResponseData(keyword));
                 keywordEntry.Add("synonyms", synonyms);
 
                 keywordEntries.Add(keywordEntry);

@@ -10,12 +10,13 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Net;
-using com.facebook.witai.data;
-using com.facebook.witai.interfaces;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
 using UnityEngine.Serialization;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     public class Wit : VoiceService, IWitRuntimeConfigProvider
     {

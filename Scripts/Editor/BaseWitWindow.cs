@@ -5,13 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using com.facebook.witai.configuration;
-using com.facebook.witai.data;
+using Facebook.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     public abstract class BaseWitWindow : EditorWindow
     {

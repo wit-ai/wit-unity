@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.interfaces;
+using Facebook.WitAi.Interfaces;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi.Configuration
 {
     public class WitRequestOptions
     {

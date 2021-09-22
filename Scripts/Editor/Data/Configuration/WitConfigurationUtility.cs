@@ -6,12 +6,14 @@
  */
 
 using System;
-using com.facebook.witai.data;
-using com.facebook.witai.lib;
-using com.facebook.witai.utility;
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Data.Intents;
+using Facebook.WitAi.Data.Traits;
+using Facebook.WitAi.Lib;
+using Facebook.WitAi.Utilities;
 using UnityEngine;
 
-namespace com.facebook.witai.configuration
+namespace Facebook.WitAi.Data.Configuration
 {
     public static class WitConfigurationUtility
     {

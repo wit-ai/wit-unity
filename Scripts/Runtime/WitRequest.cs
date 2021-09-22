@@ -10,12 +10,13 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using com.facebook.witai.data;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     /// <summary>
     /// Manages a single request lifecycle when sending/receiving data from Wit.ai.

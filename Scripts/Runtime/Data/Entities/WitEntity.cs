@@ -6,10 +6,12 @@
  */
 
 using System;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Keywords;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Data.Entities
 {
 
     [Serializable]

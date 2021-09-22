@@ -8,7 +8,7 @@
 using System;
 using UnityEngine.Events;
 
-namespace com.facebook.witai.events
+namespace Facebook.WitAi.Events
 {
     [Serializable]
     public class WitErrorEvent : UnityEvent<string, string>

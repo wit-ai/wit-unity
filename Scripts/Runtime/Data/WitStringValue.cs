@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Data
 {
     public class WitStringValue : WitValue
     {

@@ -6,10 +6,10 @@
  */
 
 using System.Collections.Generic;
-using com.facebook.witai.interfaces;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi.Data.Entities
 {
     public class WitDynamicEntities : IDynamicEntitiesProvider
     {

@@ -7,7 +7,7 @@
 
 using UnityEditor;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     public class WitEditorUI
     {

@@ -8,7 +8,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     public class WitStyles
     {

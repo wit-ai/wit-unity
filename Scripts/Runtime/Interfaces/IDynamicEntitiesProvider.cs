@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace com.facebook.witai.interfaces
+namespace Facebook.WitAi.Interfaces
 {
     public interface IDynamicEntitiesProvider
     {

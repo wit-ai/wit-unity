@@ -9,7 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using UnityEditor;
 
-namespace com.facebook.witai.utility
+namespace Facebook.WitAi.Utilities
 {
     public class EditorForegroundRunner
     {

@@ -7,12 +7,12 @@
 
 using System;
 using System.Linq;
-using com.facebook.witai.configuration;
+using Facebook.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     #if !WIT_DISABLE_UI
     [CustomEditor(typeof(SimpleStringEntityHandler))]
