@@ -6,11 +6,11 @@
  */
 
 using System.Net;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 using TMPro;
 using UnityEngine;
 
-namespace com.facebook.witai.samples.responsedebugger
+namespace Facebook.WitAi.Samples.ResponseDebugger
 {
     public class WitUIInteractionHandler : MonoBehaviour
     {

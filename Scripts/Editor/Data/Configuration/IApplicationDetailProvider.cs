@@ -9,6 +9,6 @@ namespace Facebook.WitAi.Data.Configuration
 {
     public interface IApplicationDetailProvider
     {
-    	void DrawApplication(WitApplication application);
+        void DrawApplication(WitApplication application);
     }
 }
