@@ -6,12 +6,11 @@
  */
 
 using System.Text.RegularExpressions;
-using com.facebook.witai.callbackhandlers;
-using com.facebook.witai.lib;
-using com.facebook.witai.utilities;
+using Facebook.WitAi.Lib;
+using Facebook.WitAi.Utilities;
 using UnityEngine;
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     public class WitUtteranceMatcher : WitResponseHandler
     {

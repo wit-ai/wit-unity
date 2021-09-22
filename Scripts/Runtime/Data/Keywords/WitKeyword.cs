@@ -6,10 +6,10 @@
  */
 
 using System;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Data.Keywords
 {
     [Serializable]
     public class WitKeyword

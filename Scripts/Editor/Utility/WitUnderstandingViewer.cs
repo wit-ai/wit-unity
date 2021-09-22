@@ -7,13 +7,14 @@
 
 using System;
 using System.Collections.Generic;
-using com.facebook.witai.callbackhandlers;
-using com.facebook.witai.Data;
-using com.facebook.witai.lib;
+using Facebook.WitAi.CallbackHandlers;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai.utility
+namespace Facebook.WitAi.Utilities
 {
     public class WitUnderstandingViewer : BaseWitWindow
     {

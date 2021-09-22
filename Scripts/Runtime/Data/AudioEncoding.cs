@@ -7,7 +7,7 @@
 
 using System;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Data
 {
     [Serializable]
     public class AudioEncoding

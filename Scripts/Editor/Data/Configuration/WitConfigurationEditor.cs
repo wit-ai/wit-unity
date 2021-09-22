@@ -8,15 +8,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using com.facebook.witai;
-using com.facebook.witai.configuration;
-using com.facebook.witai.data;
-using com.facebook.witai.utility;
-using com.facebook.witai.interfaces;
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Data.Intents;
+using Facebook.WitAi.Data.Traits;
+using Facebook.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai.inspectors
+namespace Facebook.WitAi.Data.Configuration
 {
 #if !WIT_DISABLE_UI
 [CustomEditor(typeof(WitConfiguration))]
@@ -149,11 +148,11 @@ namespace com.facebook.witai.inspectors
             {
                 if (configuration.application.id != null && !configuration.application.id.StartsWith("voice"))
                 {
-                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);    
+                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNames);
                 }
                 else
                 {
-                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);    
+                    selectedToolPanel = GUILayout.Toolbar(selectedToolPanel, toolPanelNamesOnlyAppInfo);
                 }
             }
             else

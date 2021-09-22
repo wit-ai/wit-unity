@@ -8,13 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using com.facebook.witai.data;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     public class WitResponseMatcher : WitResponseHandler
     {

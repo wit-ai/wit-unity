@@ -6,11 +6,11 @@
  */
 
 using System.Collections.Generic;
-using com.facebook.witai.data;
+using Facebook.WitAi.Data;
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     #if !WIT_DISABLE_UI
     [CustomPropertyDrawer(typeof(ValuePathMatcher))]

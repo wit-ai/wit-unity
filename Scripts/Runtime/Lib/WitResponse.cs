@@ -48,13 +48,14 @@
  *  2021-26-5 Update:
  *  Renamed to avoid name collisions with other libraries that include a copy of SimpleJSON
  * * * * */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 
-namespace com.facebook.witai.lib
+namespace Facebook.WitAi.Lib
 {
     public enum JSONBinaryTag
     {

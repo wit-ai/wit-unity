@@ -10,12 +10,13 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using com.facebook.witai.data;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
 
-namespace com.facebook.witai
+namespace Facebook.WitAi
 {
     /// <summary>
     /// Manages a single request lifecycle when sending/receiving data from Wit.ai.
@@ -46,7 +47,7 @@ namespace com.facebook.witai
         const string URI_AUTHORITY = "api.wit.ai";
 
         const string WIT_API_VERSION = "20210922";
-        private const string WIT_SDK_VERSION = "0.0.12";
+        private const string WIT_SDK_VERSION = "0.0.13";
 
         private WitConfiguration configuration;
 

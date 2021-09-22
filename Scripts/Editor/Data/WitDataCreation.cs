@@ -7,12 +7,13 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
-using com.facebook.witai.data;
-using com.facebook.witai.inspectors;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
-namespace com.facebook.witai.Data
+
+namespace Facebook.WitAi.Data
 {
     public class WitDataCreation
     {

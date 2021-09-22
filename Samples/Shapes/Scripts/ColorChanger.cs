@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.lib;
+using Facebook.WitAi;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.demo
+namespace Facebook.WitAi.Samples.Shapes
 {
     public class ColorChanger : MonoBehaviour
     {

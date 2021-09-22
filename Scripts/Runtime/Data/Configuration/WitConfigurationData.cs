@@ -6,10 +6,11 @@
  */
 
 using System;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Configuration
 {
     [Serializable]
     public abstract class WitConfigurationData

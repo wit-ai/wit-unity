@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Data
 {
     public abstract class WitValue : ScriptableObject
     {

@@ -6,11 +6,12 @@
  */
 
 using System;
-using com.facebook.witai.interfaces;
+using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace com.facebook.witai.data
+namespace Facebook.WitAi.Configuration
 {
     [Serializable]
     public class WitRuntimeConfiguration

@@ -6,12 +6,10 @@
  */
 
 using System;
-using com.facebook.witai.inspectors;
 using UnityEditor;
 using UnityEngine;
-using com.facebook.witai.data;
 
-namespace com.facebook.witai.configuration
+namespace Facebook.WitAi.Data.Configuration
 {
     public class WitWindow : BaseWitWindow
     {

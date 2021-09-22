@@ -6,11 +6,11 @@
  */
 
 using System;
-using com.facebook.witai.lib;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace com.facebook.witai.callbackhandlers
+namespace Facebook.WitAi.CallbackHandlers
 {
     public class SimpleStringEntityHandler : WitResponseHandler
     {

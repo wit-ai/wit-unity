@@ -23,10 +23,10 @@ using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using com.facebook.witai.data;
-using com.facebook.witai.interfaces;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Interfaces;
 
-namespace com.facebook.witai.lib
+namespace Facebook.WitAi.Lib
 {
     [RequireComponent(typeof(AudioSource))]
     public class Mic : MonoBehaviour, IAudioInputSource

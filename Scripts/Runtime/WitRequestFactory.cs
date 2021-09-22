@@ -4,14 +4,13 @@
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
  */
-using UnityEngine;
-using System.Text;
-using com.facebook.witai.data;
-using com.facebook.witai.interfaces;
-using System.Collections;
-using System.Collections.Generic;
 
-namespace com.facebook.witai
+using System.Text;
+using System.Collections.Generic;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Configuration;
+
+namespace Facebook.WitAi
 {
     public static class WitRequestFactory
     {
