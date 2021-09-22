@@ -156,17 +156,14 @@ namespace Facebook.WitAi
             {
                 if (isSoundWakeActive && levelMax > runtimeConfiguration.soundWakeThreshold)
                 {
-                    lastSampleMarker = micDataBuffer.CreateMarker();
+                    lastSampleMarker = micDataBuffer.CreateMarker((int) (-runtimeConfiguration.micBufferLengthInSeconds * 1000 * runtimeConfiguration.sampleLengthInMs));
                 }
 
-                if (null != lastSampleMarker)
-                {
-                    byte[] data = Convert(sample);
-                    micDataBuffer.Push(data, 0, data.Length);
-                    #if DEBUG_SAMPLE
+                byte[] data = Convert(sample);
+                micDataBuffer.Push(data, 0, data.Length);
+                #if DEBUG_SAMPLE
                     sampleFile.Write(data, 0, data.Length);
-                    #endif
-                }
+                #endif
             }
 
             if (IsRequestActive && activeRequest.IsRequestStreamActive)
@@ -302,6 +299,9 @@ namespace Facebook.WitAi
         /// </summary>
         public override void Activate(WitRequestOptions requestOptions)
         {
+            if (isActive) return;
+            if(micInput.IsRecording) micInput.StopRecording();
+
             if (!micInput.IsRecording && ShouldSendMicData)
             {
                 if (null == micDataBuffer && runtimeConfiguration.micBufferLengthInSeconds > 0)
@@ -312,6 +312,7 @@ namespace Facebook.WitAi
                 }
 
                 minKeepAliveWasHit = false;
+                isSoundWakeActive = true;
 
                 #if DEBUG_SAMPLE
                 var file = Application.dataPath + "/test.pcm";
@@ -320,7 +321,6 @@ namespace Facebook.WitAi
                 #endif
 
                 micInput.StartRecording(sampleLen: runtimeConfiguration.sampleLengthInMs);
-                isSoundWakeActive = true;
             }
 
             if (!isActive)
@@ -411,7 +411,8 @@ namespace Facebook.WitAi
                 sampleFile.Close();
                 #endif
             }
-            if (null != micDataBuffer) micDataBuffer.Clear();
+
+            micDataBuffer?.Clear();
             writeBuffer = null;
             lastSampleMarker = null;
             minKeepAliveWasHit = false;
@@ -520,6 +521,7 @@ namespace Facebook.WitAi
             {
                 events?.OnError?.Invoke("HTTP Error " + request.StatusCode,
                     "There was an error requesting data from the server.");
+                DeactivateRequest();
             }
 
             activeRequest = null;
