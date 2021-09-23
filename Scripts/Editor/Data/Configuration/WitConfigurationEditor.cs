@@ -121,11 +121,18 @@ namespace Facebook.WitAi.Data.Configuration
                 if (token != currentToken)
                 {
                     currentToken = token;
+                    ApplyToken(token);
                 }
 
                 if (configuration && GUILayout.Button("Refresh", GUILayout.Width(75)))
                 {
-                    RefreshAppData(WitAuthUtility.GetAppId(currentToken), currentToken);
+                    ApplyToken(currentToken);
+                }
+
+                if (GUILayout.Button(WitStyles.PasteIcon, WitStyles.ImageIcon))
+                {
+                    currentToken = EditorGUIUtility.systemCopyBuffer;
+                    ApplyToken(currentToken);
                 }
 
                 GUILayout.EndHorizontal();
@@ -192,6 +199,14 @@ namespace Facebook.WitAi.Data.Configuration
             }
         }
 
+        private void ApplyToken(string token)
+        {
+            if (!string.IsNullOrEmpty(token) && WitAuthUtility.IsServerTokenValid(token))
+            {
+                RefreshAppData(WitAuthUtility.GetAppId(token),  token);
+            }
+        }
+
         private void RefreshAppData(string appId, string token = "")
         {
             var refreshToken = WitAuthUtility.GetAppServerToken(appId, token);
@@ -212,6 +227,8 @@ namespace Facebook.WitAi.Data.Configuration
                             configuration.FetchAppConfigFromServerToken(refreshToken, () =>
                             {
                                 currentToken = refreshToken;
+                                WitAuthUtility.SetAppServerToken(configuration.application.id, currentToken);
+                                EditorUtility.SetDirty(configuration);
                                 EditorForegroundRunner.Run(Repaint);
                                 appConfigurationFoldout = false;
                             });
