@@ -47,7 +47,7 @@ namespace Facebook.WitAi.Data.Configuration
             EditorForegroundRunner.Run(() =>
             {
                 var entitiesRequest = configuration.ListEntitiesRequest();
-                entitiesRequest.onResponse = (r) => ListTraits(entitiesRequest, configuration, onUpdateComplete);
+                entitiesRequest.onResponse = (er) => ListTraits(er, configuration, onUpdateComplete);
                 OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
                     entitiesRequest.Request);
             });
