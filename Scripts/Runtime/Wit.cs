@@ -40,6 +40,7 @@ namespace Facebook.WitAi
         private byte[] writeBuffer;
         private bool minKeepAliveWasHit;
         private bool isActive;
+        private byte[] byteDataBuffer;
 
         private ITranscriptionProvider activeTranscriptionProvider;
         private Coroutine timeLimitCoroutine;
@@ -447,27 +448,25 @@ namespace Facebook.WitAi
             }
         }
 
-        static byte[] Convert(float[] samples)
+        private byte[] Convert(float[] samples)
         {
             var sampleCount = samples.Length;
 
-            Int16[] intData = new Int16[sampleCount];
-            //converting in 2 float[] steps to Int16[], //then Int16[] to Byte[]
-
-            Byte[] bytesData = new Byte[sampleCount * 2];
-            //bytesData array is twice the size of
-            //dataSource array because a float converted in Int16 is 2 bytes.
+            if (null == byteDataBuffer || byteDataBuffer.Length != sampleCount)
+            {
+                byteDataBuffer = new byte[sampleCount * 2];
+            }
 
             int rescaleFactor = 32767; //to convert float to Int16
 
             for (int i = 0; i < sampleCount; i++)
             {
-                intData[i] = (short) (samples[i] * rescaleFactor);
-                Byte[] byteArr = BitConverter.GetBytes(intData[i]);
-                byteArr.CopyTo(bytesData, i * 2);
+                short data = (short) (samples[i] * rescaleFactor);
+                byteDataBuffer[i * 2] = (byte) data;
+                byteDataBuffer[i * 2 + 1] = (byte) (data >> 8);
             }
 
-            return bytesData;
+            return byteDataBuffer;
         }
 
         /// <summary>
