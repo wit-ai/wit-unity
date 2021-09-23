@@ -217,7 +217,7 @@ namespace Facebook.WitAi.CallbackHandlers
             if (intent == intentNode["name"].Value)
             {
                 var actualConfidence = intentNode["confidence"].AsFloat;
-                if (actualConfidence > confidenceThreshold)
+                if (actualConfidence >= confidenceThreshold)
                 {
                     return true;
                 }
