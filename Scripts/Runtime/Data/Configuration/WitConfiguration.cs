@@ -25,7 +25,7 @@ namespace Facebook.WitAi.Data.Configuration
         [HideInInspector]
         [SerializeField] public WitApplication application;
 
-        [ReadOnly(true)] [SerializeField] public string clientAccessToken;
+        [SerializeField] public string clientAccessToken;
 
         [SerializeField] public WitEntity[] entities;
         [SerializeField] public WitIntent[] intents;

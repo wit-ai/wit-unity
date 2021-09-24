@@ -103,7 +103,7 @@ namespace Facebook.WitAi.Lib
         {
             get
             {
-                if (CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Microphone.devices.Length)
+                if (CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Devices.Count)
                     return string.Empty;
                 return Devices[CurrentDeviceIndex];
             }

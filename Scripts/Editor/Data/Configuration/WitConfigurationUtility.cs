@@ -11,6 +11,7 @@ using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
 using Facebook.WitAi.Lib;
 using Facebook.WitAi.Utilities;
+using UnityEditor;
 using UnityEngine;
 
 namespace Facebook.WitAi.Data.Configuration
@@ -22,35 +23,49 @@ namespace Facebook.WitAi.Data.Configuration
         public static void UpdateData(this WitConfiguration configuration,
             Action onUpdateComplete = null)
         {
-            EditorForegroundRunner.Run(() => DoUpdateData(configuration, onUpdateComplete));
+            DoUpdateData(configuration, onUpdateComplete);
         }
 
         private static void DoUpdateData(WitConfiguration configuration, Action onUpdateComplete)
         {
-            if (!string.IsNullOrEmpty(
-                WitAuthUtility.GetAppServerToken(configuration.application.id)))
+            EditorForegroundRunner.Run(() =>
             {
-                var intentsRequest = configuration.ListIntentsRequest();
-                intentsRequest.onResponse = (r) =>
+                if (!string.IsNullOrEmpty(
+                    WitAuthUtility.GetAppServerToken(configuration.application.id)))
                 {
-                    var entitiesRequest = configuration.ListEntitiesRequest();
-                    entitiesRequest.onResponse = (er) =>
-                    {
-                        var traitsRequest = configuration.ListTraitsRequest();
-                        traitsRequest.onResponse =
-                            (tr) => OnUpdateData(tr,
-                                (dataResponse) => UpdateTraitList(configuration, dataResponse),
-                                onUpdateComplete);
-                        OnUpdateData(er,
-                            (entityResponse) => UpdateEntityList(configuration, entityResponse),
-                            traitsRequest.Request);
-                    };
-                    OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
-                        entitiesRequest.Request);
-                };
+                    var intentsRequest = configuration.ListIntentsRequest();
+                    intentsRequest.onResponse =
+                        (r) => ListEntities(r, configuration, onUpdateComplete);
 
-                configuration.application?.UpdateData(intentsRequest.Request);
-            }
+                    configuration.application?.UpdateData(intentsRequest.Request);
+                }
+            });
+        }
+
+        private static void ListEntities(WitRequest r, WitConfiguration configuration, Action onUpdateComplete)
+        {
+            EditorForegroundRunner.Run(() =>
+            {
+                var entitiesRequest = configuration.ListEntitiesRequest();
+                entitiesRequest.onResponse = (er) => ListTraits(er, configuration, onUpdateComplete);
+                OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
+                    entitiesRequest.Request);
+            });
+        }
+
+        private static void ListTraits(WitRequest er, WitConfiguration configuration, Action onUpdateComplete)
+        {
+            EditorForegroundRunner.Run(() =>
+            {
+                var traitsRequest = configuration.ListTraitsRequest();
+                traitsRequest.onResponse =
+                    (tr) => OnUpdateData(tr,
+                        (dataResponse) => UpdateTraitList(configuration, dataResponse),
+                        onUpdateComplete);
+                OnUpdateData(er,
+                    (entityResponse) => UpdateEntityList(configuration, entityResponse),
+                    traitsRequest.Request);
+            });
         }
 
         private static void OnUpdateData(WitRequest request,
@@ -186,8 +201,19 @@ namespace Facebook.WitAi.Data.Configuration
                 {
                     if (r.StatusCode == 200)
                     {
-                        configuration.clientAccessToken = r.ResponseData["client_token"];
-                        EditorForegroundRunner.Run(action);
+                        var token = r.ResponseData["client_token"];
+
+                        EditorForegroundRunner.Run(() =>
+                        {
+                            SerializedObject so = new SerializedObject(configuration);
+                            so.FindProperty("clientAccessToken").stringValue =
+                                r.ResponseData["client_token"];
+                            so.ApplyModifiedProperties();
+
+                            configuration.clientAccessToken = token;
+                            EditorUtility.SetDirty(configuration);
+                            action?.Invoke();
+                        });
                     }
                     else
                     {

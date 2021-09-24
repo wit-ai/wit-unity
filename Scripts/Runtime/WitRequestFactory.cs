@@ -30,12 +30,12 @@ namespace Facebook.WitAi
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             queryParams.Add(QueryParam("q", query));
 
-            if (-1 != requestOptions.nBestIntents)
+            if (null != requestOptions && -1 != requestOptions.nBestIntents)
             {
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
 
-            if (null != requestOptions.dynamicEntities)
+            if (null != requestOptions?.dynamicEntities)
             {
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
@@ -52,12 +52,12 @@ namespace Facebook.WitAi
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
 
-            if (-1 != requestOptions.nBestIntents)
+            if (null != requestOptions && -1 != requestOptions.nBestIntents)
             {
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
 
-            if (null != requestOptions.dynamicEntities)
+            if (null != requestOptions?.dynamicEntities)
             {
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
