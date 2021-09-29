@@ -46,8 +46,8 @@ namespace Facebook.WitAi
         const string URI_SCHEME = "https";
         const string URI_AUTHORITY = "api.wit.ai";
 
-        const string WIT_API_VERSION = "20210928";
-        private const string WIT_SDK_VERSION = "0.0.16";
+        public const string WIT_API_VERSION = "20210928";
+        public const string WIT_SDK_VERSION = "0.0.16";
 
         private WitConfiguration configuration;
 
