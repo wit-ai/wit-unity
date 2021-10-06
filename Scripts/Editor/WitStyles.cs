@@ -33,6 +33,7 @@ namespace Facebook.WitAi
         public static GUIStyle LabelHeader;
         public static GUIStyle LabelHeader2;
         public static GUIStyle Label;
+        public static GUIStyle WordwrappedLabel;
         public static GUIStyle FacebookButton;
 
         public static GUIStyle TextField;
@@ -106,6 +107,9 @@ namespace Facebook.WitAi
             Label.normal.background = TextureWitBlueBg;
             Label.normal.textColor = Color.black;
             Label.wordWrap = true;
+
+            WordwrappedLabel = new GUIStyle(EditorStyles.label);
+            WordwrappedLabel.wordWrap = true;
 
             LabelHeader = new GUIStyle(Label);
             LabelHeader.fontSize = 48;

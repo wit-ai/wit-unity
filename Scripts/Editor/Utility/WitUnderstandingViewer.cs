@@ -30,6 +30,7 @@ namespace Facebook.WitAi.Utilities
         private TimeSpan requestLength;
         private string status;
         private VoiceService wit;
+        private int responseCode;
 
         public bool HasWit => null != wit;
 
@@ -151,11 +152,25 @@ namespace Facebook.WitAi.Utilities
                 }
             }
 
+            if (string.IsNullOrEmpty(witConfiguration.clientAccessToken))
+            {
+                GUILayout.Label(
+                    "Your wit configuration has not yet been linked to a wit application. Make sure you have linked your account with Wit.ai.", WitStyles.WordwrappedLabel);
+
+                if (GUILayout.Button("Select Configuration"))
+                {
+                    EditorGUIUtility.PingObject(witConfiguration);
+                    Selection.activeObject = witConfiguration;
+                }
+                return;
+            }
+
             utterance = EditorGUILayout.TextField("Utterance", utterance);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Send", GUILayout.Width(75)) && !loading)
             {
+                responseText = "";
                 if (!string.IsNullOrEmpty(utterance))
                 {
                     SubmitUtterance();
@@ -197,8 +212,16 @@ namespace Facebook.WitAi.Utilities
             else
             {
                 GUILayout.BeginVertical(EditorStyles.helpBox);
-                GUILayout.Label(
-                    "Enter an utterance and hit Send to see what your app will return.");
+                if (!string.IsNullOrEmpty(responseText))
+                {
+                    GUILayout.Label(responseText);
+                }
+                else
+                {
+                    GUILayout.Label(
+                        "Enter an utterance and hit Send to see what your app will return.");
+                }
+
                 GUILayout.EndVertical();
             }
 
@@ -232,9 +255,9 @@ namespace Facebook.WitAi.Utilities
             {
                 submitStart = System.DateTime.Now;
                 var request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
-                request.onResponse = (r) => ShowResponse(r.ResponseData);
-                request.Request();
+                request.onResponse = OnResponse;
                 loading = true;
+                request.Request();
             }
         }
 
@@ -243,14 +266,32 @@ namespace Facebook.WitAi.Utilities
             SetWit(FindObjectOfType<VoiceService>());
         }
 
-        private void ShowResponse(WitResponseNode r)
+        private void OnResponse(WitRequest request)
         {
+            responseCode = request.StatusCode;
             requestLength = DateTime.Now - submitStart;
-            response = r;
-            responseText = r.ToString();
+            if (null != request.ResponseData)
+            {
+                ShowResponse(request.ResponseData);
+            }
+            else if (!string.IsNullOrEmpty(request.StatusDescription))
+            {
+                responseText = request.StatusDescription;
+            }
+            else
+            {
+                responseText = "No response. Status: " + request.StatusCode;
+            }
+
             loading = false;
             status = $"Response time: {requestLength}";
             EditorForegroundRunner.Run(Repaint);
+        }
+
+        private void ShowResponse(WitResponseNode r)
+        {
+            response = r;
+            responseText = response.ToString();
         }
 
         private void WatchForResponse()
