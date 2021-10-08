@@ -281,7 +281,7 @@ namespace Facebook.WitAi
             #if UNITY_EDITOR
             request.UserAgent += ",Editor";
             #else
-            request.UserAgent += ",App";
+            request.UserAgent += ",Runtime";
             #endif
 
             isActive = true;
