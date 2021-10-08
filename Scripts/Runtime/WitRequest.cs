@@ -16,6 +16,10 @@ using Facebook.WitAi.Lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace Facebook.WitAi
 {
     /// <summary>
@@ -47,7 +51,7 @@ namespace Facebook.WitAi
         const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.16";
+        public const string WIT_SDK_VERSION = "0.0.17";
 
         private WitConfiguration configuration;
 
@@ -264,7 +268,21 @@ namespace Facebook.WitAi
                     break;
             }
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel}";
+            #if UNITY_EDITOR
+            if (string.IsNullOrEmpty(configuration.configId))
+            {
+                configuration.configId = Guid.NewGuid().ToString();
+                EditorUtility.SetDirty(configuration);
+            }
+            #endif
+
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configuration.configId}";
+
+            #if UNITY_EDITOR
+            request.UserAgent += ",Editor";
+            #else
+            request.UserAgent += ",Runtime";
+            #endif
 
             isActive = true;
             statusCode = 0;
