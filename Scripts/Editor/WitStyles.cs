@@ -19,15 +19,12 @@ namespace Facebook.WitAi
         public static Texture2D TextureWhite;
         public static Texture2D TextureWhite25P;
         public static Texture2D TextureBlack25P;
-        public static Texture2D TextureWitBlueBg;
         public static Texture2D TextureFBBlue;
         public static Texture2D TextureTextField;
         public static Texture2D TextureWitDark;
         public static GUIStyle BackgroundWhite;
         public static GUIStyle BackgroundWhite25P;
         public static GUIStyle BackgroundBlack25P;
-        public static GUIStyle BackgroundWitBlue;
-        public static GUIStyle BackgroundFBBlue;
         public static GUIStyle BackgroundWitDark;
 
         public static GUIStyle LabelHeader;
@@ -68,10 +65,6 @@ namespace Facebook.WitAi
             TextureBlack25P.SetPixel(0, 0, new Color(0, 0, 0, .25f));
             TextureBlack25P.Apply();
 
-            TextureWitBlueBg = new Texture2D(1, 1);
-            TextureWitBlueBg.SetPixel(0, 0, new Color(0.95f, 0.96f, 0.98f));
-            TextureWitBlueBg.Apply();
-
             TextureFBBlue = new Texture2D(1, 1);
             TextureFBBlue.SetPixel(0, 0, ColorFB);
             TextureFBBlue.Apply();
@@ -90,9 +83,6 @@ namespace Facebook.WitAi
             BackgroundWhite25P = new GUIStyle();
             BackgroundWhite25P.normal.background = TextureWhite25P;
 
-            BackgroundWitBlue = new GUIStyle();
-            BackgroundWitBlue.normal.background = TextureWitBlueBg;
-
             BackgroundBlack25P = new GUIStyle();
             BackgroundBlack25P.normal.background = TextureBlack25P;
             BackgroundBlack25P.normal.textColor = Color.white;
@@ -101,21 +91,18 @@ namespace Facebook.WitAi
             BackgroundWitDark.normal.background = TextureWitDark;
 
             FacebookButton = new GUIStyle(EditorStyles.miniButton);
-            FacebookButton.normal.background = TextureWitBlueBg;
 
             Label = new GUIStyle(EditorStyles.label);
-            Label.normal.background = TextureWitBlueBg;
-            Label.normal.textColor = Color.black;
             Label.wordWrap = true;
 
             WordwrappedLabel = new GUIStyle(EditorStyles.label);
             WordwrappedLabel.wordWrap = true;
 
             LabelHeader = new GUIStyle(Label);
-            LabelHeader.fontSize = 48;
+            LabelHeader.fontSize = 24;
 
             LabelHeader2 = new GUIStyle(Label);
-            LabelHeader2.fontSize = 32;
+            LabelHeader2.fontSize = 14;
 
             Link = new GUIStyle(Label);
             Link.normal.textColor = ColorFB;

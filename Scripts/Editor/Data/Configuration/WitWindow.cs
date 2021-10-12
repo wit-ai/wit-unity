@@ -13,16 +13,18 @@ namespace Facebook.WitAi.Data.Configuration
 {
     public class WitWindow : BaseWitWindow
     {
-        protected override WindowStyles WindowStyle => WitAuthUtility.IsServerTokenValid()
-            ? WindowStyles.Editor
-            : WindowStyles.Themed;
-
         #if !WIT_DISABLE_UI
-        [MenuItem("Window/Wit/Wit Configuration")]
+        [MenuItem("Window/Wit/Wit Settings")]
         public static void ShowWindow()
         {
-            WitWindow window = GetWindow<WitWindow>("Welcome to Wit.ai");
-            window.maxSize = new Vector2(450, 686);
+            if (WitAuthUtility.IsServerTokenValid())
+            {
+                GetWindow<WitWindow>("Wit Settings");
+            }
+            else
+            {
+                WitWelcomeWizard.ShowWizard(ShowWindow);
+            }
         }
         #endif
 

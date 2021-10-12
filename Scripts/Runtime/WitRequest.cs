@@ -139,6 +139,7 @@ namespace Facebook.WitAi
         private static string deviceName;
         private bool configurationRequired;
         private string serverToken;
+        private string callingStackTrace;
 
         public override string ToString()
         {
@@ -208,6 +209,8 @@ namespace Facebook.WitAi
 
             uriBuilder.Query = $"v={WIT_API_VERSION}";
 
+            callingStackTrace = Environment.StackTrace;
+
             if (queryParams.Any())
             {
                 var p = queryParams.Select(par =>
@@ -268,15 +271,21 @@ namespace Facebook.WitAi
                     break;
             }
 
+            var configId = "not-yet-configured";
             #if UNITY_EDITOR
-            if (string.IsNullOrEmpty(configuration.configId))
+            if (configuration)
             {
-                configuration.configId = Guid.NewGuid().ToString();
-                EditorUtility.SetDirty(configuration);
+                if (string.IsNullOrEmpty(configuration.configId))
+                {
+                    configuration.configId = Guid.NewGuid().ToString();
+                    EditorUtility.SetDirty(configuration);
+                }
+
+                configId = configuration.configId;
             }
             #endif
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configuration.configId}";
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId}";
 
             #if UNITY_EDITOR
             request.UserAgent += ",Editor";
@@ -351,7 +360,7 @@ namespace Facebook.WitAi
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError(e);
+                        Debug.LogError($"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                         statusCode = ERROR_CODE_GENERAL;
                         statusDescription = e.Message;
                     }
@@ -363,7 +372,8 @@ namespace Facebook.WitAi
             {
                 statusCode = (int) e.Status;
                 statusDescription = e.Message;
-                Debug.LogError(e);
+                Debug.LogError(
+                    $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
             }
 
             if (null != stream)

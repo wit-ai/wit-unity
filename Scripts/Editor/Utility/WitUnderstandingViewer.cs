@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Facebook.WitAi.CallbackHandlers;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
+using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;
@@ -58,10 +59,19 @@ namespace Facebook.WitAi.Utilities
         #endif
         static void Init()
         {
-            WitUnderstandingViewer window = EditorWindow.GetWindow(typeof(WitUnderstandingViewer)) as WitUnderstandingViewer;
-            window.titleContent = new GUIContent("Understanding Viewer", WitStyles.WitIcon);
-            window.autoRepaintOnSceneChange = true;
-            window.Show();
+            if (WitAuthUtility.IsServerTokenValid())
+            {
+                WitUnderstandingViewer window =
+                    EditorWindow.GetWindow(
+                        typeof(WitUnderstandingViewer)) as WitUnderstandingViewer;
+                window.titleContent = new GUIContent("Understanding Viewer", WitStyles.WitIcon);
+                window.autoRepaintOnSceneChange = true;
+                window.Show();
+            }
+            else
+            {
+                WitWelcomeWizard.ShowWizard(Init);
+            }
         }
 
         protected override void OnEnable()
