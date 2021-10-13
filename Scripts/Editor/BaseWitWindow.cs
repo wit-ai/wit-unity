@@ -13,14 +13,6 @@ namespace Facebook.WitAi
 {
     public abstract class BaseWitWindow : EditorWindow
     {
-        public enum WindowStyles
-        {
-            Themed,
-            Editor
-        }
-
-        protected virtual WindowStyles WindowStyle => WindowStyles.Editor;
-
         protected WitConfiguration[] witConfigs;
         protected string[] witConfigNames;
         protected int witConfigIndex = -1;
@@ -66,16 +58,7 @@ namespace Facebook.WitAi
         {
             minSize = new Vector2(450, 300);
             DrawHeader();
-
-            if (WindowStyle == WindowStyles.Themed)
-            {
-                GUILayout.BeginVertical(WitStyles.BackgroundWitBlue, GUILayout.ExpandWidth(true),
-                    GUILayout.ExpandHeight(true));
-            }
-            else
-            {
-                GUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-            }
+            GUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             OnDrawContent();
             GUILayout.EndVertical();
         }
@@ -84,21 +67,20 @@ namespace Facebook.WitAi
 
         protected void DrawHeader()
         {
-            var headerBackground = WindowStyle == WindowStyles.Themed
-                ? WitStyles.BackgroundWhite
-                : WitStyles.BackgroundWitDark;
-            DrawHeader(headerBackground, HeaderLink);
+            DrawHeader(HeaderLink);
         }
 
-        public static void DrawHeader(GUIStyle headerBackground = null, string headerLink = null)
+        public static void DrawHeader(string headerLink = null, Texture2D header = null)
         {
-            GUILayout.BeginVertical(null == headerBackground
-                ? WitStyles.BackgroundWitDark
-                : headerBackground);
+            GUILayout.BeginVertical();
             GUILayout.Space(16);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(WitStyles.MainHeader, "Label"))
+            if (!header) header = WitStyles.MainHeader;
+            var headerWidth = Mathf.Min(header.width, EditorGUIUtility.currentViewWidth - 64);
+            var headerHeight =
+                header.height * headerWidth / header.width;
+            if (GUILayout.Button(header, "Label", GUILayout.Width(headerWidth), GUILayout.Height(headerHeight)))
             {
                 Application.OpenURL(!string.IsNullOrEmpty(headerLink)
                     ? headerLink
@@ -146,7 +128,7 @@ namespace Facebook.WitAi
             return changed;
         }
 
-        protected void BeginCenter(int width = -1)
+        public static void BeginCenter(int width = -1)
         {
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
@@ -160,7 +142,7 @@ namespace Facebook.WitAi
             }
         }
 
-        protected void EndCenter()
+        public static void EndCenter()
         {
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
