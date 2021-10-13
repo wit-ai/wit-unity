@@ -93,6 +93,7 @@ namespace Facebook.WitAi
             FacebookButton = new GUIStyle(EditorStyles.miniButton);
 
             Label = new GUIStyle(EditorStyles.label);
+            Label.richText = true;
             Label.wordWrap = true;
 
             WordwrappedLabel = new GUIStyle(EditorStyles.label);
