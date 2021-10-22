@@ -22,7 +22,6 @@ namespace Facebook.WitAi.Utilities
         [SerializeField] private Texture2D witHeader;
         [SerializeField] private string responseText;
         private string utterance;
-        private bool loading;
         private WitResponseNode response;
         private Dictionary<string, bool> foldouts;
 
@@ -133,13 +132,11 @@ namespace Facebook.WitAi.Utilities
         private void OnError(string title, string message)
         {
             status = message;
-            loading = false;
         }
 
         private void OnRequestCreated(WitRequest request)
         {
             submitStart = System.DateTime.Now;
-            loading = true;
         }
 
         private void ShowTranscription(string transcription)
@@ -178,7 +175,7 @@ namespace Facebook.WitAi.Utilities
             utterance = EditorGUILayout.TextField("Utterance", utterance);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Send", GUILayout.Width(75)) && !loading)
+            if (GUILayout.Button("Send", GUILayout.Width(75)) && !wit.IsRequestActive)
             {
                 responseText = "";
                 if (!string.IsNullOrEmpty(utterance))
@@ -187,7 +184,6 @@ namespace Facebook.WitAi.Utilities
                 }
                 else
                 {
-                    loading = false;
                     response = null;
                 }
             }
@@ -207,7 +203,13 @@ namespace Facebook.WitAi.Utilities
 
             GUILayout.EndHorizontal();
 
-            if (loading)
+            if (wit && wit.MicActive)
+            {
+                BeginCenter();
+                GUILayout.Label("Listening...");
+                EndCenter();
+            }
+            else if (wit && wit.IsRequestActive)
             {
                 BeginCenter();
                 GUILayout.Label("Loading...");
@@ -241,12 +243,6 @@ namespace Facebook.WitAi.Utilities
 
         private void SubmitUtterance()
         {
-            if (string.IsNullOrEmpty(utterance))
-            {
-                loading = false;
-                return;
-            }
-
             // Hack to watch for loading to complete. Response does not
             // come back on the main thread so Repaint in onResponse in
             // the editor does nothing.
@@ -266,7 +262,6 @@ namespace Facebook.WitAi.Utilities
                 submitStart = System.DateTime.Now;
                 var request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
                 request.onResponse = OnResponse;
-                loading = true;
                 request.Request();
             }
         }
@@ -293,7 +288,6 @@ namespace Facebook.WitAi.Utilities
                 responseText = "No response. Status: " + request.StatusCode;
             }
 
-            loading = false;
             status = $"Response time: {requestLength}";
             EditorForegroundRunner.Run(Repaint);
         }
@@ -306,7 +300,7 @@ namespace Facebook.WitAi.Utilities
 
         private void WatchForResponse()
         {
-            if (loading == false)
+            if (!wit.IsRequestActive)
             {
                 Repaint();
                 EditorApplication.update -= WatchForResponse;
