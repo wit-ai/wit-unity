@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Facebook.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
@@ -13,10 +14,13 @@ namespace Facebook.WitAi
 {
     public abstract class BaseWitWindow : EditorWindow
     {
-        protected WitConfiguration[] witConfigs;
-        protected string[] witConfigNames;
+        protected static WitConfiguration[] witConfigs = Array.Empty<WitConfiguration>();
+        protected static string[] witConfigNames = Array.Empty<string>();
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
+
+        public static WitConfiguration[] WitConfigs => witConfigs;
+        public static string[] WitConfigNames => witConfigNames;
 
         protected virtual string HeaderLink => null;
 
@@ -40,7 +44,7 @@ namespace Facebook.WitAi
             if (witConfiguration) witConfiguration.UpdateData();
         }
 
-        protected void RefreshConfigList()
+        protected static void RefreshConfigList()
         {
             string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
             witConfigs = new WitConfiguration[guids.Length];
