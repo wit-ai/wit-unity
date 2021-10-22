@@ -529,8 +529,7 @@ namespace Facebook.WitAi
             }
             else
             {
-                events?.OnError?.Invoke("HTTP Error " + request.StatusCode,
-                    "There was an error requesting data from the server.");
+                events?.OnError?.Invoke("HTTP Error " + request.StatusCode, request.StatusDescription);
                 DeactivateRequest();
             }
 

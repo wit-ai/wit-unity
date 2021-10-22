@@ -285,7 +285,7 @@ namespace Facebook.WitAi
             }
             #endif
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId}";
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{PlayerSettings.applicationIdentifier}";
 
             #if UNITY_EDITOR
             request.UserAgent += ",Editor";
