@@ -51,7 +51,7 @@ namespace Facebook.WitAi
         const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.17";
+        public const string WIT_SDK_VERSION = "0.0.18";
 
         private WitConfiguration configuration;
 
@@ -285,7 +285,7 @@ namespace Facebook.WitAi
             }
             #endif
 
-            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{PlayerSettings.applicationIdentifier}";
+            request.UserAgent = $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{Application.identifier}";
 
             #if UNITY_EDITOR
             request.UserAgent += ",Editor";
