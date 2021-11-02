@@ -109,7 +109,7 @@ namespace Facebook.WitAi
 
         public override bool MicActive => micInput.IsRecording;
 
-        public override bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit ||
+        protected override bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit ||
                                                   null == activeTranscriptionProvider;
 
         private void Awake()

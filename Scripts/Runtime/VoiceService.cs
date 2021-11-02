@@ -22,6 +22,9 @@ namespace Facebook.WitAi
         /// </summary>
         public abstract bool Active { get; }
 
+        /// <summary>
+        /// Returns true if the service is actively communicating with Wit.ai during an Activation. The mic may or may not still be active while this is true.
+        /// </summary>
         public abstract bool IsRequestActive { get; }
 
         /// <summary>
@@ -30,6 +33,9 @@ namespace Facebook.WitAi
         /// </summary>
         public abstract ITranscriptionProvider TranscriptionProvider { get; set; }
 
+        /// <summary>
+        /// Returns true if this voice service is currently reading data from the microphone
+        /// </summary>
         public abstract bool MicActive { get; }
 
         public VoiceEvents VoiceEvents
@@ -38,29 +44,39 @@ namespace Facebook.WitAi
             set => events = value;
         }
 
-        public abstract bool ShouldSendMicData { get; }
+        /// <summary>
+        /// Returns true if the audio input should be read in an activation
+        /// </summary>
+        protected abstract bool ShouldSendMicData { get; }
 
         /// <summary>
-        /// Activate the microphone and send data for NLU processing.
+        /// Start listening for sound or speech from the user and start sending data to Wit.ai once sound or speech has been detected.
         /// </summary>
         public abstract void Activate();
 
         /// <summary>
-        /// Activate the microphone and send data for NLU processing.
+        /// Activate the microphone and send data for NLU processing. Includes optional additional request parameters like dynamic entities and maximum results.
         /// </summary>
         /// <param name="requestOptions"></param>
         public abstract void Activate(WitRequestOptions requestOptions);
 
+        /// <summary>
+        /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.
+        /// </summary>
         public abstract void ActivateImmediately();
+        
+        /// <summary>
+        /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.  Includes optional additional request parameters like dynamic entities and maximum results.
+        /// </summary>
         public abstract void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
-        /// Stop listening and submit the collected microphone data for processing.
+        /// Stop listening and submit any remaining buffered microphone data for processing.
         /// </summary>
         public abstract void Deactivate();
 
         /// <summary>
-        /// Send text data for NLU processing
+        /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
         /// <param name="text"></param>
         public abstract void Activate(string text);

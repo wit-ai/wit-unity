@@ -42,10 +42,14 @@ namespace Facebook.WitAi.Configuration
         [SerializeField]
         public float maxRecordingTime = 20;
 
-        [Header("Sound Activation")] [SerializeField]
-        public float soundWakeThreshold = .0005f;
+        [Header("Sound Activation")]
+        [Tooltip("The minimum volume level needed to be heard to start collecting data from the audio source.")]
+        [SerializeField] public float soundWakeThreshold = .0005f;
 
+        [Tooltip("The length of the individual samples read from the audio source")]
         [Range(10, 500)] [SerializeField] public int sampleLengthInMs = 10;
+        
+        [Tooltip("The total audio data that should be buffered for lookback purposes on sound based activations.")]
         [SerializeField] public float micBufferLengthInSeconds = 1;
 
         [Header("Custom Transcription")]
@@ -54,6 +58,7 @@ namespace Facebook.WitAi.Configuration
         [SerializeField]
         public bool sendAudioToWit = true;
 
+        [Tooltip("A custom provider that returns text to be used for nlu processing on activation instead of sending audio.")]
         [SerializeField] public CustomTranscriptionProvider customTranscriptionProvider;
     }
 }

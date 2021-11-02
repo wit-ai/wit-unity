@@ -15,10 +15,10 @@ namespace Facebook.WitAi.Events
     public class VoiceEvents
     {
         [Header("Activation Result Events")]
-        [Tooltip("Called when a response from wit has been received")]
+        [Tooltip("Called when a response from Wit.ai has been received")]
         public WitResponseEvent OnResponse = new WitResponseEvent();
 
-        [Tooltip("Called when there was an error with a WitRequest")]
+        [Tooltip("Called when there was an error with a WitRequest  or the RuntimeConfiguration is not properly configured.")]
         public WitErrorEvent OnError = new WitErrorEvent();
 
         [Header("Mic Events")]
@@ -34,22 +34,22 @@ namespace Facebook.WitAi.Events
             "Called when a request is created. This happens at the beginning of an activation before the microphone is activated (if in use)")]
         public WitRequestCreatedEvent OnRequestCreated = new WitRequestCreatedEvent();
 
-        [Tooltip("Called when the microphone has been activated during a Wit voice command activation")]
+        [Tooltip("Called when the microphone has started collecting data collecting data to be sent to Wit.ai. There may be some buffering before data transmission starts.")]
         public UnityEvent OnStartListening = new UnityEvent();
 
         [Tooltip(
-            "Called when the microphone has stopped recording during a Wit voice command activation")]
+            "Called when the voice service is no longer collecting data from the microphone")]
         public UnityEvent OnStoppedListening = new UnityEvent();
 
         [Tooltip(
-            "Called when the microphone input volume has been below the volume threshold for the specified duration.")]
+            "Called when the microphone input volume has been below the volume threshold for the specified duration and microphone data is no longer being collected")]
         public UnityEvent OnStoppedListeningDueToInactivity = new UnityEvent();
 
         [Tooltip(
-            "The microphone has stopped recording because maximum recording time has been hit")]
+            "The microphone has stopped recording because maximum recording time has been hit for this activation")]
         public UnityEvent OnStoppedListeningDueToTimeout = new UnityEvent();
 
-        [Tooltip("The microphone was stopped from manual deactivation")]
+        [Tooltip("The Deactivate() method has been called ending the current activation.")]
         public UnityEvent OnStoppedListeningDueToDeactivation = new UnityEvent();
 
         [Tooltip("Fired when recording stops, the minimum volume threshold was hit, and data is being sent to the server.")]
