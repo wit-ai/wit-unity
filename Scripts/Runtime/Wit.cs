@@ -186,10 +186,13 @@ namespace Facebook.WitAi
                     int read;
                     while ((read = lastSampleMarker.Read(writeBuffer, 0, writeBuffer.Length)) > 0)
                     {
-                        activeRequest.Write(writeBuffer, 0, read);
+                        if (activeRequest.IsRequestStreamActive)
+                        {
+                            activeRequest.Write(writeBuffer, 0, read);
+                        }
                     }
                 }
-                else
+                else if(activeRequest.IsRequestStreamActive)
                 {
                     byte[] sampleBytes = Convert(sample);
                     activeRequest.Write(sampleBytes, 0, sampleBytes.Length);

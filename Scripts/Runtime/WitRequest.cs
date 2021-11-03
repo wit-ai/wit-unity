@@ -47,11 +47,21 @@ namespace Facebook.WitAi
         /// </summary>
         public const int ERROR_CODE_NO_CLIENT_TOKEN = -3;
 
+        /// <summary>
+        /// No data was returned from the server.
+        /// </summary>
+        public const int ERROR_CODE_NO_DATA_FROM_SERVER = -4;
+
+        /// <summary>
+        /// Invalid data was returned from the server.
+        /// </summary>
+        public const int ERROR_CODE_INVALID_DATA_FROM_SERVER = -5;
+
         const string URI_SCHEME = "https";
         const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.18";
+        public const string WIT_SDK_VERSION = "0.0.19";
 
         private WitConfiguration configuration;
 
@@ -72,6 +82,8 @@ namespace Facebook.WitAi
 
         public byte[] postData;
         public string postContentType;
+
+        private object streamLock = new object();
 
         /// <summary>
         /// Callback called when a response is received from the server
@@ -318,10 +330,10 @@ namespace Facebook.WitAi
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
+                    string stringResponse = "";
                     try
                     {
                         var responseStream = response.GetResponseStream();
-                        string stringResponse = "";
                         if (response.Headers["Transfer-Encoding"] == "chunked")
                         {
                             byte[] buffer = new byte[10240];
@@ -332,15 +344,18 @@ namespace Facebook.WitAi
                                 if (stringResponse.Length > 0)
                                 {
                                     responseData = WitResponseJson.Parse(stringResponse);
-                                    var transcription = responseData["text"];
-                                    if (!string.IsNullOrEmpty(transcription))
+                                    if (null != responseData)
                                     {
-                                        onPartialTranscription?.Invoke(transcription);
+                                        var transcription = responseData["text"];
+                                        if (!string.IsNullOrEmpty(transcription))
+                                        {
+                                            onPartialTranscription?.Invoke(transcription);
+                                        }
                                     }
                                 }
                             }
 
-                            if (stringResponse.Length > 0)
+                            if (stringResponse.Length > 0 && null != responseData)
                             {
                                 onFullTranscription?.Invoke(responseData["text"]);
                                 onRawResponse?.Invoke(stringResponse);
@@ -357,6 +372,12 @@ namespace Facebook.WitAi
                         }
 
                         responseStream.Close();
+                    }
+                    catch (JSONParseException e)
+                    {
+                        Debug.LogError("Server returned invalid data: " + e.Message + "\n" + stringResponse);
+                        statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                        statusDescription = "Server returned invalid data.";
                     }
                     catch (Exception e)
                     {
@@ -376,11 +397,7 @@ namespace Facebook.WitAi
                     $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
             }
 
-            if (null != stream)
-            {
-                Debug.Log("Request stream was still open. Closing.");
-                CloseRequestStream();
-            }
+            CloseRequestStream();
 
             isActive = false;
 
@@ -392,6 +409,11 @@ namespace Facebook.WitAi
                     statusDescription = $"Error: {responseData["code"]}. {error}";
                     statusCode = 500;
                 }
+            }
+            else
+            {
+                statusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
+                statusDescription = "Server did not return a valid json response.";
             }
 
             onResponse?.Invoke(this);
@@ -425,16 +447,16 @@ namespace Facebook.WitAi
         /// </summary>
         public void CloseRequestStream()
         {
-            if (null != stream)
+            lock (streamLock)
             {
-                lock (stream)
+                if (null != stream)
                 {
-                    stream?.Dispose();
+                    stream.Dispose();
                     stream = null;
                 }
-            }
 
-            isRequestStreamActive = false;
+                isRequestStreamActive = false;
+            }
         }
 
         /// <summary>
@@ -447,18 +469,15 @@ namespace Facebook.WitAi
         /// <param name="length"></param>
         public void Write(byte[] data, int offset, int length)
         {
-            if (!isRequestStreamActive)
+            lock (streamLock)
             {
-                throw new IOException(
-                    "Request is not active. Call Request() on the WitRequest and wait for the onInputStreamReady callback before attempting to send data.");
-            }
-
-            if (null != stream)
-            {
-                lock (stream)
+                if (!isRequestStreamActive)
                 {
-                    stream.Write(data, offset, length);
+                    throw new IOException(
+                        "Request is not active or was killed unexpectedly. Call Request() on the WitRequest and wait for the onInputStreamReady callback before attempting to send data.");
                 }
+
+                stream?.Write(data, offset, length);
             }
         }
     }

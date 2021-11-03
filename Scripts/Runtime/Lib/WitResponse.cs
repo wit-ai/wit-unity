@@ -367,7 +367,7 @@ namespace Facebook.WitAi.Lib
                         }
 
                         if (stack.Count == 0)
-                            throw new Exception("JSON Parse: Too many closing brackets");
+                            throw new JSONParseException("JSON Parse: Too many closing brackets");
 
                         stack.Pop();
                         if (Token != "")
@@ -477,7 +477,7 @@ namespace Facebook.WitAi.Lib
 
             if (QuoteMode)
             {
-                throw new Exception("JSON Parse: Quotation marks seems to be messed up.");
+                throw new JSONParseException("JSON Parse: Quotation marks seems to be messed up.");
             }
 
             return ctx;
@@ -619,7 +619,7 @@ namespace Facebook.WitAi.Lib
 
                 default:
                 {
-                    throw new Exception("Error deserializing JSON. Unknown tag: " + type);
+                    throw new JSONParseException("Error deserializing JSON. Unknown tag: " + type);
                 }
             }
         }
@@ -1226,5 +1226,10 @@ namespace Facebook.WitAi.Lib
         {
             return WitResponseNode.Parse(aJSON);
         }
+    }
+
+    public class JSONParseException : Exception
+    {
+        public JSONParseException(string message) : base(message) { }
     }
 }
