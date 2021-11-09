@@ -27,37 +27,60 @@ namespace Facebook.WitAi.Configuration
         {
             var propValue = propery.FindPropertyRelative(name);
             GUILayout.BeginHorizontal();
-            if (editing != name)
+            if (editing == name)
             {
-                if (propValue.type == "string")
+
+                EditorGUILayout.PropertyField(propValue, new GUIContent(label));
+
+                WitStyles.ResetIcon.tooltip = $"Reset to default values ({defaultValue})";
+                if (GUILayout.Button(WitStyles.ResetIcon, WitStyles.ImageIcon))
                 {
-                    defaultValue = string.IsNullOrEmpty(propValue.stringValue)
-                        ? defaultValue
-                        : propValue.stringValue;
+                    editing = string.Empty;
+
+                    switch (propValue.type)
+                    {
+                        case "string":
+                            propValue.stringValue = defaultValue;
+                            break;
+                        case "int":
+                            propValue.intValue = int.Parse(defaultValue);
+                            break;
+                    }
                 }
-                else if (propValue.type == "int")
+
+                if (GUILayout.Button(WitStyles.AcceptIcon, WitStyles.ImageIcon))
                 {
-                    defaultValue = propValue.intValue.ToString();
+                    editing = string.Empty;
+                }
+            }
+            else
+            {
+                switch (propValue.type)
+                {
+                    case "string":
+                        defaultValue = string.IsNullOrEmpty(propValue.stringValue)
+                            ? defaultValue
+                            : propValue.stringValue;
+                        break;
+                    case "int":
+                        defaultValue = propValue.intValue.ToString();
+                        break;
                 }
 
                 EditorGUI.BeginDisabledGroup(editing != name);
                 EditorGUILayout.TextField(label, defaultValue);
                 EditorGUI.EndDisabledGroup();
-            }
-            else
-            {
-                EditorGUILayout.PropertyField(propValue, new GUIContent(label));
-            }
 
-            if (GUILayout.Button(WitStyles.EditIcon, WitStyles.ImageIcon))
-            {
-                if (editing == name)
+                if (GUILayout.Button(WitStyles.EditIcon, WitStyles.ImageIcon))
                 {
-                    editing = string.Empty;
-                }
-                else
-                {
-                    editing = name;
+                    if (editing == name)
+                    {
+                        editing = string.Empty;
+                    }
+                    else
+                    {
+                        editing = name;
+                    }
                 }
             }
 
@@ -68,7 +91,7 @@ namespace Facebook.WitAi.Configuration
         {
             scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(100));
             DrawProperty(property, "uriScheme", "Uri Scheme", WitRequest.URI_SCHEME);
-            DrawProperty(property, "authority", "Authority", WitRequest.URI_AUTHORITY);
+            DrawProperty(property, "authority", "Host", WitRequest.URI_AUTHORITY);
             DrawProperty(property, "port", "Port", "80");
             DrawProperty(property, "witApiVersion", "Wit Api Version", WitRequest.WIT_API_VERSION);
             DrawProperty(property, "speech", "Speech", WitRequest.WIT_ENDPOINT_SPEECH);

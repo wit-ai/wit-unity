@@ -42,6 +42,8 @@ namespace Facebook.WitAi
         public static GUIContent welcomeTitleContent;
         public static GUIContent PasteIcon;
         public static GUIContent EditIcon;
+        public static GUIContent ResetIcon;
+        public static GUIContent AcceptIcon;
         public static GUIContent ObjectPickerIcon;
         public static GUIStyle ImageIcon;
 
@@ -121,6 +123,8 @@ namespace Facebook.WitAi
 
             PasteIcon = EditorGUIUtility.IconContent("Clipboard");
             EditIcon = EditorGUIUtility.IconContent("editicon.sml");
+            ResetIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
+            AcceptIcon = EditorGUIUtility.IconContent("FilterSelectedOnly");
             ObjectPickerIcon = EditorGUIUtility.IconContent("d_Record Off");
         }
     }

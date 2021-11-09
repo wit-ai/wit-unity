@@ -31,6 +31,7 @@ namespace Facebook.WitAi.Utilities
         private string status;
         private VoiceService wit;
         private int responseCode;
+        private WitRequest request;
 
         public bool HasWit => null != wit;
 
@@ -58,7 +59,17 @@ namespace Facebook.WitAi.Utilities
         #endif
         static void Init()
         {
-            if (WitAuthUtility.IsServerTokenValid())
+            BaseWitWindow.RefreshConfigList();
+            bool hasConfig = false;
+            for (int i = 0; i < witConfigs.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(witConfigs[i].clientAccessToken))
+                {
+                    hasConfig = true;
+                    break;
+                }
+            }
+            if (hasConfig)
             {
                 WitUnderstandingViewer window =
                     EditorWindow.GetWindow(
@@ -136,6 +147,7 @@ namespace Facebook.WitAi.Utilities
 
         private void OnRequestCreated(WitRequest request)
         {
+            this.request = request;
             submitStart = System.DateTime.Now;
         }
 
@@ -175,7 +187,7 @@ namespace Facebook.WitAi.Utilities
             utterance = EditorGUILayout.TextField("Utterance", utterance);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Send", GUILayout.Width(75)) && !wit.IsRequestActive)
+            if (GUILayout.Button("Send", GUILayout.Width(75)) && (null == request || !request.IsActive))
             {
                 responseText = "";
                 if (!string.IsNullOrEmpty(utterance))
@@ -198,6 +210,11 @@ namespace Facebook.WitAi.Utilities
                 if (wit.Active && GUILayout.Button("Deactivate", GUILayout.Width(75)))
                 {
                     wit.Deactivate();
+                }
+
+                if (wit.Active && GUILayout.Button("Abort", GUILayout.Width(75)))
+                {
+                    wit.DeactivateAndAbortRequest();
                 }
             }
 
@@ -260,7 +277,7 @@ namespace Facebook.WitAi.Utilities
             else
             {
                 submitStart = System.DateTime.Now;
-                var request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
+                request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
                 request.onResponse = OnResponse;
                 request.Request();
             }
@@ -300,7 +317,7 @@ namespace Facebook.WitAi.Utilities
 
         private void WatchForResponse()
         {
-            if (!wit.IsRequestActive)
+            if (request.IsActive)
             {
                 Repaint();
                 EditorApplication.update -= WatchForResponse;
@@ -318,10 +335,17 @@ namespace Facebook.WitAi.Utilities
         {
             if (null == witResponseNode?.AsObject) return;
 
-            foreach (var child in witResponseNode.AsObject.ChildNodeNames)
+            if(string.IsNullOrEmpty(path)) DrawNode(witResponseNode["text"], "text", path);
+
+            var names = witResponseNode.AsObject.ChildNodeNames;
+            Array.Sort(names);
+            foreach (string child in names)
             {
-                var childNode = witResponseNode[child];
-                DrawNode(childNode, child, path);
+                if (!string.IsNullOrEmpty(path) || child != "text")
+                {
+                    var childNode = witResponseNode[child];
+                    DrawNode(childNode, child, path);
+                }
             }
         }
 

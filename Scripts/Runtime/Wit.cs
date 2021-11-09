@@ -107,7 +107,7 @@ namespace Facebook.WitAi
             }
         }
 
-        public override bool MicActive => micInput.IsRecording;
+        public override bool MicActive => null != micInput && micInput.IsRecording;
 
         protected override bool ShouldSendMicData => runtimeConfiguration.sendAudioToWit ||
                                                   null == activeTranscriptionProvider;
@@ -184,15 +184,12 @@ namespace Facebook.WitAi
 
                     // Flush the marker buffer to catch up
                     int read;
-                    while ((read = lastSampleMarker.Read(writeBuffer, 0, writeBuffer.Length)) > 0)
+                    while ((read = lastSampleMarker.Read(writeBuffer, 0, writeBuffer.Length, true)) > 0)
                     {
-                        if (activeRequest.IsRequestStreamActive)
-                        {
-                            activeRequest.Write(writeBuffer, 0, read);
-                        }
+                        activeRequest.Write(writeBuffer, 0, read);
                     }
                 }
-                else if(activeRequest.IsRequestStreamActive)
+                else
                 {
                     byte[] sampleBytes = Convert(sample);
                     activeRequest.Write(sampleBytes, 0, sampleBytes.Length);
@@ -216,10 +213,6 @@ namespace Facebook.WitAi
                     DeactivateRequest();
                     events.OnStoppedListeningDueToInactivity?.Invoke();
                 }
-            }
-            else if (!isSoundWakeActive)
-            {
-                DeactivateRequest();
             }
             else if (isSoundWakeActive && levelMax > runtimeConfiguration.soundWakeThreshold)
             {
@@ -455,10 +448,11 @@ namespace Facebook.WitAi
                 else
                 {
                     activeRequest.CloseRequestStream();
-                    if (minKeepAliveWasHit)
-                    {
-                        events.OnMicDataSent?.Invoke();
-                    }
+                }
+
+                if (minKeepAliveWasHit)
+                {
+                    events.OnMicDataSent?.Invoke();
                 }
             }
 
@@ -546,9 +540,19 @@ namespace Facebook.WitAi
             }
             else
             {
-                events?.OnError?.Invoke("HTTP Error " + request.StatusCode, request.StatusDescription);
                 DeactivateRequest();
+                if (request.StatusCode != WitRequest.ERROR_CODE_ABORTED)
+                {
+                    events?.OnError?.Invoke("HTTP Error " + request.StatusCode,
+                        request.StatusDescription);
+                }
+                else
+                {
+                    events?.OnAborted?.Invoke();
+                }
             }
+
+            events?.OnRequestCompleted?.Invoke();
 
             activeRequest = null;
         }

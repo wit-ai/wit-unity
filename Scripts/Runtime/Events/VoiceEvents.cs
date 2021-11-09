@@ -18,8 +18,17 @@ namespace Facebook.WitAi.Events
         [Tooltip("Called when a response from Wit.ai has been received")]
         public WitResponseEvent OnResponse = new WitResponseEvent();
 
-        [Tooltip("Called when there was an error with a WitRequest  or the RuntimeConfiguration is not properly configured.")]
+        [Tooltip(
+            "Called when there was an error with a WitRequest  or the RuntimeConfiguration is not properly configured.")]
         public WitErrorEvent OnError = new WitErrorEvent();
+
+        [Tooltip(
+            "Called when the activation stopped because the network request was aborted. This can be via a timeout or call to AbortActivation.")]
+        public UnityEvent OnAborted = new UnityEvent();
+
+        [Tooltip(
+            "Called when a a request has completed and all response and error callbacks have fired.")]
+        public UnityEvent OnRequestCompleted = new UnityEvent();
 
         [Header("Mic Events")]
         [Tooltip("Called when the volume level of the mic input has changed")]

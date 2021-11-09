@@ -40,8 +40,7 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
 
-            var path = string.IsNullOrEmpty(config.endpointConfiguration?.message)
-                ? WitRequest.WIT_ENDPOINT_MESSAGE : config.endpointConfiguration.message;
+            var path = WitEndpointConfig.GetEndpointConfig(config).Message;
             return new WitRequest(config, path, queryParams.ToArray());
         }
 
@@ -64,10 +63,7 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
 
-
-            var path = string.IsNullOrEmpty(config.endpointConfiguration?.speech)
-                ? WitRequest.WIT_ENDPOINT_SPEECH
-                : config.endpointConfiguration.speech;
+            var path = WitEndpointConfig.GetEndpointConfig(config).Speech;
             return new WitRequest(config, path, queryParams.ToArray());
         }
 

@@ -39,16 +39,21 @@ namespace Facebook.WitAi.Data
         {
             public long bufferDataIndex;
             public int index;
-            public RingBuffer<T> buffer;
+            public RingBuffer<T> ringBuffer;
 
-            public bool IsValid => buffer.bufferDataLength - bufferDataIndex < buffer.Capacity;
+            public bool IsValid => ringBuffer.bufferDataLength - bufferDataIndex <= ringBuffer.Capacity;
 
-            public int Read(T[] buffer, int offset, int length)
+            public int Read(T[] buffer, int offset, int length, bool skipToNextValid = false)
             {
                 int read = -1;
+                if (!IsValid && skipToNextValid && ringBuffer.bufferDataLength > ringBuffer.Capacity)
+                {
+                    bufferDataIndex = ringBuffer.bufferDataLength - ringBuffer.Capacity;
+                }
+
                 if (IsValid)
                 {
-                    read = this.buffer.Read(buffer, offset, length, bufferDataIndex);
+                    read = this.ringBuffer.Read(buffer, offset, length, bufferDataIndex);
                     bufferDataIndex += read;
                     index += read;
                     if (index > buffer.Length) index -= buffer.Length;
@@ -154,8 +159,6 @@ namespace Facebook.WitAi.Data
                 markerPosition = 0;
             }
 
-            Debug.Log("Creating marker at " + bufferDataLength + " offset to " + markerPosition);
-
             int bufIndex = bufferIndex + offset;
             if (bufIndex < 0)
             {
@@ -169,7 +172,7 @@ namespace Facebook.WitAi.Data
 
             var marker = new Marker()
             {
-                buffer = this,
+                ringBuffer = this,
                 bufferDataIndex = markerPosition,
                 index = bufIndex
             };
