@@ -409,7 +409,20 @@ namespace Facebook.WitAi
             }
         }
 
-        private void DeactivateRequest()
+        /// <summary>
+        /// Stop listening and abort any requests that may be active without waiting for a response.
+        /// </summary>
+        public override void DeactivateAndAbortRequest()
+        {
+            var recording = micInput.IsRecording;
+            DeactivateRequest(true);
+            if (recording)
+            {
+                events.OnStoppedListeningDueToDeactivation?.Invoke();
+            }
+        }
+
+        private void DeactivateRequest(bool abort = false)
         {
             if (null != timeLimitCoroutine)
             {
@@ -433,22 +446,23 @@ namespace Facebook.WitAi
 
             activeTranscriptionProvider?.Deactivate();
 
-            if (isActive)
+            if (IsRequestActive)
             {
-                if (IsRequestActive)
+                if (abort)
                 {
-
+                    activeRequest.AbortRequest();
+                }
+                else
+                {
                     activeRequest.CloseRequestStream();
                     if (minKeepAliveWasHit)
                     {
                         events.OnMicDataSent?.Invoke();
                     }
                 }
-                else
-                {
-                    isActive = false;
-                }
             }
+
+            isActive = false;
         }
 
         private byte[] Convert(float[] samples)

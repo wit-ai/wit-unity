@@ -40,7 +40,9 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
 
-            return new WitRequest(config, "message", queryParams.ToArray());
+            var path = string.IsNullOrEmpty(config.endpointConfiguration?.message)
+                ? WitRequest.WIT_ENDPOINT_MESSAGE : config.endpointConfiguration.message;
+            return new WitRequest(config, path, queryParams.ToArray());
         }
 
         /// <summary>
@@ -62,7 +64,11 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
             }
 
-            return new WitRequest(config, "speech", queryParams.ToArray());
+
+            var path = string.IsNullOrEmpty(config.endpointConfiguration?.speech)
+                ? WitRequest.WIT_ENDPOINT_SPEECH
+                : config.endpointConfiguration.speech;
+            return new WitRequest(config, path, queryParams.ToArray());
         }
 
         #region IDE Only Requests
@@ -75,7 +81,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest ListIntentsRequest(this WitConfiguration config)
         {
-            return new WitRequest(config, "intents");
+            return new WitRequest(config, WitRequest.WIT_ENDPOINT_INTENTS);
         }
 
         /// <summary>
@@ -86,7 +92,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest GetIntentRequest(this WitConfiguration config, string intentName)
         {
-            return new WitRequest(config, $"intents/{intentName}");
+            return new WitRequest(config, $"{WitRequest.WIT_ENDPOINT_INTENTS}/{intentName}");
         }
 
         /// <summary>
@@ -96,7 +102,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest ListUtterancesRequest(this WitConfiguration config)
         {
-            return new WitRequest(config, "utterances");
+            return new WitRequest(config, WitRequest.WIT_ENDPOINT_UTTERANCES);
         }
 
         /// <summary>
@@ -106,7 +112,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest ListEntitiesRequest(this WitConfiguration config)
         {
-            return new WitRequest(config, "entities", true);
+            return new WitRequest(config, WitRequest.WIT_ENDPOINT_ENTITIES, true);
         }
 
         /// <summary>
@@ -117,7 +123,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest GetEntityRequest(this WitConfiguration config, string entityName)
         {
-            return new WitRequest(config, $"entities/{entityName}", true);
+            return new WitRequest(config, $"{WitRequest.WIT_ENDPOINT_ENTITIES}/{entityName}", true);
         }
 
         /// <summary>
@@ -127,7 +133,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest ListTraitsRequest(this WitConfiguration config)
         {
-            return new WitRequest(config, "traits", true);
+            return new WitRequest(config, WitRequest.WIT_ENDPOINT_TRAITS, true);
         }
 
         /// <summary>
@@ -138,7 +144,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest GetTraitRequest(this WitConfiguration config, string traitName)
         {
-            return new WitRequest(config, $"traits/{traitName}", true);
+            return new WitRequest(config, $"{WitRequest.WIT_ENDPOINT_TRAITS}/{traitName}", true);
         }
 
         /// <summary>
@@ -148,7 +154,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest ListAppsRequest(string serverToken, int limit, int offset = 0)
         {
-            return new WitRequest(serverToken, "apps",
+            return new WitRequest(serverToken, WitRequest.WIT_ENDPOINT_APPS,
                 QueryParam("limit", limit.ToString()),
                 QueryParam("offset", offset.ToString()));
         }
@@ -161,7 +167,7 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest GetAppRequest(this WitConfiguration config, string appId)
         {
-            return new WitRequest(config, $"apps/{appId}", true);
+            return new WitRequest(config, $"{WitRequest.WIT_ENDPOINT_APPS}/{appId}", true);
         }
 
         /// <summary>
@@ -175,7 +181,7 @@ namespace Facebook.WitAi
         {
             var postString = "{\"refresh\":" + refresh.ToString().ToLower() + "}";
             var postData = Encoding.UTF8.GetBytes(postString);
-            var request = new WitRequest(config, $"apps/{appId}/client_tokens", true)
+            var request = new WitRequest(config, $"{WitRequest.WIT_ENDPOINT_APPS}/{appId}/client_tokens", true)
             {
                 postContentType = "application/json",
                 postData = postData

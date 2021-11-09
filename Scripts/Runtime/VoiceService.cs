@@ -64,7 +64,7 @@ namespace Facebook.WitAi
         /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.
         /// </summary>
         public abstract void ActivateImmediately();
-        
+
         /// <summary>
         /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.  Includes optional additional request parameters like dynamic entities and maximum results.
         /// </summary>
@@ -74,6 +74,11 @@ namespace Facebook.WitAi
         /// Stop listening and submit any remaining buffered microphone data for processing.
         /// </summary>
         public abstract void Deactivate();
+
+        /// <summary>
+        /// Stop listening and abort any requests that may be active without waiting for a response.
+        /// </summary>
+        public abstract void DeactivateAndAbortRequest();
 
         /// <summary>
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
@@ -122,6 +127,11 @@ namespace Facebook.WitAi
         /// Stop listening and submit the collected microphone data for processing.
         /// </summary>
         void Deactivate();
+
+        /// <summary>
+        /// Stop listening and abort any requests that may be active without waiting for a response.
+        /// </summary>
+        void DeactivateAndAbortRequest();
 
         /// <summary>
         /// Send text data for NLU processing

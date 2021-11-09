@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;
@@ -57,11 +58,24 @@ namespace Facebook.WitAi
         /// </summary>
         public const int ERROR_CODE_INVALID_DATA_FROM_SERVER = -5;
 
-        const string URI_SCHEME = "https";
-        const string URI_AUTHORITY = "api.wit.ai";
+        /// <summary>
+        /// Request was aborted
+        /// </summary>
+        public const int ERROR_CODE_ABORTED = -6;
+
+        public const string URI_SCHEME = "https";
+        public const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.19";
+        public const string WIT_SDK_VERSION = "0.0.20";
+
+        public const string WIT_ENDPOINT_SPEECH = "speech";
+        public const string WIT_ENDPOINT_MESSAGE = "message";
+        public const string WIT_ENDPOINT_ENTITIES = "entities";
+        public const string WIT_ENDPOINT_INTENTS = "intents";
+        public const string WIT_ENDPOINT_TRAITS = "traits";
+        public const string WIT_ENDPOINT_APPS = "apps";
+        public const string WIT_ENDPOINT_UTTERANCES = "utterances";
 
         private WitConfiguration configuration;
 
@@ -215,11 +229,22 @@ namespace Facebook.WitAi
         public void Request()
         {
             UriBuilder uriBuilder = new UriBuilder();
-            uriBuilder.Scheme = URI_SCHEME;
-            uriBuilder.Host = URI_AUTHORITY;
-            uriBuilder.Path = path;
 
-            uriBuilder.Query = $"v={WIT_API_VERSION}";
+            var endpointConfig = WitEndpointConfig.GetEndpointConfig(configuration);
+
+            uriBuilder.Scheme = endpointConfig.UriScheme;
+
+            uriBuilder.Host = endpointConfig.Authority;
+
+            var api = endpointConfig.WitApiVersion;
+            if (endpointConfig.port > 0)
+            {
+                uriBuilder.Port = endpointConfig.port;
+            }
+
+            uriBuilder.Query = $"v={api}";
+
+            uriBuilder.Path = path;
 
             callingStackTrace = Environment.StackTrace;
 
@@ -274,13 +299,11 @@ namespace Facebook.WitAi
             }
 
             // Configure additional headers
-            switch (command)
+            if(WitEndpointConfig.GetEndpointConfig(configuration).Speech == command)
             {
-                case "speech":
-                    request.ContentType = audioEncoding.ToString();
-                    request.Method = "POST";
-                    request.SendChunked = true;
-                    break;
+                request.ContentType = audioEncoding.ToString();
+                request.Method = "POST";
+                request.SendChunked = true;
             }
 
             var configId = "not-yet-configured";
@@ -321,102 +344,117 @@ namespace Facebook.WitAi
         {
             try
             {
-                response = (HttpWebResponse) request.EndGetResponse(ar);
-
-
-
-                statusCode = (int) response.StatusCode;
-                statusDescription = response.StatusDescription;
-
-                if (response.StatusCode == HttpStatusCode.OK)
+                try
                 {
-                    string stringResponse = "";
-                    try
+                    response = (HttpWebResponse) request.EndGetResponse(ar);
+
+                    statusCode = (int) response.StatusCode;
+                    statusDescription = response.StatusDescription;
+
+                    if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        var responseStream = response.GetResponseStream();
-                        if (response.Headers["Transfer-Encoding"] == "chunked")
+                        string stringResponse = "";
+                        try
                         {
-                            byte[] buffer = new byte[10240];
-                            int bytes = 0;
-                            while ((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+                            var responseStream = response.GetResponseStream();
+                            if (response.Headers["Transfer-Encoding"] == "chunked")
                             {
-                                stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
-                                if (stringResponse.Length > 0)
+                                byte[] buffer = new byte[10240];
+                                int bytes = 0;
+                                while ((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
-                                    responseData = WitResponseJson.Parse(stringResponse);
-                                    if (null != responseData)
+                                    stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
+                                    if (stringResponse.Length > 0)
                                     {
-                                        var transcription = responseData["text"];
-                                        if (!string.IsNullOrEmpty(transcription))
+                                        responseData = WitResponseJson.Parse(stringResponse);
+                                        if (null != responseData)
                                         {
-                                            onPartialTranscription?.Invoke(transcription);
+                                            var transcription = responseData["text"];
+                                            if (!string.IsNullOrEmpty(transcription))
+                                            {
+                                                onPartialTranscription?.Invoke(transcription);
+                                            }
                                         }
                                     }
                                 }
+
+                                if (stringResponse.Length > 0 && null != responseData)
+                                {
+                                    onFullTranscription?.Invoke(responseData["text"]);
+                                    onRawResponse?.Invoke(stringResponse);
+                                }
+                            }
+                            else
+                            {
+                                using (StreamReader reader = new StreamReader(responseStream))
+                                {
+                                    stringResponse = reader.ReadToEnd();
+                                    onRawResponse?.Invoke(stringResponse);
+                                    responseData = WitResponseJson.Parse(stringResponse);
+                                }
                             }
 
-                            if (stringResponse.Length > 0 && null != responseData)
-                            {
-                                onFullTranscription?.Invoke(responseData["text"]);
-                                onRawResponse?.Invoke(stringResponse);
-                            }
+                            responseStream.Close();
                         }
-                        else
+                        catch (JSONParseException e)
                         {
-                            using (StreamReader reader = new StreamReader(responseStream))
-                            {
-                                stringResponse = reader.ReadToEnd();
-                                onRawResponse?.Invoke(stringResponse);
-                                responseData = WitResponseJson.Parse(stringResponse);
-                            }
+                            Debug.LogError("Server returned invalid data: " + e.Message + "\n" +
+                                           stringResponse);
+                            statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                            statusDescription = "Server returned invalid data.";
                         }
-
-                        responseStream.Close();
+                        catch (Exception e)
+                        {
+                            Debug.LogError(
+                                $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                            statusCode = ERROR_CODE_GENERAL;
+                            statusDescription = e.Message;
+                        }
                     }
-                    catch (JSONParseException e)
+
+                    response.Close();
+                }
+                catch (WebException e)
+                {
+                    statusCode = (int) e.Status;
+                    statusDescription = e.Message;
+                    Debug.LogError(
+                        $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                }
+
+                CloseRequestStream();
+
+                if (null != responseData)
+                {
+                    var error = responseData["error"];
+                    if (!string.IsNullOrEmpty(error))
                     {
-                        Debug.LogError("Server returned invalid data: " + e.Message + "\n" + stringResponse);
-                        statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
-                        statusDescription = "Server returned invalid data.";
+                        statusDescription = $"Error: {responseData["code"]}. {error}";
+                        statusCode = 500;
+                    }
+                }
+                else
+                {
+                    statusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
+                    statusDescription = "Server did not return a valid json response.";
+                }
+
+                foreach (var responseDelegate in onResponse.GetInvocationList())
+                {
+                    try
+                    {
+                        responseDelegate.DynamicInvoke(this);
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
-                        statusCode = ERROR_CODE_GENERAL;
-                        statusDescription = e.Message;
+                        Debug.LogError(e);
                     }
                 }
-
-                response.Close();
             }
-            catch (WebException e)
+            finally
             {
-                statusCode = (int) e.Status;
-                statusDescription = e.Message;
-                Debug.LogError(
-                    $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                isActive = false;
             }
-
-            CloseRequestStream();
-
-            isActive = false;
-
-            if (null != responseData)
-            {
-                var error = responseData["error"];
-                if (!string.IsNullOrEmpty(error))
-                {
-                    statusDescription = $"Error: {responseData["code"]}. {error}";
-                    statusCode = 500;
-                }
-            }
-            else
-            {
-                statusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
-                statusDescription = "Server did not return a valid json response.";
-            }
-
-            onResponse?.Invoke(this);
         }
 
         private void HandleRequestStream(IAsyncResult ar)
@@ -440,6 +478,15 @@ namespace Facebook.WitAi
             }
         }
 
+        public void AbortRequest()
+        {
+            CloseRequestStream();
+            request.Abort();
+            statusCode = ERROR_CODE_ABORTED;
+            statusDescription = "Request was aborted";
+            isActive = false;
+        }
+
         /// <summary>
         /// Method to close the input stream of data being sent during the lifecycle of this request
         ///
@@ -447,15 +494,30 @@ namespace Facebook.WitAi
         /// </summary>
         public void CloseRequestStream()
         {
+            Stream closingStream = null;
             lock (streamLock)
             {
+                isRequestStreamActive = false;
                 if (null != stream)
                 {
-                    stream.Dispose();
+                    closingStream = stream;
                     stream = null;
                 }
+            }
 
-                isRequestStreamActive = false;
+            if (null != closingStream)
+            {
+                try
+                {
+                    closingStream.Close();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Handling edge case where stream is closed remotely
+                    // This problem occurs when the Web server resets or closes the connection after
+                    // the client application sends the HTTP header.
+                    // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
+                }
             }
         }
 
@@ -469,6 +531,7 @@ namespace Facebook.WitAi
         /// <param name="length"></param>
         public void Write(byte[] data, int offset, int length)
         {
+            Stream activeStream = null;
             lock (streamLock)
             {
                 if (!isRequestStreamActive)
@@ -477,7 +540,12 @@ namespace Facebook.WitAi
                         "Request is not active or was killed unexpectedly. Call Request() on the WitRequest and wait for the onInputStreamReady callback before attempting to send data.");
                 }
 
-                stream?.Write(data, offset, length);
+                activeStream = stream;
+            }
+
+            if (null != activeStream)
+            {
+                activeStream.WriteAsync(data, offset, length);
             }
         }
     }
