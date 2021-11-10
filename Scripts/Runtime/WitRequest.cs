@@ -352,7 +352,8 @@ namespace Facebook.WitAi
             if (request.Method == "POST")
             {
                 var getRequestTask = request.BeginGetRequestStream(HandleRequestStream, request);
-                ThreadPool.RegisterWaitForSingleObject(getRequestTask.AsyncWaitHandle, HandleTimeoutTimer, request, Timeout, true);
+                ThreadPool.RegisterWaitForSingleObject(getRequestTask.AsyncWaitHandle,
+                    HandleTimeoutTimer, request, Timeout, true);
             }
             else
             {
@@ -363,7 +364,8 @@ namespace Facebook.WitAi
         private void StartResponse()
         {
             var result = request.BeginGetResponse(HandleResponse, request);
-            ThreadPool.RegisterWaitForSingleObject(result.AsyncWaitHandle, HandleTimeoutTimer, request, Timeout, true);
+            ThreadPool.RegisterWaitForSingleObject(result.AsyncWaitHandle, HandleTimeoutTimer,
+                request, Timeout, true);
         }
 
         private void HandleTimeoutTimer(object state, bool timedout)
@@ -401,21 +403,28 @@ namespace Facebook.WitAi
                 statusCode = (int) response.StatusCode;
                 statusDescription = response.StatusDescription;
 
-                if (response.StatusCode == HttpStatusCode.OK)
+                try
                 {
-                    try
+                    var responseStream = response.GetResponseStream();
+                    if (response.Headers["Transfer-Encoding"] == "chunked")
                     {
-                        var responseStream = response.GetResponseStream();
-                        if (response.Headers["Transfer-Encoding"] == "chunked")
+                        byte[] buffer = new byte[10240];
+                        int bytes = 0;
+                        int offset = 0;
+                        int totalRead = 0;
+                        while ((bytes = responseStream.Read(buffer, offset, buffer.Length - offset)) > 0)
                         {
-                            byte[] buffer = new byte[10240];
-                            int bytes = 0;
-                            while ((bytes = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+                            totalRead += bytes;
+                            stringResponse = Encoding.UTF8.GetString(buffer, 0, totalRead);
+                            if (stringResponse.Length > 0)
                             {
-                                stringResponse = Encoding.UTF8.GetString(buffer, 0, bytes);
-                                if (stringResponse.Length > 0)
+                                try
                                 {
                                     responseData = WitResponseJson.Parse(stringResponse);
+
+                                    offset = 0;
+
+                                    totalRead = 0;
                                     if (null != responseData)
                                     {
                                         var transcription = responseData["text"];
@@ -425,40 +434,52 @@ namespace Facebook.WitAi
                                         }
                                     }
                                 }
-                            }
-
-                            if (stringResponse.Length > 0 && null != responseData)
-                            {
-                                onFullTranscription?.Invoke(responseData["text"]);
-                                onRawResponse?.Invoke(stringResponse);
+                                catch (JSONParseException e)
+                                {
+                                    // TODO: t105419819 Update the protocol to better handle this issue.
+                                    // This is a bit of a hack to get around an issue with a full
+                                    // socket buffer or partial server response. We will need to
+                                    // address this server side to make sure we're reading all data
+                                    // rather than relying on a json parse exception to catch this.
+                                    // Test case: Utterance with multiple entity responses pushing
+                                    // final data > 1024 bytes.
+                                    offset = bytes;
+                                    Debug.LogWarning("Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " + e.Message);
+                                }
                             }
                         }
-                        else
+
+                        if (stringResponse.Length > 0 && null != responseData)
                         {
-                            using (StreamReader reader = new StreamReader(responseStream))
-                            {
-                                stringResponse = reader.ReadToEnd();
-                                onRawResponse?.Invoke(stringResponse);
-                                responseData = WitResponseJson.Parse(stringResponse);
-                            }
+                            onFullTranscription?.Invoke(responseData["text"]);
+                            onRawResponse?.Invoke(stringResponse);
                         }
+                    }
+                    else
+                    {
+                        using (StreamReader reader = new StreamReader(responseStream))
+                        {
+                            stringResponse = reader.ReadToEnd();
+                            onRawResponse?.Invoke(stringResponse);
+                            responseData = WitResponseJson.Parse(stringResponse);
+                        }
+                    }
 
-                        responseStream.Close();
-                    }
-                    catch (JSONParseException e)
-                    {
-                        Debug.LogError("Server returned invalid data: " + e.Message + "\n" +
-                                       stringResponse);
-                        statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
-                        statusDescription = "Server returned invalid data.";
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError(
-                            $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
-                        statusCode = ERROR_CODE_GENERAL;
-                        statusDescription = e.Message;
-                    }
+                    responseStream.Close();
+                }
+                catch (JSONParseException e)
+                {
+                    Debug.LogError("Server returned invalid data: " + e.Message + "\n" +
+                                   stringResponse);
+                    statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                    statusDescription = "Server returned invalid data.";
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(
+                        $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                    statusCode = ERROR_CODE_GENERAL;
+                    statusDescription = e.Message;
                 }
 
                 response.Close();
@@ -486,7 +507,7 @@ namespace Facebook.WitAi
                 if (!string.IsNullOrEmpty(error))
                 {
                     statusDescription = $"Error: {responseData["code"]}. {error}";
-                    statusCode = 500;
+                    statusCode = statusCode == 200 ? ERROR_CODE_GENERAL : statusCode;
                 }
             }
             else if (statusCode == 200)
