@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -140,6 +141,19 @@ namespace Facebook.WitAi
         /// </summary>
         public Action<string> onFullTranscription;
 
+        public delegate Uri OnCustomizeUriEvent(UriBuilder uriBuilder);
+        /// <summary>
+        /// Provides an opportunity to customize the url just before a request executed
+        /// </summary>
+        public OnCustomizeUriEvent onCustomizeUri;
+
+        public delegate Dictionary<string, string> OnProvideCustomHeadersEvent();
+        /// <summary>
+        /// Provides an opportunity to provide custom headers for the request just before it is
+        /// executed.
+        /// </summary>
+        public OnProvideCustomHeadersEvent onProvideCustomHeaders;
+
         /// <summary>
         /// Returns true if a request is pending. Will return false after data has been populated
         /// from the response.
@@ -270,7 +284,8 @@ namespace Facebook.WitAi
                 uriBuilder.Query += "&" + string.Join("&", p);
             }
 
-            StartRequest(uriBuilder.Uri);
+            var uri = null == onCustomizeUri ? uriBuilder.Uri : onCustomizeUri(uriBuilder);
+            StartRequest(uri);
         }
 
         private void StartRequest(Uri uri)
@@ -349,6 +364,14 @@ namespace Facebook.WitAi
             statusCode = 0;
             statusDescription = "Starting request";
             request.Timeout = configuration ? configuration.timeoutMS : 10000;
+
+            if (null != onProvideCustomHeaders)
+            {
+                foreach (var header in onProvideCustomHeaders())
+                {
+                    request.Headers[header.Key] = header.Value;
+                }
+            }
             if (request.Method == "POST")
             {
                 var getRequestTask = request.BeginGetRequestStream(HandleRequestStream, request);
@@ -487,6 +510,35 @@ namespace Facebook.WitAi
             catch (WebException e)
             {
                 statusCode = (int) e.Status;
+                if (e.Response is HttpWebResponse errorResponse)
+                {
+                    statusCode = (int) errorResponse.StatusCode;
+
+                    try
+                    {
+                        var stream = errorResponse.GetResponseStream();
+                        if (null != stream)
+                        {
+                            using (StreamReader reader = new StreamReader(stream))
+                            {
+                                stringResponse = reader.ReadToEnd();
+                                onRawResponse?.Invoke(stringResponse);
+                                responseData = WitResponseJson.Parse(stringResponse);
+                            }
+                        }
+                    }
+                    catch (JSONParseException)
+                    {
+                        // Response wasn't encoded error, ignore it.
+                    }
+                    catch (Exception errorResponseError)
+                    {
+                        // We've already caught that there is an error, we'll ignore any errors
+                        // reading error response data and use the status/original error for validation
+                        Debug.LogWarning(errorResponseError);
+                    }
+                }
+
                 statusDescription = e.Message;
                 if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
@@ -552,14 +604,15 @@ namespace Facebook.WitAi
         {
             Stream stream = (Stream) obj;
 
-            while (isRequestStreamActive)
-            {
-                FlushBuffer(stream);
-                Thread.Yield();
-            }
 
             try
             {
+                while (isRequestStreamActive)
+                {
+                    FlushBuffer(stream);
+                    Thread.Yield();
+                }
+
                 FlushBuffer(stream);
                 stream.Close();
             }
@@ -571,6 +624,10 @@ namespace Facebook.WitAi
                 // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
                 Debug.LogWarning(
                     "Stream already disposed. It is likely the server reset the connection before streaming started.");
+            }
+            catch (IOException e)
+            {
+                Debug.LogWarning(e.Message);
             }
             catch (Exception e)
             {
