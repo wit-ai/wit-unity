@@ -681,7 +681,6 @@ namespace Facebook.WitAi
         /// </summary>
         public void CloseRequestStream()
         {
-            Stream closingStream = null;
             lock (streamLock)
             {
                 isRequestStreamActive = false;
