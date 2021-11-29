@@ -264,8 +264,8 @@ namespace Facebook.WitAi.Lib
         IEnumerator ReadRawAudio()
         {
             int loops = 0;
-            int readAbsPos = 0;
-            int prevPos = 0;
+            int readAbsPos = Microphone.GetPosition(CurrentDeviceName);
+            int prevPos = readAbsPos;
             float[] temp = new float[Sample.Length];
 
             while (AudioClip != null && Microphone.IsRecording(CurrentDeviceName) && IsRecording)
