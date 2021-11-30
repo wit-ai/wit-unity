@@ -53,15 +53,21 @@ namespace Facebook.WitAi.Data.Configuration
             });
         }
 
-        private static void ListTraits(WitRequest er, WitConfiguration configuration, Action onUpdateComplete)
+         private static void ListTraits(WitRequest er, WitConfiguration configuration, Action onUpdateComplete)
         {
             EditorForegroundRunner.Run(() =>
             {
                 var traitsRequest = configuration.ListTraitsRequest();
                 traitsRequest.onResponse =
-                    (tr) => OnUpdateData(tr,
-                        (dataResponse) => UpdateTraitList(configuration, dataResponse),
-                        onUpdateComplete);
+                    (tr) =>
+                    {
+                        EditorForegroundRunner.Run(() =>
+                        {
+                            OnUpdateData(tr,
+                                (dataResponse) => UpdateTraitList(configuration, dataResponse),
+                                onUpdateComplete);
+                        });
+                    };
                 OnUpdateData(er,
                     (entityResponse) => UpdateEntityList(configuration, entityResponse),
                     traitsRequest.Request);
