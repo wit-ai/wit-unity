@@ -359,7 +359,7 @@ namespace Facebook.WitAi
             request.UserAgent += ",Runtime";
 #endif
 
-            requestStartTime = DateTime.Now;
+            requestStartTime = DateTime.UtcNow;
             isActive = true;
             statusCode = 0;
             statusDescription = "Starting request";
@@ -399,7 +399,7 @@ namespace Facebook.WitAi
             var request = (HttpWebRequest) state;
             if (null != this.request)
             {
-                Debug.Log("Request timed out after " + (DateTime.Now - requestStartTime));
+                Debug.Log("Request timed out after " + (DateTime.UtcNow - requestStartTime));
                 request.Abort();
             }
 
