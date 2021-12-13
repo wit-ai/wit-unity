@@ -327,7 +327,14 @@ namespace Facebook.WitAi
                 Debug.Log("Writing recording to file: " + file);
 #endif
 
-                micInput.StartRecording(sampleLen: runtimeConfiguration.sampleLengthInMs);
+                if (micInput.IsInputAvailable)
+                {
+                    micInput.StartRecording(sampleLen: runtimeConfiguration.sampleLengthInMs);
+                }
+                else
+                {
+                    events.OnError.Invoke("Input Error", "No input source was available. Cannot activate for voice input.");
+                }
             }
 
             if (!isActive)
@@ -382,7 +389,7 @@ namespace Facebook.WitAi
         {
             activationTime = Time.time;
             lastMinVolumeLevelTime = Time.time;
-            if (!micInput.IsRecording)
+            if (!micInput.IsRecording && micInput.IsInputAvailable)
             {
                 micInput.StartRecording(runtimeConfiguration.sampleLengthInMs);
             }

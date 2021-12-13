@@ -44,5 +44,10 @@ namespace Facebook.WitAi.Interfaces
         /// NOTE: Default values for AudioEncoding are server optimized to reduce latency.
         /// </summary>
         AudioEncoding AudioEncoding { get; }
+
+        /// <summary>
+        /// Return true if input is available.
+        /// </summary>
+        bool IsInputAvailable { get; }
     }
 }
