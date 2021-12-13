@@ -75,7 +75,7 @@ namespace Facebook.WitAi
         public const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.20";
+        public const string WIT_SDK_VERSION = "0.0.23";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
