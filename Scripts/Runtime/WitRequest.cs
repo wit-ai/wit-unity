@@ -19,6 +19,7 @@ using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 using SystemInfo = UnityEngine.SystemInfo;
+using Facebook.WitAi.Utilities;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -75,7 +76,7 @@ namespace Facebook.WitAi
         public const string URI_AUTHORITY = "api.wit.ai";
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.21";
+        public const string WIT_SDK_VERSION = "0.0.24";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -188,6 +189,7 @@ namespace Facebook.WitAi
         private static string operatingSystem;
         private static string deviceModel;
         private static string deviceName;
+        private static string appIdentifier;
         private bool configurationRequired;
         private string serverToken;
         private string callingStackTrace;
@@ -212,6 +214,7 @@ namespace Facebook.WitAi
             if (null == operatingSystem) operatingSystem = SystemInfo.operatingSystem;
             if (null == deviceModel) deviceModel = SystemInfo.deviceModel;
             if (null == deviceName) deviceName = SystemInfo.deviceName;
+            if (null == appIdentifier) appIdentifier = Application.identifier;
         }
 
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
@@ -351,7 +354,7 @@ namespace Facebook.WitAi
 #endif
 
             request.UserAgent =
-                $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{Application.identifier}";
+                $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{appIdentifier}";
 
 #if UNITY_EDITOR
             request.UserAgent += ",Editor";
@@ -364,6 +367,7 @@ namespace Facebook.WitAi
             statusCode = 0;
             statusDescription = "Starting request";
             request.Timeout = configuration ? configuration.timeoutMS : 10000;
+            WatchMainThreadCallbacks();
 
             if (null != onProvideCustomHeaders)
             {
@@ -372,6 +376,7 @@ namespace Facebook.WitAi
                     request.Headers[header.Key] = header.Value;
                 }
             }
+
             if (request.Method == "POST")
             {
                 var getRequestTask = request.BeginGetRequestStream(HandleRequestStream, request);
@@ -453,7 +458,7 @@ namespace Facebook.WitAi
                                         var transcription = responseData["text"];
                                         if (!string.IsNullOrEmpty(transcription))
                                         {
-                                            onPartialTranscription?.Invoke(transcription);
+                                            MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
                                         }
                                     }
                                 }
@@ -474,8 +479,8 @@ namespace Facebook.WitAi
 
                         if (stringResponse.Length > 0 && null != responseData)
                         {
-                            onFullTranscription?.Invoke(responseData["text"]);
-                            onRawResponse?.Invoke(stringResponse);
+                            MainThreadCallback(() => onFullTranscription?.Invoke(responseData["text"]));
+                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                         }
                     }
                     else
@@ -483,7 +488,7 @@ namespace Facebook.WitAi
                         using (StreamReader reader = new StreamReader(responseStream))
                         {
                             stringResponse = reader.ReadToEnd();
-                            onRawResponse?.Invoke(stringResponse);
+                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                             responseData = WitResponseJson.Parse(stringResponse);
                         }
                     }
@@ -522,7 +527,7 @@ namespace Facebook.WitAi
                             using (StreamReader reader = new StreamReader(stream))
                             {
                                 stringResponse = reader.ReadToEnd();
-                                onRawResponse?.Invoke(stringResponse);
+                                MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                                 responseData = WitResponseJson.Parse(stringResponse);
                             }
                         }
@@ -604,7 +609,6 @@ namespace Facebook.WitAi
         {
             Stream stream = (Stream) obj;
 
-
             try
             {
                 while (isRequestStreamActive)
@@ -648,20 +652,23 @@ namespace Facebook.WitAi
 
         private void SafeInvoke(Action<WitRequest> action)
         {
-            // We want to allow each invocation to run even if there is an exception thrown by one
-            // of the callbacks in the invocation list. This protects shared invocations from
-            // clients blocking things like UI updates from other parts of the sdk being invoked.
-            foreach (var responseDelegate in action.GetInvocationList())
+            MainThreadCallback(() =>
             {
-                try
+                // We want to allow each invocation to run even if there is an exception thrown by one
+                // of the callbacks in the invocation list. This protects shared invocations from
+                // clients blocking things like UI updates from other parts of the sdk being invoked.
+                foreach (var responseDelegate in action.GetInvocationList())
                 {
-                    responseDelegate.DynamicInvoke(this);
+                    try
+                    {
+                        responseDelegate.DynamicInvoke(this);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError(e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Debug.LogError(e);
-                }
-            }
+            });
         }
 
         public void AbortRequest()
@@ -703,5 +710,56 @@ namespace Facebook.WitAi
             Array.Copy(data, offset, buffer, 0, length);
             writeBuffer.Enqueue(buffer);
         }
+
+        #region CALLBACKS
+        // Check performing
+        private bool _performing = false;
+        // All actions
+        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+        // Called from background thread
+        private void MainThreadCallback(Action action)
+        {
+            _mainThreadCallbacks.Enqueue(action);
+        }
+        // While active, perform any sent callbacks
+        private void WatchMainThreadCallbacks()
+        {
+            // Ifnore if already performing
+            if (_performing)
+            {
+                return;
+            }
+
+            // Check callbacks every frame (editor or runtime)
+            CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
+        }
+        // Every frame check for callbacks & perform any found
+        private System.Collections.IEnumerator PerformMainThreadCallbacks()
+        {
+            // Begin performing
+            _performing = true;
+
+            // While checking, continue
+            while (HasMainThreadCallbacks())
+            {
+                // Wait for frame
+                yield return new WaitForEndOfFrame();
+
+                // Perform if possible
+                while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
+                {
+                    result();
+                }
+            }
+
+            // Done performing
+            _performing = false;
+        }
+        // Check actions
+        private bool HasMainThreadCallbacks()
+        {
+            return IsActive || isRequestStreamActive || _mainThreadCallbacks.Count > 0;
+        }
+        #endregion
     }
 }

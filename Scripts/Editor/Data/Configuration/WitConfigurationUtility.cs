@@ -28,50 +28,38 @@ namespace Facebook.WitAi.Data.Configuration
 
         private static void DoUpdateData(WitConfiguration configuration, Action onUpdateComplete)
         {
-            EditorForegroundRunner.Run(() =>
+            if (!string.IsNullOrEmpty(
+                WitAuthUtility.GetAppServerToken(configuration.application.id)))
             {
-                if (!string.IsNullOrEmpty(
-                    WitAuthUtility.GetAppServerToken(configuration.application.id)))
-                {
-                    var intentsRequest = configuration.ListIntentsRequest();
-                    intentsRequest.onResponse =
-                        (r) => ListEntities(r, configuration, onUpdateComplete);
+                var intentsRequest = configuration.ListIntentsRequest();
+                intentsRequest.onResponse =
+                    (r) => ListEntities(r, configuration, onUpdateComplete);
 
-                    configuration.application?.UpdateData(intentsRequest.Request);
-                }
-            });
+                configuration.application?.UpdateData(intentsRequest.Request);
+            }
         }
 
         private static void ListEntities(WitRequest r, WitConfiguration configuration, Action onUpdateComplete)
         {
-            EditorForegroundRunner.Run(() =>
-            {
-                var entitiesRequest = configuration.ListEntitiesRequest();
-                entitiesRequest.onResponse = (er) => ListTraits(er, configuration, onUpdateComplete);
-                OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
-                    entitiesRequest.Request);
-            });
+            var entitiesRequest = configuration.ListEntitiesRequest();
+            entitiesRequest.onResponse = (er) => ListTraits(er, configuration, onUpdateComplete);
+            OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
+                entitiesRequest.Request);
         }
 
          private static void ListTraits(WitRequest er, WitConfiguration configuration, Action onUpdateComplete)
         {
-            EditorForegroundRunner.Run(() =>
-            {
-                var traitsRequest = configuration.ListTraitsRequest();
-                traitsRequest.onResponse =
-                    (tr) =>
-                    {
-                        EditorForegroundRunner.Run(() =>
-                        {
-                            OnUpdateData(tr,
+            var traitsRequest = configuration.ListTraitsRequest();
+            traitsRequest.onResponse =
+                (tr) =>
+                {
+                    OnUpdateData(tr,
                                 (dataResponse) => UpdateTraitList(configuration, dataResponse),
                                 onUpdateComplete);
-                        });
-                    };
-                OnUpdateData(er,
-                    (entityResponse) => UpdateEntityList(configuration, entityResponse),
-                    traitsRequest.Request);
-            });
+                };
+            OnUpdateData(er,
+                (entityResponse) => UpdateEntityList(configuration, entityResponse),
+                traitsRequest.Request);
         }
 
         private static void OnUpdateData(WitRequest request,
@@ -86,7 +74,7 @@ namespace Facebook.WitAi.Data.Configuration
                 Debug.LogError($"Request for {request} failed: {request.StatusDescription}");
             }
 
-            EditorForegroundRunner.Run(onUpdateComplete);
+            onUpdateComplete();
         }
 
         private static void UpdateIntentList(this WitConfiguration configuration,
@@ -180,12 +168,8 @@ namespace Facebook.WitAi.Data.Configuration
                                     WitApplication.FromJson(applications[i]);
                             }
 
-                            EditorForegroundRunner.Run(() =>
-                            {
-                                WitAuthUtility.SetAppServerToken(configuration.application.id,
-                                    serverToken);
-                                response?.Invoke();
-                            });
+                            WitAuthUtility.SetAppServerToken(configuration.application.id, serverToken);
+                            response?.Invoke();
                             break;
                         }
                     }
@@ -208,18 +192,14 @@ namespace Facebook.WitAi.Data.Configuration
                     if (r.StatusCode == 200)
                     {
                         var token = r.ResponseData["client_token"];
+                        SerializedObject so = new SerializedObject(configuration);
+                        so.FindProperty("clientAccessToken").stringValue =
+                            r.ResponseData["client_token"];
+                        so.ApplyModifiedProperties();
 
-                        EditorForegroundRunner.Run(() =>
-                        {
-                            SerializedObject so = new SerializedObject(configuration);
-                            so.FindProperty("clientAccessToken").stringValue =
-                                r.ResponseData["client_token"];
-                            so.ApplyModifiedProperties();
-
-                            configuration.clientAccessToken = token;
-                            EditorUtility.SetDirty(configuration);
-                            action?.Invoke();
-                        });
+                        configuration.clientAccessToken = token;
+                        EditorUtility.SetDirty(configuration);
+                        action?.Invoke();
                     }
                     else
                     {

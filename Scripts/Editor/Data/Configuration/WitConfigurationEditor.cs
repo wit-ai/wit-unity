@@ -76,7 +76,7 @@ namespace Facebook.WitAi.Data.Configuration
             {
                 configuration?.UpdateData(() =>
                 {
-                    EditorForegroundRunner.Run(() => EditorUtility.SetDirty(configuration));
+                    EditorUtility.SetDirty(configuration);
                 });
             }
         }
@@ -271,7 +271,7 @@ namespace Facebook.WitAi.Data.Configuration
                                 currentToken = refreshToken;
                                 WitAuthUtility.SetAppServerToken(configuration.application.id, currentToken);
                                 EditorUtility.SetDirty(configuration);
-                                EditorForegroundRunner.Run(Repaint);
+                                Repaint();
                                 appConfigurationFoldout = false;
                             });
                         }
@@ -293,7 +293,7 @@ namespace Facebook.WitAi.Data.Configuration
             configuration.FetchAppConfigFromServerToken(refreshToken, () =>
             {
                 currentToken = refreshToken;
-                EditorForegroundRunner.Run(Repaint);
+                Repaint();
                 appConfigurationFoldout = false;
             });
         }
@@ -313,11 +313,8 @@ namespace Facebook.WitAi.Data.Configuration
                         if (applications[i]["is_app_for_token"].AsBool)
                         {
                             var application = WitApplication.FromJson(applications[i]);
-                            EditorForegroundRunner.Run(() =>
-                            {
-                                WitAuthUtility.SetAppServerToken(application.id, serverToken);
-                                updateComplete?.Invoke();
-                            });
+                            WitAuthUtility.SetAppServerToken(application.id, serverToken);
+                            updateComplete?.Invoke();
                             break;
                         }
                     }

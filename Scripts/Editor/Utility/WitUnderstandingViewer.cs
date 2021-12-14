@@ -306,7 +306,7 @@ namespace Facebook.WitAi.Utilities
             }
 
             status = $"Response time: {requestLength}";
-            EditorForegroundRunner.Run(Repaint);
+            Repaint();
         }
 
         private void ShowResponse(WitResponseNode r)
