@@ -20,7 +20,7 @@ namespace Facebook.WitAi.Data.Entities
         [SerializeField] public string id;
         [SerializeField] public string name;
         [SerializeField] public string[] lookups;
-        [SerializeField] public string[] roles;
+        [SerializeField] public WitEntityRole[] roles;
         [SerializeField] public WitKeyword[] keywords;
 
         #if UNITY_EDITOR
@@ -34,7 +34,12 @@ namespace Facebook.WitAi.Data.Entities
             id = entityWitResponse["id"].Value;
             name = entityWitResponse["name"].Value;
             lookups = entityWitResponse["lookups"].AsStringArray;
-            roles = entityWitResponse["roles"].AsStringArray;
+            var roleArray = entityWitResponse["roles"].AsArray;
+            roles = new WitEntityRole[roleArray.Count];
+            for (int i = 0; i < roleArray.Count; i++)
+            {
+                roles[i] = WitEntityRole.FromJson(roleArray[i]);
+            }
             var keywordArray = entityWitResponse["keywords"].AsArray;
             keywords = new WitKeyword[keywordArray.Count];
             for (int i = 0; i < keywordArray.Count; i++)

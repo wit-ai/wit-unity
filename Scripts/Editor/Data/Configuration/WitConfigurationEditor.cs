@@ -434,16 +434,15 @@ namespace Facebook.WitAi.Data.Configuration
 
         private void DrawEntity(WitEntity entity)
         {
+            BeginIndent();
             InfoField("ID", entity.id);
-            if (null != entity.roles && entity.roles.Length > 0)
+            if (entity.roles != null && entity.roles.Length > 0)
             {
-                EditorGUILayout.Popup("Roles", 0, entity.roles);
+                var entityRoles = entity.roles.Select(e => e.name).ToArray();
+                DrawStringArray("Roles", entityRoles, entity.roles.GetHashCode().ToString());
             }
-
-            if (null != entity.lookups && entity.lookups.Length > 0)
-            {
-                EditorGUILayout.Popup("Lookups", 0, entity.lookups);
-            }
+            DrawStringArray("Lookups", entity.lookups);
+            EndIndent();
         }
 
         private void DrawIntents()
@@ -467,7 +466,6 @@ namespace Facebook.WitAi.Data.Configuration
                             DrawIntent(intent);
                         }
                     }
-
                     EndIndent();
                 }
             }
@@ -479,12 +477,36 @@ namespace Facebook.WitAi.Data.Configuration
 
         private void DrawIntent(WitIntent intent)
         {
+            BeginIndent();
             InfoField("ID", intent.id);
             var entities = intent.entities;
             if (entities.Length > 0)
             {
                 var entityNames = entities.Select(e => e.name).ToArray();
-                EditorGUILayout.Popup("Entities", 0, entityNames);
+                DrawStringArray("Entities", entityNames, intent.entities.GetHashCode().ToString());
+            }
+            EndIndent();
+        }
+
+        private void DrawStringArray(string displayName, string[] vals, string keybase = "")
+        {
+            if (vals != null && vals.Length > 0)
+            {
+                if (string.IsNullOrEmpty(keybase))
+                {
+                    keybase = vals.GetHashCode().ToString();
+                }
+                if (Foldout(keybase, displayName))
+                {
+                    BeginIndent();
+                    BeginIndent();
+                    for (int i = 0; i < vals.Length; i++)
+                    {
+                        GUILayout.Label(vals[i]);
+                    }
+                    EndIndent();
+                    EndIndent();
+                }
             }
         }
 
