@@ -134,6 +134,11 @@ namespace Facebook.WitAi.Data
 
         public int Read(T[] data, int offset, int length, long bufferDataIndex)
         {
+            if (bufferIndex == 0 && bufferDataLength == 0) // The ring buffer has been cleared.
+            {
+                return 0;
+            }
+
             lock (buffer)
             {
                 int read = (int) (Math.Min(bufferDataIndex + length, bufferDataLength) -
