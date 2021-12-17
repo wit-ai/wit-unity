@@ -1,11 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using Facebook.WitAi.Data;
+﻿using Facebook.WitAi.Data;
 using NUnit.Framework;
-using UnityEngine;
-using UnityEngine.TestTools;
-using System;
-using System.Linq;
 
 namespace Tests
 {
@@ -22,7 +16,7 @@ namespace Tests
         [Test]
         public void Test_Capacity()
         {
-            var ringBuffer  = new RingBuffer<int>(5);
+            var ringBuffer = new RingBuffer<int>(5);
             Assert.AreEqual(ringBuffer.Capacity, 5);
         }
         [Test]
@@ -30,7 +24,7 @@ namespace Tests
         {
             byte[] data = { 0, 1, 10, 100, 255 }; // sample input.
             var micDataBuffer = new RingBuffer<byte>(data.Length);
-            RingBuffer<byte>.Marker lastSampleMarker = micDataBuffer.CreateMarker(0);            
+            RingBuffer<byte>.Marker lastSampleMarker = micDataBuffer.CreateMarker(0);
             micDataBuffer.Push(data, 0, data.Length);
             var readBuffer = new byte[data.Length];
             int result = lastSampleMarker.Read(readBuffer, 0, readBuffer.Length, true);
@@ -45,10 +39,10 @@ namespace Tests
             byte[] data = { 1, 3, 4, 5, 255 }; // sample input.
             var micDataBuffer = new RingBuffer<byte>(data.Length);
             RingBuffer<byte>.Marker lastSampleMarker = micDataBuffer.CreateMarker(0);
-            
+
             micDataBuffer.Push(data, 0, data.Length);
             micDataBuffer.Clear();
-            var readBuffer = new byte[data.Length];            
+            var readBuffer = new byte[data.Length];
             int result = lastSampleMarker.Read(readBuffer, 0, readBuffer.Length, true);
 
             // Not only the elements of the input array should remain zero but 
@@ -62,12 +56,10 @@ namespace Tests
         {
             byte[] data = { 1, 3, 4, 5, 255 }; // sample input.
             var micDataBuffer = new RingBuffer<byte>(data.Length);
-            RingBuffer<byte>.Marker lastSampleMarker = micDataBuffer.CreateMarker(0);
-
             micDataBuffer.Push(data, 0, data.Length);
             micDataBuffer.Clear();
             var readBuffer = new byte[data.Length];
-            int result = micDataBuffer.Read(readBuffer, 0, readBuffer.Length, 0);            
+            int result = micDataBuffer.Read(readBuffer, 0, readBuffer.Length, 0);
 
             // Not only the input array should remain zero but 
             // the number of read bytes should also be zero.
@@ -102,7 +94,5 @@ namespace Tests
             result = lastSampleMarker.Read(readBuffer3, 0, 1, true);
             Assert.IsTrue(result <= 0);
         }
-
-
     }
 }
