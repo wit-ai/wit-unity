@@ -88,8 +88,6 @@ namespace Facebook.WitAi
 
         private WitConfiguration configuration;
 
-        private Stream activeStream;
-
         private string command;
         private string path;
 

@@ -34,7 +34,7 @@ namespace Facebook.WitAi.Utilities
         public class CoroutinePerformer : MonoBehaviour
         {
             // Coroutine
-            public bool isRunning { get; private set; }
+            public bool IsRunning { get; private set; }
             private Coroutine _runtimeCoroutine;
 
             // Dont destroy
@@ -47,13 +47,13 @@ namespace Facebook.WitAi.Utilities
             public void CoroutineBegin(IEnumerator asyncMethod)
             {
                 // Cannot call twice
-                if (isRunning)
+                if (IsRunning)
                 {
                     return;
                 }
 
                 // Begin running
-                isRunning = true;
+                IsRunning = true;
 
 #if UNITY_EDITOR
                 // Editor mode
@@ -95,7 +95,7 @@ namespace Facebook.WitAi.Utilities
             // Cancel on destroy
             private void OnDestroy()
             {
-                if (isRunning)
+                if (IsRunning)
                 {
                     CoroutineCancel();
                 }
@@ -103,7 +103,7 @@ namespace Facebook.WitAi.Utilities
             // Cancel coroutine
             public void CoroutineCancel()
             {
-                if (isRunning)
+                if (IsRunning)
                 {
                     CoroutineComplete();
                 }
@@ -112,13 +112,13 @@ namespace Facebook.WitAi.Utilities
             private void CoroutineComplete()
             {
                 // Ignore unless running
-                if (!isRunning)
+                if (!IsRunning)
                 {
                     return;
                 }
 
                 // Done
-                isRunning = false;
+                IsRunning = false;
 
 #if UNITY_EDITOR
                 // Complete

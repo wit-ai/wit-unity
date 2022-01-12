@@ -32,9 +32,11 @@ namespace Facebook.WitAi.Data.Entities
                     synonyms.Add(new WitResponseData(synonym));
                 }
 
-                var keywordEntry = new WitResponseClass();
-                keywordEntry.Add("keyword", new WitResponseData(keywordToSynonyms.Key));
-                keywordEntry.Add("synonyms", synonyms);
+                var keywordEntry = new WitResponseClass
+                {
+                    { "keyword", new WitResponseData(keywordToSynonyms.Key) },
+                    { "synonyms", synonyms }
+                };
 
                 keywordEntries.Add(keywordEntry);
             }
@@ -44,8 +46,10 @@ namespace Facebook.WitAi.Data.Entities
         public string ToJSON()
         {
             KeyValuePair<string, WitResponseArray> pair = this.GetEntityPair();
-            var root = new WitResponseClass();
-            root.Add(pair.Key, pair.Value);
+            var root = new WitResponseClass
+            {
+                { pair.Key, pair.Value }
+            };
             return root.ToString();
         }
     }

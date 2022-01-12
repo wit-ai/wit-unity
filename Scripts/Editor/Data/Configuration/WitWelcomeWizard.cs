@@ -13,8 +13,6 @@ namespace Facebook.WitAi.Data.Configuration
 {
     public class WitWelcomeWizard : ScriptableWizard
     {
-        private Texture2D tex;
-        private bool manualToken;
         protected WitConfigurationEditor witEditor;
         protected string serverToken;
         public Action successAction;

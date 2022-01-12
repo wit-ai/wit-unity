@@ -27,8 +27,10 @@ namespace Facebook.WitAi
         /// <returns></returns>
         public static WitRequest MessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions)
         {
-            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
-            queryParams.Add(QueryParam("q", query));
+            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>
+            {
+                QueryParam("q", query)
+            };
 
             if (null != requestOptions && -1 != requestOptions.nBestIntents)
             {

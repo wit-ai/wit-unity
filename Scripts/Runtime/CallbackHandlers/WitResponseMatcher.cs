@@ -116,10 +116,9 @@ namespace Facebook.WitAi.CallbackHandlers
 
         private bool CompareDouble(string value, ValuePathMatcher matcher)
         {
-            double dValue;
 
             // This one is freeform based on the input so we will retrun false if it is not parsable
-            if (!double.TryParse(value, out dValue)) return false;
+            if (!double.TryParse(value, out double dValue)) return false;
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.
@@ -146,10 +145,9 @@ namespace Facebook.WitAi.CallbackHandlers
 
         private bool CompareFloat(string value, ValuePathMatcher matcher)
         {
-            float dValue;
 
             // This one is freeform based on the input so we will retrun false if it is not parsable
-            if (!float.TryParse(value, out dValue)) return false;
+            if (!float.TryParse(value, out float dValue)) return false;
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.
@@ -178,10 +176,9 @@ namespace Facebook.WitAi.CallbackHandlers
 
         private bool CompareInt(string value, ValuePathMatcher matcher)
         {
-            int dValue;
 
             // This one is freeform based on the input so we will retrun false if it is not parsable
-            if (!int.TryParse(value, out dValue)) return false;
+            if (!int.TryParse(value, out int dValue)) return false;
 
             // We will throw an exception if match value is not a numeric value. This is a developer
             // error.

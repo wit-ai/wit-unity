@@ -73,10 +73,7 @@ namespace Facebook.WitAi.Data.Configuration
             {
                 Debug.LogError($"Request for {request} failed: {request.StatusDescription}");
             }
-            if (onUpdateComplete != null)
-            {
-                onUpdateComplete();
-            }
+            onUpdateComplete?.Invoke();
         }
 
         private static void UpdateIntentList(this WitConfiguration configuration,

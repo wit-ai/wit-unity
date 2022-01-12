@@ -94,18 +94,26 @@ namespace Facebook.WitAi
 
             FacebookButton = new GUIStyle(EditorStyles.miniButton);
 
-            Label = new GUIStyle(EditorStyles.label);
-            Label.richText = true;
-            Label.wordWrap = true;
+            Label = new GUIStyle(EditorStyles.label)
+            {
+                richText = true,
+                wordWrap = true
+            };
 
-            WordwrappedLabel = new GUIStyle(EditorStyles.label);
-            WordwrappedLabel.wordWrap = true;
+            WordwrappedLabel = new GUIStyle(EditorStyles.label)
+            {
+                wordWrap = true
+            };
 
-            LabelHeader = new GUIStyle(Label);
-            LabelHeader.fontSize = 24;
+            LabelHeader = new GUIStyle(Label)
+            {
+                fontSize = 24
+            };
 
-            LabelHeader2 = new GUIStyle(Label);
-            LabelHeader2.fontSize = 14;
+            LabelHeader2 = new GUIStyle(Label)
+            {
+                fontSize = 14
+            };
 
             Link = new GUIStyle(Label);
             Link.normal.textColor = ColorFB;
@@ -114,9 +122,11 @@ namespace Facebook.WitAi
             TextField.normal.background = TextureTextField;
             TextField.normal.textColor = Color.black;
 
-            ImageIcon = new GUIStyle(EditorStyles.label);
-            ImageIcon.fixedWidth = 16;
-            ImageIcon.fixedHeight = 16;
+            ImageIcon = new GUIStyle(EditorStyles.label)
+            {
+                fixedWidth = 16,
+                fixedHeight = 16
+            };
 
             titleContent = new GUIContent("Wit.ai", WitIcon);
             welcomeTitleContent = new GUIContent("Welcome to Wit.ai", WitIcon);

@@ -26,7 +26,6 @@ namespace Facebook.WitAi
         [SerializeField]
         private WitRuntimeConfiguration runtimeConfiguration = new WitRuntimeConfiguration();
 
-        private float activationTime;
         private IAudioInputSource micInput;
         private WitRequestOptions currentRequestOptions;
         private float lastMinVolumeLevelTime;
@@ -340,7 +339,6 @@ namespace Facebook.WitAi
             // the mic starts recording. If we're already recording for a live
             // recording, we just triggered an activation so we will reset the
             // last minvolumetime to ensure a minimum time from activation time
-            activationTime = float.PositiveInfinity;
             lastMinVolumeLevelTime = float.PositiveInfinity;
             lastWordTime = float.PositiveInfinity;
             receivedTranscription = false;
@@ -367,7 +365,6 @@ namespace Facebook.WitAi
 
         private void OnWitReadyForData()
         {
-            activationTime = Time.time;
             lastMinVolumeLevelTime = Time.time;
             if (!micInput.IsRecording && micInput.IsInputAvailable)
             {
