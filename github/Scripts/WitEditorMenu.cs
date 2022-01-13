@@ -6,6 +6,8 @@
  */
 
 using System;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,6 +15,7 @@ namespace Facebook.WitAi.Windows
 {
     public static class WitEditorMenu
     {
+        #region WINDOWS
         [MenuItem("Window/Wit/Wit Settings")]
         public static void OpenConfigurationWindow()
         {
@@ -23,5 +26,34 @@ namespace Facebook.WitAi.Windows
         {
             WitWindowUtility.OpenUnderstandingWindow();
         }
+        #endregion
+
+        #region CREATION
+        [MenuItem("Assets/Create/Wit/Add Wit to Scene")]
+        public static void AddWitToScene()
+        {
+            WitDataCreation.AddWitToScene();
+        }
+        [MenuItem("Assets/Create/Wit/Values/String Value")]
+        public static void WitCreateStringValue()
+        {
+            WitDataCreation.CreateStringValue("");
+        }
+        [MenuItem("Assets/Create/Wit/Values/Float Value")]
+        public static void WitCreateFloatValue()
+        {
+            WitDataCreation.CreateFloatValue("");
+        }
+        [MenuItem("Assets/Create/Wit/Values/Int Value")]
+        public static void WitCreateIntValue()
+        {
+            WitDataCreation.CreateIntValue("");
+        }
+        [MenuItem("Assets/Create/Wit/Configuration")]
+        public static void WitCreateConfiguration()
+        {
+            WitConfigurationUtility.CreateConfiguration(WitAuthUtility.ServerToken);
+        }
+        #endregion
     }
 }
