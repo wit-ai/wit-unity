@@ -38,7 +38,7 @@ namespace Facebook.WitAi.Windows
                 Close();
                 if (successAction == null)
                 {
-                    WitEditorUtility.OpenConfigurationWindow();
+                    WitWindowUtility.OpenConfigurationWindow();
                 }
                 else
                 {

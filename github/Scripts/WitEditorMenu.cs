@@ -9,19 +9,19 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Facebook.WitAi
+namespace Facebook.WitAi.Windows
 {
     public static class WitEditorMenu
     {
         [MenuItem("Window/Wit/Wit Settings")]
         public static void OpenConfigurationWindow()
         {
-            WitEditorUtility.OpenConfigurationWindow();
+            WitWindowUtility.OpenConfigurationWindow();
         }
         [MenuItem("Window/Wit/Understanding Viewer")]
         public static void OpenUnderstandingWindow()
         {
-            WitEditorUtility.OpenUnderstandingWindow();
+            WitWindowUtility.OpenUnderstandingWindow();
         }
     }
 }

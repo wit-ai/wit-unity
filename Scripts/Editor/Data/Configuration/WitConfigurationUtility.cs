@@ -18,10 +18,226 @@ namespace Facebook.WitAi.Data.Configuration
 {
     public static class WitConfigurationUtility
     {
+        #region ACCESS
+        // Wit configuration assets
+        private static WitConfiguration[] witConfigs = null;
+        public static WitConfiguration[] WitConfigs => witConfigs;
 
-#if UNITY_EDITOR
-        public static void UpdateData(this WitConfiguration configuration,
-            Action onUpdateComplete = null)
+        // Wit configuration asset names
+        private static string[] witConfigNames = Array.Empty<string>();
+        public static string[] WitConfigNames => witConfigNames;
+
+        // Has configuration
+        public static bool HasValidConfig()
+        {
+            // Refresh list
+            RefreshConfigurationList();
+            // Check configs
+            for (int i = 0; i < witConfigs.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(witConfigs[i].clientAccessToken))
+                {
+                    return true;
+                }
+            }
+            // None found
+            return false;
+        }
+        // Refresh configuration asset list
+        public static void RefreshConfigurationList()
+        {
+            // Find all Wit Configurations
+            string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
+
+            // Store wit configuration data
+            witConfigs = new WitConfiguration[guids.Length];
+            witConfigNames = new string[guids.Length];
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                witConfigs[i] = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
+                witConfigNames[i] = witConfigs[i].name;
+                //witConfigs[i].RefreshConfiguration();
+            }
+        }
+        // Get configuration index
+        public static int GetConfigurationIndex(WitConfiguration configuration)
+        {
+            // Init if needed
+            if (witConfigs == null)
+            {
+                RefreshConfigurationList();
+            }
+            // Check for config
+            if (witConfigs != null)
+            {
+                for (int c = 0; c < witConfigs.Length; c++)
+                {
+                    if (witConfigs[c] == configuration)
+                    {
+                        return c;
+                    }
+                }
+            }
+            // Not found
+            return -1;
+        }
+        // Get configuration index
+        public static int GetConfigurationIndex(string configurationName)
+        {
+            // Init if needed
+            if (witConfigs == null)
+            {
+                RefreshConfigurationList();
+            }
+            // Check for config
+            if (witConfigs != null)
+            {
+                for (int c = 0; c < witConfigs.Length; c++)
+                {
+                    if (configurationName.Equals(witConfigs[c].name))
+                    {
+                        return c;
+                    }
+                }
+            }
+            // Not found
+            return -1;
+        }
+        #endregion
+
+        #region MANAGEMENT
+        // Create configuration for token
+        public static int CreateConfiguration(string serverToken)
+        {
+            // Create
+            string path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath, "WitConfiguration", "asset");
+            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
+            {
+                // Create
+                WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
+                asset.clientAccessToken = string.Empty;
+                path = path.Substring(Application.dataPath.Length - 6);
+                AssetDatabase.CreateAsset(asset, path);
+                AssetDatabase.SaveAssets();
+
+                // Refresh configurations
+                RefreshConfigurationList();
+
+                // Get new index following reload
+                string name = System.IO.Path.GetFileNameWithoutExtension(path);
+                int index = GetConfigurationIndex(name);
+                return index;
+            }
+
+            // Return new index
+            return -1;
+        }
+        // TODO: Delete
+        public static bool DeleteConfiguration(WitConfiguration configuration)
+        {
+            return false;
+        }
+        #endregion
+
+        #region TOKENS
+        // Check if server token is valid
+        public static bool IsConfigurationServerTokenValid(string serverToken)
+        {
+            return !string.IsNullOrEmpty(serverToken) && WitAuthUtility.IsServerTokenValid(serverToken);
+        }
+        // Check if client token is valid
+        public static bool IsConfigurationClientTokenValid(string clientToken)
+        {
+            return !string.IsNullOrEmpty(clientToken) && clientToken.Length == 32;
+        }
+        // Update token data
+        public static void UpdateTokenData(string serverToken, Action updateComplete = null)
+        {
+            if (!WitAuthUtility.IsServerTokenValid(serverToken)) return;
+
+            var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
+            listRequest.onResponse = (r) =>
+            {
+                if (r.StatusCode == 200)
+                {
+                    var applications = r.ResponseData.AsArray;
+                    for (int i = 0; i < applications.Count; i++)
+                    {
+                        if (applications[i]["is_app_for_token"].AsBool)
+                        {
+                            var application = WitApplication.FromJson(applications[i]);
+                            WitAuthUtility.SetAppServerToken(application.id, serverToken);
+                            updateComplete?.Invoke();
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError(r.StatusDescription);
+                }
+            };
+            listRequest.Request();
+        }
+        public static void ApplyConfigurationToken(WitConfiguration configuration, string token)
+        {
+            string appID = configuration?.application?.id;
+            if (string.IsNullOrEmpty(appID))
+            {
+                appID = WitAuthUtility.GetAppId(token);
+            }
+            if (!string.IsNullOrEmpty(token) && WitAuthUtility.IsServerTokenValid(token))
+            {
+                RefreshConfigurationAppData(configuration, appID, token);
+            }
+        }
+        public static void RefreshConfigurationAppData(WitConfiguration configuration, string appId, string token)
+        {
+            var refreshToken = WitAuthUtility.GetAppServerToken(appId, token);
+            if (string.IsNullOrEmpty(refreshToken) &&
+                string.IsNullOrEmpty(appId) &&
+                !string.IsNullOrEmpty(configuration?.application?.id))
+            {
+                refreshToken = WitAuthUtility.GetAppServerToken(configuration.application.id,
+                    WitAuthUtility.ServerToken);
+                appId = WitAuthUtility.GetAppId(refreshToken);
+                if (string.IsNullOrEmpty(appId))
+                {
+                    UpdateTokenData(refreshToken, () =>
+                    {
+                        appId = WitAuthUtility.GetAppId(refreshToken);
+                        if (appId == configuration.application.id)
+                        {
+                            configuration.FetchAppConfigFromServerToken(refreshToken, () =>
+                            {
+                                WitAuthUtility.SetAppServerToken(configuration.application.id, refreshToken);
+                                EditorUtility.SetDirty(configuration);
+                            });
+                        }
+                    });
+                    return;
+                }
+
+                if (appId == configuration.application.id)
+                {
+                    refreshToken = WitAuthUtility.ServerToken;
+                }
+            }
+
+            // Apply token
+            WitAuthUtility.SetAppServerToken(configuration?.application?.id, refreshToken);
+
+            // Apply token
+            configuration.FetchAppConfigFromServerToken(refreshToken, () =>
+            {
+                WitAuthUtility.SetAppServerToken(configuration?.application?.id, refreshToken);
+            });
+        }
+        #endregion
+
+        #region UPDATE
+        public static void UpdateData(this WitConfiguration configuration, Action onUpdateComplete = null)
         {
             DoUpdateData(configuration, onUpdateComplete);
         }
@@ -73,7 +289,10 @@ namespace Facebook.WitAi.Data.Configuration
             {
                 Debug.LogError($"Request for {request} failed: {request.StatusDescription}");
             }
-            onUpdateComplete?.Invoke();
+            if (onUpdateComplete != null)
+            {
+                onUpdateComplete();
+            }
         }
 
         private static void UpdateIntentList(this WitConfiguration configuration,
@@ -208,6 +427,6 @@ namespace Facebook.WitAi.Data.Configuration
                 tokenRequest.Request();
             }
         }
-#endif
+        #endregion
     }
 }
