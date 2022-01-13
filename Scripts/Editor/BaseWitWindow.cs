@@ -14,21 +14,25 @@ namespace Facebook.WitAi
 {
     public abstract class BaseWitWindow : EditorWindow
     {
-        protected static WitConfiguration[] witConfigs = Array.Empty<WitConfiguration>();
-        protected static string[] witConfigNames = Array.Empty<string>();
+        // Selected wit configuration
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
-
-        public static WitConfiguration[] WitConfigs => witConfigs;
-        public static string[] WitConfigNames => witConfigNames;
-
+        // Header link?
         protected virtual string HeaderLink => null;
 
+        protected virtual string GetTitleText()
+        {
+            return GetType().ToString();
+        }
+        protected virtual Texture2D GetTitleIcon()
+        {
+            return WitStyles.WitIcon;
+        }
         protected virtual void OnEnable()
         {
-            RefreshConfigList();
+            titleContent = new GUIContent(GetTitleText(), GetTitleIcon());
+            WitEditorUtility.RefreshConfigList();
         }
-
         protected virtual void OnDisable()
         {
 
@@ -36,26 +40,12 @@ namespace Facebook.WitAi
 
         protected virtual void OnProjectChange()
         {
-            RefreshConfigList();
+            WitEditorUtility.RefreshConfigList();
         }
 
         protected void RefreshContent()
         {
             if (witConfiguration) witConfiguration.UpdateData();
-        }
-
-        protected static void RefreshConfigList()
-        {
-            string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
-            witConfigs = new WitConfiguration[guids.Length];
-            witConfigNames = new string[guids.Length];
-
-            for (int i = 0; i < guids.Length; i++) //probably could get optimized
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                witConfigs[i] = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
-                witConfigNames[i] = witConfigs[i].name;
-            }
         }
 
         protected virtual void OnGUI()
@@ -99,14 +89,19 @@ namespace Facebook.WitAi
 
         protected bool DrawWitConfigurationPopup()
         {
-            if (null == witConfigs) return false;
+            WitConfiguration[] witConfigs = WitEditorUtility.WitConfigs;
+            string[] witConfigNames = WitEditorUtility.WitConfigNames;
+            if (witConfigs == null)
+            {
+                return false;
+            }
 
             bool changed = false;
             if (witConfigs.Length == 1)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Wit Configuration");
-                EditorGUILayout.LabelField(witConfigNames[0], EditorStyles.popup);
+                EditorGUILayout.LabelField(witConfigs[0].name, EditorStyles.popup);
                 GUILayout.EndHorizontal();
             }
             else

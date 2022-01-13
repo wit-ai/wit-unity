@@ -17,6 +17,12 @@ namespace Facebook.WitAi.Data.Configuration
         protected string serverToken;
         public Action successAction;
 
+        protected virtual string TitleText => "Welcome to Wit.AI";
+        protected virtual Texture2D TitleIcon => WitStyles.WitIcon;
+        protected virtual void OnEnable()
+        {
+            titleContent = new GUIContent(TitleText, TitleIcon);
+        }
         protected virtual void OnWizardCreate()
         {
             ValidateAndClose();
@@ -28,15 +34,20 @@ namespace Facebook.WitAi.Data.Configuration
             if (WitAuthUtility.IsServerTokenValid())
             {
                 Close();
-                WitWindow.ShowWindow();
-                successAction?.Invoke();
+                if (successAction == null)
+                {
+                    WitEditorUtility.OpenConfigurationWindow();
+                }
+                else
+                {
+                    successAction();
+                }
             }
             else
             {
                 throw new ArgumentException("Please enter a valid token before linking.");
             }
         }
-
         protected override bool DrawWizardGUI()
         {
             maxSize = minSize = new Vector2(400, 375);
@@ -74,21 +85,6 @@ namespace Facebook.WitAi.Data.Configuration
             BaseWitWindow.EndCenter();
 
             return WitAuthUtility.IsServerTokenValid();
-        }
-
-        public static string welcomeWizardGreeting = "Welcome to Wit.ai";
-        public static Type welcomeWizardType = typeof(WitWelcomeWizard);
-        public static void ShowWizard(Action successAction)
-        {
-            // Get type
-            if (welcomeWizardType == null || (welcomeWizardType != typeof(WitWelcomeWizard) && !welcomeWizardType.IsSubclassOf(typeof(WitWelcomeWizard))))
-            {
-                welcomeWizardType = typeof(WitWelcomeWizard);
-            }
-
-            // Get wizard
-            WitWelcomeWizard wizard = ( WitWelcomeWizard)ScriptableWizard.DisplayWizard(welcomeWizardGreeting, welcomeWizardType, "Link");
-            wizard.successAction = successAction;
         }
     }
 }
