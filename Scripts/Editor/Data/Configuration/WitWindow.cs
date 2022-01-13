@@ -65,7 +65,7 @@ namespace Facebook.WitAi.Data.Configuration
         {
             if (witConfiguration)
             {
-                witEditor = (WitConfigurationEditor) Editor.CreateEditor(witConfiguration);
+                witEditor = (WitConfigurationEditor)Editor.CreateEditor(witConfiguration);
                 witEditor.drawHeader = false;
                 witEditor.Initialize();
             }
@@ -104,13 +104,21 @@ namespace Facebook.WitAi.Data.Configuration
             }
             if (GUILayout.Button("Relink", GUILayout.Width(75)))
             {
+                bool invalidToken = true;
                 if (WitAuthUtility.IsServerTokenValid(serverToken))
                 {
                     WitConfigurationEditor.UpdateTokenData(serverToken, RefreshContent);
+                    invalidToken = false;
                 }
-
                 WitAuthUtility.ServerToken = serverToken;
                 RefreshContent();
+                if (invalidToken)
+                {
+                    // Open Wizard
+                    WitWelcomeWizard.ShowWizard(ShowWindow);
+                    // Close this Window
+                    Close();
+                }
             }
             GUILayout.EndHorizontal();
 
@@ -124,11 +132,11 @@ namespace Facebook.WitAi.Data.Configuration
 
             if (witConfiguration && (configChanged || !witEditor))
             {
-                WitConfiguration config = (WitConfiguration) witConfiguration;
+                WitConfiguration config = (WitConfiguration)witConfiguration;
                 SetWitEditor();
             }
 
-            if(witConfiguration && witEditor) witEditor.OnInspectorGUI();
+            if (witConfiguration && witEditor) witEditor.OnInspectorGUI();
 
             GUILayout.EndVertical();
         }

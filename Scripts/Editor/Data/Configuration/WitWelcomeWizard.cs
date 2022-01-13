@@ -21,7 +21,7 @@ namespace Facebook.WitAi.Data.Configuration
         {
             ValidateAndClose();
         }
-        protected void ValidateAndClose()
+        protected virtual void ValidateAndClose()
         {
 
             WitAuthUtility.ServerToken = serverToken;
@@ -76,10 +76,18 @@ namespace Facebook.WitAi.Data.Configuration
             return WitAuthUtility.IsServerTokenValid();
         }
 
+        public static string welcomeWizardGreeting = "Welcome to Wit.ai";
+        public static Type welcomeWizardType = typeof(WitWelcomeWizard);
         public static void ShowWizard(Action successAction)
         {
-            var wizard =
-                ScriptableWizard.DisplayWizard<WitWelcomeWizard>("Welcome to Wit.ai", "Link");
+            // Get type
+            if (welcomeWizardType == null || (welcomeWizardType != typeof(WitWelcomeWizard) && !welcomeWizardType.IsSubclassOf(typeof(WitWelcomeWizard))))
+            {
+                welcomeWizardType = typeof(WitWelcomeWizard);
+            }
+
+            // Get wizard
+            WitWelcomeWizard wizard = ( WitWelcomeWizard)ScriptableWizard.DisplayWizard(welcomeWizardGreeting, welcomeWizardType, "Link");
             wizard.successAction = successAction;
         }
     }
