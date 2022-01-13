@@ -26,7 +26,7 @@ namespace Facebook.WitAi
         }
         protected virtual Texture2D GetTitleIcon()
         {
-            return WitStyles.WitIcon;
+            return WitStyles.HeaderIcon;
         }
         protected virtual void OnEnable()
         {
@@ -70,7 +70,7 @@ namespace Facebook.WitAi
             GUILayout.Space(16);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (!header) header = WitStyles.MainHeader;
+            if (!header) header = WitStyles.HeaderIcon;
             var headerWidth = Mathf.Min(header.width, EditorGUIUtility.currentViewWidth - 64);
             var headerHeight =
                 header.height * headerWidth / header.width;

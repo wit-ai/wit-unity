@@ -9,6 +9,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Windows;
 
 namespace Facebook.WitAi
 {

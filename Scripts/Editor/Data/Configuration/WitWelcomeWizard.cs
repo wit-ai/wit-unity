@@ -8,20 +8,23 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using Facebook.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi.Data.Configuration
+namespace Facebook.WitAi.Windows
 {
     public class WitWelcomeWizard : ScriptableWizard
     {
+        protected Vector2 scrollOffset;
         protected WitConfigurationEditor witEditor;
         protected string serverToken;
         public Action successAction;
+        protected virtual GUIContent Title => WitStyles.SetupTitleContent;
+        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
+        protected virtual string HeaderUrl => WitStyles.HeaderLinkURL;
 
-        protected virtual string TitleText => "Welcome to Wit.AI";
-        protected virtual Texture2D TitleIcon => WitStyles.WitIcon;
         protected virtual void OnEnable()
         {
-            titleContent = new GUIContent(TitleText, TitleIcon);
+            titleContent = Title;
         }
         protected virtual void OnWizardCreate()
         {
@@ -29,7 +32,6 @@ namespace Facebook.WitAi.Data.Configuration
         }
         protected virtual void ValidateAndClose()
         {
-
             WitAuthUtility.ServerToken = serverToken;
             if (WitAuthUtility.IsServerTokenValid())
             {
@@ -50,41 +52,54 @@ namespace Facebook.WitAi.Data.Configuration
         }
         protected override bool DrawWizardGUI()
         {
-            maxSize = minSize = new Vector2(400, 375);
-            BaseWitWindow.DrawHeader("https://wit.ai/apps");
+            // Layout window
+            Vector2 size = Vector2.zero;
+            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
 
+            // Success if token is valid
+            return WitAuthUtility.IsServerTokenValid();
+        }
+
+        protected virtual float LayoutContent()
+        {
+            // Center Begin
             GUILayout.BeginHorizontal();
-            GUILayout.Space(16);
-            GUILayout.BeginVertical();
-            GUILayout.Label("Build Natural Language Experiences", WitStyles.LabelHeader);
-            GUILayout.Label(
-                "Empower people to use your product with voice and text",
-                WitStyles.LabelHeader2);
-            GUILayout.EndVertical();
-            GUILayout.Space(16);
-            GUILayout.EndHorizontal();
-            GUILayout.Space(32);
-
-            BaseWitWindow.BeginCenter(296);
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Paste your Server Access Token here", WitStyles.Label);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(WitStyles.PasteIcon, WitStyles.Label))
-            {
-                serverToken = EditorGUIUtility.systemCopyBuffer;
-                WitAuthUtility.ServerToken = serverToken;
-                ValidateAndClose();
-            }
-            GUILayout.EndHorizontal();
+            GUILayout.BeginVertical();
+
+            // Token
             if (null == serverToken)
             {
                 serverToken = WitAuthUtility.ServerToken;
             }
-            serverToken = EditorGUILayout.PasswordField(serverToken, WitStyles.TextField);
-            BaseWitWindow.EndCenter();
 
-            return WitAuthUtility.IsServerTokenValid();
+            // TODO: Move to WitStyles
+            var color = "blue";
+            if (EditorGUIUtility.isProSkin)
+            {
+                color = "#ccccff";
+            }
+            string title = $"Paste your <color={color}>Wit.ai</color> Server Access Token here";
+
+            // Layout
+            float h = 0f;
+            bool updated = false;
+            WitEditorUI.LayoutPasswordField(new GUIContent(title), ref serverToken, ref updated, ref h);
+
+            // Updated
+            if (updated)
+            {
+                WitAuthUtility.ServerToken = serverToken;
+                ValidateAndClose();
+            }
+
+            // Center End
+            GUILayout.EndVertical();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            // Return
+            return h;
         }
     }
 }

@@ -31,9 +31,9 @@ namespace Facebook.WitAi.Configuration
             {
 
                 EditorGUILayout.PropertyField(propValue, new GUIContent(label));
-
+                float h = 0f;
                 WitStyles.ResetIcon.tooltip = $"Reset to default values ({defaultValue})";
-                if (GUILayout.Button(WitStyles.ResetIcon, WitStyles.ImageIcon))
+                if (WitEditorUI.LayoutIconButton(WitStyles.ResetIcon, ref h))
                 {
                     editing = string.Empty;
 
@@ -47,8 +47,7 @@ namespace Facebook.WitAi.Configuration
                             break;
                     }
                 }
-
-                if (GUILayout.Button(WitStyles.AcceptIcon, WitStyles.ImageIcon))
+                if (WitEditorUI.LayoutIconButton(WitStyles.AcceptIcon, ref h))
                 {
                     editing = string.Empty;
                 }
@@ -70,8 +69,8 @@ namespace Facebook.WitAi.Configuration
                 EditorGUI.BeginDisabledGroup(editing != name);
                 EditorGUILayout.TextField(label, defaultValue);
                 EditorGUI.EndDisabledGroup();
-
-                if (GUILayout.Button(WitStyles.EditIcon, WitStyles.ImageIcon))
+                float h = 0f;
+                if (WitEditorUI.LayoutIconButton(WitStyles.EditIcon, ref h))
                 {
                     if (editing == name)
                     {
