@@ -7,95 +7,49 @@
 
 using UnityEditor;
 using UnityEngine;
+using Facebook.WitAi.Configuration;
+using System.Reflection;
 
-namespace Facebook.WitAi.Configuration
+namespace Facebook.WitAi.Windows
 {
-
     [CustomPropertyDrawer(typeof(WitEndpointConfig))]
-    public class WitEndpointConfigDrawer : PropertyDrawer
+    public class WitEndpointConfigDrawer : WitPropertyDrawer
     {
-        private string editing;
-        private Vector2 scroll;
-
-        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        // Allow edit with lock
+        protected override WitPropertyEditType GetEditType()
         {
-            return 0;
+            return WitPropertyEditType.LockEdit;
         }
-
-        private void DrawProperty(SerializedProperty propery, string name,
-            string label, string defaultValue)
+        // Determine if should layout field
+        protected override bool ShouldLayoutField(FieldInfo subfield)
         {
-            var propValue = propery.FindPropertyRelative(name);
-            GUILayout.BeginHorizontal();
-            if (editing == name)
+            switch (subfield.Name)
             {
-
-                EditorGUILayout.PropertyField(propValue, new GUIContent(label));
-                float h = 0f;
-                WitStyles.ResetIcon.tooltip = $"Reset to default values ({defaultValue})";
-                if (WitEditorUI.LayoutIconButton(WitStyles.ResetIcon, ref h))
-                {
-                    editing = string.Empty;
-
-                    switch (propValue.type)
-                    {
-                        case "string":
-                            propValue.stringValue = defaultValue;
-                            break;
-                        case "int":
-                            propValue.intValue = int.Parse(defaultValue);
-                            break;
-                    }
-                }
-                if (WitEditorUI.LayoutIconButton(WitStyles.AcceptIcon, ref h))
-                {
-                    editing = string.Empty;
-                }
+                case "message":
+                    return false;
             }
-            else
+            return base.ShouldLayoutField(subfield);
+        }
+        // Get default fields
+        protected override string GetDefaultFieldValue(FieldInfo subfield)
+        {
+            // Iterate options
+            switch (subfield.Name)
             {
-                switch (propValue.type)
-                {
-                    case "string":
-                        defaultValue = string.IsNullOrEmpty(propValue.stringValue)
-                            ? defaultValue
-                            : propValue.stringValue;
-                        break;
-                    case "int":
-                        defaultValue = propValue.intValue.ToString();
-                        break;
-                }
-
-                EditorGUI.BeginDisabledGroup(editing != name);
-                EditorGUILayout.TextField(label, defaultValue);
-                EditorGUI.EndDisabledGroup();
-                float h = 0f;
-                if (WitEditorUI.LayoutIconButton(WitStyles.EditIcon, ref h))
-                {
-                    if (editing == name)
-                    {
-                        editing = string.Empty;
-                    }
-                    else
-                    {
-                        editing = name;
-                    }
-                }
+                case "uriScheme":
+                    return WitRequest.URI_SCHEME;
+                case "authority":
+                    return WitRequest.URI_AUTHORITY;
+                case "port":
+                    return "80";
+                case "witApiVersion":
+                    return WitRequest.WIT_API_VERSION;
+                case "speech":
+                    return WitRequest.WIT_ENDPOINT_SPEECH;
             }
 
-            GUILayout.EndHorizontal();
-        }
-
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-        {
-            scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(100));
-            DrawProperty(property, "uriScheme", "Uri Scheme", WitRequest.URI_SCHEME);
-            DrawProperty(property, "authority", "Host", WitRequest.URI_AUTHORITY);
-            DrawProperty(property, "port", "Port", "80");
-            DrawProperty(property, "witApiVersion", "Wit Api Version", WitRequest.WIT_API_VERSION);
-            DrawProperty(property, "speech", "Speech", WitRequest.WIT_ENDPOINT_SPEECH);
-            DrawProperty(property, "message", "Message", WitRequest.WIT_ENDPOINT_MESSAGE);
-            GUILayout.EndScrollView();
+            // Return base
+            return base.GetDefaultFieldValue(subfield);
         }
     }
 }

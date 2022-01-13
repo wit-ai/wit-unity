@@ -9,7 +9,7 @@ using System;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 
-namespace Facebook.WitAi.Data.Keywords
+namespace Facebook.WitAi.Data.Entities
 {
     [Serializable]
     public class WitEntityRole
