@@ -13,26 +13,34 @@ namespace Facebook.WitAi.Windows
 {
     public abstract class BaseWitWindow : EditorWindow
     {
-        private Vector2 scrollOffset;
+        // Scroll offset
+        private Vector2 ScrollOffset;
 
+        // Override values
         protected abstract GUIContent Title { get; }
         protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.HeaderLinkURL;
+        protected virtual string HeaderUrl => WitStyles.Texts.WitUrl;
+
+        // Window open
         protected virtual void OnEnable()
         {
+            WitStyles.Init();
             titleContent = Title;
             WitConfigurationUtility.RefreshConfigurationList();
         }
+        // Window close
         protected virtual void OnDisable()
         {
-            scrollOffset = Vector2.zero;
+            ScrollOffset = Vector2.zero;
         }
+        // Handle Layout
         protected virtual void OnGUI()
         {
             Vector2 size;
-            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
+            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref ScrollOffset, out size);
             minSize = size;
         }
+        // Draw content of window
         protected abstract float LayoutContent();
     }
 }

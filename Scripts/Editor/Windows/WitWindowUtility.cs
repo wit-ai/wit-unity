@@ -28,16 +28,20 @@ namespace Facebook.WitAi.Windows
         // Opens Setup Window
         public static void OpenSetupWindow(Action onSetupComplete)
         {
+            // Init
+            WitStyles.Init();
             // Get setup type
             Type type = GetSafeType(setupWindowType, defaultSetupWindowType);
             // Get wizard (Title is overwritten)
-            WitWelcomeWizard wizard = (WitWelcomeWizard)ScriptableWizard.DisplayWizard("Setup Wizard", type, "Link");
+            WitWelcomeWizard wizard = (WitWelcomeWizard)ScriptableWizard.DisplayWizard(WitStyles.Texts.SetupTitleLabel, type, WitStyles.Texts.SetupSubmitButtonLabel);
             // Set success callback
             wizard.successAction = onSetupComplete;
         }
         // Opens Configuration Window
         public static void OpenConfigurationWindow()
         {
+            // Init
+            WitStyles.Init();
             // Setup if needed
             if (!WitConfigurationUtility.HasValidConfig())
             {
@@ -55,6 +59,8 @@ namespace Facebook.WitAi.Windows
         // Opens Understanding Window
         public static void OpenUnderstandingWindow()
         {
+            // Init
+            WitStyles.Init();
             // Setup if needed
             if (!WitConfigurationUtility.HasValidConfig())
             {

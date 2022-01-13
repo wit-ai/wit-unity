@@ -34,7 +34,7 @@ namespace Facebook.WitAi
             // Error if none found
             if (witConfigs.Length == 0)
             {
-                WitEditorUI.LayoutErrorLabel(WitStyles.ConfigurationMissingText, ref height);
+                WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationSelectMissingLabel, ref height);
                 return;
             }
 
@@ -43,7 +43,7 @@ namespace Facebook.WitAi
 
             // Layout popup
             bool configUpdated = false;
-            WitEditorUI.LayoutPopup(WitStyles.ConfigurationSelectText, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated, ref height);
+            WitEditorUI.LayoutPopup(WitStyles.Texts.ConfigurationSelectLabel, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated, ref height);
         }
     }
 }

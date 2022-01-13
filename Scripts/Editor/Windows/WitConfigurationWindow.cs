@@ -11,6 +11,7 @@ namespace Facebook.WitAi.Windows
 {
     public abstract class WitConfigurationWindow : BaseWitWindow
     {
+        #region CONFIGURATION
         // Selected wit configuration
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
@@ -31,22 +32,9 @@ namespace Facebook.WitAi.Windows
             base.OnEnable();
             WitAuthUtility.InitEditorTokens();
         }
-        // Get header url
-        protected override string HeaderUrl
-        {
-            get
-            {
-                // Get ID
-                string applicationID = witConfiguration?.application?.id;
-                if (!string.IsNullOrEmpty(applicationID))
-                {
-                    return WitStyles.GetConfigurationURL(applicationID);
-                }
+        #endregion
 
-                // Use base
-                return base.HeaderUrl;
-            }
-        }
+        #region LAYOUT
         // Layout content
         protected override float LayoutContent()
         {
@@ -65,5 +53,22 @@ namespace Facebook.WitAi.Windows
             // Return height
             return height;
         }
+        // Get header url
+        protected override string HeaderUrl
+        {
+            get
+            {
+                // Get ID
+                string applicationID = witConfiguration?.application?.id;
+                if (!string.IsNullOrEmpty(applicationID))
+                {
+                    return WitStyles.GetSettingsURL(applicationID);
+                }
+
+                // Use base
+                return base.HeaderUrl;
+            }
+        }
+        #endregion
     }
 }

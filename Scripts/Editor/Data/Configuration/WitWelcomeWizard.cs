@@ -15,16 +15,13 @@ namespace Facebook.WitAi.Windows
     public class WitWelcomeWizard : ScriptableWizard
     {
         protected Vector2 scrollOffset;
-        protected WitConfigurationEditor witEditor;
         protected string serverToken;
         public Action successAction;
-        protected virtual GUIContent Title => WitStyles.SetupTitleContent;
-        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.HeaderLinkURL;
 
         protected virtual void OnEnable()
         {
-            titleContent = Title;
+            WitAuthUtility.InitEditorTokens();
+            titleContent = GetTitle();
         }
         protected virtual void OnWizardCreate()
         {
@@ -47,25 +44,54 @@ namespace Facebook.WitAi.Windows
             }
             else
             {
-                throw new ArgumentException("Please enter a valid token before linking.");
+                throw new ArgumentException(WitStyles.Texts.SetupSubmitFailLabel);
             }
         }
         protected override bool DrawWizardGUI()
         {
             // Layout window
             Vector2 size = Vector2.zero;
-            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
+            WitEditorUI.LayoutWindow(titleContent.text, GetHeaderIcon(), GetHeaderURL(), LayoutContent, ref scrollOffset, out size);
 
             // Success if token is valid
-            return WitAuthUtility.IsServerTokenValid();
+            return WitConfigurationUtility.IsServerTokenValid(serverToken);
         }
 
+        /// <summary>
+        /// Title
+        /// </summary>
+        protected virtual GUIContent GetTitle()
+        {
+            return WitStyles.SetupTitleContent;
+        }
+        /// <summary>
+        /// Header icon getter
+        /// </summary>
+        protected virtual Texture2D GetHeaderIcon()
+        {
+            return WitStyles.HeaderIcon;
+        }
+        /// <summary>
+        /// Header url getter
+        /// </summary>
+        protected virtual string GetHeaderURL()
+        {
+            return WitStyles.Texts.WitUrl;
+        }
+        /// <summary>
+        /// Get header text
+        /// </summary>
+        protected virtual string GetServerTokenText()
+        {
+            return WitStyles.Texts.SetupServerTokenLabel;
+        }
+        /// <summary>
+        /// Draw content of window
+        /// </summary>
         protected virtual float LayoutContent()
         {
             // Center Begin
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical();
+            float h = 0f;
 
             // Token
             if (null == serverToken)
@@ -73,30 +99,9 @@ namespace Facebook.WitAi.Windows
                 serverToken = WitAuthUtility.ServerToken;
             }
 
-            // TODO: Move to WitStyles
-            var color = "blue";
-            if (EditorGUIUtility.isProSkin)
-            {
-                color = "#ccccff";
-            }
-            string title = $"Paste your <color={color}>Wit.ai</color> Server Access Token here";
-
-            // Layout
-            float h = 0f;
+            // Layout field
             bool updated = false;
-            WitEditorUI.LayoutPasswordField(new GUIContent(title), ref serverToken, ref updated, ref h);
-
-            // Updated
-            if (updated)
-            {
-                WitAuthUtility.ServerToken = serverToken;
-                ValidateAndClose();
-            }
-
-            // Center End
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            WitEditorUI.LayoutPasswordField(new GUIContent(GetServerTokenText()), ref serverToken, ref updated, ref h);
 
             // Return
             return h;

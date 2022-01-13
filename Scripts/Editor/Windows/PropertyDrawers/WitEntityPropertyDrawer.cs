@@ -15,20 +15,29 @@ namespace Facebook.WitAi.Windows
     [CustomPropertyDrawer(typeof(WitEntity))]
     public class WitEntityPropertyDrawer : WitPropertyDrawer
     {
-        // Get localized category
-        protected override string GetLocalizationCategory(SerializedProperty property)
-        {
-            return WitStyles.ConfigurationResponseEntitiesKey;
-        }
         // Use name value for title if possible
-        protected override string GetLocalizedTitle(SerializedProperty property)
+        protected override string GetLocalizedText(SerializedProperty property, string key)
         {
-            string v = GetFieldStringValue(property, "name");
-            if (!string.IsNullOrEmpty(v))
+            // Determine by ids
+            switch (key)
             {
-                return v;
+                    case LocalizedTitleKey:
+                        string title = GetFieldStringValue(property, "name");
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                            return title;
+                        }
+                        break;
+                    case "id":
+                        return WitStyles.Texts.ConfigurationEntitiesIdLabel;
+                    case "lookups":
+                        return WitStyles.Texts.ConfigurationEntitiesLookupsLabel;
+                    case "roles":
+                        return WitStyles.Texts.ConfigurationEntitiesRolesLabel;
             }
-            return "???";// base.GetLocalizedTitle(property);
+            
+            // Default to base
+            return base.GetLocalizedText(property, key);
         }
         // Determine if should layout field
         protected override bool ShouldLayoutField(FieldInfo subfield)

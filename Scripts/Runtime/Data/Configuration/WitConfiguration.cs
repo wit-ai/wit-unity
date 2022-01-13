@@ -44,7 +44,6 @@ namespace Facebook.WitAi.Data.Configuration
         [SerializeField] public WitTrait[] traits;
 
         public WitApplication Application => application;
-
         private void OnEnable()
         {
             #if UNITY_EDITOR

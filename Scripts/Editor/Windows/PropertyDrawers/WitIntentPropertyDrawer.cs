@@ -15,22 +15,62 @@ namespace Facebook.WitAi.Windows
     [CustomPropertyDrawer(typeof(WitIntent))]
     public class WitIntentPropertyDrawer : WitPropertyDrawer
     {
-        // Get intent category
-        protected override string GetLocalizationCategory(SerializedProperty property)
-        {
-            return WitStyles.ConfigurationResponseIntentsKey;
-        }
         // Use name value for title if possible
-        protected override string GetLocalizedTitle(SerializedProperty property)
+        protected override string GetLocalizedText(SerializedProperty property, string key)
         {
-            string v = GetFieldStringValue(property, "name");
-            if (!string.IsNullOrEmpty(v))
+            // Determine by ids
+            switch (key)
             {
-                return v;
+                case LocalizedTitleKey:
+                    string title = GetFieldStringValue(property, "name");
+                    if (!string.IsNullOrEmpty(title))
+                    {
+                        return title;
+                    }
+                    break;
+                case "id":
+                    return WitStyles.Texts.ConfigurationIntentsIdLabel;
+                case "entities":
+                    return WitStyles.Texts.ConfigurationIntentsEntitiesLabel;
             }
-            return "???";// base.GetLocalizedTitle(property);
+            
+            // Default to base
+            return base.GetLocalizedText(property, key);
         }
-        // Determine if should layout field
+        // Layout entity override
+        protected override void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty, GUIContent labelContent, bool canEdit,
+            ref float height)
+        {
+            // Handle all the same except entities
+            if (canEdit || !string.Equals(subfield.Name, "entities"))
+            {
+                base.LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit, ref height);
+                return;
+            }
+            
+            // Entity foldout
+            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded, ref height);
+            if (subfieldProperty.isExpanded)
+            {
+                EditorGUI.indentLevel++;
+                if (subfieldProperty.arraySize == 0)
+                {
+                    WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationEntitiesMissingLabel, ref height);
+                }
+                else
+                {
+                    for (int e = 0; e < subfieldProperty.arraySize; e++)
+                    {
+                        SerializedProperty entityProp = subfieldProperty.GetArrayElementAtIndex(e);
+                        string entityPropName = entityProp.FindPropertyRelative("name").stringValue;
+                        WitEditorUI.LayoutLabel(entityPropName, ref height);
+                    }
+                }
+                EditorGUI.indentLevel--;
+            }
+        }
+
+// Determine if should layout field
         protected override bool ShouldLayoutField(FieldInfo subfield)
         {
             switch (subfield.Name)

@@ -15,9 +15,33 @@ namespace Facebook.WitAi.Windows
     [CustomPropertyDrawer(typeof(WitApplication))]
     public class WitApplicationPropertyDrawer : WitPropertyDrawer
     {
-        // No foldout needed
+        // Whether to use a foldout
         protected override bool FoldoutEnabled => false;
-        
+        // Use name value for title if possible
+        protected override string GetLocalizedText(SerializedProperty property, string key)
+        {
+            // Determine by ids
+            switch (key)
+            {
+                case LocalizedTitleKey:
+                    return WitStyles.Texts.ConfigurationApplicationTabLabel;
+                case LocalizedMissingKey:
+                    return WitStyles.Texts.ConfigurationApplicationMissingLabel;
+                case "name":
+                    return WitStyles.Texts.ConfigurationApplicationNameLabel;
+                case "id":
+                    return WitStyles.Texts.ConfigurationApplicationIdLabel;
+                case "lang":
+                    return WitStyles.Texts.ConfigurationApplicationLanguageLabel;
+                case "isPrivate":
+                    return WitStyles.Texts.ConfigurationApplicationPrivateLabel;
+                case "createdAt":
+                    return WitStyles.Texts.ConfigurationApplicationCreatedLabel;
+            }
+            
+            // Default to base
+            return base.GetLocalizedText(property, key);
+        }
         // Skip wit configuration field
         protected override bool ShouldLayoutField(FieldInfo subfield)
         {

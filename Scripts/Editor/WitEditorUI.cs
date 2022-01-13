@@ -135,6 +135,12 @@ namespace Facebook.WitAi
         // Foldout settings
         private static string GetFoldoutID(object bindObject)
         {
+            if (bindObject != null && bindObject.GetType() == typeof(SerializedProperty))
+            {
+                SerializedProperty sp = (SerializedProperty) bindObject;
+                string c = sp.serializedObject.GetHashCode().ToString() + "_" + sp.propertyPath;
+                return "proparrays";
+            }
             return bindObject == null ? "" : bindObject.GetHashCode().ToString();
         }
         // Get foldout
@@ -394,6 +400,8 @@ namespace Facebook.WitAi
         /// </summary>
         public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderURL, Func<float> windowContentLayout, ref Vector2 offset, out Vector2 size)
         {
+            // Init styles
+            WitStyles.Init();
             // Window width
             float windowWidth = EditorGUIUtility.currentViewWidth;
 

@@ -48,5 +48,27 @@ namespace Facebook.WitAi.Windows
             // Return base
             return base.GetDefaultFieldValue(subfield);
         }
+        // Use name value for title if possible
+        protected override string GetLocalizedText(SerializedProperty property, string key)
+        {
+            // Iterate options
+            switch (key)
+            {
+                case LocalizedTitleKey:
+                    return WitStyles.Texts.ConfigurationEndpointTitleLabel;
+                case "uriScheme":
+                    return WitStyles.Texts.ConfigurationEndpointUriLabel;
+                case "authority":
+                    return WitStyles.Texts.ConfigurationEndpointAuthLabel;
+                case "port":
+                    return WitStyles.Texts.ConfigurationEndpointPortLabel;
+                case "witApiVersion":
+                    return WitStyles.Texts.ConfigurationEndpointApiLabel;
+                case "speech":
+                    return WitStyles.Texts.ConfigurationEndpointSpeechLabel;
+            }
+            // Default to base
+            return base.GetLocalizedText(property, key);
+        }
     }
 }

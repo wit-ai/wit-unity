@@ -1064,7 +1064,6 @@ namespace Facebook.WitAi.Lib
             {
                 m_Node.Add(m_Key, aVal);
             }
-
             m_Node = null; // Be GC friendly.
         }
 

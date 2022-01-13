@@ -21,16 +21,15 @@ namespace Facebook.WitAi.Windows
     }
 
     // Handles layout of of property sub properties
-    public class WitPropertyDrawer : PropertyDrawer
+    public abstract class WitPropertyDrawer : PropertyDrawer
     {
         // Whether editing
         private int editIndex = -1;
-
         // Whether to use a foldout
         protected virtual bool FoldoutEnabled => true;
         // Determine edit type for this drawer
         protected virtual WitPropertyEditType EditType => WitPropertyEditType.NoEdit;
-        
+
         // Remove padding
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -46,13 +45,13 @@ namespace Facebook.WitAi.Windows
             // Return error
             if (property.serializedObject == null)
             {
-                string missingText = GetLocalizedText(property, WitStyles.LocalizationDrawerMissingID);
+                string missingText = GetLocalizedText(property, LocalizedMissingKey);
                 WitEditorUI.LayoutErrorLabel(missingText, ref height);
                 return;
             }
 
             // Show foldout if desired
-            string titleText = GetLocalizedTitle(property);
+            string titleText = GetLocalizedText(property, LocalizedTitleKey);
             if (FoldoutEnabled)
             {
                 property.isExpanded = WitEditorUI.LayoutFoldout(new GUIContent(titleText), property.isExpanded, ref height);
@@ -75,6 +74,7 @@ namespace Facebook.WitAi.Windows
             OnGUIPreFields(position, property, label);
 
             // Iterate all subfields
+            WitPropertyEditType editType = EditType;
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
             Type fieldType = fieldInfo.FieldType;
             if (fieldType.IsArray)
@@ -87,7 +87,7 @@ namespace Facebook.WitAi.Windows
                 FieldInfo subfield = subfields[s];
                 if (ShouldLayoutField(subfield))
                 {
-                    LayoutField(s, property, subfield, EditType, ref height);
+                    LayoutField(s, property, subfield, editType, ref height);
                 }
             }
 
@@ -136,7 +136,7 @@ namespace Facebook.WitAi.Windows
             else
             {
                 GUILayout.BeginVertical();
-                EditorGUILayout.PropertyField(subfieldProperty, labelContent);
+                LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit, ref height);
                 GUILayout.EndVertical();
             }
 
@@ -183,25 +183,41 @@ namespace Facebook.WitAi.Windows
             // End layout
             GUILayout.EndHorizontal();
         }
+        // Layout property field
+        protected virtual void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty,  GUIContent labelContent, bool canEdit, ref float height)
+        {
+            // If can edit or not array default layout
+            if (canEdit || !subfield.FieldType.IsArray || subfieldProperty.arraySize <= 0)
+            {
+                EditorGUILayout.PropertyField(subfieldProperty, labelContent);
+                return;
+            }
+            
+            // If cannot edit, handle here
+            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded, ref height);
+            if (subfieldProperty.isExpanded)
+            {
+                EditorGUI.indentLevel++;
+                for (int i = 0; i < subfieldProperty.arraySize; i++)
+                {
+                    SerializedProperty p = subfieldProperty.GetArrayElementAtIndex(i);
+                    EditorGUILayout.PropertyField(p);
+                }
+                EditorGUI.indentLevel--;
+            }
+        }
         // Override post fields
         protected virtual void OnGUIPostFields(Rect position, SerializedProperty property, GUIContent label)
         {
 
         }
-        // Get localized category
-        protected virtual string GetLocalizationCategory(SerializedProperty property)
-        {
-            return property.name;
-        }
-        // Get localized title
-        protected virtual string GetLocalizedTitle(SerializedProperty property)
-        {
-            return GetLocalizedText(property, "");
-        }
         // Get text for specified key
+        public const string LocalizedTitleKey = "title";
+        public const string LocalizedMissingKey = "missing";
         protected virtual string GetLocalizedText(SerializedProperty property, string key)
         {
-            return WitStyles.GetLocalizedText(GetLocalizationCategory(property), key);
+            Debug.Log("Missing Localization: " + key);
+            return key;
         }
         // Way to ignore certain properties
         protected virtual bool ShouldLayoutField(FieldInfo subfield)
