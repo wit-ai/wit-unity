@@ -40,10 +40,5 @@ namespace Facebook.WitAi.Windows
             }
             return base.ShouldLayoutField(subfield);
         }
-        // Dont let edit
-        protected override WitPropertyEditType GetEditType()
-        {
-            return WitPropertyEditType.NoEdit;
-        }
     }
 }

@@ -16,10 +16,7 @@ namespace Facebook.WitAi.Windows
     public class WitEndpointConfigDrawer : WitPropertyDrawer
     {
         // Allow edit with lock
-        protected override WitPropertyEditType GetEditType()
-        {
-            return WitPropertyEditType.LockEdit;
-        }
+        protected override WitPropertyEditType EditType => WitPropertyEditType.LockEdit;
         // Determine if should layout field
         protected override bool ShouldLayoutField(FieldInfo subfield)
         {
@@ -41,7 +38,7 @@ namespace Facebook.WitAi.Windows
                 case "authority":
                     return WitRequest.URI_AUTHORITY;
                 case "port":
-                    return "80";
+                    return WitRequest.URI_DEFAULT_PORT.ToString();
                 case "witApiVersion":
                     return WitRequest.WIT_API_VERSION;
                 case "speech":

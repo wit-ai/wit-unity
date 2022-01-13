@@ -28,6 +28,7 @@ namespace Facebook.WitAi.Configuration
         public string UriScheme => string.IsNullOrEmpty(uriScheme) ? WitRequest.URI_SCHEME : uriScheme;
         public string Authority =>
             string.IsNullOrEmpty(authority) ? WitRequest.URI_AUTHORITY : authority;
+        public int Port => port <= 0 ? WitRequest.URI_DEFAULT_PORT : port;
         public string WitApiVersion => string.IsNullOrEmpty(witApiVersion)
             ? WitRequest.WIT_API_VERSION
             : witApiVersion;

@@ -202,6 +202,11 @@ namespace Facebook.WitAi
         // Simple password field
         public static void LayoutPasswordField(GUIContent key, ref string value, ref bool isUpdated, ref float height)
         {
+            // Ensure not null
+            if (value == null)
+            {
+                value = string.Empty;
+            }
             // Begin horizontal
             GUILayout.BeginHorizontal();
 

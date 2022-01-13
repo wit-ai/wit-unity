@@ -26,6 +26,11 @@ namespace Facebook.WitAi.Windows
         // Whether editing
         private int editIndex = -1;
 
+        // Whether to use a foldout
+        protected virtual bool FoldoutEnabled => true;
+        // Determine edit type for this drawer
+        protected virtual WitPropertyEditType EditType => WitPropertyEditType.NoEdit;
+        
         // Remove padding
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -48,7 +53,7 @@ namespace Facebook.WitAi.Windows
 
             // Show foldout if desired
             string titleText = GetLocalizedTitle(property);
-            if (UseFoldout())
+            if (FoldoutEnabled)
             {
                 property.isExpanded = WitEditorUI.LayoutFoldout(new GUIContent(titleText), property.isExpanded, ref height);
                 if (!property.isExpanded)
@@ -70,7 +75,6 @@ namespace Facebook.WitAi.Windows
             OnGUIPreFields(position, property, label);
 
             // Iterate all subfields
-            WitPropertyEditType editType = GetEditType();
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
             Type fieldType = fieldInfo.FieldType;
             if (fieldType.IsArray)
@@ -83,7 +87,7 @@ namespace Facebook.WitAi.Windows
                 FieldInfo subfield = subfields[s];
                 if (ShouldLayoutField(subfield))
                 {
-                    LayoutField(s, property, subfield, editType, ref height);
+                    LayoutField(s, property, subfield, EditType, ref height);
                 }
             }
 
@@ -198,16 +202,6 @@ namespace Facebook.WitAi.Windows
         protected virtual string GetLocalizedText(SerializedProperty property, string key)
         {
             return WitStyles.GetLocalizedText(GetLocalizationCategory(property), key);
-        }
-        // Whether to use a foldout
-        protected virtual bool UseFoldout()
-        {
-            return true;
-        }
-        // Determine edit type for this drawer
-        protected virtual WitPropertyEditType GetEditType()
-        {
-            return WitPropertyEditType.NoEdit;
         }
         // Way to ignore certain properties
         protected virtual bool ShouldLayoutField(FieldInfo subfield)

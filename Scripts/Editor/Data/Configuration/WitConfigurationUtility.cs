@@ -5,12 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if UNITY_EDITOR
+//#define VERBOSE_LOG
+#endif
+
 using System;
+using System.Collections.Generic;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
 using Facebook.WitAi.Lib;
-using Facebook.WitAi.Utilities;
+using Facebook.WitAi.Configuration;
 using UnityEditor;
 using UnityEngine;
 
@@ -57,7 +62,6 @@ namespace Facebook.WitAi.Data.Configuration
                 string path = AssetDatabase.GUIDToAssetPath(guids[i]);
                 witConfigs[i] = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
                 witConfigNames[i] = witConfigs[i].name;
-                //witConfigs[i].RefreshConfiguration();
             }
         }
         // Get configuration index
@@ -127,6 +131,8 @@ namespace Facebook.WitAi.Data.Configuration
                 // Get new index following reload
                 string name = System.IO.Path.GetFileNameWithoutExtension(path);
                 int index = GetConfigurationIndex(name);
+                witConfigs[index].SetServerToken(serverToken);
+                // Return index
                 return index;
             }
 
@@ -141,164 +147,349 @@ namespace Facebook.WitAi.Data.Configuration
         #endregion
 
         #region TOKENS
-        // Check if server token is valid
-        public static bool IsConfigurationServerTokenValid(string serverToken)
+        // Token valid check
+        public static bool IsServerTokenValid(string serverToken)
         {
             return !string.IsNullOrEmpty(serverToken) && WitAuthUtility.IsServerTokenValid(serverToken);
         }
-        // Check if client token is valid
-        public static bool IsConfigurationClientTokenValid(string clientToken)
+        // Token valid check
+        public static bool IsClientTokenValid(string clientToken)
         {
             return !string.IsNullOrEmpty(clientToken) && clientToken.Length == 32;
         }
-        // Update token data
-        public static void UpdateTokenData(string serverToken, Action updateComplete = null)
+        // Sets server token for all configurations if possible
+        public static void SetServerToken(string serverToken, Action<string> onSetComplete = null)
         {
-            if (!WitAuthUtility.IsServerTokenValid(serverToken)) return;
-
-            var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
-            listRequest.onResponse = (r) =>
+            // Invalid token
+            if (!IsServerTokenValid(serverToken))
             {
-                if (r.StatusCode == 200)
+                SetServerTokenComplete(serverToken, "Invalid Token", onSetComplete);
+                return;
+            }
+            // Perform a list app request to get app for token
+            var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
+            PerformRequest(listRequest, (response, onRequestComplete) =>
+            {
+                var applications = response.AsArray;
+                for (int i = 0; i < applications.Count; i++)
                 {
-                    var applications = r.ResponseData.AsArray;
-                    for (int i = 0; i < applications.Count; i++)
+                    if (applications[i]["is_app_for_token"].AsBool)
                     {
-                        if (applications[i]["is_app_for_token"].AsBool)
-                        {
-                            var application = WitApplication.FromJson(applications[i]);
-                            WitAuthUtility.SetAppServerToken(application.id, serverToken);
-                            updateComplete?.Invoke();
-                            break;
-                        }
+                        var application = WitApplication.FromJson(applications[i]);
+                        WitAuthUtility.SetAppServerToken(application.id, serverToken);
+                        onRequestComplete("");
+                        return;
                     }
                 }
+                onRequestComplete("No matching application found!");
+            }, (error) =>
+            {
+                SetServerTokenComplete(serverToken, error, onSetComplete);
+            });
+        }
+        // Set server token complete
+        private static void SetServerTokenComplete(string serverToken, string error, Action<string> onSetComplete)
+        {
+            // Failed
+            if (!string.IsNullOrEmpty(error))
+            {
+                error = $"Set Server Token Failed\n{error}";
+                Log(error, true);
+                WitAuthUtility.ServerToken = "";
+            }
+            // Success
+            else
+            {
+                // Log Success
+                Log("Set Server Token Success", false);
+                // Apply token
+                WitAuthUtility.ServerToken = serverToken;
+                // Refresh configurations
+                RefreshConfigurationList();
+            }
+            // On complete
+            onSetComplete?.Invoke(error);
+        }
+        // Sets server token for specified configuration by updating it's application data
+        public static void SetServerToken(this WitConfiguration configuration, string serverToken, Action<string> onSetComplete = null)
+        {
+            // Invalid
+            if (!IsServerTokenValid(serverToken))
+            {
+                SetConfigServerTokenComplete(configuration, serverToken, "Invalid Token", onSetComplete);
+                return;
+            }
+            // Refresh app data
+            SetApplicationData(configuration, serverToken, onSetComplete);
+        }
+        // Refresh client data
+        private static void SetApplicationData(WitConfiguration configuration, string serverToken, Action<string> onSetComplete)
+        {
+            // Already set in app server data
+            string appID = configuration?.application?.id;
+            if (!string.IsNullOrEmpty(appID))
+            {
+                string curToken = WitAuthUtility.GetAppServerToken(appID);
+                if (string.Equals(curToken, serverToken))
+                {
+                    SetClientData(configuration, serverToken, onSetComplete);
+                    return;
+                }
+            }
+            // Perform a list app request to get app for token
+            var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
+            PerformConfigRequest(configuration, listRequest, ApplyApplicationData, (error) =>
+            {
+                // Failed
+                if (!string.IsNullOrEmpty(error))
+                {
+                    SetConfigServerTokenComplete(configuration, serverToken, error, onSetComplete);
+                }
+                // Find client token
                 else
                 {
-                    Debug.LogError(r.StatusDescription);
+                    SetClientData(configuration, serverToken, onSetComplete);
                 }
-            };
-            listRequest.Request();
+            });
         }
-        public static void ApplyConfigurationToken(WitConfiguration configuration, string token)
+        // Refresh client data
+        private static void SetClientData(WitConfiguration configuration, string serverToken, Action<string> onSetComplete)
         {
+            // Invalid app ID
             string appID = configuration?.application?.id;
             if (string.IsNullOrEmpty(appID))
             {
-                appID = WitAuthUtility.GetAppId(token);
+                SetConfigServerTokenComplete(configuration, serverToken, "Invalid App ID", onSetComplete);
+                return;
             }
-            if (!string.IsNullOrEmpty(token) && WitAuthUtility.IsServerTokenValid(token))
+            // Set server token
+            WitAuthUtility.SetAppServerToken(appID, serverToken);
+            // Clear client token
+            ApplyClientToken(configuration, string.Empty, null);
+            // Find client id
+            PerformConfigRequest(configuration, configuration.GetClientToken(appID), ApplyClientToken, (error) =>
             {
-                RefreshConfigurationAppData(configuration, appID, token);
-            }
-        }
-        public static void RefreshConfigurationAppData(WitConfiguration configuration, string appId, string token)
-        {
-            var refreshToken = WitAuthUtility.GetAppServerToken(appId, token);
-            if (string.IsNullOrEmpty(refreshToken) &&
-                string.IsNullOrEmpty(appId) &&
-                !string.IsNullOrEmpty(configuration?.application?.id))
-            {
-                refreshToken = WitAuthUtility.GetAppServerToken(configuration.application.id,
-                    WitAuthUtility.ServerToken);
-                appId = WitAuthUtility.GetAppId(refreshToken);
-                if (string.IsNullOrEmpty(appId))
-                {
-                    UpdateTokenData(refreshToken, () =>
-                    {
-                        appId = WitAuthUtility.GetAppId(refreshToken);
-                        if (appId == configuration.application.id)
-                        {
-                            configuration.FetchAppConfigFromServerToken(refreshToken, () =>
-                            {
-                                WitAuthUtility.SetAppServerToken(configuration.application.id, refreshToken);
-                                EditorUtility.SetDirty(configuration);
-                            });
-                        }
-                    });
-                    return;
-                }
-
-                if (appId == configuration.application.id)
-                {
-                    refreshToken = WitAuthUtility.ServerToken;
-                }
-            }
-
-            // Apply token
-            WitAuthUtility.SetAppServerToken(configuration?.application?.id, refreshToken);
-
-            // Apply token
-            configuration.FetchAppConfigFromServerToken(refreshToken, () =>
-            {
-                WitAuthUtility.SetAppServerToken(configuration?.application?.id, refreshToken);
+                SetConfigServerTokenComplete(configuration, serverToken, error, onSetComplete);
             });
+        }
+        // Complete
+        private static void SetConfigServerTokenComplete(WitConfiguration configuration, string serverToken, string error, Action<string> onSetComplete)
+        {
+            // Failed
+            if (!string.IsNullOrEmpty(error))
+            {
+                error = "Set Configuration Server Token Failed\n" + error;
+                Log(error, true);
+            }
+            // Success
+            else
+            {
+                // Log success
+                Log("Set Configuration Server Token Success", false);
+                // Refresh data
+                configuration.RefreshData(onSetComplete);
+            }
+            // On complete
+            onSetComplete?.Invoke(error);
         }
         #endregion
 
-        #region UPDATE
-        public static void UpdateData(this WitConfiguration configuration, Action onUpdateComplete = null)
+        #region REFRESH
+        // Refresh if possible & return true if still refreshing
+        private static List<string> refreshIDs = new List<string>();
+        // Refresh ID
+        private static string GetRefreshID(WitConfiguration configuration)
         {
-            DoUpdateData(configuration, onUpdateComplete);
+            return configuration?.application?.id;
         }
-
-        private static void DoUpdateData(WitConfiguration configuration, Action onUpdateComplete)
+        // Check if refreshing
+        private static bool IsRefreshing(string refreshID)
         {
-            if (!string.IsNullOrEmpty(
-                WitAuthUtility.GetAppServerToken(configuration.application.id)))
+            return !string.IsNullOrEmpty(refreshID) && refreshIDs.Contains(refreshID);
+        }
+        // Check if refreshing
+        public static bool IsRefreshingData(this WitConfiguration configuration)
+        {
+            string refreshID = GetRefreshID(configuration);
+            return IsRefreshing(refreshID);
+        }
+        // Refreshes configuration data
+        public static void RefreshData(this WitConfiguration configuration, Action<string> onRefreshComplete = null)
+        {
+            // Get refresh id
+            string refreshID = GetRefreshID(configuration);
+            if (string.IsNullOrEmpty(refreshID))
             {
-                var intentsRequest = configuration.ListIntentsRequest();
-                intentsRequest.onResponse =
-                    (r) => ListEntities(r, configuration, onUpdateComplete);
-
-                configuration.application?.UpdateData(intentsRequest.Request);
+                RefreshDataComplete(configuration, "Cannot refresh without application data", onRefreshComplete);
+                return;
             }
+            if (IsRefreshing(refreshID))
+            {
+                RefreshDataComplete(configuration, "Already Refreshing", onRefreshComplete);
+                return;
+            }
+            if (!IsClientTokenValid(configuration.clientAccessToken))
+            {
+                RefreshDataComplete(configuration, "Invalid client token set", onRefreshComplete);
+                return;
+            }
+            // Begin refresh
+            refreshIDs.Add(refreshID);
+            // Refresh application data
+            configuration.application.witConfiguration = configuration;
+            configuration.application.UpdateData(() =>
+            {
+                EditorUtility.SetDirty(configuration);
+                RefreshIntentsData(configuration, onRefreshComplete);
+            });
         }
-
-        private static void ListEntities(WitRequest r, WitConfiguration configuration, Action onUpdateComplete)
+        // Refresh intents data
+        private static void RefreshIntentsData(WitConfiguration configuration, Action<string> onRefreshComplete)
         {
-            var entitiesRequest = configuration.ListEntitiesRequest();
-            entitiesRequest.onResponse = (er) => ListTraits(er, configuration, onUpdateComplete);
-            OnUpdateData(r, (response) => UpdateIntentList(configuration, response),
-                entitiesRequest.Request);
-        }
-
-         private static void ListTraits(WitRequest er, WitConfiguration configuration, Action onUpdateComplete)
-        {
-            var traitsRequest = configuration.ListTraitsRequest();
-            traitsRequest.onResponse =
-                (tr) =>
+            PerformConfigRequest(configuration, configuration.ListIntentsRequest(), ApplyIntentList, (error) =>
+            {
+                if (!string.IsNullOrEmpty(error))
                 {
-                    OnUpdateData(tr,
-                                (dataResponse) => UpdateTraitList(configuration, dataResponse),
-                                onUpdateComplete);
-                };
-            OnUpdateData(er,
-                (entityResponse) => UpdateEntityList(configuration, entityResponse),
-                traitsRequest.Request);
+                    RefreshDataComplete(configuration, error, onRefreshComplete);
+                }
+                else
+                {
+                    RefreshEntitiesData(configuration, onRefreshComplete);
+                }
+            });
         }
-
-        private static void OnUpdateData(WitRequest request,
-            Action<WitResponseNode> updateComponent, Action onUpdateComplete)
+        // Refresh entities data
+        private static void RefreshEntitiesData(WitConfiguration configuration, Action<string> onRefreshComplete)
         {
-            if (request.StatusCode == 200)
+            PerformConfigRequest(configuration, configuration.ListEntitiesRequest(), ApplyEntityList, (error) =>
             {
-                updateComponent(request.ResponseData);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    RefreshDataComplete(configuration, error, onRefreshComplete);
+                }
+                else
+                {
+                    RefreshTraitsData(configuration, onRefreshComplete);
+                }
+            });
+        }
+        // Refresh traits data
+        private static void RefreshTraitsData(WitConfiguration configuration, Action<string> onRefreshComplete)
+        {
+            PerformConfigRequest(configuration, configuration.ListTraitsRequest(), ApplyTraitList, (error) =>
+            {
+                RefreshDataComplete(configuration, error, onRefreshComplete);
+            });
+        }
+        // Refresh data complete
+        private static void RefreshDataComplete(WitConfiguration configuration, string error, Action<string> onRefreshComplete)
+        {
+            // Get refresh id
+            string refreshID = GetRefreshID(configuration);
+            if (IsRefreshing(refreshID))
+            {
+                refreshIDs.Remove(refreshID);
             }
+            // Failed
+            if (!string.IsNullOrEmpty(error))
+            {
+                error = $"Refresh Configuration Failed\n{error}";
+                Log(error, true);
+            }
+            // Success
             else
             {
-                Debug.LogError($"Request for {request} failed: {request.StatusDescription}");
+                Log("Refresh Configuration Success", false);
             }
-            if (onUpdateComplete != null)
-            {
-                onUpdateComplete();
-            }
+            // Invoke complete
+            onRefreshComplete?.Invoke(error);
         }
+        #endregion
 
-        private static void UpdateIntentList(this WitConfiguration configuration,
-            WitResponseNode intentListWitResponse)
+        #region APPLICATION
+        // Perform a configuration wit request and then apply configuration data
+        private static void PerformConfigRequest(WitConfiguration configuration, WitRequest request, Action<WitConfiguration, WitResponseNode, Action<string>> onApply, Action<string> onComplete)
         {
-            var intentList = intentListWitResponse.AsArray;
+            PerformRequest(request, (response, onRequestComplete) =>
+            {
+                onApply(configuration, response, onRequestComplete);
+            }, onComplete);
+        }
+        // Perform a wit request and then apply data
+        private static void PerformRequest(WitRequest request, Action<WitResponseNode, Action<string>> onApply, Action<string> onComplete)
+        {
+            // Add response delegate
+            request.onResponse = (response) =>
+            {
+                // Get status
+                int status = response.StatusCode;
+                // Failed
+                if (status != 200)
+                {
+                    onComplete($"Request Failed [{status}]: {response.StatusDescription}\nPath: {request}");
+                }
+                // Success
+                else
+                {
+                    // Apply
+                    onApply(response.ResponseData, (error) =>
+                    {
+                        // Apply failed
+                        if (!string.IsNullOrEmpty(error))
+                        {
+                            onComplete?.Invoke($"Request Set Failed: {status}\nPath: {request}\nError: {error}");
+                        }
+                        // Complete
+                        else
+                        {
+                            Log($"Request Success\nType: {request}", false);
+                            onComplete?.Invoke("");
+                        }
+                    });
+                }
+            };
+
+            // Perform
+            Log($"Request Begin\nType: {request}", false);
+            request.Request();
+        }
+        // Apply application data
+        private static void ApplyApplicationData(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
+        {
+            var applications = witResponse.AsArray;
+            for (int i = 0; i < applications.Count; i++)
+            {
+                if (applications[i]["is_app_for_token"].AsBool)
+                {
+                    if (configuration.application == null)
+                    {
+                        configuration.application = WitApplication.FromJson(applications[i]);
+                    }
+                    else
+                    {
+                        configuration.application.UpdateData(applications[i]);
+                    }
+                    configuration.application.witConfiguration = configuration;
+                    EditorUtility.SetDirty(configuration);
+                    onComplete?.Invoke("");
+                    return;
+                }
+            }
+            onComplete?.Invoke("No applicable configuration application found");
+        }
+        // Apply client id
+        private static void ApplyClientToken(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
+        {
+            var token = witResponse?["client_token"];
+            configuration.clientAccessToken = token;
+            EditorUtility.SetDirty(configuration);
+            onComplete?.Invoke("");
+        }
+        // Apply intents
+        private static void ApplyIntentList(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
+        {
+            // Generate intent list
+            var intentList = witResponse.AsArray;
             var n = intentList.Count;
             configuration.intents = new WitIntent[n];
             for (int i = 0; i < n; i++)
@@ -306,14 +497,16 @@ namespace Facebook.WitAi.Data.Configuration
                 var intent = WitIntent.FromJson(intentList[i]);
                 intent.witConfiguration = configuration;
                 configuration.intents[i] = intent;
-                intent.UpdateData();
             }
+            EditorUtility.SetDirty(configuration);
+            // Update intents
+            UpdateConfigItem(0, configuration.intents, configuration, onComplete);
         }
-
-        private static void UpdateEntityList(this WitConfiguration configuration,
-            WitResponseNode entityListWitResponse)
+        // Apply entities
+        private static void ApplyEntityList(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
         {
-            var entityList = entityListWitResponse.AsArray;
+            // Generate entities list
+            var entityList = witResponse.AsArray;
             var n = entityList.Count;
             configuration.entities = new WitEntity[n];
             for (int i = 0; i < n; i++)
@@ -321,14 +514,16 @@ namespace Facebook.WitAi.Data.Configuration
                 var entity = WitEntity.FromJson(entityList[i]);
                 entity.witConfiguration = configuration;
                 configuration.entities[i] = entity;
-                entity.UpdateData();
             }
+            EditorUtility.SetDirty(configuration);
+            // Update entities
+            UpdateConfigItem(0, configuration.entities, configuration, onComplete);
         }
-
-        public static void UpdateTraitList(this WitConfiguration configuration,
-            WitResponseNode traitListWitResponse)
+        // Apply traits
+        private static void ApplyTraitList(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
         {
-            var traitList = traitListWitResponse.AsArray;
+            // Generate traits list
+            var traitList = witResponse.AsArray;
             var n = traitList.Count;
             configuration.traits = new WitTrait[n];
             for (int i = 0; i < n; i++)
@@ -336,96 +531,43 @@ namespace Facebook.WitAi.Data.Configuration
                 var trait = WitTrait.FromJson(traitList[i]);
                 trait.witConfiguration = configuration;
                 configuration.traits[i] = trait;
-                trait.UpdateData();
             }
+            EditorUtility.SetDirty(configuration);
+            // Update traits
+            UpdateConfigItem(0, configuration.traits, configuration, onComplete);
         }
-
-        /// <summary>
-        /// Gets the app info and client id that is associated with the server token being used
-        /// </summary>
-        /// <param name="serverToken">The server token to use to get the app config</param>
-        /// <param name="action"></param>
-        public static void FetchAppConfigFromServerToken(this WitConfiguration configuration,
-            string serverToken, Action action)
+        // Update all
+        private static void UpdateConfigItem(int index, WitConfigurationData[] items, WitConfiguration configuration, Action<string> onComplete)
         {
-            if (WitAuthUtility.IsServerTokenValid(serverToken))
+            // Complete
+            if (index < 0 || index >= items.Length)
             {
-                FetchApplicationFromServerToken(configuration, serverToken,
-                    () =>
-                    {
-                        FetchClientToken(configuration,
-                            () => { configuration.UpdateData(action); });
-                    });
+                onComplete?.Invoke("");
+                return;
+            }
+            // Update item
+            WitConfigurationData item = items[index];
+            item.UpdateData(() =>
+            {
+                Log($"{item.GetType()} {index} Updated", false);
+                EditorUtility.SetDirty(configuration);
+                UpdateConfigItem(index + 1, items, configuration, onComplete);
+            });
+        }
+        // Log
+        private static void Log(string comment, bool error)
+        {
+            #if VERBOSE_LOG
+            string l = "Wit Configuration Utility - " + comment;
+            if (error)
+            {
+                Debug.LogError(l);
             }
             else
             {
-                Debug.LogError($"No server token set for {configuration.name}.");
+                Debug.Log(l);
             }
-        }
-
-        private static void FetchApplicationFromServerToken(WitConfiguration configuration,
-            string serverToken, Action response)
-        {
-            var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
-            listRequest.onResponse = (r) =>
-            {
-                if (r.StatusCode == 200)
-                {
-                    var applications = r.ResponseData.AsArray;
-                    for (int i = 0; i < applications.Count; i++)
-                    {
-                        if (applications[i]["is_app_for_token"].AsBool)
-                        {
-                            if (null != configuration.application)
-                            {
-                                configuration.application.UpdateData(applications[i]);
-                            }
-                            else
-                            {
-                                configuration.application =
-                                    WitApplication.FromJson(applications[i]);
-                            }
-
-                            WitAuthUtility.SetAppServerToken(configuration.application.id, serverToken);
-                            response?.Invoke();
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.LogError(r.StatusDescription);
-                }
-            };
-            listRequest.Request();
-        }
-
-        private static void FetchClientToken(WitConfiguration configuration, Action action)
-        {
-            if (!string.IsNullOrEmpty(configuration.application?.id))
-            {
-                var tokenRequest = configuration.GetClientToken(configuration.application.id);
-                tokenRequest.onResponse = (r) =>
-                {
-                    if (r.StatusCode == 200)
-                    {
-                        var token = r.ResponseData["client_token"];
-                        SerializedObject so = new SerializedObject(configuration);
-                        so.FindProperty("clientAccessToken").stringValue =
-                            r.ResponseData["client_token"];
-                        so.ApplyModifiedProperties();
-
-                        configuration.clientAccessToken = token;
-                        EditorUtility.SetDirty(configuration);
-                        action?.Invoke();
-                    }
-                    else
-                    {
-                        Debug.LogError(r.StatusDescription);
-                    }
-                };
-                tokenRequest.Request();
-            }
+            #endif
         }
         #endregion
     }

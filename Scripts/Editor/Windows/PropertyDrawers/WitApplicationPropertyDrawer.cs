@@ -16,15 +16,8 @@ namespace Facebook.WitAi.Windows
     public class WitApplicationPropertyDrawer : WitPropertyDrawer
     {
         // No foldout needed
-        protected override bool UseFoldout()
-        {
-            return false;
-        }
-        // Dont let edit
-        protected override WitPropertyEditType GetEditType()
-        {
-            return WitPropertyEditType.NoEdit;
-        }
+        protected override bool FoldoutEnabled => false;
+        
         // Skip wit configuration field
         protected override bool ShouldLayoutField(FieldInfo subfield)
         {
