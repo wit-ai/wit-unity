@@ -58,14 +58,11 @@ namespace Facebook.WitAi.Windows
         {
             get
             {
-                // Get ID
-                string applicationID = witConfiguration?.application?.id;
-                if (!string.IsNullOrEmpty(applicationID))
+                string appID = WitConfigurationUtility.GetAppID(witConfiguration);
+                if (!string.IsNullOrEmpty(appID))
                 {
-                    return WitStyles.GetSettingsURL(applicationID);
+                    return WitStyles.GetSettingsURL(appID);
                 }
-
-                // Use base
                 return base.HeaderUrl;
             }
         }

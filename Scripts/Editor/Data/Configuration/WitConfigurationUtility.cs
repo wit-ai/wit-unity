@@ -108,6 +108,15 @@ namespace Facebook.WitAi.Data.Configuration
             // Not found
             return -1;
         }
+        // Get application id
+        public static string GetAppID(WitConfiguration configuration)
+        {
+            if (configuration != null && configuration.application != null)
+            {
+                return configuration.application.id;
+            }
+            return string.Empty;
+        }
         #endregion
 
         #region MANAGEMENT
@@ -138,11 +147,6 @@ namespace Facebook.WitAi.Data.Configuration
 
             // Return new index
             return -1;
-        }
-        // TODO: Delete
-        public static bool DeleteConfiguration(WitConfiguration configuration)
-        {
-            return false;
         }
         #endregion
 
@@ -226,7 +230,7 @@ namespace Facebook.WitAi.Data.Configuration
         private static void SetApplicationData(WitConfiguration configuration, string serverToken, Action<string> onSetComplete)
         {
             // Already set in app server data
-            string appID = configuration?.application?.id;
+            string appID = GetAppID(configuration);
             if (!string.IsNullOrEmpty(appID))
             {
                 string curToken = WitAuthUtility.GetAppServerToken(appID);
@@ -256,7 +260,7 @@ namespace Facebook.WitAi.Data.Configuration
         private static void SetClientData(WitConfiguration configuration, string serverToken, Action<string> onSetComplete)
         {
             // Invalid app ID
-            string appID = configuration?.application?.id;
+            string appID = GetAppID(configuration);
             if (string.IsNullOrEmpty(appID))
             {
                 SetConfigServerTokenComplete(configuration, serverToken, "Invalid App ID", onSetComplete);
@@ -296,34 +300,29 @@ namespace Facebook.WitAi.Data.Configuration
 
         #region REFRESH
         // Refresh if possible & return true if still refreshing
-        private static List<string> refreshIDs = new List<string>();
-        // Refresh ID
-        private static string GetRefreshID(WitConfiguration configuration)
-        {
-            return configuration?.application?.id;
-        }
+        private static List<string> refreshAppIDs = new List<string>();
         // Check if refreshing
-        private static bool IsRefreshing(string refreshID)
+        private static bool IsRefreshing(string appID)
         {
-            return !string.IsNullOrEmpty(refreshID) && refreshIDs.Contains(refreshID);
+            return !string.IsNullOrEmpty(appID) && refreshAppIDs.Contains(appID);
         }
         // Check if refreshing
         public static bool IsRefreshingData(this WitConfiguration configuration)
         {
-            string refreshID = GetRefreshID(configuration);
-            return IsRefreshing(refreshID);
+            string appID = GetAppID(configuration);
+            return IsRefreshing(appID);
         }
         // Refreshes configuration data
         public static void RefreshData(this WitConfiguration configuration, Action<string> onRefreshComplete = null)
         {
             // Get refresh id
-            string refreshID = GetRefreshID(configuration);
-            if (string.IsNullOrEmpty(refreshID))
+            string appID = GetAppID(configuration);
+            if (string.IsNullOrEmpty(appID))
             {
                 RefreshDataComplete(configuration, "Cannot refresh without application data", onRefreshComplete);
                 return;
             }
-            if (IsRefreshing(refreshID))
+            if (IsRefreshing(appID))
             {
                 RefreshDataComplete(configuration, "Already Refreshing", onRefreshComplete);
                 return;
@@ -334,7 +333,7 @@ namespace Facebook.WitAi.Data.Configuration
                 return;
             }
             // Begin refresh
-            refreshIDs.Add(refreshID);
+            refreshAppIDs.Add(appID);
             // Refresh application data
             configuration.application.witConfiguration = configuration;
             configuration.application.UpdateData(() =>
@@ -385,10 +384,10 @@ namespace Facebook.WitAi.Data.Configuration
         private static void RefreshDataComplete(WitConfiguration configuration, string error, Action<string> onRefreshComplete)
         {
             // Get refresh id
-            string refreshID = GetRefreshID(configuration);
-            if (IsRefreshing(refreshID))
+            string appID = GetAppID(configuration);
+            if (IsRefreshing(appID))
             {
-                refreshIDs.Remove(refreshID);
+                refreshAppIDs.Remove(appID);
             }
             // Failed
             if (!string.IsNullOrEmpty(error))
