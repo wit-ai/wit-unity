@@ -1,7 +1,7 @@
 ﻿using Facebook.WitAi.Data;
 using NUnit.Framework;
 
-namespace Tests
+namespace Facebook.WitAi.Tests
 {
     public class RingBufferTests
     {
