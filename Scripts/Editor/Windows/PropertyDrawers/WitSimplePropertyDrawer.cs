@@ -27,10 +27,9 @@ namespace Facebook.WitAi.Windows
         // Handles gui layout
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            float height = 0f;
             string keyText = GetFieldStringValue(property, GetKeyFieldName());
             string valueText = GetFieldStringValue(property, GetValueFieldName());
-            WitEditorUI.LayoutKeyLabel(keyText, valueText, ref height);
+            WitEditorUI.LayoutKeyLabel(keyText, valueText);
         }
         // Get subfield value
         protected virtual string GetFieldStringValue(SerializedProperty property, string fieldName)

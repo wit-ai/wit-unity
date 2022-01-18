@@ -39,14 +39,11 @@ namespace Facebook.WitAi.Windows
         // Handles gui layout
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            // For layout
-            float height = 0f;
-
             // Return error
             if (property.serializedObject == null)
             {
                 string missingText = GetLocalizedText(property, LocalizedMissingKey);
-                WitEditorUI.LayoutErrorLabel(missingText, ref height);
+                WitEditorUI.LayoutErrorLabel(missingText);
                 return;
             }
 
@@ -54,7 +51,7 @@ namespace Facebook.WitAi.Windows
             string titleText = GetLocalizedText(property, LocalizedTitleKey);
             if (FoldoutEnabled)
             {
-                property.isExpanded = WitEditorUI.LayoutFoldout(new GUIContent(titleText), property.isExpanded, ref height);
+                property.isExpanded = WitEditorUI.LayoutFoldout(new GUIContent(titleText), property.isExpanded);
                 if (!property.isExpanded)
                 {
                     return;
@@ -63,7 +60,7 @@ namespace Facebook.WitAi.Windows
             // Show title only
             else
             {
-                WitEditorUI.LayoutLabel(titleText, ref height);
+                WitEditorUI.LayoutLabel(titleText);
             }
 
             // Indent
@@ -87,7 +84,7 @@ namespace Facebook.WitAi.Windows
                 FieldInfo subfield = subfields[s];
                 if (ShouldLayoutField(subfield))
                 {
-                    LayoutField(s, property, subfield, editType, ref height);
+                    LayoutField(s, property, subfield, editType);
                 }
             }
 
@@ -104,7 +101,7 @@ namespace Facebook.WitAi.Windows
 
         }
         // Draw a specific property
-        protected virtual void LayoutField(int index, SerializedProperty property, FieldInfo subfield, WitPropertyEditType editType, ref float height)
+        protected virtual void LayoutField(int index, SerializedProperty property, FieldInfo subfield, WitPropertyEditType editType)
         {
             // Begin layout
             GUILayout.BeginHorizontal();
@@ -130,13 +127,13 @@ namespace Facebook.WitAi.Windows
                 }
 
                 // Layout key
-                WitEditorUI.LayoutKeyLabel(labelText, valText, ref height);
+                WitEditorUI.LayoutKeyLabel(labelText, valText);
             }
             // Can edit, allow edit
             else
             {
                 GUILayout.BeginVertical();
-                LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit, ref height);
+                LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit);
                 GUILayout.EndVertical();
             }
 
@@ -150,7 +147,7 @@ namespace Facebook.WitAi.Windows
                 if (editIndex == index)
                 {
                     // Clear Edit
-                    if (WitEditorUI.LayoutIconButton(WitStyles.ResetIcon, ref height))
+                    if (WitEditorUI.LayoutIconButton(WitStyles.ResetIcon))
                     {
                         editIndex = -1;
                         string clearVal = "";
@@ -162,7 +159,7 @@ namespace Facebook.WitAi.Windows
                         GUI.FocusControl(null);
                     }
                     // Accept Edit
-                    if (WitEditorUI.LayoutIconButton(WitStyles.AcceptIcon, ref height))
+                    if (WitEditorUI.LayoutIconButton(WitStyles.AcceptIcon))
                     {
                         editIndex = -1;
                         GUI.FocusControl(null);
@@ -172,7 +169,7 @@ namespace Facebook.WitAi.Windows
                 else
                 {
                     // Begin Editing
-                    if (WitEditorUI.LayoutIconButton(WitStyles.EditIcon, ref height))
+                    if (WitEditorUI.LayoutIconButton(WitStyles.EditIcon))
                     {
                         editIndex = index;
                         GUI.FocusControl(null);
@@ -184,7 +181,7 @@ namespace Facebook.WitAi.Windows
             GUILayout.EndHorizontal();
         }
         // Layout property field
-        protected virtual void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty,  GUIContent labelContent, bool canEdit, ref float height)
+        protected virtual void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty,  GUIContent labelContent, bool canEdit)
         {
             // If can edit or not array default layout
             if (canEdit || !subfield.FieldType.IsArray || subfieldProperty.arraySize <= 0)
@@ -194,7 +191,7 @@ namespace Facebook.WitAi.Windows
             }
             
             // If cannot edit, handle here
-            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded, ref height);
+            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded);
             if (subfieldProperty.isExpanded)
             {
                 EditorGUI.indentLevel++;

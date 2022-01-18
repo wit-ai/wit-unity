@@ -16,102 +16,77 @@ namespace Facebook.WitAi
     public static class WitEditorUI
     {
         #region LABELS
-        // Default
-        public static void LayoutLabel(string text, ref float height)
+        public static void LayoutLabel(string text)
         {
-            LayoutLabel(text, WitStyles.Label, ref height);
+            LayoutLabel(text, WitStyles.Label);
         }
-        // Header
-        public static void LayoutHeaderLabel(string text, ref float height)
+        public static void LayoutHeaderLabel(string text)
         {
-            LayoutLabel(text, WitStyles.LabelHeader, ref height);
+            LayoutLabel(text, WitStyles.LabelHeader);
         }
-        // Subheader
-        public static void LayoutSubheaderLabel(string text, ref float height)
+        public static void LayoutSubheaderLabel(string text)
         {
-            LayoutLabel(text, WitStyles.LabelSubheader, ref height);
+            LayoutLabel(text, WitStyles.LabelSubheader);
         }
-        // Error
-        public static void LayoutErrorLabel(string text, ref float height)
+        public static void LayoutErrorLabel(string text)
         {
-            LayoutLabel(text, WitStyles.LabelError, ref height);
+            LayoutLabel(text, WitStyles.LabelError);
         }
-        // Local only
-        private static void LayoutLabel(string text, GUIStyle style, ref float height)
+        private static void LayoutLabel(string text, GUIStyle style)
         {
-            // Simple layout
             EditorGUILayout.LabelField(text, style);
-            // Add height
-            height += style.CalcSize(new GUIContent(text)).y;
         }
-        // Layout key label
-        public static void LayoutKeyLabel(string key, string text, ref float height)
+        public static void LayoutKeyLabel(string key, string text)
         {
-            // Simple layout
             EditorGUILayout.LabelField(key, text, WitStyles.TextField);
-            // Add height
-            height += WitStyles.TextField.CalcSize(new GUIContent(text)).y;
         }
         #endregion
 
         #region BUTTONS
-        // Layout text button
-        public static bool LayoutTextButton(string text, ref float height)
+        public static bool LayoutTextButton(string text)
         {
             GUIContent content = new GUIContent(text);
             float width = WitStyles.TextButton.CalcSize(content).x + WitStyles.TextButtonPadding * 2f;
-            return LayoutButton(content, WitStyles.TextButton, new GUILayoutOption[] { GUILayout.Width(width) }, ref height);
+            return LayoutButton(content, WitStyles.TextButton, new GUILayoutOption[] { GUILayout.Width(width) });
         }
-        // Layout icon button
-        public static bool LayoutIconButton(GUIContent icon, ref float height)
+        public static bool LayoutIconButton(GUIContent icon)
         {
-            return LayoutButton(icon, WitStyles.IconButton, null, ref height);
+            return LayoutButton(icon, WitStyles.IconButton, null);
         }
-        // Layout tab buttons
-        public static void LayoutTabButtons(string[] tabTitles, ref int selection, ref float height)
+        public static void LayoutTabButtons(string[] tabTitles, ref int selection)
         {
             if (tabTitles != null)
             {
-                float maxHeight = 0f;
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(EditorGUI.indentLevel * WitStyles.TextButtonPadding * 2f);
                 for (int t = 0; t < tabTitles.Length; t++)
                 {
-                    float newHeight = 0f;
                     GUI.enabled = selection != t;
-                    if (LayoutTabButton(tabTitles[t], ref newHeight))
+                    if (LayoutTabButton(tabTitles[t]))
                     {
                         selection = t;
                     }
-                    maxHeight = Mathf.Max(maxHeight, newHeight);
                 }
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
             }
         }
-        // Layout tab button
-        public static bool LayoutTabButton(string tabTitle, ref float height)
+        public static bool LayoutTabButton(string tabTitle)
         {
-            return LayoutButton(new GUIContent(tabTitle), WitStyles.TabButton, null, ref height);
+            return LayoutButton(new GUIContent(tabTitle), WitStyles.TabButton, null);
         }
-        // Layout button
-        private static bool LayoutButton(GUIContent content, GUIStyle style, GUILayoutOption[] options, ref float height)
+        private static bool LayoutButton(GUIContent content, GUIStyle style, GUILayoutOption[] options)
         {
-            // Simple layout
-            bool result = GUILayout.Button(content, style, options);
-            // Add height
-            height += style.CalcSize(content).y;
-            // Return
-            return result;
+            return GUILayout.Button(content, style, options);
         }
         // Layout header button
-        public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL, ref float height)
+        public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL)
         {
             float headerWidth = headerTexture == null ? 0f : Mathf.Min(headerTexture.width, Mathf.Min(WitStyles.WindowMinWidth, EditorGUIUtility.currentViewWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
-            LayoutHeaderButton(headerTexture, headerURL, headerWidth, ref height);
+            LayoutHeaderButton(headerTexture, headerURL, headerWidth);
         }
         // Layout header button
-        public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL, float headerWidth, ref float height)
+        public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL, float headerWidth)
         {
             if (headerTexture != null)
             {
@@ -122,7 +97,6 @@ namespace Facebook.WitAi
                 {
                     Application.OpenURL(headerURL);
                 }
-                height += headerHeight;
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
             }
@@ -130,20 +104,12 @@ namespace Facebook.WitAi
         #endregion
 
         #region FOLDOUT
-        // Foldout storage
+        // Foldout storage for bind objects
         private static Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
-        // Foldout settings
         private static string GetFoldoutID(object bindObject)
         {
-            if (bindObject != null && bindObject.GetType() == typeof(SerializedProperty))
-            {
-                SerializedProperty sp = (SerializedProperty) bindObject;
-                string c = sp.serializedObject.GetHashCode().ToString() + "_" + sp.propertyPath;
-                return "proparrays";
-            }
             return bindObject == null ? "" : bindObject.GetHashCode().ToString();
         }
-        // Get foldout
         public static bool GetFoldoutValue(object bindObject)
         {
             string foldoutID = GetFoldoutID(bindObject);
@@ -153,7 +119,6 @@ namespace Facebook.WitAi
             }
             return false;
         }
-        // Apply foldout
         public static void SetFoldoutValue(object bindObject, bool toFoldout)
         {
             string foldoutID = GetFoldoutID(bindObject);
@@ -162,11 +127,10 @@ namespace Facebook.WitAi
                 foldouts[foldoutID] = toFoldout;
             }
         }
-        // GUI Layout
-        public static bool LayoutFoldout(GUIContent key, object bindObject, ref float height)
+        public static bool LayoutFoldout(GUIContent key, object bindObject)
         {
             bool wasFoldout = GetFoldoutValue(bindObject);
-            bool isFoldout = LayoutFoldout(key, wasFoldout, ref height);
+            bool isFoldout = LayoutFoldout(key, wasFoldout);
             if (isFoldout != wasFoldout)
             {
                 SetFoldoutValue(bindObject, isFoldout);
@@ -174,17 +138,14 @@ namespace Facebook.WitAi
             return isFoldout;
         }
         // GUI Layout handled without bind objects
-        public static bool LayoutFoldout(GUIContent key, bool wasFoldout, ref float height)
+        public static bool LayoutFoldout(GUIContent key, bool wasFoldout)
         {
-            bool isFoldout = EditorGUILayout.Foldout(wasFoldout, key, true, WitStyles.Foldout);
-            height += WitStyles.Foldout.CalcSize(key).y;
-            return isFoldout;
+            return EditorGUILayout.Foldout(wasFoldout, key, true, WitStyles.Foldout);
         }
         #endregion
 
         #region FIELDS
-        // Simple text field
-        public static void LayoutTextField(GUIContent key, ref string value, ref bool isUpdated, ref float height)
+        public static void LayoutTextField(GUIContent key, ref string value, ref bool isUpdated)
         {
             // Ensure not null
             if (value == null)
@@ -201,12 +162,8 @@ namespace Facebook.WitAi
                 value = newValue;
                 isUpdated = true;
             }
-
-            // Add height
-            height += WitStyles.TextField.CalcSize(key).y;
         }
-        // Simple password field
-        public static void LayoutPasswordField(GUIContent key, ref string value, ref bool isUpdated, ref float height)
+        public static void LayoutPasswordField(GUIContent key, ref string value, ref bool isUpdated)
         {
             // Ensure not null
             if (value == null)
@@ -220,8 +177,7 @@ namespace Facebook.WitAi
             string newValue = EditorGUILayout.PasswordField(key, value, WitStyles.PasswordField);
 
             // Layout icon
-            float h = 0f;
-            if (LayoutIconButton(WitStyles.PasteIcon, ref h))
+            if (LayoutIconButton(WitStyles.PasteIcon))
             {
                 newValue = EditorGUIUtility.systemCopyBuffer;
                 GUI.FocusControl(null);
@@ -236,13 +192,8 @@ namespace Facebook.WitAi
                 value = newValue;
                 isUpdated = true;
             }
-
-            // Add height
-            h = Mathf.Max(h, WitStyles.PasswordField.CalcSize(key).y);
-            height += h;
         }
-        // Simple int field
-        public static void LayoutIntField(GUIContent key, ref int value, ref bool isUpdated, ref float height)
+        public static void LayoutIntField(GUIContent key, ref int value, ref bool isUpdated)
         {
             // Simple layout
             int newValue = EditorGUILayout.IntField(key, value, WitStyles.IntField);
@@ -253,21 +204,17 @@ namespace Facebook.WitAi
                 value = newValue;
                 isUpdated = true;
             }
-
-            // Add height
-            height += WitStyles.IntField.CalcSize(key).y;
         }
         // Locked text field
         private static string unlockID = "";
         private static string unlockText = "";
-        public static void LayoutLockedTextField(GUIContent key, ref string value, ref bool isUpdated, ref float height)
+        public static void LayoutLockedTextField(GUIContent key, ref string value, ref bool isUpdated)
         {
             // Determine if locked
             string id = GetFoldoutID(key.text);
             bool isEditing = unlockID.Equals(id);
 
             // Begin Horizontal
-            float h = 0f;
             GUILayout.BeginHorizontal();
 
             // Hide if not editing
@@ -275,7 +222,7 @@ namespace Facebook.WitAi
             // Layout
             string newValue = isEditing ? unlockText : value;
             bool newUpdate = false;
-            LayoutTextField(key, ref newValue, ref newUpdate, ref h);
+            LayoutTextField(key, ref newValue, ref newUpdate);
             // Allow next item
             GUI.enabled = true;
 
@@ -286,17 +233,15 @@ namespace Facebook.WitAi
             }
 
             // Cancel vs Apply Buttons
-            float h2 = 0f;
             if (isEditing)
             {
-                if (LayoutIconButton(WitStyles.ResetIcon, ref h2))
+                if (LayoutIconButton(WitStyles.ResetIcon))
                 {
                     unlockID = string.Empty;
                     unlockText = string.Empty;
                     GUI.FocusControl(null);
                 }
-                h = Mathf.Max(h, h2);
-                if (LayoutIconButton(WitStyles.AcceptIcon, ref h2))
+                if (LayoutIconButton(WitStyles.AcceptIcon))
                 {
                     if (!unlockText.Equals(value))
                     {
@@ -307,30 +252,24 @@ namespace Facebook.WitAi
                     unlockText = string.Empty;
                     GUI.FocusControl(null);
                 }
-                h = Mathf.Max(h, h2);
             }
             // Edit button
             else
             {
-                if (LayoutIconButton(WitStyles.EditIcon, ref h2))
+                if (LayoutIconButton(WitStyles.EditIcon))
                 {
                     unlockID = id;
                     unlockText = value;
                 }
-                h = Mathf.Max(h, h2);
             }
 
             // End Horizontal
             GUILayout.EndHorizontal();
-
-            // Add height
-            height += h;
         }
         #endregion
 
         #region MISCELANEOUS
-        // Simple toggle
-        public static void LayoutToggle(GUIContent key, ref bool value, ref bool isUpdated, ref float height)
+        public static void LayoutToggle(GUIContent key, ref bool value, ref bool isUpdated)
         {
             // Simple layout
             bool newValue = EditorGUILayout.Toggle(key, value, WitStyles.Toggle);
@@ -341,12 +280,8 @@ namespace Facebook.WitAi
                 value = newValue;
                 isUpdated = true;
             }
-
-            // Add height
-            height += WitStyles.Toggle.CalcSize(key).y;
         }
-        // Simple popup/dropdown
-        public static void LayoutPopup(string key, string[] options, ref int selection, ref bool isUpdated, ref float height)
+        public static void LayoutPopup(string key, string[] options, ref int selection, ref bool isUpdated)
         {
             // Simple layout
             int newValue = EditorGUILayout.Popup(key, selection, options, WitStyles.Popup);
@@ -357,29 +292,24 @@ namespace Facebook.WitAi
                 selection = newValue;
                 isUpdated = true;
             }
-
-            // Add height
-            height += WitStyles.Popup.CalcSize(new GUIContent(key)).y;
         }
-        // Handles
         public static bool LayoutSerializedObjectPopup(SerializedObject serializedObject, string propertyName, string[] names, ref int index)
         {
             // Get property
             var property = serializedObject.FindProperty(propertyName);
             // Get intent
             string intent;
-            float height = 0f;
             bool updated = false;
             if (names != null && names.Length > 0)
             {
                 index = Mathf.Clamp(index, 0, names.Length);
-                LayoutPopup(property.displayName, names, ref index, ref updated, ref height);
+                LayoutPopup(property.displayName, names, ref index, ref updated);
                 intent = names[index];
             }
             else
             {
                 intent = property.stringValue;
-                LayoutTextField(new GUIContent(property.displayName), ref intent, ref updated, ref height);
+                LayoutTextField(new GUIContent(property.displayName), ref intent, ref updated);
             }
 
             // Success
@@ -395,10 +325,7 @@ namespace Facebook.WitAi
         #endregion
 
         #region WINDOW
-        /// <summary>
-        /// Handle Window Layout
-        /// </summary>
-        public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderURL, Func<float> windowContentLayout, ref Vector2 offset, out Vector2 size)
+        public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderURL, Action windowContentLayout, ref Vector2 offset, out Vector2 size)
         {
             // Init styles
             WitStyles.Init();
@@ -408,7 +335,6 @@ namespace Facebook.WitAi
             // Begin scroll
             offset = GUILayout.BeginScrollView(offset);
             // Top padding
-            float height = WitStyles.WindowPaddingTop;
             GUILayout.Space(WitStyles.WindowPaddingTop);
             // Left padding
             GUILayout.BeginHorizontal();
@@ -419,21 +345,20 @@ namespace Facebook.WitAi
             if (windowHeader != null)
             {
                 float headerWidth = Mathf.Min(windowHeader.width, Mathf.Min(WitStyles.WindowMinWidth, windowWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
-                LayoutHeaderButton(windowHeader, windowHeaderURL, headerWidth, ref height);
+                LayoutHeaderButton(windowHeader, windowHeaderURL, headerWidth);
                 GUILayout.Space(WitStyles.HeaderPaddingBottom);
-                height += WitStyles.HeaderPaddingBottom;
             }
 
             // Layout header label
             if (!string.IsNullOrEmpty(windowTitle))
             {
-                LayoutHeaderLabel(windowTitle, ref height);
+                LayoutHeaderLabel(windowTitle);
             }
 
             // Layout content
             if (windowContentLayout != null)
             {
-                height += windowContentLayout();
+                windowContentLayout();
             }
 
             // Right padding
@@ -441,13 +366,12 @@ namespace Facebook.WitAi
             GUILayout.Space(WitStyles.WindowPaddingRight);
             GUILayout.EndHorizontal();
             // Bottom padding
-            height += WitStyles.WindowPaddingBottom;
             GUILayout.Space(WitStyles.WindowPaddingBottom);
             // End scroll
             GUILayout.EndScrollView();
 
             // Return size
-            size = new Vector2(WitStyles.WindowMinWidth, Mathf.Max(height, WitStyles.WindowMinHeight));
+            size = new Vector2(WitStyles.WindowMinWidth, WitStyles.WindowMinHeight);
         }
         #endregion
     }

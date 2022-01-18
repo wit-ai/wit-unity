@@ -41,6 +41,6 @@ namespace Facebook.WitAi.Windows
             minSize = size;
         }
         // Draw content of window
-        protected abstract float LayoutContent();
+        protected abstract void LayoutContent();
     }
 }

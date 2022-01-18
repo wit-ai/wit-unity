@@ -36,22 +36,16 @@ namespace Facebook.WitAi.Windows
 
         #region LAYOUT
         // Layout content
-        protected override float LayoutContent()
+        protected override void LayoutContent()
         {
-            // Get height
-            float height = 0f;
-
             // Layout popup
             int index = witConfigIndex;
-            WitConfigurationEditorUI.LayoutConfigurationSelect(ref index, ref height);
+            WitConfigurationEditorUI.LayoutConfigurationSelect(ref index);
             // Selection changed
             if (index != witConfigIndex)
             {
                 SetConfiguration(index);
             }
-
-            // Return height
-            return height;
         }
         // Get header url
         protected override string HeaderUrl

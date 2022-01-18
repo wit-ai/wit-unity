@@ -17,11 +17,15 @@ namespace Facebook.WitAi.Windows
         protected Vector2 scrollOffset;
         protected string serverToken;
         public Action successAction;
+        protected virtual GUIContent Title => WitStyles.SetupTitleContent;
+        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
+        protected virtual string HeaderUrl => WitStyles.Texts.WitUrl;
+        protected virtual string ServerTokenLabel => WitStyles.Texts.SetupServerTokenLabel;
 
         protected virtual void OnEnable()
         {
             WitAuthUtility.InitEditorTokens();
-            titleContent = GetTitle();
+            titleContent = Title;
         }
         protected virtual void OnWizardCreate()
         {
@@ -51,60 +55,22 @@ namespace Facebook.WitAi.Windows
         {
             // Layout window
             Vector2 size = Vector2.zero;
-            WitEditorUI.LayoutWindow(titleContent.text, GetHeaderIcon(), GetHeaderURL(), LayoutContent, ref scrollOffset, out size);
+            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
 
             // Success if token is valid
             return WitConfigurationUtility.IsServerTokenValid(serverToken);
         }
-
-        /// <summary>
-        /// Title
-        /// </summary>
-        protected virtual GUIContent GetTitle()
+        protected virtual void LayoutContent()
         {
-            return WitStyles.SetupTitleContent;
-        }
-        /// <summary>
-        /// Header icon getter
-        /// </summary>
-        protected virtual Texture2D GetHeaderIcon()
-        {
-            return WitStyles.HeaderIcon;
-        }
-        /// <summary>
-        /// Header url getter
-        /// </summary>
-        protected virtual string GetHeaderURL()
-        {
-            return WitStyles.Texts.WitUrl;
-        }
-        /// <summary>
-        /// Get header text
-        /// </summary>
-        protected virtual string GetServerTokenText()
-        {
-            return WitStyles.Texts.SetupServerTokenLabel;
-        }
-        /// <summary>
-        /// Draw content of window
-        /// </summary>
-        protected virtual float LayoutContent()
-        {
-            // Center Begin
-            float h = 0f;
-
-            // Token
-            if (null == serverToken)
+            // Get new Token
+            if (string.IsNullOrEmpty(serverToken))
             {
                 serverToken = WitAuthUtility.ServerToken;
             }
 
             // Layout field
             bool updated = false;
-            WitEditorUI.LayoutPasswordField(new GUIContent(GetServerTokenText()), ref serverToken, ref updated, ref h);
-
-            // Return
-            return h;
+            WitEditorUI.LayoutPasswordField(new GUIContent(ServerTokenLabel), ref serverToken, ref updated);
         }
     }
 }

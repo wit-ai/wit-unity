@@ -38,24 +38,23 @@ namespace Facebook.WitAi.Windows
             return base.GetLocalizedText(property, key);
         }
         // Layout entity override
-        protected override void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty, GUIContent labelContent, bool canEdit,
-            ref float height)
+        protected override void LayoutPropertyField(FieldInfo subfield, SerializedProperty subfieldProperty, GUIContent labelContent, bool canEdit)
         {
             // Handle all the same except entities
             if (canEdit || !string.Equals(subfield.Name, "entities"))
             {
-                base.LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit, ref height);
+                base.LayoutPropertyField(subfield, subfieldProperty, labelContent, canEdit);
                 return;
             }
             
             // Entity foldout
-            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded, ref height);
+            subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded);
             if (subfieldProperty.isExpanded)
             {
                 EditorGUI.indentLevel++;
                 if (subfieldProperty.arraySize == 0)
                 {
-                    WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationEntitiesMissingLabel, ref height);
+                    WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationEntitiesMissingLabel);
                 }
                 else
                 {
@@ -63,14 +62,13 @@ namespace Facebook.WitAi.Windows
                     {
                         SerializedProperty entityProp = subfieldProperty.GetArrayElementAtIndex(e);
                         string entityPropName = entityProp.FindPropertyRelative("name").stringValue;
-                        WitEditorUI.LayoutLabel(entityPropName, ref height);
+                        WitEditorUI.LayoutLabel(entityPropName);
                     }
                 }
                 EditorGUI.indentLevel--;
             }
         }
-
-// Determine if should layout field
+        // Determine if should layout field
         protected override bool ShouldLayoutField(FieldInfo subfield)
         {
             switch (subfield.Name)

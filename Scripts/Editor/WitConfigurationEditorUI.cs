@@ -21,7 +21,7 @@ namespace Facebook.WitAi
     public static class WitConfigurationEditorUI
     {
         // Configuration select
-        public static void LayoutConfigurationSelect(ref int configIndex, ref float height)
+        public static void LayoutConfigurationSelect(ref int configIndex)
         {
             // Refresh configurations if needed
             WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
@@ -34,7 +34,7 @@ namespace Facebook.WitAi
             // Error if none found
             if (witConfigs.Length == 0)
             {
-                WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationSelectMissingLabel, ref height);
+                WitEditorUI.LayoutErrorLabel(WitStyles.Texts.ConfigurationSelectMissingLabel);
                 return;
             }
 
@@ -43,7 +43,7 @@ namespace Facebook.WitAi
 
             // Layout popup
             bool configUpdated = false;
-            WitEditorUI.LayoutPopup(WitStyles.Texts.ConfigurationSelectLabel, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated, ref height);
+            WitEditorUI.LayoutPopup(WitStyles.Texts.ConfigurationSelectLabel, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated);
         }
     }
 }
