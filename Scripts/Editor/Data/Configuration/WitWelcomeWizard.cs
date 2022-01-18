@@ -20,12 +20,35 @@ namespace Facebook.WitAi.Windows
         protected virtual GUIContent Title => WitStyles.SetupTitleContent;
         protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
         protected virtual string HeaderUrl => WitStyles.Texts.WitUrl;
-        protected virtual string ServerTokenLabel => WitStyles.Texts.SetupServerTokenLabel;
+        protected virtual string SubheaderLabel => WitStyles.Texts.SetupSubheaderLabel;
 
         protected virtual void OnEnable()
         {
             WitAuthUtility.InitEditorTokens();
             titleContent = Title;
+        }
+        protected override bool DrawWizardGUI()
+        {
+            // Layout window
+            Vector2 size = Vector2.zero;
+            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
+
+            // Success if token is valid
+            return WitConfigurationUtility.IsServerTokenValid(serverToken);
+        }
+        protected virtual void LayoutContent()
+        {
+            // Get new Token
+            if (string.IsNullOrEmpty(serverToken))
+            {
+                serverToken = WitAuthUtility.ServerToken;
+            }
+            // Layout subheader
+            WitEditorUI.LayoutSubheaderLabel(SubheaderLabel);
+
+            // Layout field
+            bool updated = false;
+            WitEditorUI.LayoutPasswordField(WitStyles.SettingsServerTokenContent, ref serverToken, ref updated);
         }
         protected virtual void OnWizardCreate()
         {
@@ -50,27 +73,6 @@ namespace Facebook.WitAi.Windows
             {
                 throw new ArgumentException(WitStyles.Texts.SetupSubmitFailLabel);
             }
-        }
-        protected override bool DrawWizardGUI()
-        {
-            // Layout window
-            Vector2 size = Vector2.zero;
-            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
-
-            // Success if token is valid
-            return WitConfigurationUtility.IsServerTokenValid(serverToken);
-        }
-        protected virtual void LayoutContent()
-        {
-            // Get new Token
-            if (string.IsNullOrEmpty(serverToken))
-            {
-                serverToken = WitAuthUtility.ServerToken;
-            }
-
-            // Layout field
-            bool updated = false;
-            WitEditorUI.LayoutPasswordField(new GUIContent(ServerTokenLabel), ref serverToken, ref updated);
         }
     }
 }

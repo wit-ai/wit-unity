@@ -29,7 +29,7 @@ namespace Facebook.WitAi
             public string ConfigurationSelectMissingLabel;
             [Header("Setup Settings Texts")]
             public string SetupTitleLabel;
-            public string SetupServerTokenLabel;
+            public string SetupSubheaderLabel;
             public string SetupSubmitButtonLabel;
             public string SetupSubmitFailLabel;
             [Header("Understanding Viewer Texts")]
@@ -100,7 +100,6 @@ namespace Facebook.WitAi
         public const float WindowPaddingRight = 20f;
         // Spacing
         public const float HeaderPaddingBottom = 10f;
-        public const float ConfigurationPadding = 5f;
 
         // Icons
         public static Texture2D TitleIcon;
@@ -118,7 +117,6 @@ namespace Facebook.WitAi
         public static GUIContent ConfigurationServerTokenContent;
         public static GUIContent ConfigurationClientTokenContent;
         public static GUIContent ConfigurationRequestTimeoutContent;
-        public static string[] ConfigurationResponseTabTexts;
         // Label Styles
         public static GUIStyle Label;
         public static GUIStyle LabelError;
@@ -193,7 +191,7 @@ namespace Facebook.WitAi
             ConfigurationServerTokenContent = new GUIContent(Texts.ConfigurationServerTokenLabel);
             ConfigurationClientTokenContent = new GUIContent(Texts.ConfigurationClientTokenLabel);
             ConfigurationRequestTimeoutContent = new GUIContent(Texts.ConfigurationRequestTimeoutLabel);
-            ConfigurationResponseTabTexts = new string[] { Texts.ConfigurationApplicationTabLabel, Texts.ConfigurationIntentsTabLabel, Texts.ConfigurationEntitiesTabLabel, Texts.ConfigurationTraitsTabLabel };
+
             // Label Styles
             Label = new GUIStyle();
             Label.fontSize = 11;

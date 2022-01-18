@@ -27,7 +27,7 @@ namespace Facebook.WitAi
             WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
             if (witConfigs == null)
             {
-                WitConfigurationUtility.RefreshConfigurationList();
+                WitConfigurationUtility.ReloadConfigurationData();
                 witConfigs = WitConfigurationUtility.WitConfigs;
             }
 

@@ -36,7 +36,7 @@ namespace Facebook.WitAi.Data.Configuration
         public static bool HasValidConfig()
         {
             // Refresh list
-            RefreshConfigurationList();
+            ReloadConfigurationData();
             // Check configs
             for (int i = 0; i < witConfigs.Length; i++)
             {
@@ -49,7 +49,7 @@ namespace Facebook.WitAi.Data.Configuration
             return false;
         }
         // Refresh configuration asset list
-        public static void RefreshConfigurationList()
+        public static void ReloadConfigurationData()
         {
             // Find all Wit Configurations
             string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
@@ -70,21 +70,10 @@ namespace Facebook.WitAi.Data.Configuration
             // Init if needed
             if (witConfigs == null)
             {
-                RefreshConfigurationList();
+                ReloadConfigurationData();
             }
-            // Check for config
-            if (witConfigs != null)
-            {
-                for (int c = 0; c < witConfigs.Length; c++)
-                {
-                    if (witConfigs[c] == configuration)
-                    {
-                        return c;
-                    }
-                }
-            }
-            // Not found
-            return -1;
+            // Search through configs
+            return Array.FindIndex(witConfigs, (checkConfig) => checkConfig == configuration );
         }
         // Get configuration index
         public static int GetConfigurationIndex(string configurationName)
@@ -92,21 +81,10 @@ namespace Facebook.WitAi.Data.Configuration
             // Init if needed
             if (witConfigs == null)
             {
-                RefreshConfigurationList();
+                ReloadConfigurationData();
             }
-            // Check for config
-            if (witConfigs != null)
-            {
-                for (int c = 0; c < witConfigs.Length; c++)
-                {
-                    if (configurationName.Equals(witConfigs[c].name))
-                    {
-                        return c;
-                    }
-                }
-            }
-            // Not found
-            return -1;
+            // Search through configs
+            return Array.FindIndex(witConfigs, (checkConfig) => string.Equals(checkConfig.name, configurationName));
         }
         // Get application id
         public static string GetAppID(WitConfiguration configuration)
@@ -130,12 +108,12 @@ namespace Facebook.WitAi.Data.Configuration
                 // Create
                 WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
                 asset.clientAccessToken = string.Empty;
-                path = path.Substring(Application.dataPath.Length - 6);
+                path = path.Replace(Application.dataPath, "Assets");
                 AssetDatabase.CreateAsset(asset, path);
                 AssetDatabase.SaveAssets();
 
                 // Refresh configurations
-                RefreshConfigurationList();
+                ReloadConfigurationData();
 
                 // Get new index following reload
                 string name = System.IO.Path.GetFileNameWithoutExtension(path);
@@ -209,7 +187,7 @@ namespace Facebook.WitAi.Data.Configuration
                 // Apply token
                 WitAuthUtility.ServerToken = serverToken;
                 // Refresh configurations
-                RefreshConfigurationList();
+                ReloadConfigurationData();
             }
             // On complete
             onSetComplete?.Invoke(error);

@@ -26,7 +26,7 @@ namespace Facebook.WitAi.Windows
         {
             WitStyles.Init();
             titleContent = Title;
-            WitConfigurationUtility.RefreshConfigurationList();
+            WitConfigurationUtility.ReloadConfigurationData();
         }
         // Window close
         protected virtual void OnDisable()

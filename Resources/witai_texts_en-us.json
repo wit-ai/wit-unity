@@ -7,7 +7,7 @@
   "ConfigurationSelectLabel": "Wit Configuration",
   "ConfigurationSelectMissingLabel": "No Wit Configurations Found",
   "SetupTitleLabel": "Welcome to Wit.ai",
-  "SetupServerTokenLabel": "Server Access Token",
+  "SetupSubheaderLabel": "Paste your Wit.ai Server Access Token here.",
   "SetupSubmitButtonLabel": "Link",
   "SetupSubmitFailLabel": "Please enter a valid token before linking.",
   "UnderstandingViewerLabel": "Wit.ai Understanding Viewer",

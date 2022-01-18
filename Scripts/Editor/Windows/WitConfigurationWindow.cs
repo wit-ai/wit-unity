@@ -11,43 +11,9 @@ namespace Facebook.WitAi.Windows
 {
     public abstract class WitConfigurationWindow : BaseWitWindow
     {
-        #region CONFIGURATION
-        // Selected wit configuration
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
 
-        // Set configuration
-        protected virtual void SetConfiguration(int newConfiguration)
-        {
-            // Apply
-            witConfigIndex = newConfiguration;
-
-            // Get configuration
-            WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
-            witConfiguration = witConfigs != null && witConfigIndex >= 0 && witConfigIndex < witConfigs.Length ? witConfigs[witConfigIndex] : null;
-        }
-        // Init tokens
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            WitAuthUtility.InitEditorTokens();
-        }
-        #endregion
-
-        #region LAYOUT
-        // Layout content
-        protected override void LayoutContent()
-        {
-            // Layout popup
-            int index = witConfigIndex;
-            WitConfigurationEditorUI.LayoutConfigurationSelect(ref index);
-            // Selection changed
-            if (index != witConfigIndex)
-            {
-                SetConfiguration(index);
-            }
-        }
-        // Get header url
         protected override string HeaderUrl
         {
             get
@@ -60,6 +26,27 @@ namespace Facebook.WitAi.Windows
                 return base.HeaderUrl;
             }
         }
-        #endregion
+        protected virtual void SetConfiguration(int newConfiguration)
+        {
+            witConfigIndex = newConfiguration;
+            WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
+            witConfiguration = witConfigs != null && witConfigIndex >= 0 && witConfigIndex < witConfigs.Length ? witConfigs[witConfigIndex] : null;
+        }
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            WitAuthUtility.InitEditorTokens();
+        }
+        protected override void LayoutContent()
+        {
+            // Layout popup
+            int index = witConfigIndex;
+            WitConfigurationEditorUI.LayoutConfigurationSelect(ref index);
+            // Selection changed
+            if (index != witConfigIndex)
+            {
+                SetConfiguration(index);
+            }
+        }
     }
 }

@@ -59,12 +59,12 @@ namespace Facebook.WitAi
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(EditorGUI.indentLevel * WitStyles.TextButtonPadding * 2f);
-                for (int t = 0; t < tabTitles.Length; t++)
+                for (int i = 0; i < tabTitles.Length; i++)
                 {
-                    GUI.enabled = selection != t;
-                    if (LayoutTabButton(tabTitles[t]))
+                    GUI.enabled = selection != i;
+                    if (LayoutTabButton(tabTitles[i]))
                     {
-                        selection = t;
+                        selection = i;
                     }
                 }
                 GUI.enabled = true;
@@ -145,74 +145,71 @@ namespace Facebook.WitAi
         #endregion
 
         #region FIELDS
-        public static void LayoutTextField(GUIContent key, ref string value, ref bool isUpdated)
+        public static void LayoutTextField(GUIContent key, ref string fieldValue, ref bool isUpdated)
         {
             // Ensure not null
-            if (value == null)
+            if (fieldValue == null)
             {
-                value = string.Empty;
+                fieldValue = string.Empty;
             }
 
             // Simple layout
-            string newValue = EditorGUILayout.TextField(key, value, WitStyles.TextField);
+            string newFieldValue = EditorGUILayout.TextField(key, fieldValue, WitStyles.TextField);
 
-            // Update
-            if (!newValue.Equals(value))
+            // Update if changed
+            if (!string.Equals(fieldValue, newFieldValue))
             {
-                value = newValue;
+                fieldValue = newFieldValue;
                 isUpdated = true;
             }
         }
-        public static void LayoutPasswordField(GUIContent key, ref string value, ref bool isUpdated)
+        public static void LayoutPasswordField(GUIContent key, ref string fieldValue, ref bool isUpdated)
         {
             // Ensure not null
-            if (value == null)
+            if (fieldValue == null)
             {
-                value = string.Empty;
+                fieldValue = string.Empty;
             }
-            // Begin horizontal
-            GUILayout.BeginHorizontal();
 
             // Simple layout
-            string newValue = EditorGUILayout.PasswordField(key, value, WitStyles.PasswordField);
+            GUILayout.BeginHorizontal();
+            string newFieldValue = EditorGUILayout.PasswordField(key, fieldValue, WitStyles.PasswordField);
 
             // Layout icon
             if (LayoutIconButton(WitStyles.PasteIcon))
             {
-                newValue = EditorGUIUtility.systemCopyBuffer;
+                newFieldValue = EditorGUIUtility.systemCopyBuffer;
                 GUI.FocusControl(null);
             }
-
-            // End horizontal
             GUILayout.EndHorizontal();
 
-            // Update
-            if (!newValue.Equals(value))
+            // Update if changed
+            if (!string.Equals(fieldValue, newFieldValue))
             {
-                value = newValue;
+                fieldValue = newFieldValue;
                 isUpdated = true;
             }
         }
-        public static void LayoutIntField(GUIContent key, ref int value, ref bool isUpdated)
+        public static void LayoutIntField(GUIContent key, ref int fieldValue, ref bool isUpdated)
         {
             // Simple layout
-            int newValue = EditorGUILayout.IntField(key, value, WitStyles.IntField);
+            int newFieldValue = EditorGUILayout.IntField(key, fieldValue, WitStyles.IntField);
 
             // Update
-            if (newValue != value)
+            if (fieldValue != newFieldValue)
             {
-                value = newValue;
+                fieldValue = newFieldValue;
                 isUpdated = true;
             }
         }
         // Locked text field
-        private static string unlockID = "";
-        private static string unlockText = "";
-        public static void LayoutLockedTextField(GUIContent key, ref string value, ref bool isUpdated)
+        private static string unlockFieldId = "";
+        private static string unlockFieldText = "";
+        public static void LayoutLockedTextField(GUIContent key, ref string fieldValue, ref bool isUpdated)
         {
             // Determine if locked
-            string id = GetFoldoutID(key.text);
-            bool isEditing = unlockID.Equals(id);
+            string fieldId = GetFoldoutID(key.text);
+            bool isEditing = unlockFieldId.Equals(fieldId);
 
             // Begin Horizontal
             GUILayout.BeginHorizontal();
@@ -220,16 +217,16 @@ namespace Facebook.WitAi
             // Hide if not editing
             GUI.enabled = isEditing;
             // Layout
-            string newValue = isEditing ? unlockText : value;
+            string newFieldValue = isEditing ? unlockFieldText : fieldValue;
             bool newUpdate = false;
-            LayoutTextField(key, ref newValue, ref newUpdate);
+            LayoutTextField(key, ref newFieldValue, ref newUpdate);
             // Allow next item
             GUI.enabled = true;
 
             // Updated
             if (newUpdate && isEditing)
             {
-                unlockText = newValue;
+                unlockFieldText = newFieldValue;
             }
 
             // Cancel vs Apply Buttons
@@ -237,19 +234,19 @@ namespace Facebook.WitAi
             {
                 if (LayoutIconButton(WitStyles.ResetIcon))
                 {
-                    unlockID = string.Empty;
-                    unlockText = string.Empty;
+                    unlockFieldId = string.Empty;
+                    unlockFieldText = string.Empty;
                     GUI.FocusControl(null);
                 }
                 if (LayoutIconButton(WitStyles.AcceptIcon))
                 {
-                    if (!unlockText.Equals(value))
+                    if (!string.Equals(fieldValue, unlockFieldText))
                     {
-                        value = unlockText;
+                        fieldValue = unlockFieldText;
                         isUpdated = true;
                     }
-                    unlockID = string.Empty;
-                    unlockText = string.Empty;
+                    unlockFieldId = string.Empty;
+                    unlockFieldText = string.Empty;
                     GUI.FocusControl(null);
                 }
             }
@@ -258,8 +255,8 @@ namespace Facebook.WitAi
             {
                 if (LayoutIconButton(WitStyles.EditIcon))
                 {
-                    unlockID = id;
-                    unlockText = value;
+                    unlockFieldId = fieldId;
+                    unlockFieldText = fieldValue;
                 }
             }
 
@@ -269,27 +266,27 @@ namespace Facebook.WitAi
         #endregion
 
         #region MISCELANEOUS
-        public static void LayoutToggle(GUIContent key, ref bool value, ref bool isUpdated)
+        public static void LayoutToggle(GUIContent key, ref bool toggleValue, ref bool isUpdated)
         {
             // Simple layout
-            bool newValue = EditorGUILayout.Toggle(key, value, WitStyles.Toggle);
+            bool newToggleValue = EditorGUILayout.Toggle(key, toggleValue, WitStyles.Toggle);
 
             // Update
-            if (value != newValue)
+            if (toggleValue != newToggleValue)
             {
-                value = newValue;
+                toggleValue = newToggleValue;
                 isUpdated = true;
             }
         }
-        public static void LayoutPopup(string key, string[] options, ref int selection, ref bool isUpdated)
+        public static void LayoutPopup(string key, string[] options, ref int selectionValue, ref bool isUpdated)
         {
             // Simple layout
-            int newValue = EditorGUILayout.Popup(key, selection, options, WitStyles.Popup);
+            int newSelectionValue = EditorGUILayout.Popup(key, selectionValue, options, WitStyles.Popup);
 
             // Update
-            if (selection != newValue)
+            if (selectionValue != newSelectionValue)
             {
-                selection = newValue;
+                selectionValue = newSelectionValue;
                 isUpdated = true;
             }
         }
@@ -325,7 +322,7 @@ namespace Facebook.WitAi
         #endregion
 
         #region WINDOW
-        public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderURL, Action windowContentLayout, ref Vector2 offset, out Vector2 size)
+        public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderUrl, Action windowContentLayout, ref Vector2 offset, out Vector2 size)
         {
             // Init styles
             WitStyles.Init();
@@ -345,7 +342,7 @@ namespace Facebook.WitAi
             if (windowHeader != null)
             {
                 float headerWidth = Mathf.Min(windowHeader.width, Mathf.Min(WitStyles.WindowMinWidth, windowWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
-                LayoutHeaderButton(windowHeader, windowHeaderURL, headerWidth);
+                LayoutHeaderButton(windowHeader, windowHeaderUrl, headerWidth);
                 GUILayout.Space(WitStyles.HeaderPaddingBottom);
             }
 
@@ -356,10 +353,7 @@ namespace Facebook.WitAi
             }
 
             // Layout content
-            if (windowContentLayout != null)
-            {
-                windowContentLayout();
-            }
+            windowContentLayout?.Invoke();
 
             // Right padding
             GUILayout.EndVertical();
