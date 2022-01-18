@@ -18,17 +18,17 @@ namespace Facebook.WitAi.Windows
         // Allow edit with lock
         protected override WitPropertyEditType EditType => WitPropertyEditType.LockEdit;
         // Determine if should layout field
-        protected override bool ShouldLayoutField(FieldInfo subfield)
+        protected override bool ShouldLayoutField(SerializedProperty property, FieldInfo subfield)
         {
             switch (subfield.Name)
             {
                 case "message":
                     return false;
             }
-            return base.ShouldLayoutField(subfield);
+            return base.ShouldLayoutField(property, subfield);
         }
         // Get default fields
-        protected override string GetDefaultFieldValue(FieldInfo subfield)
+        protected override string GetDefaultFieldValue(SerializedProperty property, FieldInfo subfield)
         {
             // Iterate options
             switch (subfield.Name)
@@ -46,7 +46,7 @@ namespace Facebook.WitAi.Windows
             }
 
             // Return base
-            return base.GetDefaultFieldValue(subfield);
+            return base.GetDefaultFieldValue(property, subfield);
         }
         // Use name value for title if possible
         protected override string GetLocalizedText(SerializedProperty property, string key)

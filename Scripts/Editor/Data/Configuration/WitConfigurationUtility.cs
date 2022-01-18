@@ -98,18 +98,32 @@ namespace Facebook.WitAi.Data.Configuration
         #endregion
 
         #region MANAGEMENT
-        // Create configuration for token
+        // Create configuration for token with blank configuration
         public static int CreateConfiguration(string serverToken)
         {
+            // Generate blank asset
+            WitConfiguration configurationAsset = ScriptableObject.CreateInstance<WitConfiguration>();
+            configurationAsset.name = WitStyles.Texts.ConfigurationFileNameLabel;
+            configurationAsset.clientAccessToken = string.Empty;
             // Create
-            string path = EditorUtility.SaveFilePanel("Create Wit Configuration", Application.dataPath, "WitConfiguration", "asset");
+            int index = SaveConfiguration(serverToken, configurationAsset);
+            if (index == -1)
+            {
+                MonoBehaviour.DestroyImmediate(configurationAsset);
+            }
+            // Return new index
+            return index;
+        }
+        // Save configuration to selected location
+        public static int SaveConfiguration(string serverToken, WitConfiguration configurationAsset)
+        {
+            // Create
+            string path = EditorUtility.SaveFilePanel(WitStyles.Texts.ConfigurationFileManagerLabel, Application.dataPath, WitStyles.Texts.ConfigurationFileNameLabel, "asset");
             if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
             {
                 // Create
-                WitConfiguration asset = ScriptableObject.CreateInstance<WitConfiguration>();
-                asset.clientAccessToken = string.Empty;
                 path = path.Replace(Application.dataPath, "Assets");
-                AssetDatabase.CreateAsset(asset, path);
+                AssetDatabase.CreateAsset(configurationAsset, path);
                 AssetDatabase.SaveAssets();
 
                 // Refresh configurations
@@ -298,6 +312,11 @@ namespace Facebook.WitAi.Data.Configuration
             if (string.IsNullOrEmpty(appID))
             {
                 RefreshDataComplete(configuration, "Cannot refresh without application data", onRefreshComplete);
+                return;
+            }
+            if (Application.isPlaying)
+            {
+                RefreshDataComplete(configuration, "Cannot refresh while playing", onRefreshComplete);
                 return;
             }
             if (IsRefreshing(appID))

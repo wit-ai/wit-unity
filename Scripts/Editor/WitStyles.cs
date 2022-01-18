@@ -23,13 +23,17 @@ namespace Facebook.WitAi
             public string LanguageID;
             public string WitUrl;
             public string WitAppsUrl;
-            public string WitAppSettingsUrl;
+            public string WitAppSettingsEndpoint;
+            public string WitAppUnderstandingEndpoint;
             public string WitOpenButtonLabel;
+            public string ConfigurationFileManagerLabel;
+            public string ConfigurationFileNameLabel;
             public string ConfigurationSelectLabel;
             public string ConfigurationSelectMissingLabel;
             [Header("Setup Settings Texts")]
             public string SetupTitleLabel;
             public string SetupSubheaderLabel;
+            public string SetupServerTokenLabel;
             public string SetupSubmitButtonLabel;
             public string SetupSubmitFailLabel;
             [Header("Understanding Viewer Texts")]
@@ -93,12 +97,13 @@ namespace Facebook.WitAi
         }
         // Window Layout Data
         public const float WindowMinWidth = 450f;
-        public const float WindowMinHeight = 300f;
+        public const float WindowMinHeight = 550f;
         public const float WindowPaddingTop = 20f;
         public const float WindowPaddingBottom = 20f;
         public const float WindowPaddingLeft = 20f;
         public const float WindowPaddingRight = 20f;
         // Spacing
+        public const float HeaderWidth = 350f;
         public const float HeaderPaddingBottom = 10f;
 
         // Icons
@@ -133,6 +138,9 @@ namespace Facebook.WitAi
         private const float TabButtonHeight = 40f;
         public static GUIStyle HeaderButton;
         public static Color HeaderTextColor = new Color(0.09f, 0.47f, 0.95f); // FB
+        // Wit link color
+        public static string WitLinkColor = "#ccccff"; // "blue" if not pro
+        public const string WitLinkKey = "[COLOR]";
 
         // Text Field Styles
         public static GUIStyle TextField;
@@ -211,6 +219,11 @@ namespace Facebook.WitAi
             LabelHeader.margin = new RectOffset(0, 0, 10, 10);
             LabelError = new GUIStyle(Label);
             LabelError.normal.textColor = Color.red;
+            // Set to blue if not pro
+            if (!EditorGUIUtility.isProSkin)
+            {
+                WitLinkColor = "blue";
+            }
 
             // Button Styles
             TextButton = new GUIStyle(EditorStyles.miniButton);
@@ -240,19 +253,42 @@ namespace Facebook.WitAi
             // Initialized
             Initialized = true;
         }
-        // Return settings id for application id
-        public static string GetSettingsURL(string appId)
+        public enum WitAppEndpointType
         {
+            Settings,
+            Understanding
+        }
+        public static string GetAppURL(string appId, WitAppEndpointType endpointType)
+        {
+            // Ignore without base url
             if (string.IsNullOrEmpty(Texts.WitUrl))
             {
                 return "";
             }
+            // Return apps url without id
             string url = Texts.WitUrl + Texts.WitAppsUrl;
             if (string.IsNullOrEmpty(appId))
             {
                 return url;
             }
-            return url + Texts.WitAppSettingsUrl.Replace("[APP_ID]", appId);
+            // Determine endpoint
+            string endpoint;
+            switch (endpointType)
+            {
+                case WitAppEndpointType.Understanding:
+                    endpoint = Texts.WitAppUnderstandingEndpoint;
+                    break;
+                case WitAppEndpointType.Settings:
+                    endpoint = Texts.WitAppSettingsEndpoint;
+                    break;
+                default:
+                    endpoint = Texts.WitAppSettingsEndpoint;
+                    break;
+            }
+            // Replace app id key with desired app id
+            endpoint = endpoint.Replace("[APP_ID]", appId);
+            // Return full url
+            return url + endpoint;
         }
     }
 }

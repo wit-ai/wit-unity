@@ -40,7 +40,7 @@ namespace Facebook.WitAi.Windows
             return base.GetLocalizedText(property, key);
         }
         // Determine if should layout field
-        protected override bool ShouldLayoutField(FieldInfo subfield)
+        protected override bool ShouldLayoutField(SerializedProperty property, FieldInfo subfield)
         {
             switch (subfield.Name)
             {
@@ -48,7 +48,7 @@ namespace Facebook.WitAi.Windows
                 case "keywords":
                     return false;
             }
-            return base.ShouldLayoutField(subfield);
+            return base.ShouldLayoutField(property, subfield);
         }
     }
 }

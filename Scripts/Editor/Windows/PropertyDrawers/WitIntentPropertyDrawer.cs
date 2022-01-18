@@ -58,9 +58,9 @@ namespace Facebook.WitAi.Windows
                 }
                 else
                 {
-                    for (int e = 0; e < subfieldProperty.arraySize; e++)
+                    for (int i = 0; i < subfieldProperty.arraySize; i++)
                     {
-                        SerializedProperty entityProp = subfieldProperty.GetArrayElementAtIndex(e);
+                        SerializedProperty entityProp = subfieldProperty.GetArrayElementAtIndex(i);
                         string entityPropName = entityProp.FindPropertyRelative("name").stringValue;
                         WitEditorUI.LayoutLabel(entityPropName);
                     }
@@ -69,14 +69,14 @@ namespace Facebook.WitAi.Windows
             }
         }
         // Determine if should layout field
-        protected override bool ShouldLayoutField(FieldInfo subfield)
+        protected override bool ShouldLayoutField(SerializedProperty property, FieldInfo subfield)
         {
             switch (subfield.Name)
             {
                 case "name":
                     return false;
             }
-            return base.ShouldLayoutField(subfield);
+            return base.ShouldLayoutField(property, subfield);
         }
     }
 }

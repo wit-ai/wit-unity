@@ -12,45 +12,43 @@ using Facebook.WitAi.Data.Configuration;
 
 namespace Facebook.WitAi.Windows
 {
-    public class WitWelcomeWizard : ScriptableWizard
+    public class WitWelcomeWizard : WitScriptableWizard
     {
-        protected Vector2 scrollOffset;
         protected string serverToken;
         public Action successAction;
-        protected virtual GUIContent Title => WitStyles.SetupTitleContent;
-        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.Texts.WitUrl;
-        protected virtual string SubheaderLabel => WitStyles.Texts.SetupSubheaderLabel;
 
-        protected virtual void OnEnable()
-        {
-            WitAuthUtility.InitEditorTokens();
-            titleContent = Title;
-        }
-        protected override bool DrawWizardGUI()
-        {
-            // Layout window
-            Vector2 size = Vector2.zero;
-            WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
+        protected override Texture2D HeaderIcon => WitStyles.HeaderIcon;
+        protected override GUIContent Title => WitStyles.SetupTitleContent;
+        protected override string ButtonLabel => WitStyles.Texts.SetupSubmitButtonLabel;
+        protected override string ContentSubheaderLabel => WitStyles.Texts.SetupSubheaderLabel;
 
-            // Success if token is valid
-            return WitConfigurationUtility.IsServerTokenValid(serverToken);
-        }
-        protected virtual void LayoutContent()
+        protected override void OnEnable()
         {
-            // Get new Token
+            base.OnEnable();
             if (string.IsNullOrEmpty(serverToken))
             {
                 serverToken = WitAuthUtility.ServerToken;
             }
-            // Layout subheader
-            WitEditorUI.LayoutSubheaderLabel(SubheaderLabel);
-
-            // Layout field
-            bool updated = false;
-            WitEditorUI.LayoutPasswordField(WitStyles.SettingsServerTokenContent, ref serverToken, ref updated);
         }
-        protected virtual void OnWizardCreate()
+        protected override bool DrawWizardGUI()
+        {
+            // Layout base
+            base.DrawWizardGUI();
+            // True if valid server token
+            return WitConfigurationUtility.IsServerTokenValid(serverToken);
+        }
+        protected override void LayoutFields()
+        {
+            string serverTokenLabelText = WitStyles.Texts.SetupServerTokenLabel;
+            serverTokenLabelText = serverTokenLabelText.Replace(WitStyles.WitLinkKey, WitStyles.WitLinkColor);
+            if (GUILayout.Button(serverTokenLabelText, WitStyles.Label))
+            {
+                Application.OpenURL(WitStyles.GetAppURL("", WitStyles.WitAppEndpointType.Settings));
+            }
+            bool updated = false;
+            WitEditorUI.LayoutPasswordField(null, ref serverToken, ref updated);
+        }
+        protected override void OnWizardCreate()
         {
             ValidateAndClose();
         }
@@ -59,20 +57,30 @@ namespace Facebook.WitAi.Windows
             WitAuthUtility.ServerToken = serverToken;
             if (WitAuthUtility.IsServerTokenValid())
             {
-                Close();
-                if (successAction == null)
+                // Create configuration
+                int index = CreateConfiguration(serverToken);
+                if (index != -1)
                 {
-                    WitWindowUtility.OpenConfigurationWindow();
-                }
-                else
-                {
-                    successAction();
+                    // Complete
+                    Close();
+                    if (successAction == null)
+                    {
+                        WitWindowUtility.OpenConfigurationWindow();
+                    }
+                    else
+                    {
+                        successAction();
+                    }
                 }
             }
             else
             {
                 throw new ArgumentException(WitStyles.Texts.SetupSubmitFailLabel);
             }
+        }
+        protected virtual int CreateConfiguration(string newToken)
+        {
+            return WitConfigurationUtility.CreateConfiguration(newToken);
         }
     }
 }

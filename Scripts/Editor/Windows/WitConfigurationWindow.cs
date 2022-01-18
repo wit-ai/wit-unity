@@ -21,11 +21,12 @@ namespace Facebook.WitAi.Windows
                 string appID = WitConfigurationUtility.GetAppID(witConfiguration);
                 if (!string.IsNullOrEmpty(appID))
                 {
-                    return WitStyles.GetSettingsURL(appID);
+                    return WitStyles.GetAppURL(appID, HeaderEndpointType);
                 }
                 return base.HeaderUrl;
             }
         }
+        protected virtual WitStyles.WitAppEndpointType HeaderEndpointType => WitStyles.WitAppEndpointType.Settings;
         protected virtual void SetConfiguration(int newConfiguration)
         {
             witConfigIndex = newConfiguration;

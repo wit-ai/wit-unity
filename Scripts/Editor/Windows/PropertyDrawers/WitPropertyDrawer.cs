@@ -82,7 +82,7 @@ namespace Facebook.WitAi.Windows
             for (int s = 0; s < subfields.Length; s++)
             {
                 FieldInfo subfield = subfields[s];
-                if (ShouldLayoutField(subfield))
+                if (ShouldLayoutField(property, subfield))
                 {
                     LayoutField(s, property, subfield, editType);
                 }
@@ -123,7 +123,7 @@ namespace Facebook.WitAi.Windows
                 string valText = subfieldProperty.stringValue;
                 if (string.IsNullOrEmpty(valText))
                 {
-                    valText = GetDefaultFieldValue(subfield);
+                    valText = GetDefaultFieldValue(property, subfield);
                 }
 
                 // Layout key
@@ -153,7 +153,7 @@ namespace Facebook.WitAi.Windows
                         string clearVal = "";
                         if (subfieldProperty.type != "string")
                         {
-                            clearVal = GetDefaultFieldValue(subfield);
+                            clearVal = GetDefaultFieldValue(property, subfield);
                         }
                         SetFieldStringValue(subfieldProperty, clearVal);
                         GUI.FocusControl(null);
@@ -189,7 +189,7 @@ namespace Facebook.WitAi.Windows
                 EditorGUILayout.PropertyField(subfieldProperty, labelContent);
                 return;
             }
-            
+
             // If cannot edit, handle here
             subfieldProperty.isExpanded = WitEditorUI.LayoutFoldout(labelContent, subfieldProperty.isExpanded);
             if (subfieldProperty.isExpanded)
@@ -217,7 +217,7 @@ namespace Facebook.WitAi.Windows
             return key;
         }
         // Way to ignore certain properties
-        protected virtual bool ShouldLayoutField(FieldInfo subfield)
+        protected virtual bool ShouldLayoutField(SerializedProperty property, FieldInfo subfield)
         {
             switch (subfield.Name)
             {
@@ -227,7 +227,7 @@ namespace Facebook.WitAi.Windows
             return true;
         }
         // Get field default value if applicable
-        protected virtual string GetDefaultFieldValue(FieldInfo subfield)
+        protected virtual string GetDefaultFieldValue(SerializedProperty property, FieldInfo subfield)
         {
             return string.Empty;
         }

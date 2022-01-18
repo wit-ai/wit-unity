@@ -154,7 +154,15 @@ namespace Facebook.WitAi
             }
 
             // Simple layout
-            string newFieldValue = EditorGUILayout.TextField(key, fieldValue, WitStyles.TextField);
+            string newFieldValue;
+            if (key == null)
+            {
+                newFieldValue = EditorGUILayout.TextField(fieldValue, WitStyles.TextField);
+            }
+            else
+            {
+                newFieldValue = EditorGUILayout.TextField(key, fieldValue, WitStyles.TextField);
+            }
 
             // Update if changed
             if (!string.Equals(fieldValue, newFieldValue))
@@ -173,7 +181,15 @@ namespace Facebook.WitAi
 
             // Simple layout
             GUILayout.BeginHorizontal();
-            string newFieldValue = EditorGUILayout.PasswordField(key, fieldValue, WitStyles.PasswordField);
+            string newFieldValue;
+            if (key == null)
+            {
+                newFieldValue = EditorGUILayout.PasswordField(fieldValue, WitStyles.PasswordField);
+            }
+            else
+            {
+                newFieldValue = EditorGUILayout.PasswordField(key, fieldValue, WitStyles.PasswordField);
+            }
 
             // Layout icon
             if (LayoutIconButton(WitStyles.PasteIcon))
@@ -330,6 +346,7 @@ namespace Facebook.WitAi
             float windowWidth = EditorGUIUtility.currentViewWidth;
 
             // Begin scroll
+            GUILayout.BeginVertical();
             offset = GUILayout.BeginScrollView(offset);
             // Top padding
             GUILayout.Space(WitStyles.WindowPaddingTop);
@@ -341,7 +358,7 @@ namespace Facebook.WitAi
             // Layout header image
             if (windowHeader != null)
             {
-                float headerWidth = Mathf.Min(windowHeader.width, Mathf.Min(WitStyles.WindowMinWidth, windowWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
+                float headerWidth = Mathf.Min(WitStyles.HeaderWidth, windowHeader.width, Mathf.Min(WitStyles.WindowMinWidth, windowWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
                 LayoutHeaderButton(windowHeader, windowHeaderUrl, headerWidth);
                 GUILayout.Space(WitStyles.HeaderPaddingBottom);
             }
@@ -350,6 +367,7 @@ namespace Facebook.WitAi
             if (!string.IsNullOrEmpty(windowTitle))
             {
                 LayoutHeaderLabel(windowTitle);
+                GUILayout.Space(WitStyles.HeaderPaddingBottom);
             }
 
             // Layout content
@@ -363,6 +381,7 @@ namespace Facebook.WitAi
             GUILayout.Space(WitStyles.WindowPaddingBottom);
             // End scroll
             GUILayout.EndScrollView();
+            GUILayout.EndVertical();
 
             // Return size
             size = new Vector2(WitStyles.WindowMinWidth, WitStyles.WindowMinHeight);
