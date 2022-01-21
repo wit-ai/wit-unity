@@ -1,6 +1,5 @@
 {
   "LanguageID": "en-us",
-  "WitUrl": "https://wit.ai",
   "WitAppsUrl": "/apps",
   "WitAppSettingsEndpoint": "/apps/[APP_ID]/settings",
   "WitAppUnderstandingEndpoint": "/apps/[APP_ID]/understanding",

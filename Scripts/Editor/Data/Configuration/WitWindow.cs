@@ -56,6 +56,7 @@ namespace Facebook.WitAi.Windows
                 }
             }
             GUILayout.EndHorizontal();
+            GUILayout.Space(WitStyles.ButtonMargin);
 
             // Configuration select
             base.LayoutContent();

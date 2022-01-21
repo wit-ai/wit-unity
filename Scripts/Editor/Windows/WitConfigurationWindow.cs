@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using UnityEngine;
 using Facebook.WitAi.Data.Configuration;
 
 namespace Facebook.WitAi.Windows
@@ -43,6 +44,7 @@ namespace Facebook.WitAi.Windows
             // Layout popup
             int index = witConfigIndex;
             WitConfigurationEditorUI.LayoutConfigurationSelect(ref index);
+            GUILayout.Space(WitStyles.ButtonMargin);
             // Selection changed
             if (index != witConfigIndex)
             {

@@ -90,14 +90,11 @@ namespace Facebook.WitAi.Windows
             LayoutConfiguration();
 
             // Additional open wit button
-            GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (WitEditorUI.LayoutTextButton(WitStyles.Texts.WitOpenButtonLabel))
+            if (GUILayout.Button(WitStyles.Texts.WitOpenButtonLabel, WitStyles.TextButton))
             {
                 Application.OpenURL(HeaderUrl);
             }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
         }
         // Layout configuration
         protected virtual void LayoutConfiguration()
@@ -138,6 +135,7 @@ namespace Facebook.WitAi.Windows
             }
             GUI.enabled = true;
             GUILayout.EndHorizontal();
+            GUILayout.Space(WitStyles.ButtonMargin);
 
             // Show configuration app data
             if (foldout)
@@ -165,6 +163,9 @@ namespace Facebook.WitAi.Windows
 
             // End vertical box layout
             GUILayout.EndVertical();
+
+            // Layout configuration request tabs
+            LayoutConfigurationRequestTabs();
         }
         // Layout configuration data
         protected virtual void LayoutConfigurationData()
@@ -183,9 +184,6 @@ namespace Facebook.WitAi.Windows
 
             // Show configuration app data
             LayoutConfigurationEndpoint();
-
-            // Layout configuration request tabs
-            LayoutConfigurationRequestTabs();
         }
         // Layout endpoint data
         protected virtual void LayoutConfigurationEndpoint()

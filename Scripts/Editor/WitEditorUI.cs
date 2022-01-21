@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Facebook.WitAi.Data.Configuration;
+using UnityEditor.PackageManager.UI;
 
 namespace Facebook.WitAi
 {
@@ -58,7 +59,6 @@ namespace Facebook.WitAi
             if (tabTitles != null)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Space(EditorGUI.indentLevel * WitStyles.TextButtonPadding * 2f);
                 for (int i = 0; i < tabTitles.Length; i++)
                 {
                     GUI.enabled = selection != i;
@@ -82,16 +82,12 @@ namespace Facebook.WitAi
         // Layout header button
         public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL)
         {
-            float headerWidth = headerTexture == null ? 0f : Mathf.Min(headerTexture.width, Mathf.Min(WitStyles.WindowMinWidth, EditorGUIUtility.currentViewWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
-            LayoutHeaderButton(headerTexture, headerURL, headerWidth);
-        }
-        // Layout header button
-        public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL, float headerWidth)
-        {
             if (headerTexture != null)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
+                float maxWidth = EditorGUIUtility.currentViewWidth - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight;
+                float headerWidth = Mathf.Min(WitStyles.HeaderWidth, maxWidth);
                 float headerHeight = headerWidth * (float)headerTexture.height / (float)headerTexture.width;
                 if (GUILayout.Button(headerTexture, WitStyles.HeaderButton, GUILayout.Width(headerWidth), GUILayout.Height(headerHeight)) && !string.IsNullOrEmpty(headerURL))
                 {
@@ -342,49 +338,48 @@ namespace Facebook.WitAi
         {
             // Init styles
             WitStyles.Init();
-            // Window width
-            float windowWidth = EditorGUIUtility.currentViewWidth;
+            // Get minimum width
+            float minWidth = WitStyles.WindowMinWidth;
 
-            // Begin scroll
+            // Begin Header
             GUILayout.BeginVertical();
-            offset = GUILayout.BeginScrollView(offset);
-            // Top padding
-            GUILayout.Space(WitStyles.WindowPaddingTop);
-            // Left padding
             GUILayout.BeginHorizontal();
             GUILayout.Space(WitStyles.WindowPaddingLeft);
             GUILayout.BeginVertical();
-
+            GUILayout.Space(WitStyles.WindowPaddingTop);
             // Layout header image
             if (windowHeader != null)
             {
-                float headerWidth = Mathf.Min(WitStyles.HeaderWidth, windowHeader.width, Mathf.Min(WitStyles.WindowMinWidth, windowWidth) - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight);
-                LayoutHeaderButton(windowHeader, windowHeaderUrl, headerWidth);
-                GUILayout.Space(WitStyles.HeaderPaddingBottom);
+                LayoutHeaderButton(windowHeader, windowHeaderUrl);
             }
-
             // Layout header label
             if (!string.IsNullOrEmpty(windowTitle))
             {
                 LayoutHeaderLabel(windowTitle);
-                GUILayout.Space(WitStyles.HeaderPaddingBottom);
             }
-
-            // Layout content
-            windowContentLayout?.Invoke();
-
-            // Right padding
+            // End Header
             GUILayout.EndVertical();
             GUILayout.Space(WitStyles.WindowPaddingRight);
             GUILayout.EndHorizontal();
-            // Bottom padding
+            GUILayout.EndVertical();
+            // Begin Content
+            GUILayout.BeginVertical();
+            offset = GUILayout.BeginScrollView(offset);
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(WitStyles.WindowPaddingLeft);
+            GUILayout.BeginVertical(GUILayout.MinWidth(minWidth), GUILayout.MaxWidth(WitStyles.WindowMaxSize));
+            // Layout content
+            windowContentLayout?.Invoke();
+            // End Content
+            GUILayout.EndVertical();
+            GUILayout.Space(WitStyles.WindowPaddingRight);
+            GUILayout.EndHorizontal();
             GUILayout.Space(WitStyles.WindowPaddingBottom);
-            // End scroll
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
             // Return size
-            size = new Vector2(WitStyles.WindowMinWidth, WitStyles.WindowMinHeight);
+            size = new Vector2(minWidth + WitStyles.WindowPaddingLeft + WitStyles.WindowPaddingRight + WitStyles.WindowScrollBarSize, WitStyles.WindowMinHeight);
         }
         #endregion
     }

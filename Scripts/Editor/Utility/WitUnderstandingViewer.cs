@@ -139,6 +139,15 @@ namespace Facebook.WitAi.Windows
             Repaint();
         }
 
+        // On gui
+        protected override void OnGUI()
+        {
+            base.OnGUI();
+            minSize = new Vector2(100f, minSize.y);
+            // Add status
+            GUILayout.Label(status, WitStyles.BackgroundBlack25P);
+        }
+
         protected override void LayoutContent()
         {
             // Layout wit select
@@ -212,8 +221,9 @@ namespace Facebook.WitAi.Windows
             }
             else if (null != response)
             {
-                GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.ExpandHeight(true));
+                GUILayout.BeginVertical(EditorStyles.helpBox);
                 DrawResponse();
+                GUILayout.FlexibleSpace();
                 GUILayout.EndVertical();
             }
             else
@@ -229,11 +239,6 @@ namespace Facebook.WitAi.Windows
                 }
                 GUILayout.EndVertical();
             }
-
-            GUILayout.FlexibleSpace();
-            GUI.color = Color.green;
-            WitEditorUI.LayoutSubheaderLabel(status);
-            GUI.color = Color.white;
         }
 
         private void SubmitUtterance()

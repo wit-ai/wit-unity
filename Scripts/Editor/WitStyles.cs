@@ -21,7 +21,6 @@ namespace Facebook.WitAi
         {
             [Header("Shared Settings Texts")]
             public string LanguageID;
-            public string WitUrl;
             public string WitAppsUrl;
             public string WitAppSettingsEndpoint;
             public string WitAppUnderstandingEndpoint;
@@ -95,16 +94,26 @@ namespace Facebook.WitAi
             public string ConfigurationTraitsIdLabel;
             public string ConfigurationTraitsValuesLabel;
         }
+
+        // Wit
+        public const string WitUrl = "https://wit.ai";
+
         // Window Layout Data
-        public const float WindowMinWidth = 450f;
-        public const float WindowMinHeight = 550f;
-        public const float WindowPaddingTop = 20f;
-        public const float WindowPaddingBottom = 20f;
-        public const float WindowPaddingLeft = 20f;
-        public const float WindowPaddingRight = 20f;
+        public const float WindowMinWidth = 0f;
+        public const float WindowMaxWidth = 450f;
+        public const float WindowMinHeight = 400f;
+        public const float WindowMaxSize = 5000f;
+        public const float WindowPaddingTop = 8f;
+        public const float WindowPaddingBottom = 8f;
+        public const float WindowPaddingLeft = 8f;
+        public const float WindowPaddingRight = 8f;
+        public const float WindowScrollBarSize = 15f;
         // Spacing
         public const float HeaderWidth = 350f;
-        public const float HeaderPaddingBottom = 10f;
+        public const float HeaderPaddingBottom = 8f;
+        // Text padding
+        public const float TextMargin = 8f;
+        public const float ButtonMargin = 5f;
 
         // Icons
         public static Texture2D TitleIcon;
@@ -152,6 +161,9 @@ namespace Facebook.WitAi
         public static GUIStyle Toggle;
         // Popup/Dropdown Styles
         public static GUIStyle Popup;
+        // Texture
+        public static GUIStyle BackgroundBlack25P;
+        public static Texture2D TextureBlack25P;
 
         // Init
         private static bool Initialized = false;
@@ -217,6 +229,7 @@ namespace Facebook.WitAi
             LabelHeader.fontSize = 24;
             LabelHeader.padding = new RectOffset(0, 0, 10, 10);
             LabelHeader.margin = new RectOffset(0, 0, 10, 10);
+            LabelHeader.wordWrap = true;
             LabelError = new GUIStyle(Label);
             LabelError.normal.textColor = Color.red;
             // Set to blue if not pro
@@ -250,6 +263,13 @@ namespace Facebook.WitAi
             Foldout = new GUIStyle(EditorStyles.foldout);
             Toggle = new GUIStyle(EditorStyles.toggle);
             Popup = new GUIStyle(EditorStyles.popup);
+            // Black background
+            TextureBlack25P = new Texture2D(1, 1);
+            TextureBlack25P.SetPixel(0, 0, new Color(0, 0, 0, .25f));
+            TextureBlack25P.Apply();
+            BackgroundBlack25P = new GUIStyle();
+            BackgroundBlack25P.normal.background = TextureBlack25P;
+            BackgroundBlack25P.normal.textColor = Color.white;
             // Initialized
             Initialized = true;
         }
@@ -260,13 +280,8 @@ namespace Facebook.WitAi
         }
         public static string GetAppURL(string appId, WitAppEndpointType endpointType)
         {
-            // Ignore without base url
-            if (string.IsNullOrEmpty(Texts.WitUrl))
-            {
-                return "";
-            }
             // Return apps url without id
-            string url = Texts.WitUrl + Texts.WitAppsUrl;
+            string url = WitUrl + Texts.WitAppsUrl;
             if (string.IsNullOrEmpty(appId))
             {
                 return url;
@@ -284,6 +299,11 @@ namespace Facebook.WitAi
                 default:
                     endpoint = Texts.WitAppSettingsEndpoint;
                     break;
+            }
+            // Ensure endpoint is set
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                return url;
             }
             // Replace app id key with desired app id
             endpoint = endpoint.Replace("[APP_ID]", appId);

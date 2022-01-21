@@ -16,7 +16,7 @@ namespace Facebook.WitAi.Windows
         protected Vector2 scrollOffset;
 
         protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.Texts.WitUrl;
+        protected virtual string HeaderUrl => WitStyles.WitUrl;
         
         protected abstract GUIContent Title { get; }
         protected abstract string ButtonLabel { get; }
@@ -38,6 +38,11 @@ namespace Facebook.WitAi.Windows
             // Layout window
             Vector2 size = Vector2.zero;
             WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref scrollOffset, out size);
+            
+            // Set wizard to max width
+            size.x = WitStyles.WindowMaxWidth;
+            // Wizards add additional padding
+            size.y += 70f;
             
             // Clamp wizard sizes
             maxSize = minSize = size;
