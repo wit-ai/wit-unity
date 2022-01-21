@@ -86,19 +86,6 @@ namespace Facebook.WitAi.Windows
         
         protected virtual void LayoutContent()
         {
-            // Begin content layout
-            LayoutConfiguration();
-
-            // Additional open wit button
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button(WitStyles.Texts.WitOpenButtonLabel, WitStyles.TextButton))
-            {
-                Application.OpenURL(HeaderUrl);
-            }
-        }
-        // Layout configuration
-        protected virtual void LayoutConfiguration()
-        {
             // Begin vertical box
             GUILayout.BeginVertical(EditorStyles.helpBox);
 
@@ -166,6 +153,13 @@ namespace Facebook.WitAi.Windows
 
             // Layout configuration request tabs
             LayoutConfigurationRequestTabs();
+
+            // Additional open wit button
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(WitStyles.Texts.WitOpenButtonLabel, WitStyles.TextButton))
+            {
+                Application.OpenURL(HeaderUrl);
+            }
         }
         // Layout configuration data
         protected virtual void LayoutConfigurationData()

@@ -112,7 +112,6 @@ namespace Facebook.WitAi
         public const float HeaderWidth = 350f;
         public const float HeaderPaddingBottom = 8f;
         // Text padding
-        public const float TextMargin = 8f;
         public const float ButtonMargin = 5f;
 
         // Icons
@@ -123,6 +122,7 @@ namespace Facebook.WitAi
         public static GUIContent ResetIcon;
         public static GUIContent AcceptIcon;
         public static GUIContent ObjectPickerIcon;
+        public static GUIContent HelpIcon;
         // Title Contents
         public static GUIContent SetupTitleContent;
         public static GUIContent UnderstandingTitleContent;
@@ -202,6 +202,7 @@ namespace Facebook.WitAi
             ResetIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
             AcceptIcon = EditorGUIUtility.IconContent("FilterSelectedOnly");
             ObjectPickerIcon = EditorGUIUtility.IconContent("d_Record Off");
+            HelpIcon = EditorGUIUtility.IconContent("_Help");
 
             // Setup titles
             SetupTitleContent = new GUIContent(Texts.SetupTitleLabel, TitleIcon);

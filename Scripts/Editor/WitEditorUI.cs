@@ -86,7 +86,7 @@ namespace Facebook.WitAi
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                float maxWidth = EditorGUIUtility.currentViewWidth - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight;
+                float maxWidth = EditorGUIUtility.currentViewWidth - WitStyles.WindowPaddingLeft - WitStyles.WindowPaddingRight - WitStyles.IconButton.CalcSize(WitStyles.HelpIcon).x;
                 float headerWidth = Mathf.Min(WitStyles.HeaderWidth, maxWidth);
                 float headerHeight = headerWidth * (float)headerTexture.height / (float)headerTexture.width;
                 if (GUILayout.Button(headerTexture, WitStyles.HeaderButton, GUILayout.Width(headerWidth), GUILayout.Height(headerHeight)) && !string.IsNullOrEmpty(headerURL))
@@ -94,6 +94,10 @@ namespace Facebook.WitAi
                     Application.OpenURL(headerURL);
                 }
                 GUILayout.FlexibleSpace();
+                if (LayoutIconButton(WitStyles.HelpIcon))
+                {
+                    Application.OpenURL(headerURL);
+                }
                 GUILayout.EndHorizontal();
             }
         }
