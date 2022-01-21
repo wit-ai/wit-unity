@@ -12,7 +12,6 @@ using System.Reflection;
 
 namespace Facebook.WitAi.Windows
 {
-    [CustomPropertyDrawer(typeof(WitEndpointConfig))]
     public class WitEndpointConfigDrawer : WitPropertyDrawer
     {
         // Allow edit with lock

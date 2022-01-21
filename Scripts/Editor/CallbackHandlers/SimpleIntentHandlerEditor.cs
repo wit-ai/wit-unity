@@ -13,7 +13,6 @@ using UnityEngine;
 
 namespace Facebook.WitAi.CallbackHandlers
 {
-    [CustomEditor(typeof(SimpleIntentHandler))]
     public class SimpleIntentHandlerEditor : Editor
     {
         private SimpleIntentHandler handler;

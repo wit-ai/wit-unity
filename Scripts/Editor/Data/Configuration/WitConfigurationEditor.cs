@@ -15,7 +15,6 @@ using UnityEngine;
 
 namespace Facebook.WitAi.Windows
 {
-    [CustomEditor(typeof(WitConfiguration))]
     public class WitConfigurationEditor : Editor
     {
         public WitConfiguration configuration { get; private set; }

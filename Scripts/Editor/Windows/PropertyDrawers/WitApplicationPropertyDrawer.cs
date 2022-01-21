@@ -12,7 +12,6 @@ using System.Reflection;
 
 namespace Facebook.WitAi.Windows
 {
-    [CustomPropertyDrawer(typeof(WitApplication))]
     public class WitApplicationPropertyDrawer : WitPropertyDrawer
     {
         // Whether to use a foldout

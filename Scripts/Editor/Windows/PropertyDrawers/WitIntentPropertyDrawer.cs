@@ -12,7 +12,6 @@ using System.Reflection;
 
 namespace Facebook.WitAi.Windows
 {
-    [CustomPropertyDrawer(typeof(WitIntent))]
     public class WitIntentPropertyDrawer : WitPropertyDrawer
     {
         // Use name value for title if possible

@@ -10,7 +10,6 @@ using UnityEngine;
 
 namespace Facebook.WitAi.Inspectors
 {
-    [CustomEditor(typeof(Wit))]
     public class WitInspector : Editor
     {
         private string activationMessage;

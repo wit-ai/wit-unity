@@ -12,7 +12,6 @@ using Facebook.WitAi.Data.Traits;
 
 namespace Facebook.WitAi.Windows
 {
-    [CustomPropertyDrawer(typeof(WitTrait))]
     public class WitTraitPropertyDrawer : WitPropertyDrawer
     {
         // Use name value for title if possible

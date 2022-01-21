@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Data.Configuration;
-using UnityEditor;
 using UnityEngine;
+using UnityEditor;
+using Facebook.WitAi.Data;
+using Facebook.WitAi.Inspectors;
+using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Data.Intents;
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Data.Traits;
 
 namespace Facebook.WitAi.Windows
 {
@@ -53,6 +57,62 @@ namespace Facebook.WitAi.Windows
         public static void WitCreateConfiguration()
         {
             WitConfigurationUtility.CreateConfiguration(WitAuthUtility.ServerToken);
+        }
+        #endregion
+
+        #region INSPECTORS
+        [CustomEditor(typeof(Wit))]
+        public class WitCustomInspector : WitInspector
+        {
+            
+        }
+        [CustomEditor(typeof(WitConfiguration))]
+        public class WitConfigurationCustomInspector : WitConfigurationEditor
+        {
+            
+        }
+        [CustomEditor(typeof(SimpleIntentHandler))]
+        public class WitCustomSimpleIntentHandlerEditor : SimpleIntentHandlerEditor
+        {
+        
+        }
+        [CustomEditor(typeof(SimpleStringEntityHandler))]
+        public class WitCustomSimpleStringEntityHandlerEditor : SimpleStringEntityHandlerEditor
+        {
+        
+        }
+        #endregion
+        
+        #region DRAWERS
+        [CustomPropertyDrawer(typeof(WitEndpointConfig))]
+        public class WitCustomEndpointPropertyDrawer : WitEndpointConfigDrawer
+        {
+            
+        }
+        [CustomPropertyDrawer(typeof(WitApplication))]
+        public class WitCustomApplicationPropertyDrawer : WitApplicationPropertyDrawer
+        {
+            
+        }
+        [CustomPropertyDrawer(typeof(WitIntent))]
+        public class WitCustomIntentPropertyDrawer : WitIntentPropertyDrawer
+        {
+            
+        }
+        [CustomPropertyDrawer(typeof(WitEntity))]
+        public class WitCustomEntityPropertyDrawer : WitEntityPropertyDrawer
+        {
+            
+        }
+        [CustomPropertyDrawer(typeof(WitTrait))]
+        public class WitCustomTraitPropertyDrawer : WitTraitPropertyDrawer
+        {
+            
+        }
+        [CustomEditor(typeof(ValuePathMatcher))]
+        public class WitCustomValuePathMatcherPropertyDrawer : ValuePathMatcherPropertyDrawer
+        {
+        
         }
         #endregion
     }
