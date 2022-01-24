@@ -258,15 +258,19 @@ namespace Facebook.WitAi.Windows
             }
             else
             {
-                // Hack to watch for loading to complete. Response does not
-                // come back on the main thread so Repaint in onResponse in
-                // the editor does nothing.
-                EditorApplication.update += WatchForResponse;
-
                 submitStart = System.DateTime.Now;
                 request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
                 request.onResponse = OnResponse;
                 request.Request();
+            }
+        }
+
+        private void WatchForWitResponse()
+        {
+            if (wit && !wit.Active)
+            {
+                Repaint();
+                EditorApplication.update -= WatchForWitResponse;
             }
         }
 
@@ -290,7 +294,6 @@ namespace Facebook.WitAi.Windows
             {
                 responseText = "No response. Status: " + request.StatusCode;
             }
-            Repaint();
         }
 
         private void ShowResponse(WitResponseNode r)
@@ -299,24 +302,6 @@ namespace Facebook.WitAi.Windows
             responseText = response.ToString();
             requestLength = DateTime.Now - submitStart;
             status = $"Response time: {requestLength}";
-        }
-
-        private void WatchForResponse()
-        {
-            if (null == request || !request.IsActive)
-            {
-                Repaint();
-                EditorApplication.update -= WatchForResponse;
-            }
-        }
-
-        private void WatchForWitResponse()
-        {
-            if (wit && !wit.Active)
-            {
-                Repaint();
-                EditorApplication.update -= WatchForResponse;
-            }
         }
 
         private void DrawResponse()
@@ -346,6 +331,10 @@ namespace Facebook.WitAi.Windows
 
         private void DrawNode(WitResponseNode childNode, string child, string path, bool isArrayElement = false)
         {
+            if (childNode == null)
+            {
+                return;
+            }
             string childPath;
 
             if (path.Length > 0)
