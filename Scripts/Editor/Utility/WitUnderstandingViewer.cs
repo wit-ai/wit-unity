@@ -26,7 +26,6 @@ namespace Facebook.WitAi.Windows
         private WitResponseNode response;
         private Dictionary<string, bool> foldouts;
 
-        private Vector2 scroll;
         private DateTime submitStart;
         private TimeSpan requestLength;
         private string status;
@@ -143,9 +142,7 @@ namespace Facebook.WitAi.Windows
         protected override void OnGUI()
         {
             base.OnGUI();
-            minSize = new Vector2(100f, minSize.y);
-            // Add status
-            GUILayout.Label(status, WitStyles.BackgroundBlack25P);
+            WitEditorUI.LayoutStatusLabel(status);
         }
 
         protected override void LayoutContent()
@@ -164,6 +161,13 @@ namespace Facebook.WitAi.Windows
             if (string.IsNullOrEmpty(appID))
             {
                 WitEditorUI.LayoutErrorLabel(WitStyles.Texts.UnderstandingViewerNoAppLabel);
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerSettingsButtonLabel))
+                {
+                    Selection.activeObject = witConfiguration;
+                }
+                GUILayout.EndHorizontal();
                 return;
             }
             bool updated = false;
@@ -200,45 +204,32 @@ namespace Facebook.WitAi.Windows
                     wit.DeactivateAndAbortRequest();
                 }
             }
-
             GUILayout.EndHorizontal();
 
+            // Results
+            GUILayout.BeginVertical(EditorStyles.helpBox);
             if (wit && wit.MicActive)
             {
-                GUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
-                WitEditorUI.LayoutLabel(WitStyles.Texts.UnderstandingViewerListeningLabel);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
+                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerListeningLabel);
             }
             else if (wit && wit.IsRequestActive)
             {
-                GUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
-                WitEditorUI.LayoutLabel(WitStyles.Texts.UnderstandingViewerLoadingLabel);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
+                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerLoadingLabel);
             }
-            else if (null != response)
+            else if (response != null)
             {
-                GUILayout.BeginVertical(EditorStyles.helpBox);
                 DrawResponse();
-                GUILayout.FlexibleSpace();
-                GUILayout.EndVertical();
+            }
+            else if (string.IsNullOrEmpty(responseText))
+            {
+                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerPromptLabel);
             }
             else
             {
-                GUILayout.BeginVertical(EditorStyles.helpBox);
-                if (!string.IsNullOrEmpty(responseText))
-                {
-                    GUILayout.Label(responseText);
-                }
-                else
-                {
-                    GUILayout.Label(WitStyles.Texts.UnderstandingViewerPromptLabel);
-                }
-                GUILayout.EndVertical();
+                WitEditorUI.LayoutWrapLabel(responseText);
             }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
         }
 
         private void SubmitUtterance()
@@ -248,8 +239,13 @@ namespace Facebook.WitAi.Windows
                 SetDefaultWit();
             }
 
+            // Remove response
+            response = null;
+
             if (wit && Application.isPlaying)
             {
+                status = WitStyles.Texts.UnderstandingViewerListeningLabel;
+                responseText = status;
                 wit.Activate(utterance);
                 // Hack to watch for loading to complete. Response does not
                 // come back on the main thread so Repaint in onResponse in
@@ -258,6 +254,8 @@ namespace Facebook.WitAi.Windows
             }
             else
             {
+                status = WitStyles.Texts.UnderstandingViewerLoadingLabel;
+                responseText = status;
                 submitStart = System.DateTime.Now;
                 request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());
                 request.onResponse = OnResponse;
@@ -306,9 +304,7 @@ namespace Facebook.WitAi.Windows
 
         private void DrawResponse()
         {
-            scroll = GUILayout.BeginScrollView(scroll);
             DrawResponseNode(response);
-            GUILayout.EndScrollView();
         }
 
         private void DrawResponseNode(WitResponseNode witResponseNode, string path = "")

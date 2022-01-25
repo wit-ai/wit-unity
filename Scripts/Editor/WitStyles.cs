@@ -39,6 +39,7 @@ namespace Facebook.WitAi
             public string UnderstandingViewerLabel;
             public string UnderstandingViewerMissingConfigLabel;
             public string UnderstandingViewerNoAppLabel;
+            public string UnderstandingViewerSettingsButtonLabel;
             public string UnderstandingViewerUtteranceLabel;
             public string UnderstandingViewerPromptLabel;
             public string UnderstandingViewerSubmitButtonLabel;
@@ -133,9 +134,11 @@ namespace Facebook.WitAi
         public static GUIContent ConfigurationRequestTimeoutContent;
         // Label Styles
         public static GUIStyle Label;
+        public static GUIStyle LabelWrap;
         public static GUIStyle LabelError;
         public static GUIStyle LabelHeader;
         public static GUIStyle LabelSubheader;
+        public static GUIStyle LabelStatus;
 
         // Button styles
         public static GUIStyle TextButton;
@@ -162,7 +165,6 @@ namespace Facebook.WitAi
         // Popup/Dropdown Styles
         public static GUIStyle Popup;
         // Texture
-        public static GUIStyle BackgroundBlack25P;
         public static Texture2D TextureBlack25P;
 
         // Init
@@ -224,6 +226,8 @@ namespace Facebook.WitAi
             Label.active.textColor = Color.white;
             Label.richText = true;
             Label.wordWrap = false;
+            LabelWrap = new GUIStyle(Label);
+            LabelWrap.wordWrap = true;
             LabelSubheader = new GUIStyle(Label);
             LabelSubheader.fontSize = 14;
             LabelHeader = new GUIStyle(Label);
@@ -232,7 +236,17 @@ namespace Facebook.WitAi
             LabelHeader.margin = new RectOffset(0, 0, 10, 10);
             LabelHeader.wordWrap = true;
             LabelError = new GUIStyle(Label);
+            LabelError.wordWrap = true;
             LabelError.normal.textColor = Color.red;
+            LabelStatus = new GUIStyle(Label);
+            TextureBlack25P = new Texture2D(1, 1);
+            TextureBlack25P.SetPixel(0, 0, new Color(0, 0, 0, .25f));
+            TextureBlack25P.Apply();
+            LabelStatus.normal.background = TextureBlack25P;
+            LabelStatus.wordWrap = true;
+            LabelStatus.fontSize++;
+            LabelStatus.alignment = TextAnchor.LowerLeft;
+            LabelStatus.margin = new RectOffset(0, 0, 0, 0);
             // Set to blue if not pro
             if (!EditorGUIUtility.isProSkin)
             {
@@ -264,13 +278,6 @@ namespace Facebook.WitAi
             Foldout = new GUIStyle(EditorStyles.foldout);
             Toggle = new GUIStyle(EditorStyles.toggle);
             Popup = new GUIStyle(EditorStyles.popup);
-            // Black background
-            TextureBlack25P = new Texture2D(1, 1);
-            TextureBlack25P.SetPixel(0, 0, new Color(0, 0, 0, .25f));
-            TextureBlack25P.Apply();
-            BackgroundBlack25P = new GUIStyle();
-            BackgroundBlack25P.normal.background = TextureBlack25P;
-            BackgroundBlack25P.normal.textColor = Color.white;
             // Initialized
             Initialized = true;
         }

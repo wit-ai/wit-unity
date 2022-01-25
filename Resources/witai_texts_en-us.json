@@ -15,6 +15,7 @@
   "UnderstandingViewerPromptLabel": "Enter an utterance and hit 'Send' to see what your app will return.",
   "UnderstandingViewerMissingConfigLabel": "A Wit configuration must be available and selected to test utterances.",
   "UnderstandingViewerNoAppLabel": "Your wit configuration has not yet been linked to a wit application. Make sure you have linked your account with Wit.ai.",
+  "UnderstandingViewerSettingsButtonLabel": "Select Configuration",
   "UnderstandingViewerSubmitButtonLabel": "Send",
   "UnderstandingViewerActivateButtonLabel": "Activate",
   "UnderstandingViewerDeactivateButtonLabel": "Deactivate",

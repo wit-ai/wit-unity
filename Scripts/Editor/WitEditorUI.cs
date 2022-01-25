@@ -21,6 +21,10 @@ namespace Facebook.WitAi
         {
             LayoutLabel(text, WitStyles.Label);
         }
+        public static void LayoutWrapLabel(string text)
+        {
+            LayoutLabel(text, WitStyles.LabelWrap);
+        }
         public static void LayoutHeaderLabel(string text)
         {
             LayoutLabel(text, WitStyles.LabelHeader);
@@ -32,6 +36,10 @@ namespace Facebook.WitAi
         public static void LayoutErrorLabel(string text)
         {
             LayoutLabel(text, WitStyles.LabelError);
+        }
+        public static void LayoutStatusLabel(string text)
+        {
+            LayoutLabel(text, WitStyles.LabelStatus);
         }
         private static void LayoutLabel(string text, GUIStyle style)
         {
