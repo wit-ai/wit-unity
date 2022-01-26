@@ -1,8 +1,8 @@
 {
   "LanguageID": "en-us",
   "WitAppsUrl": "/apps",
-  "WitAppSettingsEndpoint": "/apps/[APP_ID]/settings",
-  "WitAppUnderstandingEndpoint": "/apps/[APP_ID]/understanding",
+  "WitAppSettingsEndpoint": "/[APP_ID]/settings",
+  "WitAppUnderstandingEndpoint": "/[APP_ID]/understanding",
   "WitOpenButtonLabel": "Open Wit.ai",
   "ConfigurationSelectLabel": "Wit Configuration",
   "ConfigurationSelectMissingLabel": "No Wit Configurations Found",
