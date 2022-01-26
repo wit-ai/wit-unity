@@ -38,7 +38,6 @@ namespace Facebook.WitAi.Windows
         {
             Vector2 size;
             WitEditorUI.LayoutWindow(titleContent.text, HeaderIcon, HeaderUrl, LayoutContent, ref ScrollOffset, out size);
-            minSize = size;
         }
         // Draw content of window
         protected abstract void LayoutContent();
