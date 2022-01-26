@@ -14,6 +14,7 @@ using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Traits;
+using Facebook.WitAi.CallbackHandlers;
 
 namespace Facebook.WitAi.Windows
 {
@@ -64,55 +65,55 @@ namespace Facebook.WitAi.Windows
         [CustomEditor(typeof(Wit))]
         public class WitCustomInspector : WitInspector
         {
-            
+
         }
         [CustomEditor(typeof(WitConfiguration))]
         public class WitConfigurationCustomInspector : WitConfigurationEditor
         {
-            
+
         }
         [CustomEditor(typeof(SimpleIntentHandler))]
         public class WitCustomSimpleIntentHandlerEditor : SimpleIntentHandlerEditor
         {
-        
+
         }
         [CustomEditor(typeof(SimpleStringEntityHandler))]
         public class WitCustomSimpleStringEntityHandlerEditor : SimpleStringEntityHandlerEditor
         {
-        
+
         }
         #endregion
-        
+
         #region DRAWERS
         [CustomPropertyDrawer(typeof(WitEndpointConfig))]
         public class WitCustomEndpointPropertyDrawer : WitEndpointConfigDrawer
         {
-            
+
         }
         [CustomPropertyDrawer(typeof(WitApplication))]
         public class WitCustomApplicationPropertyDrawer : WitApplicationPropertyDrawer
         {
-            
+
         }
         [CustomPropertyDrawer(typeof(WitIntent))]
         public class WitCustomIntentPropertyDrawer : WitIntentPropertyDrawer
         {
-            
+
         }
         [CustomPropertyDrawer(typeof(WitEntity))]
         public class WitCustomEntityPropertyDrawer : WitEntityPropertyDrawer
         {
-            
+
         }
         [CustomPropertyDrawer(typeof(WitTrait))]
         public class WitCustomTraitPropertyDrawer : WitTraitPropertyDrawer
         {
-            
+
         }
         [CustomEditor(typeof(ValuePathMatcher))]
         public class WitCustomValuePathMatcherPropertyDrawer : ValuePathMatcherPropertyDrawer
         {
-        
+
         }
         #endregion
     }
