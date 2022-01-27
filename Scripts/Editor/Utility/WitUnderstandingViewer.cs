@@ -55,7 +55,7 @@ namespace Facebook.WitAi.Windows
         }
 
         protected override GUIContent Title => WitStyles.UnderstandingTitleContent;
-        protected override WitStyles.WitAppEndpointType HeaderEndpointType => WitStyles.WitAppEndpointType.Settings;
+        protected override WitStyles.WitAppEndpointType HeaderEndpointType => WitStyles.WitAppEndpointType.Understanding;
 
         protected override void OnEnable()
         {
