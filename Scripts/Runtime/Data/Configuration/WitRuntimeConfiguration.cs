@@ -60,5 +60,8 @@ namespace Facebook.WitAi.Configuration
 
         [Tooltip("A custom provider that returns text to be used for nlu processing on activation instead of sending audio.")]
         [SerializeField] public CustomTranscriptionProvider customTranscriptionProvider;
+
+        [Tooltip("If always record is set the mic will fill the mic data buffer as long as the component is enabled in the scene.")]
+        public bool alwaysRecord;
     }
 }
