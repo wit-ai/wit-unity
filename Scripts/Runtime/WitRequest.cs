@@ -94,7 +94,8 @@ namespace Facebook.WitAi
 
         public QueryParam[] queryParams;
 
-        private HttpWebRequest request;
+        //private HttpWebRequest request;
+        private IRequest request;
         private HttpWebResponse response;
 
         private WitResponseNode responseData;
@@ -184,6 +185,8 @@ namespace Facebook.WitAi
         public string StatusDescription => statusDescription;
 
         public int Timeout => configuration ? configuration.timeoutMS : 10000;
+
+        public IRequest RequestProvider { get; internal set; }
 
         private static string operatingSystem;
         private static string deviceModel;
@@ -309,9 +312,9 @@ namespace Facebook.WitAi
                 SafeInvoke(onResponse);
                 return;
             }
-
-            request = (HttpWebRequest) WebRequest.Create(uri);
-
+            WrapHttpWebRequest wr = new WrapHttpWebRequest((HttpWebRequest)WebRequest.Create(uri));
+            //request = (IRequest)(HttpWebRequest) WebRequest.Create(uri);
+            request = wr;
             if (isServerAuthRequired)
             {
                 request.Headers["Authorization"] =
@@ -400,7 +403,8 @@ namespace Facebook.WitAi
             if (!timedout) return;
 
             // Clean up the current request if it is still going
-            var request = (HttpWebRequest) state;
+            //var request = (HttpWebRequest) state;
+            var request = (IRequest)state;
             if (null != this.request)
             {
                 Debug.Log("Request timed out after " + (DateTime.UtcNow - requestStartTime));
