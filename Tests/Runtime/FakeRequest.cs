@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using UnityEngine;
+
 namespace Facebook.WitAi
 {
     public class FakeRequest : IRequest
     {
+        private MemoryStream _stream;
+
         public WebHeaderCollection Headers { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string Method { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string ContentType { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -32,18 +35,21 @@ namespace Facebook.WitAi
 
         public Stream EndGetRequestStream(IAsyncResult asyncResult)
         {
-            string s = "I am a test string.";
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream);
-            writer.Write(s);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
+             _stream = new MemoryStream();
+            return _stream;
         }
 
         public WebResponse EndGetResponse(IAsyncResult asyncResult) // TODO: Replace 'WebResponse' with 'IResponse'.
         {
-            throw new NotImplementedException();
+            // Create a request for the URL.
+            WebRequest request = WebRequest.Create(
+              "https://docs.microsoft.com");
+            // If required by the server, set the credentials.
+            request.Credentials = CredentialCache.DefaultCredentials;
+
+            // Get the response.
+            WebResponse response = request.GetResponse();
+            return response;
         }
     }
 }
