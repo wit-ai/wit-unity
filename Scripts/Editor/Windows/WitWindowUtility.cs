@@ -6,34 +6,47 @@
  */
 
 using System;
-using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
-using UnityEngine;
 using Facebook.WitAi.Data.Configuration;
 
 namespace Facebook.WitAi.Windows
 {
     public static class WitWindowUtility
     {
-        // Default types
-        private readonly static Type defaultSetupWindowType = typeof(WitWelcomeWizard);
-        private readonly static Type defaultConfigurationWindowType = typeof(WitWindow);
-        private readonly static Type defaultUnderstandingWindowType = typeof(WitUnderstandingViewer);
-
         // Window types
-        public static Type setupWindowType = defaultSetupWindowType;
-        public static Type configurationWindowType = defaultConfigurationWindowType;
-        public static Type understandingWindowType = defaultUnderstandingWindowType;
+        public static Type SetupWindowType => FindChildClass(typeof(WitWelcomeWizard));
+        public static Type ConfigurationWindowType => FindChildClass(typeof(WitWindow));
+        public static Type UnderstandingWindowType => FindChildClass(typeof(WitUnderstandingViewer));
+        // Finds a child class if possible
+        private static Type FindChildClass(Type baseType)
+        {
+            Type result = baseType;
+            Assembly currentAssembly = baseType.Assembly;
+            Array.Find(AppDomain.CurrentDomain.GetAssemblies(), (assembly) =>
+            {
+                if (assembly != currentAssembly)
+                {
+                    Type[] types = assembly.GetTypes();
+                    int index = Array.FindIndex(types, (assemblyType) => { return assemblyType.BaseType == baseType; });
+                    if (index != -1)
+                    {
+                        result = types[index];
+                        return true;
+                    }
+                }
+                return false;
+            });
+            return result;
+        }
 
         // Opens Setup Window
         public static void OpenSetupWindow(Action<WitConfiguration> onSetupComplete)
         {
             // Init
             WitStyles.Init();
-            // Get setup type
-            Type type = GetSafeType(setupWindowType, defaultSetupWindowType);
             // Get wizard (Title is overwritten)
-            WitWelcomeWizard wizard = (WitWelcomeWizard)ScriptableWizard.DisplayWizard(WitStyles.Texts.SetupTitleLabel, type, WitStyles.Texts.SetupSubmitButtonLabel);
+            WitWelcomeWizard wizard = (WitWelcomeWizard)ScriptableWizard.DisplayWizard(WitStyles.Texts.SetupTitleLabel, SetupWindowType, WitStyles.Texts.SetupSubmitButtonLabel);
             // Set success callback
             wizard.successAction = onSetupComplete;
         }
@@ -49,10 +62,8 @@ namespace Facebook.WitAi.Windows
                 return;
             }
 
-            // Get confuration type
-            Type type = GetSafeType(configurationWindowType, defaultConfigurationWindowType);
             // Get window & show
-            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(type);
+            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(ConfigurationWindowType);
             window.autoRepaintOnSceneChange = true;
             window.SetConfiguration(configuration);
             window.Show();
@@ -69,23 +80,11 @@ namespace Facebook.WitAi.Windows
                 return;
             }
 
-            // Get understanding type
-            Type type = GetSafeType(understandingWindowType, defaultUnderstandingWindowType);
             // Get window & show
-            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(type);
+            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(UnderstandingWindowType);
             window.autoRepaintOnSceneChange = true;
             window.SetConfiguration(configuration);
             window.Show();
-        }
-        // Get safe type
-        private static Type GetSafeType(Type desiredType, Type defaultType)
-        {
-            if (desiredType == null || (desiredType != defaultType && !desiredType.IsSubclassOf(defaultType)))
-            {
-                Debug.LogError("Wit Editor Utility - Invalid Window Type: " + (desiredType == null ? "NULL" : desiredType.ToString()) + "\nUsing: " + defaultType.ToString());
-                return defaultType;
-            }
-            return desiredType;
         }
     }
 }
