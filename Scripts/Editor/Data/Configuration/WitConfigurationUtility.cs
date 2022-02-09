@@ -44,13 +44,15 @@ namespace Facebook.WitAi.Data.Configuration
         // Check for custom configuration
         public static bool IsValidCustomConfig(WitConfiguration configuration)
         {
+            // Ensure app id is valid
             string appID = GetAppID(configuration);
             if (string.IsNullOrEmpty(appID))
             {
                 return false;
             }
-            string serverID = WitAuthUtility.GetAppServerToken(appID);
-            return !string.IsNullOrEmpty(serverID);
+            // Ensure not inside a package
+            string assetPath = AssetDatabase.GetAssetPath(configuration);
+            return !assetPath.StartsWith("Packages");
         }
         // Refresh configuration asset list
         public static void ReloadConfigurationData()

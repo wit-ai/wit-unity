@@ -16,6 +16,7 @@ namespace Facebook.WitAi.Windows
         protected WitConfigurationEditor witInspector;
         protected string serverToken;
         protected override GUIContent Title => WitStyles.SettingsTitleContent;
+        protected override string HeaderUrl => witInspector ? witInspector.HeaderUrl : base.HeaderUrl;
 
         protected override void OnEnable()
         {
