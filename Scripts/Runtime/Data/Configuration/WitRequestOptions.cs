@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Facebook.WitAi.Interfaces;
 
 namespace Facebook.WitAi.Configuration
@@ -25,5 +26,10 @@ namespace Facebook.WitAi.Configuration
         /// The tag for snapshot
         /// </summary>
         public string tag;
+
+        /// <summary>
+        /// Callback for completion
+        /// </summary>
+        public Action<WitRequest> onResponse;
     }
 }
