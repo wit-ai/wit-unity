@@ -77,7 +77,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.27";
+        public const string WIT_SDK_VERSION = "0.0.28";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -141,6 +141,17 @@ namespace Facebook.WitAi
         /// NOTE: This response comes back on a different thread.
         /// </summary>
         public Action<string> onFullTranscription;
+
+        public delegate void PreSendRequestDelegate(ref Uri src_uri, out Dictionary<string,string> headers);
+
+        /// <summary>
+        /// Allows customization of the request before it is sent out.
+        ///
+        /// Note: This is for devs who are routing requests to their servers
+        /// before sending data to Wit.ai. This allows adding any additional
+        /// headers, url modifications, or customization of the request.
+        /// </summary>
+        public static PreSendRequestDelegate onPreSendRequest;
 
         public delegate Uri OnCustomizeUriEvent(UriBuilder uriBuilder);
         /// <summary>
@@ -313,8 +324,16 @@ namespace Facebook.WitAi
                 return;
             }
 
+            //allow app to intercept request and potentially modify uri or add custom headers
+            //NOTE: the callback depends on knowing the original Uri, before it is modified
+            Dictionary<string, string> customHeaders = null;
+            if (onPreSendRequest != null)
+            {
+                onPreSendRequest(ref uri, out customHeaders);
+            }
+
             WrapHttpWebRequest wr = new WrapHttpWebRequest((HttpWebRequest)WebRequest.Create(uri));
-            
+
             //request = (IRequest)(HttpWebRequest) WebRequest.Create(uri);
             _request = wr;
             if (isServerAuthRequired)
@@ -378,6 +397,15 @@ namespace Facebook.WitAi
                 foreach (var header in onProvideCustomHeaders())
                 {
                     _request.Headers[header.Key] = header.Value;
+                }
+            }
+
+            //apply any modified headers last, as this allows us to overwrite headers if need be
+            if (customHeaders != null)
+            {
+                foreach (var pair in customHeaders)
+                {
+                    _request.Headers[pair.Key] = pair.Value;
                 }
             }
 

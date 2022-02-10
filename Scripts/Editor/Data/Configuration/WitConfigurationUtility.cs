@@ -33,20 +33,24 @@ namespace Facebook.WitAi.Data.Configuration
         public static string[] WitConfigNames => witConfigNames;
 
         // Has configuration
-        public static bool HasValidConfig()
+        public static bool HasValidCustomConfig()
         {
             // Refresh list
             ReloadConfigurationData();
-            // Check configs
-            for (int i = 0; i < witConfigs.Length; i++)
+            // Find a valid custom configuration
+            int customConfigIndex = Array.FindIndex(witConfigs, (c) => IsValidCustomConfig(c));
+            return customConfigIndex != -1;
+        }
+        // Check for custom configuration
+        public static bool IsValidCustomConfig(WitConfiguration configuration)
+        {
+            string appID = GetAppID(configuration);
+            if (string.IsNullOrEmpty(appID))
             {
-                if (!string.IsNullOrEmpty(witConfigs[i].clientAccessToken))
-                {
-                    return true;
-                }
+                return false;
             }
-            // None found
-            return false;
+            string serverID = WitAuthUtility.GetAppServerToken(appID);
+            return !string.IsNullOrEmpty(serverID);
         }
         // Refresh configuration asset list
         public static void ReloadConfigurationData()
@@ -335,8 +339,11 @@ namespace Facebook.WitAi.Data.Configuration
             configuration.application.witConfiguration = configuration;
             configuration.application.UpdateData(() =>
             {
-                EditorUtility.SetDirty(configuration);
-                RefreshIntentsData(configuration, onRefreshComplete);
+                if (configuration != null)
+                {
+                    EditorUtility.SetDirty(configuration);
+                    RefreshIntentsData(configuration, onRefreshComplete);
+                }
             });
         }
         // Refresh intents data

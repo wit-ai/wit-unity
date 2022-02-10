@@ -29,7 +29,7 @@ Facebook has a [bounty program](https://www.facebook.com/whitehat/) for the safe
 disclosure of security bugs. In those cases, please go through the process
 outlined on that page and do not file a public issue.
 
-## Coding Style  
+## Coding Style
 * 4 spaces for indentation rather than tabs
 * 80 character line length
 * Use [Allman](https://en.wikipedia.org/wiki/Indentation_style#Allman_style) style for braces
