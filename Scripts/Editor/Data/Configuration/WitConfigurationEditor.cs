@@ -82,7 +82,7 @@ namespace Facebook.WitAi.Windows
                 EditorGUI.indentLevel--;
             }
         }
-        
+
         protected virtual void LayoutContent()
         {
             // Begin vertical box

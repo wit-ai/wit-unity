@@ -221,7 +221,7 @@ namespace Facebook.WitAi.Lib
                 Debug.LogWarning("Tried to start recording when no input is available.");
                 return;
             }
-            
+
             StopRecording();
 
             if (!Microphone.IsRecording(CurrentDeviceName))

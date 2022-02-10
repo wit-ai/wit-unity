@@ -26,7 +26,7 @@ namespace Facebook.WitAi.Windows
         public static Type understandingWindowType = defaultUnderstandingWindowType;
 
         // Opens Setup Window
-        public static void OpenSetupWindow(Action onSetupComplete)
+        public static void OpenSetupWindow(Action<WitConfiguration> onSetupComplete)
         {
             // Init
             WitStyles.Init();
@@ -38,12 +38,12 @@ namespace Facebook.WitAi.Windows
             wizard.successAction = onSetupComplete;
         }
         // Opens Configuration Window
-        public static void OpenConfigurationWindow()
+        public static void OpenConfigurationWindow(WitConfiguration configuration = null)
         {
             // Init
             WitStyles.Init();
             // Setup if needed
-            if (!WitConfigurationUtility.HasValidConfig())
+            if (configuration == null && !WitConfigurationUtility.HasValidCustomConfig())
             {
                 OpenSetupWindow(OpenConfigurationWindow);
                 return;
@@ -52,17 +52,18 @@ namespace Facebook.WitAi.Windows
             // Get confuration type
             Type type = GetSafeType(configurationWindowType, defaultConfigurationWindowType);
             // Get window & show
-            EditorWindow window = EditorWindow.GetWindow(type);
+            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(type);
             window.autoRepaintOnSceneChange = true;
+            window.SetConfiguration(configuration);
             window.Show();
         }
-        // Opens Understanding Window
-        public static void OpenUnderstandingWindow()
+        // Opens Understanding Window to specific configuration
+        public static void OpenUnderstandingWindow(WitConfiguration configuration = null)
         {
             // Init
             WitStyles.Init();
             // Setup if needed
-            if (!WitConfigurationUtility.HasValidConfig())
+            if (configuration == null && !WitConfigurationUtility.HasValidCustomConfig())
             {
                 OpenSetupWindow(OpenUnderstandingWindow);
                 return;
@@ -71,8 +72,9 @@ namespace Facebook.WitAi.Windows
             // Get understanding type
             Type type = GetSafeType(understandingWindowType, defaultUnderstandingWindowType);
             // Get window & show
-            EditorWindow window = EditorWindow.GetWindow(type);
+            WitConfigurationWindow window = (WitConfigurationWindow)EditorWindow.GetWindow(type);
             window.autoRepaintOnSceneChange = true;
+            window.SetConfiguration(configuration);
             window.Show();
         }
         // Get safe type
