@@ -43,6 +43,8 @@ namespace Facebook.WitAi.Data.Configuration
         [SerializeField] public WitIntent[] intents;
         [SerializeField] public WitTrait[] traits;
 
+        [HideInInspector] [SerializeField] public bool isDemoOnly;
+
         public WitApplication Application => application;
         private void OnEnable()
         {

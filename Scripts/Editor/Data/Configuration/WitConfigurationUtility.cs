@@ -38,21 +38,7 @@ namespace Facebook.WitAi.Data.Configuration
             // Refresh list
             ReloadConfigurationData();
             // Find a valid custom configuration
-            int customConfigIndex = Array.FindIndex(witConfigs, (c) => IsValidCustomConfig(c));
-            return customConfigIndex != -1;
-        }
-        // Check for custom configuration
-        public static bool IsValidCustomConfig(WitConfiguration configuration)
-        {
-            // Ensure app id is valid
-            string appID = GetAppID(configuration);
-            if (string.IsNullOrEmpty(appID))
-            {
-                return false;
-            }
-            // Ensure not inside a package
-            string assetPath = AssetDatabase.GetAssetPath(configuration);
-            return !assetPath.StartsWith("Packages");
+            return Array.Exists(witConfigs, (c) => !c.isDemoOnly);
         }
         // Refresh configuration asset list
         public static void ReloadConfigurationData()
