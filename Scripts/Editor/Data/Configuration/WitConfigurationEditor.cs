@@ -175,6 +175,10 @@ namespace Facebook.WitAi.Windows
             bool updated = false;
             // Client access field
             WitEditorUI.LayoutPasswordField(WitStyles.ConfigurationClientTokenContent, ref configuration.clientAccessToken, ref updated);
+            if (updated && string.IsNullOrEmpty(configuration.clientAccessToken))
+            {
+                Debug.LogError("Client access token is not defined. Cannot perform requests with '" + configuration.name + "'.");
+            }
             // Timeout field
             WitEditorUI.LayoutIntField(WitStyles.ConfigurationRequestTimeoutContent, ref configuration.timeoutMS, ref updated);
             // Updated
