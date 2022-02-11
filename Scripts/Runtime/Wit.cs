@@ -190,6 +190,11 @@ namespace Facebook.WitAi
         /// </summary>
         public override void Activate(WitRequestOptions requestOptions)
         {
+            if (!IsConfigurationValid())
+            {
+                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                return;
+            }
             if (_isActive) return;
             StopRecording();
 
@@ -222,6 +227,11 @@ namespace Facebook.WitAi
         }
         public override void ActivateImmediately(WitRequestOptions requestOptions)
         {
+            if (!IsConfigurationValid())
+            {
+                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                return;
+            }
             // Make sure we aren't checking activation time until
             // the mic starts recording. If we're already recording for a live
             // recording, we just triggered an activation so we will reset the
@@ -268,7 +278,22 @@ namespace Facebook.WitAi
         /// <param name="requestOptions">Additional options</param>
         public override void Activate(string text, WitRequestOptions requestOptions)
         {
+            if (!IsConfigurationValid())
+            {
+                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                return;
+            }
             SendTranscription(text, requestOptions);
+        }
+        /// <summary>
+        /// Check configuration, client access token & app id
+        /// </summary>
+        public virtual bool IsConfigurationValid()
+        {
+            return _runtimeConfiguration.witConfiguration != null &&
+                   !string.IsNullOrEmpty(_runtimeConfiguration.witConfiguration.clientAccessToken) &&
+                   _runtimeConfiguration.witConfiguration.application != null &&
+                   !string.IsNullOrEmpty(_runtimeConfiguration.witConfiguration.application.id);
         }
         #endregion
 
@@ -327,7 +352,9 @@ namespace Facebook.WitAi
         // Wait until mic is available
         private IEnumerator WaitForMic()
         {
+            Debug.Log("Begin Mic Wait");
             yield return new WaitUntil(() => _micInput.IsInputAvailable);
+            Debug.Log("Complete Mic Wait");
             _micInitCoroutine = null;
             StartRecording();
         }
@@ -462,7 +489,6 @@ namespace Facebook.WitAi
                 _lastMinVolumeLevelTime = Time.time;
                 _minKeepAliveWasHit = true;
             }
-
             events.OnMicLevelChanged?.Invoke(level);
         }
         // Mic level changed in transcription
