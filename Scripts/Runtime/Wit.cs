@@ -352,9 +352,7 @@ namespace Facebook.WitAi
         // Wait until mic is available
         private IEnumerator WaitForMic()
         {
-            Debug.Log("Begin Mic Wait");
             yield return new WaitUntil(() => _micInput.IsInputAvailable);
-            Debug.Log("Complete Mic Wait");
             _micInitCoroutine = null;
             StartRecording();
         }
@@ -519,8 +517,13 @@ namespace Facebook.WitAi
         // Stop listening if time expires
         private IEnumerator DeactivateDueToTimeLimit()
         {
-            yield return new WaitForSeconds(_runtimeConfiguration.maxRecordingTime);
-            DeactivateRequest(events.OnStoppedListeningDueToTimeout, false);
+            float s = Time.realtimeSinceStartup;
+            yield return new WaitUntil(() => !IsRequestActive || s - Time.realtimeSinceStartup >= _runtimeConfiguration.maxRecordingTime);
+            if (IsRequestActive)
+            {
+                Debug.Log($"Deactivated input due to timeout.\nMax Record Time: {_runtimeConfiguration.maxRecordingTime}");
+                DeactivateRequest(events.OnStoppedListeningDueToTimeout, false);
+            }
         }
         private void DeactivateRequest(UnityEvent onComplete = null, bool abort = false)
         {
@@ -627,6 +630,12 @@ namespace Facebook.WitAi
         /// </summary>
         private void HandleResult(WitRequest request)
         {
+            // If result is obtained before transcription
+            if (request == _recordingRequest)
+            {
+                DeactivateRequest(null, false);
+            }
+
             // Handle success
             if (request.StatusCode == (int) HttpStatusCode.OK)
             {
@@ -652,16 +661,10 @@ namespace Facebook.WitAi
                     events?.OnAborted?.Invoke();
                 }
             }
-
             // Remove from transmit list, missing if aborted
             if ( _transmitRequests.Contains(request))
             {
                 _transmitRequests.Remove(request);
-            }
-            // Should not occur, but safer
-            if (request == _recordingRequest)
-            {
-                _recordingRequest = null;
             }
 
             // Complete delegate
