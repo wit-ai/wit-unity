@@ -517,8 +517,7 @@ namespace Facebook.WitAi
         // Stop listening if time expires
         private IEnumerator DeactivateDueToTimeLimit()
         {
-            float s = Time.realtimeSinceStartup;
-            yield return new WaitUntil(() => !IsRequestActive || s - Time.realtimeSinceStartup >= _runtimeConfiguration.maxRecordingTime);
+            yield return new WaitForSeconds(_runtimeConfiguration.maxRecordingTime);
             if (IsRequestActive)
             {
                 Debug.Log($"Deactivated input due to timeout.\nMax Record Time: {_runtimeConfiguration.maxRecordingTime}");
