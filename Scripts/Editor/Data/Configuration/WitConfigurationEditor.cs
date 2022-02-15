@@ -109,7 +109,7 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = isValid;
                     if (WitEditorUI.LayoutTextButton(WitStyles.Texts.ConfigurationRefreshButtonLabel))
                     {
-                        configuration.SetServerToken(serverToken);
+                        ApplyServerToken(serverToken);
                     }
                 }
                 else
@@ -137,7 +137,7 @@ namespace Facebook.WitAi.Windows
                 WitEditorUI.LayoutPasswordField(WitStyles.ConfigurationServerTokenContent, ref serverToken, ref updated);
                 if (updated)
                 {
-                    configuration.SetServerToken(serverToken);
+                    ApplyServerToken(serverToken);
                 }
 
                 // Additional data
@@ -162,6 +162,12 @@ namespace Facebook.WitAi.Windows
             {
                 Application.OpenURL(HeaderUrl);
             }
+        }
+        // Apply server token
+        public void ApplyServerToken(string newToken)
+        {
+            serverToken = newToken;
+            configuration.SetServerToken(serverToken);
         }
         // Whether or not to allow a configuration to refresh
         protected virtual bool CanConfigurationRefresh(WitConfiguration configuration)
@@ -295,14 +301,11 @@ namespace Facebook.WitAi.Windows
         // Safe refresh
         protected virtual void SafeRefresh()
         {
-            if (!WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))
+            if (WitConfigurationUtility.IsServerTokenValid(serverToken))
             {
-                if (!WitConfigurationUtility.IsServerTokenValid(serverToken))
-                {
-                    configuration.SetServerToken(serverToken);
-                }
+                configuration.SetServerToken(serverToken);
             }
-            else
+            else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))
             {
                 configuration.RefreshData();
             }

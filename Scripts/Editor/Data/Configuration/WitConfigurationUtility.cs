@@ -165,11 +165,10 @@ namespace Facebook.WitAi.Data.Configuration
                     {
                         var application = WitApplication.FromJson(applications[i]);
                         WitAuthUtility.SetAppServerToken(application.id, serverToken);
-                        onRequestComplete("");
-                        return;
+                        break;
                     }
                 }
-                onRequestComplete("No matching application found!");
+                onRequestComplete("");
             }, (error) =>
             {
                 SetServerTokenComplete(serverToken, error, onSetComplete);
