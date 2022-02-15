@@ -77,7 +77,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.29";
+        public const string WIT_SDK_VERSION = "0.0.30";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -107,6 +107,9 @@ namespace Facebook.WitAi
         public string postContentType;
 
         private object streamLock = new object();
+
+        private int bytesWritten;
+        private bool requestRequiresBody;
 
         /// <summary>
         /// Callback called when a response is received from the server
@@ -362,6 +365,8 @@ namespace Facebook.WitAi
                 _request.SendChunked = true;
             }
 
+            requestRequiresBody = RequestRequiresBody(command);
+
             var configId = "not-yet-configured";
 #if UNITY_EDITOR
             if (configuration)
@@ -419,6 +424,11 @@ namespace Facebook.WitAi
             {
                 StartResponse();
             }
+        }
+
+        private bool RequestRequiresBody(string command)
+        {
+            return command == WitEndpointConfig.GetEndpointConfig(configuration).Speech;
         }
 
         private void StartResponse()
@@ -616,9 +626,11 @@ namespace Facebook.WitAi
         {
             StartResponse();
             var stream = _request.EndGetRequestStream(ar);
+            bytesWritten = 0;
 
             if (null != postData)
             {
+                bytesWritten += postData.Length;
                 stream.Write(postData, 0, postData.Length);
                 CloseRequestStream();
             }
@@ -640,6 +652,7 @@ namespace Facebook.WitAi
 
         private void ExecuteWriteThread(object obj)
         {
+            bytesWritten = 0;
             Stream stream = (Stream) obj;
 
             try
@@ -670,6 +683,12 @@ namespace Facebook.WitAi
             {
                 Debug.LogError(e);
             }
+
+            if (requestRequiresBody && bytesWritten == 0)
+            {
+                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
+                AbortRequest();
+            }
         }
 
         private void FlushBuffer(Stream stream)
@@ -678,6 +697,7 @@ namespace Facebook.WitAi
             {
                 if (writeBuffer.TryDequeue(out var buffer))
                 {
+                    bytesWritten += buffer.Length;
                     stream.Write(buffer, 0, buffer.Length);
                 }
             }
@@ -706,8 +726,7 @@ namespace Facebook.WitAi
 
         public void AbortRequest()
         {
-            CloseRequestStream();
-            Debug.Log("Abort");
+            CloseActiveStream();
             _request.Abort();
             statusCode = ERROR_CODE_ABORTED;
             statusDescription = "Request was aborted";
@@ -720,6 +739,19 @@ namespace Facebook.WitAi
         /// If a post method was used, this will need to be called before the request will complete.
         /// </summary>
         public void CloseRequestStream()
+        {
+            if (requestRequiresBody && bytesWritten == 0)
+            {
+                AbortRequest();
+                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
+            }
+            else
+            {
+                CloseActiveStream();
+            }
+        }
+
+        private void CloseActiveStream()
         {
             lock (streamLock)
             {
@@ -749,6 +781,7 @@ namespace Facebook.WitAi
         private bool _performing = false;
         // All actions
         private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+
         // Called from background thread
         private void MainThreadCallback(Action action)
         {
