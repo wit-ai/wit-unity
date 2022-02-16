@@ -172,10 +172,12 @@ namespace Facebook.WitAi.Windows
                 return;
             }
             bool updated = false;
+            bool allowInput = !wit || !wit.Active;
+            GUI.enabled = allowInput;
             WitEditorUI.LayoutTextField(new GUIContent(WitStyles.Texts.UnderstandingViewerUtteranceLabel), ref utterance, ref updated);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerSubmitButtonLabel) && (null == request || !request.IsActive))
+            if (allowInput && WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerSubmitButtonLabel))
             {
                 responseText = "";
                 if (!string.IsNullOrEmpty(utterance))
@@ -187,6 +189,7 @@ namespace Facebook.WitAi.Windows
                     response = null;
                 }
             }
+            GUI.enabled = true;
 
             if (EditorApplication.isPlaying && wit)
             {
