@@ -19,6 +19,8 @@ namespace Facebook.WitAi.Windows
     {
         public WitConfiguration configuration { get; private set; }
         private string serverToken;
+        private string appName;
+        private string appID;
         private bool initialized = false;
         public bool drawHeader = true;
         private bool foldout = true;
@@ -44,7 +46,7 @@ namespace Facebook.WitAi.Windows
             if (CanConfigurationRefresh(configuration) && WitConfigurationUtility.IsServerTokenValid(serverToken))
             {
                 // Get client token if needed
-                string appID = WitConfigurationUtility.GetAppID(configuration);
+                appID = WitConfigurationUtility.GetAppID(configuration);
                 if (string.IsNullOrEmpty(appID))
                 {
                     configuration.SetServerToken(serverToken);
@@ -91,10 +93,12 @@ namespace Facebook.WitAi.Windows
             // Begin vertical box
             GUILayout.BeginVertical(EditorStyles.helpBox);
 
+            // Check for app name/id update
+            ReloadAppData();
+
             // Title Foldout
             GUILayout.BeginHorizontal();
             string foldoutText = WitStyles.Texts.ConfigurationHeaderLabel;
-            string appName = configuration?.application?.name;
             if (!string.IsNullOrEmpty(appName))
             {
                 foldoutText = foldoutText + " - " + appName;
@@ -161,6 +165,25 @@ namespace Facebook.WitAi.Windows
             if (GUILayout.Button(OpenButtonLabel, WitStyles.TextButton))
             {
                 Application.OpenURL(HeaderUrl);
+            }
+        }
+        // Reload app data if needed
+        private void ReloadAppData()
+        {
+            // Check for changes
+            string checkName = "";
+            string checkID = "";
+            if (configuration != null && configuration.application != null)
+            {
+                checkName = configuration.application.name;
+                checkID = configuration.application.id;
+            }
+            // Reset
+            if (!string.Equals(appName, checkName) || !string.Equals(appID, checkID))
+            {
+                appName = checkName;
+                appID = checkID;
+                serverToken = WitAuthUtility.GetAppServerToken(configuration);
             }
         }
         // Apply server token
