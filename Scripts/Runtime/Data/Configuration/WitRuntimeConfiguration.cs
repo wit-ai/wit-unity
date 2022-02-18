@@ -52,6 +52,9 @@ namespace Facebook.WitAi.Configuration
         [Tooltip("The total audio data that should be buffered for lookback purposes on sound based activations.")]
         [SerializeField] public float micBufferLengthInSeconds = 1;
 
+        [Tooltip("The maximum amount of concurrent requests that can occur")]
+        [Range(1, 10)] [SerializeField] public int maxConcurrentRequests = 5;
+
         [Header("Custom Transcription")]
         [Tooltip(
             "If true, the audio recorded in the activation will be sent to Wit.ai for processing. If a custom transcription provider is set and this is false, only the transcription will be sent to Wit.ai for processing")]

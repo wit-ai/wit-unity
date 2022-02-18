@@ -8,6 +8,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
@@ -32,7 +33,6 @@ namespace Facebook.WitAi
         private WitRequestOptions _currentRequestOptions;
         private float _lastMinVolumeLevelTime;
         private WitRequest _recordingRequest;
-        private HashSet<WitRequest> _transmitRequests = new HashSet<WitRequest>();
 
         private bool _isSoundWakeActive;
         private RingBuffer<byte> _micDataBuffer;
@@ -48,6 +48,11 @@ namespace Facebook.WitAi
         // Transcription based endpointing
         private bool _receivedTranscription;
         private float _lastWordTime;
+
+        // Parallel Requests
+        private HashSet<WitRequest> _transmitRequests = new HashSet<WitRequest>();
+        private HashSet<WitRequest> _queuedRequests = new HashSet<WitRequest>();
+        private Coroutine _queueHandler;
 
         #region Interfaces
         private IWitByteDataReadyHandler[] _dataReadyHandlers;
@@ -548,6 +553,7 @@ namespace Facebook.WitAi
             // Abort transmitting requests
             if (abort)
             {
+                AbortQueue();
                 foreach (var request in _transmitRequests)
                 {
                     DeactivateWitRequest(request, true);
@@ -614,12 +620,74 @@ namespace Facebook.WitAi
             // Create request & add response delegate
             WitRequest request = RuntimeConfiguration.witConfiguration.MessageRequest(transcription, requestOptions);
             request.onResponse += HandleResult;
+
             // Call on create delegate
             events.OnRequestCreated?.Invoke(request);
-            // Add to transmit requests list
-            _transmitRequests.Add(request);
-            // Perform request
-            request.Request();
+
+            // Add to queue
+            AddToQueue(request);
+        }
+        #endregion
+
+        #region QUEUE
+        // Add request to wait queue
+        private void AddToQueue(WitRequest request)
+        {
+            // In editor or disabled, do not queue
+            if (!Application.isPlaying || _runtimeConfiguration.maxConcurrentRequests <= 0)
+            {
+                _transmitRequests.Add(request);
+                request.Request();
+                return;
+            }
+
+            // Add to queue
+            _queuedRequests.Add(request);
+
+            // If not running, begin
+            if (_queueHandler == null)
+            {
+                _queueHandler = StartCoroutine(PerformDequeue());
+            }
+        }
+        // Abort request
+        private void AbortQueue()
+        {
+            if (_queueHandler != null)
+            {
+                StopCoroutine(_queueHandler);
+                _queueHandler = null;
+            }
+            foreach (var request in _queuedRequests)
+            {
+                DeactivateWitRequest(request, true);
+            }
+            _queuedRequests.Clear();
+        }
+        // Coroutine used to send transcriptions when possible
+        private IEnumerator PerformDequeue()
+        {
+            // Perform until no requests remain
+            while (_queuedRequests.Count > 0)
+            {
+                // Wait a frame to space out requests
+                yield return new WaitForEndOfFrame();
+
+                // If space, dequeue & request
+                if (_transmitRequests.Count < _runtimeConfiguration.maxConcurrentRequests)
+                {
+                    // Dequeue
+                    WitRequest request = _queuedRequests.First();
+                    _queuedRequests.Remove(request);
+
+                    // Transmit
+                    _transmitRequests.Add(request);
+                    request.Request();
+                }
+            }
+
+            // Kill coroutine
+            _queueHandler = null;
         }
         #endregion
 
