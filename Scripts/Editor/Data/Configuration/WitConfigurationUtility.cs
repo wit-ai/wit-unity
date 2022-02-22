@@ -109,8 +109,24 @@ namespace Facebook.WitAi.Data.Configuration
         // Save configuration to selected location
         public static int SaveConfiguration(string serverToken, WitConfiguration configurationAsset)
         {
+            // Determine root directory with selection if possible
+            string rootDirectory = Application.dataPath;
+            if (Selection.activeObject)
+            {
+                string selectedPath = AssetDatabase.GetAssetPath(Selection.activeObject);
+                if (AssetDatabase.IsValidFolder(selectedPath))
+                {
+                    rootDirectory = selectedPath;
+                }
+                else if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    rootDirectory = new System.IO.FileInfo(selectedPath).DirectoryName;
+                    rootDirectory = rootDirectory.Replace("\\", "/").Replace(Application.dataPath, "Assets");
+                }
+            }
+
             // Create
-            string path = EditorUtility.SaveFilePanel(WitStyles.Texts.ConfigurationFileManagerLabel, Application.dataPath, WitStyles.Texts.ConfigurationFileNameLabel, "asset");
+            string path = EditorUtility.SaveFilePanel(WitStyles.Texts.ConfigurationFileManagerLabel, rootDirectory, WitStyles.Texts.ConfigurationFileNameLabel, "asset");
             if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
             {
                 // Create
@@ -471,8 +487,11 @@ namespace Facebook.WitAi.Data.Configuration
         private static void ApplyClientToken(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
         {
             var token = witResponse?["client_token"];
-            configuration.clientAccessToken = token;
-            EditorUtility.SetDirty(configuration);
+            if (!string.IsNullOrEmpty(token))
+            {
+                configuration.clientAccessToken = token;
+                EditorUtility.SetDirty(configuration);
+            }
             onComplete?.Invoke("");
         }
         // Apply intents
