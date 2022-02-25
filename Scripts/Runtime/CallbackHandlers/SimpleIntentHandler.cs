@@ -11,6 +11,7 @@ using UnityEngine.Events;
 
 namespace Facebook.WitAi.CallbackHandlers
 {
+    [AddComponentMenu("Wit.ai/Response Matchers/Simple Intent Handler")]
     public class SimpleIntentHandler : WitResponseHandler
     {
         [SerializeField] public string intent;
