@@ -140,6 +140,7 @@ namespace Facebook.WitAi
         public static GUIStyle LabelHeader;
         public static GUIStyle LabelSubheader;
         public static GUIStyle LabelStatus;
+        public static GUIStyle LabelStatusBackground;
 
         // Button styles
         public static GUIStyle TextButton;
@@ -168,8 +169,14 @@ namespace Facebook.WitAi
         // Texture
         public static Texture2D TextureBlack25P;
 
+        static WitStyles()
+        {
+            Init();
+        }
+
         // Init
         private static bool Initialized = false;
+
         public static void Init()
         {
             if (Initialized)
@@ -200,6 +207,7 @@ namespace Facebook.WitAi
             // Setup icons
             TitleIcon = (Texture2D) Resources.Load("witai");
             HeaderIcon = (Texture2D) Resources.Load("wit-ai-title");
+            PasteIcon = EditorGUIUtility.IconContent("Clipboard");
             PasteIcon = EditorGUIUtility.IconContent("Clipboard");
             EditIcon = EditorGUIUtility.IconContent("editicon.sml");
             ResetIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
@@ -243,11 +251,14 @@ namespace Facebook.WitAi
             TextureBlack25P = new Texture2D(1, 1);
             TextureBlack25P.SetPixel(0, 0, new Color(0, 0, 0, .25f));
             TextureBlack25P.Apply();
-            LabelStatus.normal.background = TextureBlack25P;
+            LabelStatusBackground = new GUIStyle();
+            LabelStatusBackground.normal.background = TextureBlack25P;
             LabelStatus.wordWrap = true;
             LabelStatus.fontSize++;
             LabelStatus.alignment = TextAnchor.LowerLeft;
             LabelStatus.margin = new RectOffset(0, 0, 0, 0);
+            LabelStatus.wordWrap = false;
+            LabelStatus.fontSize = 10;
             // Set to blue if not pro
             if (!EditorGUIUtility.isProSkin)
             {

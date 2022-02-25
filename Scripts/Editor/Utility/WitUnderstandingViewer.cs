@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Facebook.WitAi.CallbackHandlers;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
@@ -32,6 +33,8 @@ namespace Facebook.WitAi.Windows
         private VoiceService wit;
         private int responseCode;
         private WitRequest request;
+        private int savePopup;
+        private GUIStyle hamburgerButton;
 
         public bool HasWit => null != wit;
 
@@ -142,7 +145,42 @@ namespace Facebook.WitAi.Windows
         protected override void OnGUI()
         {
             base.OnGUI();
+            EditorGUILayout.BeginHorizontal();
             WitEditorUI.LayoutStatusLabel(status);
+            GUILayout.BeginVertical(GUILayout.Width(24));
+            GUILayout.Space(4);
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(4);
+            var rect = GUILayoutUtility.GetLastRect();
+
+            if (null == hamburgerButton)
+            {
+                // GUI.skin must be called from OnGUI
+                hamburgerButton = new GUIStyle(GUI.skin.GetStyle("PaneOptions"));
+                hamburgerButton.imagePosition = ImagePosition.ImageOnly;
+            }
+
+            var value = EditorGUILayout.Popup(-1, new string[] {"Save", "Copy to Clipboard"}, hamburgerButton, GUILayout.Width(24));
+            if (-1 != value)
+            {
+                if (value == 0)
+                {
+                    var path = EditorUtility.SaveFilePanel("Save Response Json", Application.dataPath,
+                        "result", "json");
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        File.WriteAllText(path, response.ToString());
+                    }
+                }
+                else
+                {
+                    EditorGUIUtility.systemCopyBuffer = response.ToString();
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
         }
 
         protected override void LayoutContent()

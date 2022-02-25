@@ -39,7 +39,10 @@ namespace Facebook.WitAi
         }
         public static void LayoutStatusLabel(string text)
         {
-            LayoutLabel(text, WitStyles.LabelStatus);
+            EditorGUILayout.BeginVertical(WitStyles.LabelStatusBackground,
+                GUILayout.ExpandWidth(true), GUILayout.Height(24));
+            EditorGUILayout.LabelField(text, WitStyles.LabelStatus, GUILayout.ExpandWidth(true));
+            EditorGUILayout.EndVertical();
         }
         private static void LayoutLabel(string text, GUIStyle style)
         {
