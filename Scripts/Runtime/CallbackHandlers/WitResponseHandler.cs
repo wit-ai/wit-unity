@@ -36,9 +36,11 @@ namespace Facebook.WitAi.CallbackHandlers
 
         private void OnDisable()
         {
-            wit.events.OnResponse.RemoveListener(OnHandleResponse);
+            if(wit) wit.events.OnResponse.RemoveListener(OnHandleResponse);
         }
 
         protected abstract void OnHandleResponse(WitResponseNode response);
+
+        public void HandleResponse(WitResponseNode response) => OnHandleResponse(response);
     }
 }
