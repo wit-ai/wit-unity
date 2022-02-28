@@ -44,15 +44,24 @@ namespace Facebook.WitAi.Data.Configuration
         public static void ReloadConfigurationData()
         {
             // Find all Wit Configurations
+            List<WitConfiguration> found = new List<WitConfiguration>();
             string[] guids = AssetDatabase.FindAssets("t:WitConfiguration");
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                WitConfiguration config = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
+                if (!config.isDemoOnly)
+                {
+                    found.Add(config);
+                }
+            }
 
             // Store wit configuration data
-            witConfigs = new WitConfiguration[guids.Length];
-            witConfigNames = new string[guids.Length];
-            for (int i = 0; i < guids.Length; i++)
+            witConfigs = found.ToArray();
+            // Obtain all names
+            witConfigNames = new string[witConfigs.Length];
+            for (int i = 0; i < witConfigs.Length; i++)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                witConfigs[i] = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
                 witConfigNames[i] = witConfigs[i].name;
             }
         }
