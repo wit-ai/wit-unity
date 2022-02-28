@@ -6,7 +6,6 @@
  */
 
 using System.Collections.Generic;
-using Codice.Client.BaseCommands;
 using UnityEditor;
 using UnityEngine;
 using Facebook.WitAi.CallbackHandlers;
