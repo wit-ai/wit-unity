@@ -95,7 +95,7 @@ namespace Facebook.WitAi.Data.Configuration
         {
             // Generate blank asset
             WitConfiguration configurationAsset = ScriptableObject.CreateInstance<WitConfiguration>();
-            configurationAsset.name = WitStyles.Texts.ConfigurationFileNameLabel;
+            configurationAsset.name = WitTexts.Texts.ConfigurationFileNameLabel;
             configurationAsset.clientAccessToken = string.Empty;
             // Create
             int index = SaveConfiguration(serverToken, configurationAsset);
@@ -106,7 +106,7 @@ namespace Facebook.WitAi.Data.Configuration
             // Return new index
             return index;
         }
-        // Save configuration to selected location
+        // Save configuration after determining path
         public static int SaveConfiguration(string serverToken, WitConfiguration configurationAsset)
         {
             // Determine root directory with selection if possible
@@ -121,32 +121,37 @@ namespace Facebook.WitAi.Data.Configuration
                 else if (!string.IsNullOrEmpty(selectedPath))
                 {
                     rootDirectory = new System.IO.FileInfo(selectedPath).DirectoryName;
-                    rootDirectory = rootDirectory.Replace("\\", "/").Replace(Application.dataPath, "Assets");
                 }
             }
 
-            // Create
-            string path = EditorUtility.SaveFilePanel(WitStyles.Texts.ConfigurationFileManagerLabel, rootDirectory, WitStyles.Texts.ConfigurationFileNameLabel, "asset");
-            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
+            // Determine save path
+            string savePath = EditorUtility.SaveFilePanel(WitTexts.Texts.ConfigurationFileManagerLabel, rootDirectory, WitTexts.Texts.ConfigurationFileNameLabel, "asset");
+            return SaveConfiguration(savePath, serverToken, configurationAsset);
+        }
+        // Save configuration to selected location
+        public static int SaveConfiguration(string savePath, string serverToken, WitConfiguration configurationAsset)
+        {
+            // Ensure valid save path
+            if (string.IsNullOrEmpty(savePath))
             {
-                // Create
-                path = path.Replace(Application.dataPath, "Assets");
-                AssetDatabase.CreateAsset(configurationAsset, path);
-                AssetDatabase.SaveAssets();
-
-                // Refresh configurations
-                ReloadConfigurationData();
-
-                // Get new index following reload
-                string name = System.IO.Path.GetFileNameWithoutExtension(path);
-                int index = GetConfigurationIndex(name);
-                witConfigs[index].SetServerToken(serverToken);
-                // Return index
-                return index;
+                return -1;
             }
 
-            // Return new index
-            return -1;
+            // Determine local unity path
+            string unityPath = savePath.Replace("\\", "/").Replace(Application.dataPath, "Assets");
+            AssetDatabase.CreateAsset(configurationAsset, unityPath);
+            AssetDatabase.SaveAssets();
+
+            // Refresh configurations
+            ReloadConfigurationData();
+
+            // Get new index following reload
+            string name = System.IO.Path.GetFileNameWithoutExtension(unityPath);
+            int index = GetConfigurationIndex(name);
+            witConfigs[index].SetServerToken(serverToken);
+
+            // Return index
+            return index;
         }
         #endregion
 

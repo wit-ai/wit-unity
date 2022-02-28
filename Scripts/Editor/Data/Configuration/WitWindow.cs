@@ -15,7 +15,7 @@ namespace Facebook.WitAi.Windows
     {
         protected WitConfigurationEditor witInspector;
         protected string serverToken;
-        protected override GUIContent Title => WitStyles.SettingsTitleContent;
+        protected override GUIContent Title => WitTexts.SettingsTitleContent;
         protected override string HeaderUrl => witInspector ? witInspector.HeaderUrl : base.HeaderUrl;
 
         protected override void OnEnable()
@@ -43,16 +43,16 @@ namespace Facebook.WitAi.Windows
             // Server access token
             GUILayout.BeginHorizontal();
             bool updated = false;
-            WitEditorUI.LayoutPasswordField(WitStyles.SettingsServerTokenContent, ref serverToken, ref updated);
+            WitEditorUI.LayoutPasswordField(WitTexts.SettingsServerTokenContent, ref serverToken, ref updated);
             if (updated && witInspector != null)
             {
                 witInspector.ApplyServerToken(serverToken);
             }
-            if (WitEditorUI.LayoutTextButton(WitStyles.Texts.SettingsRelinkButtonLabel))
+            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsRelinkButtonLabel))
             {
                 RelinkServerToken();
             }
-            if (WitEditorUI.LayoutTextButton(WitStyles.Texts.SettingsAddButtonLabel))
+            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsAddButtonLabel))
             {
                 int newIndex = WitConfigurationUtility.CreateConfiguration(serverToken);
                 if (newIndex != -1)

@@ -110,7 +110,7 @@ namespace Facebook.WitAi.Windows
         {
 
         }
-        [CustomEditor(typeof(ValuePathMatcher))]
+        [CustomPropertyDrawer(typeof(ValuePathMatcher))]
         public class WitCustomValuePathMatcherPropertyDrawer : ValuePathMatcherPropertyDrawer
         {
 

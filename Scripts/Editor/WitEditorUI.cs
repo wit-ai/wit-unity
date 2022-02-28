@@ -351,8 +351,6 @@ namespace Facebook.WitAi
         #region WINDOW
         public static void LayoutWindow(string windowTitle, Texture2D windowHeader, string windowHeaderUrl, Action windowContentLayout, ref Vector2 offset, out Vector2 size)
         {
-            // Init styles
-            WitStyles.Init();
             // Get minimum width
             float minWidth = WitStyles.WindowMinWidth;
 

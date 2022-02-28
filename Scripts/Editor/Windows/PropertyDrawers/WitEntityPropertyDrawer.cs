@@ -28,13 +28,13 @@ namespace Facebook.WitAi.Windows
                         }
                         break;
                     case "id":
-                        return WitStyles.Texts.ConfigurationEntitiesIdLabel;
+                        return WitTexts.Texts.ConfigurationEntitiesIdLabel;
                     case "lookups":
-                        return WitStyles.Texts.ConfigurationEntitiesLookupsLabel;
+                        return WitTexts.Texts.ConfigurationEntitiesLookupsLabel;
                     case "roles":
-                        return WitStyles.Texts.ConfigurationEntitiesRolesLabel;
+                        return WitTexts.Texts.ConfigurationEntitiesRolesLabel;
             }
-            
+
             // Default to base
             return base.GetLocalizedText(property, key);
         }

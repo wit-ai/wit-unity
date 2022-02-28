@@ -15,8 +15,8 @@ namespace Facebook.WitAi.Windows
     {
         protected Vector2 scrollOffset;
 
-        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.WitUrl;
+        protected virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
+        protected virtual string HeaderUrl => WitTexts.WitUrl;
 
         protected abstract GUIContent Title { get; }
         protected abstract string ButtonLabel { get; }

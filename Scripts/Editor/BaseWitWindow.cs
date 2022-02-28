@@ -18,13 +18,12 @@ namespace Facebook.WitAi.Windows
 
         // Override values
         protected abstract GUIContent Title { get; }
-        protected virtual Texture2D HeaderIcon => WitStyles.HeaderIcon;
-        protected virtual string HeaderUrl => WitStyles.WitUrl;
+        protected virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
+        protected virtual string HeaderUrl => WitTexts.WitUrl;
 
         // Window open
         protected virtual void OnEnable()
         {
-            WitStyles.Init();
             titleContent = Title;
             WitConfigurationUtility.ReloadConfigurationData();
         }

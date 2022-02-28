@@ -57,8 +57,8 @@ namespace Facebook.WitAi.Windows
             }
         }
 
-        protected override GUIContent Title => WitStyles.UnderstandingTitleContent;
-        protected override WitStyles.WitAppEndpointType HeaderEndpointType => WitStyles.WitAppEndpointType.Understanding;
+        protected override GUIContent Title => WitTexts.UnderstandingTitleContent;
+        protected override WitTexts.WitAppEndpointType HeaderEndpointType => WitTexts.WitAppEndpointType.Understanding;
 
         protected override void OnEnable()
         {
@@ -69,7 +69,7 @@ namespace Facebook.WitAi.Windows
             {
                 response = WitResponseNode.Parse(responseText);
             }
-            status = WitStyles.Texts.UnderstandingViewerPromptLabel;
+            status = WitTexts.Texts.UnderstandingViewerPromptLabel;
         }
 
         protected override void OnDisable()
@@ -191,7 +191,7 @@ namespace Facebook.WitAi.Windows
             // Need configuration
             if (!witConfiguration)
             {
-                WitEditorUI.LayoutErrorLabel(WitStyles.Texts.UnderstandingViewerMissingConfigLabel);
+                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingConfigLabel);
                 return;
             }
             // Need app id
@@ -199,10 +199,10 @@ namespace Facebook.WitAi.Windows
             string clientAccessToken = witConfiguration.clientAccessToken;
             if (string.IsNullOrEmpty(appID) || string.IsNullOrEmpty(clientAccessToken))
             {
-                WitEditorUI.LayoutErrorLabel(WitStyles.Texts.UnderstandingViewerNoAppLabel);
+                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerNoAppLabel);
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                if (WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerSettingsButtonLabel))
+                if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSettingsButtonLabel))
                 {
                     Selection.activeObject = witConfiguration;
                 }
@@ -212,10 +212,10 @@ namespace Facebook.WitAi.Windows
             bool updated = false;
             bool allowInput = !wit || !wit.Active;
             GUI.enabled = allowInput;
-            WitEditorUI.LayoutTextField(new GUIContent(WitStyles.Texts.UnderstandingViewerUtteranceLabel), ref utterance, ref updated);
+            WitEditorUI.LayoutTextField(new GUIContent(WitTexts.Texts.UnderstandingViewerUtteranceLabel), ref utterance, ref updated);
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (allowInput && WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerSubmitButtonLabel))
+            if (allowInput && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSubmitButtonLabel))
             {
                 responseText = "";
                 if (!string.IsNullOrEmpty(utterance))
@@ -231,17 +231,17 @@ namespace Facebook.WitAi.Windows
 
             if (EditorApplication.isPlaying && wit)
             {
-                if (!wit.Active && WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerActivateButtonLabel))
+                if (!wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerActivateButtonLabel))
                 {
                     wit.Activate();
                 }
 
-                if (wit.Active && WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerDeactivateButtonLabel))
+                if (wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerDeactivateButtonLabel))
                 {
                     wit.Deactivate();
                 }
 
-                if (wit.Active && WitEditorUI.LayoutTextButton(WitStyles.Texts.UnderstandingViewerAbortButtonLabel))
+                if (wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerAbortButtonLabel))
                 {
                     wit.DeactivateAndAbortRequest();
                 }
@@ -252,11 +252,11 @@ namespace Facebook.WitAi.Windows
             GUILayout.BeginVertical(EditorStyles.helpBox);
             if (wit && wit.MicActive)
             {
-                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerListeningLabel);
+                WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerListeningLabel);
             }
             else if (wit && wit.IsRequestActive)
             {
-                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerLoadingLabel);
+                WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerLoadingLabel);
             }
             else if (response != null)
             {
@@ -264,7 +264,7 @@ namespace Facebook.WitAi.Windows
             }
             else if (string.IsNullOrEmpty(responseText))
             {
-                WitEditorUI.LayoutWrapLabel(WitStyles.Texts.UnderstandingViewerPromptLabel);
+                WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerPromptLabel);
             }
             else
             {
@@ -286,7 +286,7 @@ namespace Facebook.WitAi.Windows
 
             if (wit && Application.isPlaying)
             {
-                status = WitStyles.Texts.UnderstandingViewerListeningLabel;
+                status = WitTexts.Texts.UnderstandingViewerListeningLabel;
                 responseText = status;
                 wit.Activate(utterance);
                 // Hack to watch for loading to complete. Response does not
@@ -296,7 +296,7 @@ namespace Facebook.WitAi.Windows
             }
             else
             {
-                status = WitStyles.Texts.UnderstandingViewerLoadingLabel;
+                status = WitTexts.Texts.UnderstandingViewerLoadingLabel;
                 responseText = status;
                 submitStart = System.DateTime.Now;
                 request = witConfiguration.MessageRequest(utterance, new WitRequestOptions());

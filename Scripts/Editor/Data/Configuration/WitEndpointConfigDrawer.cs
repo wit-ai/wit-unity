@@ -54,17 +54,17 @@ namespace Facebook.WitAi.Windows
             switch (key)
             {
                 case LocalizedTitleKey:
-                    return WitStyles.Texts.ConfigurationEndpointTitleLabel;
+                    return WitTexts.Texts.ConfigurationEndpointTitleLabel;
                 case "uriScheme":
-                    return WitStyles.Texts.ConfigurationEndpointUriLabel;
+                    return WitTexts.Texts.ConfigurationEndpointUriLabel;
                 case "authority":
-                    return WitStyles.Texts.ConfigurationEndpointAuthLabel;
+                    return WitTexts.Texts.ConfigurationEndpointAuthLabel;
                 case "port":
-                    return WitStyles.Texts.ConfigurationEndpointPortLabel;
+                    return WitTexts.Texts.ConfigurationEndpointPortLabel;
                 case "witApiVersion":
-                    return WitStyles.Texts.ConfigurationEndpointApiLabel;
+                    return WitTexts.Texts.ConfigurationEndpointApiLabel;
                 case "speech":
-                    return WitStyles.Texts.ConfigurationEndpointSpeechLabel;
+                    return WitTexts.Texts.ConfigurationEndpointSpeechLabel;
             }
             // Default to base
             return base.GetLocalizedText(property, key);
