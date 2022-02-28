@@ -14,6 +14,7 @@ using UnityEngine;
 
 namespace Facebook.WitAi.CallbackHandlers
 {
+    [CustomEditor(typeof(SimpleStringEntityHandler))]
     public class SimpleStringEntityHandlerEditor : Editor
     {
         private SimpleStringEntityHandler handler;

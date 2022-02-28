@@ -72,16 +72,6 @@ namespace Facebook.WitAi.Windows
         {
 
         }
-        [CustomEditor(typeof(SimpleIntentHandler))]
-        public class WitCustomSimpleIntentHandlerEditor : SimpleIntentHandlerEditor
-        {
-
-        }
-        [CustomEditor(typeof(SimpleStringEntityHandler))]
-        public class WitCustomSimpleStringEntityHandlerEditor : SimpleStringEntityHandlerEditor
-        {
-
-        }
         #endregion
 
         #region DRAWERS
