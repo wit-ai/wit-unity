@@ -77,7 +77,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.31";
+        public const string WIT_SDK_VERSION = "0.0.32";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -624,30 +624,42 @@ namespace Facebook.WitAi
 
         private void HandleRequestStream(IAsyncResult ar)
         {
-            StartResponse();
-            var stream = _request.EndGetRequestStream(ar);
-            bytesWritten = 0;
+            try
+            {
+                StartResponse();
+                var stream = _request.EndGetRequestStream(ar);
+                bytesWritten = 0;
 
-            if (null != postData)
-            {
-                bytesWritten += postData.Length;
-                stream.Write(postData, 0, postData.Length);
-                CloseRequestStream();
-            }
-            else
-            {
-                if (null == onInputStreamReady)
+                if (null != postData)
                 {
+                    bytesWritten += postData.Length;
+                    stream.Write(postData, 0, postData.Length);
                     CloseRequestStream();
                 }
                 else
                 {
-                    isRequestStreamActive = true;
-                    SafeInvoke(onInputStreamReady);
+                    if (null == onInputStreamReady)
+                    {
+                        CloseRequestStream();
+                    }
+                    else
+                    {
+                        isRequestStreamActive = true;
+                        SafeInvoke(onInputStreamReady);
+                    }
+                }
+
+                new Thread(ExecuteWriteThread).Start(stream);
+            }
+            catch (WebException e)
+            {
+                if (e.Status != WebExceptionStatus.RequestCanceled)
+                {
+                    statusCode = (int) e.Status;
+                    statusDescription = e.Message;
+                    SafeInvoke(onResponse);
                 }
             }
-
-            new Thread(ExecuteWriteThread).Start(stream);
         }
 
         private void ExecuteWriteThread(object obj)
@@ -728,8 +740,11 @@ namespace Facebook.WitAi
         {
             CloseActiveStream();
             _request.Abort();
-            statusCode = ERROR_CODE_ABORTED;
-            statusDescription = "Request was aborted";
+            if (statusCode == 0)
+            {
+                statusCode = ERROR_CODE_ABORTED;
+                statusDescription = "Request was aborted";
+            }
             isActive = false;
         }
 
