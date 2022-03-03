@@ -53,6 +53,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Data.Intents;
 
 
 namespace Facebook.WitAi.Lib
@@ -221,6 +223,11 @@ namespace Facebook.WitAi.Lib
             get { return this as WitResponseClass; }
         }
 
+        public virtual WitEntityData AsWitEntity => new WitEntityData(this);
+        public virtual WitEntityFloatData AsWitFloatEntity => new WitEntityFloatData(this);
+        public virtual WitEntityIntData AsWitIntEntity => new WitEntityIntData(this);
+
+        public virtual WitIntentData AsWitIntent => new WitIntentData(this);
 
         #endregion typecasting properties
 

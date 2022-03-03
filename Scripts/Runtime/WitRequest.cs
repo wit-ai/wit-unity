@@ -77,7 +77,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.32";
+        public const string WIT_SDK_VERSION = "0.0.33";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -515,7 +515,7 @@ namespace Facebook.WitAi
                                     // Test case: Utterance with multiple entity responses pushing
                                     // final data > 1024 bytes.
                                     offset = bytes;
-                                    Debug.LogWarning("Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " + e.Message);
+                                    Debug.LogWarning("Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " + e.Message + "\n" + stringResponse);
                                 }
                             }
                         }

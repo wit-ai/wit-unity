@@ -5,9 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
 using UnityEngine;
 
 namespace Facebook.WitAi
@@ -92,6 +95,65 @@ namespace Facebook.WitAi
         /// <param name="text"></param>
         /// <param name="requestOptions"></param>
         public abstract void Activate(string text, WitRequestOptions requestOptions);
+
+        protected virtual void Awake()
+        {
+            MatchIntentRegistry.Initialize();
+        }
+
+        protected virtual void OnEnable()
+        {
+            events.OnResponse.AddListener(OnResponse);
+        }
+
+        protected virtual void OnDisable()
+        {
+            events.OnResponse.RemoveListener(OnResponse);
+        }
+
+        protected virtual void OnResponse(WitResponseNode response)
+        {
+            var intents = response.GetIntents();
+            foreach (var intent in intents)
+            {
+                HandleIntent(intent, response);
+            }
+        }
+
+        private void HandleIntent(WitIntentData intent, WitResponseNode response)
+        {
+            var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
+            foreach (var method in methods)
+            {
+                ExecuteRegisteredMatch(method, intent, response);
+            }
+        }
+
+        private void ExecuteRegisteredMatch(RegisteredMatchIntent registeredMethod,
+            WitIntentData intent, WitResponseNode response)
+        {
+            if (intent.confidence >= registeredMethod.matchIntent.MinConfidence &&
+                intent.confidence <= registeredMethod.matchIntent.MaxConfidence)
+            {
+                foreach (var obj in FindObjectsOfType(registeredMethod.type))
+                {
+                    var parameters = registeredMethod.method.GetParameters();
+                    if (parameters.Length == 1)
+                    {
+                        registeredMethod.method.Invoke(obj, new object[] {response});
+                    }
+                    else if (parameters.Length == 0)
+                    {
+                        registeredMethod.method.Invoke(obj, Array.Empty<object>());
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            "Too many parameters on method tagged with MatchIntent. Match intent only supports methods with no parameters or with a WitResponseNode parameter.");
+                    }
+                }
+            }
+        }
     }
 
     public interface IVoiceService

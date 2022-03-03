@@ -43,5 +43,49 @@ namespace Facebook.WitAi.Samples.Shapes
                 }
             }
         }
+
+        [MatchIntent("change_color")]
+        public void OnColorIntent()
+        {
+            Debug.Log("OnColorIntent was triggered");
+        }
+
+        [MatchIntent("change_color")]
+        public void OnHandleColorIntent(WitResponseNode node)
+        {
+            var intent = node.GetFirstIntentData();
+
+            var color = node.GetFirstWitEntity("color:color");
+            if (color == "red")
+            {
+                Debug.Log("The cube is red!");
+            }
+
+            Debug.Log("OnHandleColorIntent was triggered with color " +
+                      color);
+        }
+
+        [MatchIntent("change_size")]
+        public void OnHandleSizeIntent(WitResponseNode node)
+        {
+            var intent = node.GetFirstIntentData();
+
+            var size = node.GetFirstWitIntEntity("wit:number") ?? 1;
+            var shape = node.GetFirstWitEntity("shape:shape");
+
+            if (shape.confidence > .5)
+            {
+                var shapeTransform = transform.Find(shape);
+                if (shapeTransform)
+                {
+                    shapeTransform.localScale = Vector3.one * 10 / ((float) size);
+                }
+            }
+        }
+
+        private void FindShape(string shape)
+        {
+
+        }
     }
 }

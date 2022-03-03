@@ -32,9 +32,7 @@ namespace Facebook.WitAi.CallbackHandlers
         [SerializeField] private FormattedValueEvents[] formattedValueEvents;
         [SerializeField] private MultiValueEvent onMultiValueEvent = new MultiValueEvent();
 
-
         private static Regex valueRegex = new Regex(Regex.Escape("{value}"), RegexOptions.Compiled);
-
 
         protected override void OnHandleResponse(WitResponseNode response)
         {

@@ -131,8 +131,9 @@ namespace Facebook.WitAi
 
         #region LIFECYCLE
         // Find transcription provider & Mic
-        private void Awake()
+        protected virtual void Awake()
         {
+            base.Awake();
             if (null == _activeTranscriptionProvider &&
                 _runtimeConfiguration.customTranscriptionProvider)
             {
@@ -149,8 +150,9 @@ namespace Facebook.WitAi
             _dataSentHandlers = GetComponents<IWitByteDataSentHandler>();
         }
         // Add mic delegates
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
 #if UNITY_EDITOR
             // Make sure we have a mic input after a script recompile
             if (null == _micInput)
@@ -174,8 +176,9 @@ namespace Facebook.WitAi
             }
         }
         // Remove mic delegates
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             _micInput.OnSampleReady -= OnMicSampleReady;
             _micInput.OnStartRecording -= OnMicStartListening;
             _micInput.OnStopRecording -= OnMicStoppedListening;

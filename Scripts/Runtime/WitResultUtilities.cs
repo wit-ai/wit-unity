@@ -5,30 +5,171 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Lib;
 
 namespace Facebook.WitAi
 {
     public static class WitResultUtilities
     {
+        /// <summary>
+        /// Gets the string value of the first entity
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static string GetFirstEntityValue(this WitResponseNode witResponse, string name)
         {
             return witResponse?["entities"]?[name]?[0]?["value"]?.Value;
         }
 
+        /// <summary>
+        /// Gets the first entity as a WitResponseNode
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static WitResponseNode GetFirstEntity(this WitResponseNode witResponse, string name)
         {
             return witResponse?["entities"]?[name][0];
         }
 
+        /// <summary>
+        /// Gets the first entity with the given name as string data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static WitEntityData GetFirstWitEntity(this WitResponseNode witResponse, string name)
+        {
+            var array = witResponse?["entities"]?[name].AsArray;
+            return array?.Count > 0 ? array[0].AsWitEntity : null;
+        }
+
+        /// <summary>
+        /// Gets The first entity with the given name as int data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static WitEntityIntData GetFirstWitIntEntity(this WitResponseNode witResponse, string name)
+        {
+            var array = witResponse?["entities"]?[name].AsArray;
+            return array?.Count > 0 ? array[0].AsWitIntEntity : null;
+        }
+
+        /// <summary>
+        /// Gets the first entity with the given name as float data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static WitEntityFloatData GetFirstWitFloatEntity(this WitResponseNode witResponse, string name)
+        {
+            var array = witResponse?["entities"]?[name].AsArray;
+            return array?.Count > 0 ? array[0].AsWitFloatEntity : null;
+        }
+
+        /// <summary>
+        /// Gets the first intent's name
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns></returns>
         public static string GetIntentName(this WitResponseNode witResponse)
         {
             return witResponse?["intents"]?[0]?["name"]?.Value;
         }
 
+        /// <summary>
+        /// Gets the first intent node
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns></returns>
         public static WitResponseNode GetFirstIntent(this WitResponseNode witResponse)
         {
             return witResponse?["intents"]?[0];
+        }
+
+        /// <summary>
+        /// Gets the first set of intent data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns>WitIntentData or null if no intents are found</returns>
+        public static WitIntentData GetFirstIntentData(this WitResponseNode witResponse)
+        {
+            var array = witResponse?["intents"]?.AsArray;
+            return array?.Count > 0 ? array[0].AsWitIntent : null;
+        }
+
+        /// <summary>
+        /// Gets all intents in the given response
+        /// </summary>
+        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
+        /// <returns></returns>
+        public static WitIntentData[] GetIntents(this WitResponseNode witResponse)
+        {
+            var intentResponseArray = witResponse?["intents"].AsArray;
+            var intents = new WitIntentData[intentResponseArray?.Count ?? 0];
+            for (int i = 0; i < intents.Length; i++)
+            {
+                intents[i] = intentResponseArray[i].AsWitIntent;
+            }
+
+            return intents;
+        }
+
+        /// <summary>
+        /// Gets all entities in the given response
+        /// </summary>
+        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
+        /// <returns></returns>
+        public static WitEntityData[] GetEntities(this WitResponseNode witResponse, string name)
+        {
+            var entityJsonArray = witResponse?["entities"]?[name].AsArray;
+            var entities = new WitEntityData[entityJsonArray?.Count ?? 0];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                entities[i] = entityJsonArray[i].AsWitEntity;
+            }
+
+            return entities;
+        }
+
+        /// <summary>
+        /// Gets all float entity values in the given response with the specified entity name
+        /// </summary>
+        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static WitEntityFloatData[] GetFloatEntities(this WitResponseNode witResponse, string name)
+        {
+            var entityJsonArray = witResponse?["entities"]?[name].AsArray;
+            var entities = new WitEntityFloatData[entityJsonArray?.Count ?? 0];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                entities[i] = entityJsonArray[i].AsWitFloatEntity;
+            }
+
+            return entities;
+        }
+
+        /// <summary>
+        /// Gets all int entity values in the given response with the specified entity name
+        /// </summary>
+        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static WitEntityIntData[] GetIntEntities(this WitResponseNode witResponse, string name)
+        {
+            var entityJsonArray = witResponse?["entities"]?[name].AsArray;
+            var entities = new WitEntityIntData[entityJsonArray?.Count ?? 0];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                entities[i] = entityJsonArray[i].AsWitIntEntity;
+            }
+
+            return entities;
         }
 
         public static string GetPathValue(this WitResponseNode response, string path)
