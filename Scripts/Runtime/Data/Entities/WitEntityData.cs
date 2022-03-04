@@ -68,11 +68,10 @@ namespace Facebook.WitAi.Data.Entities
             return node[WitEntity.Fields.VALUE];
         }
 
+        public static implicit operator bool(WitEntityData data) => null != data && !string.IsNullOrEmpty(data.value);
         public static implicit operator string(WitEntityData data) => data.value;
-        public static bool operator ==(WitEntityData data, string value) => data?.value == value;
-        public static bool operator !=(WitEntityData data, string value) => !(data == value);
-        public static bool operator ==(string value, WitEntityData data) => data?.value == value;
-        public static bool operator !=(string value, WitEntityData data) => !(data == value);
+        public static bool operator ==(WitEntityData data, object value) => Equals(data?.value, value);
+        public static bool operator !=(WitEntityData data, object value) => !Equals(data?.value, value);
 
         public override bool Equals(object obj)
         {
