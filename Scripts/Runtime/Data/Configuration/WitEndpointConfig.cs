@@ -23,6 +23,7 @@ namespace Facebook.WitAi.Configuration
         public string witApiVersion;
 
         public string speech;
+        public string dictation;
         public string message;
 
         public string UriScheme => string.IsNullOrEmpty(uriScheme) ? WitRequest.URI_SCHEME : uriScheme;
@@ -35,6 +36,9 @@ namespace Facebook.WitAi.Configuration
 
         public string Speech =>
             string.IsNullOrEmpty(speech) ? WitRequest.WIT_ENDPOINT_SPEECH : speech;
+        public string Dictation =>
+            string.IsNullOrEmpty(dictation) ? WitRequest.WIT_ENDPOINT_DICTATION : dictation;
+        
 
         public string Message =>
             string.IsNullOrEmpty(message) ? WitRequest.WIT_ENDPOINT_MESSAGE : message;
