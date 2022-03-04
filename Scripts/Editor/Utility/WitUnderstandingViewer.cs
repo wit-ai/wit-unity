@@ -195,9 +195,8 @@ namespace Facebook.WitAi.Windows
                 return;
             }
             // Need app id
-            string appID = WitConfigurationUtility.GetAppID(witConfiguration);
             string clientAccessToken = witConfiguration.clientAccessToken;
-            if (string.IsNullOrEmpty(appID) || string.IsNullOrEmpty(clientAccessToken))
+            if (string.IsNullOrEmpty(clientAccessToken))
             {
                 WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerNoAppLabel);
                 GUILayout.BeginHorizontal();
