@@ -32,9 +32,7 @@ namespace Facebook.WitAi
         private IAudioInputSource _micInput;
         private WitRequestOptions _currentRequestOptions;
         private float _lastMinVolumeLevelTime;
-        public WitRequest RecordingWitRequest { get => _recordingWitRequest; set => _recordingWitRequest = value; }
-
-        private WitRequest _recordingWitRequest;
+        private WitRequest _recordingRequest;
 
         private bool _isSoundWakeActive;
         private RingBuffer<byte> _micDataBuffer;
@@ -72,7 +70,7 @@ namespace Facebook.WitAi
         /// </summary>
         public override bool Active => _isActive || IsRequestActive;
 
-        public override bool IsRequestActive => null != _recordingWitRequest && _recordingWitRequest.IsActive;
+        public override bool IsRequestActive => null != _recordingRequest && _recordingRequest.IsActive;
 
         public WitRuntimeConfiguration RuntimeConfiguration
         {
@@ -252,13 +250,14 @@ namespace Facebook.WitAi
 
             if (ShouldSendMicData)
             {
-                _recordingWitRequest.audioEncoding = _micInput.AudioEncoding;
-                _recordingWitRequest.onPartialTranscription = OnPartialTranscription;
-                _recordingWitRequest.onFullTranscription = OnFullTranscription;
-                _recordingWitRequest.onInputStreamReady = r => OnWitReadyForData();
-                _recordingWitRequest.onResponse += HandleResult;
-                events.OnRequestCreated?.Invoke(_recordingWitRequest);
-                _recordingWitRequest.Request();
+                _recordingRequest = RuntimeConfiguration.witConfiguration.SpeechRequest(requestOptions);
+                _recordingRequest.audioEncoding = _micInput.AudioEncoding;
+                _recordingRequest.onPartialTranscription = OnPartialTranscription;
+                _recordingRequest.onFullTranscription = OnFullTranscription;
+                _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
+                _recordingRequest.onResponse += HandleResult;
+                events.OnRequestCreated?.Invoke(_recordingRequest);
+                _recordingRequest.Request();
                 _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             }
 
@@ -414,7 +413,7 @@ namespace Facebook.WitAi
 #endif
             }
 
-            if (IsRequestActive && _recordingWitRequest.IsRequestStreamActive)
+            if (IsRequestActive && _recordingRequest.IsRequestStreamActive)
             {
                 if (null != _micDataBuffer && _micDataBuffer.Capacity > 0)
                 {
@@ -427,7 +426,7 @@ namespace Facebook.WitAi
                     int read;
                     while ((read = _lastSampleMarker.Read(_writeBuffer, 0, _writeBuffer.Length, true)) > 0)
                     {
-                        _recordingWitRequest.Write(_writeBuffer, 0, read);
+                        _recordingRequest.Write(_writeBuffer, 0, read);
                         events.OnByteDataSent?.Invoke(_writeBuffer, 0, read);
                         for (int i = 0; null != _dataSentHandlers && i < _dataSentHandlers.Length; i++)
                         {
@@ -438,7 +437,7 @@ namespace Facebook.WitAi
                 else
                 {
                     byte[] sampleBytes = Convert(sample);
-                    _recordingWitRequest.Write(sampleBytes, 0, sampleBytes.Length);
+                    _recordingRequest.Write(sampleBytes, 0, sampleBytes.Length);
                 }
 
 
@@ -550,7 +549,7 @@ namespace Facebook.WitAi
 
             // Deactivate recording request
             bool isRecordingRequestActive = IsRequestActive;
-            DeactivateWitRequest(_recordingWitRequest, abort);
+            DeactivateWitRequest(_recordingRequest, abort);
 
             // Abort transmitting requests
             if (abort)
@@ -565,8 +564,8 @@ namespace Facebook.WitAi
             // Transmit recording request
             else if (isRecordingRequestActive && _minKeepAliveWasHit)
             {
-                _transmitRequests.Add(_recordingWitRequest);
-                _recordingWitRequest = null;
+                _transmitRequests.Add(_recordingRequest);
+                _recordingRequest = null;
                 events.OnMicDataSent?.Invoke();
             }
 
@@ -700,7 +699,7 @@ namespace Facebook.WitAi
         private void HandleResult(WitRequest request)
         {
             // If result is obtained before transcription
-            if (request == _recordingWitRequest)
+            if (request == _recordingRequest)
             {
                 DeactivateRequest(null, false);
             }

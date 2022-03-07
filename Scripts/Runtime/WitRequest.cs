@@ -80,8 +80,6 @@ namespace Facebook.WitAi
         public const string WIT_SDK_VERSION = "0.0.33";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
-        public const string WIT_ENDPOINT_DICTATION = "dictation";
-
         public const string WIT_ENDPOINT_MESSAGE = "message";
         public const string WIT_ENDPOINT_ENTITIES = "entities";
         public const string WIT_ENDPOINT_INTENTS = "intents";
