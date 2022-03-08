@@ -8,7 +8,6 @@
 using System;
 using System.Reflection;
 using System.Threading;
-using Codice.Client.BaseCommands;
 using Facebook.WitAi.Utilities;
 
 namespace Facebook.WitAi

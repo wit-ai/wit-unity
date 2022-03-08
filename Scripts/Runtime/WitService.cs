@@ -131,7 +131,7 @@ namespace Facebook.WitAi
 
         #region LIFECYCLE
         // Find transcription provider & Mic
-        protected virtual void Awake()
+        protected override void Awake()
         {
             base.Awake();
             if (null == _activeTranscriptionProvider &&

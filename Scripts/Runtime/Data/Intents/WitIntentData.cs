@@ -13,11 +13,11 @@ namespace Facebook.WitAi.Data.Intents
     public class WitIntentData
     {
         public WitResponseNode responseNode;
-        
+
         public string id;
         public string name;
         public float confidence;
-        
+
         public WitIntentData() {}
 
         public WitIntentData(WitResponseNode node)
