@@ -181,25 +181,12 @@ namespace Facebook.WitAi.Data.Configuration
             // Invalid token
             if (!IsServerTokenValid(serverToken))
             {
-                SetServerTokenComplete(serverToken, "Invalid Token", onSetComplete);
+                SetServerTokenComplete(string.Empty, "", onSetComplete);
                 return;
             }
             // Perform a list app request to get app for token
             var listRequest = WitRequestFactory.ListAppsRequest(serverToken, 10000);
-            PerformRequest(listRequest, (response, onRequestComplete) =>
-            {
-                var applications = response.AsArray;
-                for (int i = 0; i < applications.Count; i++)
-                {
-                    if (applications[i]["is_app_for_token"].AsBool)
-                    {
-                        var application = WitApplication.FromJson(applications[i]);
-                        WitAuthUtility.SetAppServerToken(application.id, serverToken);
-                        break;
-                    }
-                }
-                onRequestComplete("");
-            }, (error) =>
+            PerformRequest(listRequest, (r, o) => ApplyAllApplicationData(serverToken, r, o), (error) =>
             {
                 SetServerTokenComplete(serverToken, error, onSetComplete);
             });
@@ -472,6 +459,32 @@ namespace Facebook.WitAi.Data.Configuration
             // Perform
             Log($"Request Begin\nType: {request}", false);
             request.Request();
+        }
+        // Apply all application data
+        private static void ApplyAllApplicationData(string serverToken, WitResponseNode witResponse, Action<string> onComplete)
+        {
+            var applications = witResponse.AsArray;
+            for (int i = 0; i < applications.Count; i++)
+            {
+                // Get application
+                var application = WitApplication.FromJson(applications[i]);
+                string appID = application?.id;
+                // Apply app server token if applicable
+                if (applications[i]["is_app_for_token"].AsBool)
+                {
+                    WitAuthUtility.SetAppServerToken(appID, serverToken);
+                }
+                // Apply to configuration
+                int witConfigIndex = Array.FindIndex(witConfigs, (configuration) => string.Equals(appID, configuration?.application?.id));
+                if (witConfigIndex != -1)
+                {
+                    WitConfiguration configuration = witConfigs[witConfigIndex];
+                    configuration.application = application;
+                    EditorUtility.SetDirty(configuration);
+                    configuration.RefreshData();
+                }
+            }
+            onComplete("");
         }
         // Apply application data
         private static void ApplyApplicationData(WitConfiguration configuration, WitResponseNode witResponse, Action<string> onComplete)
