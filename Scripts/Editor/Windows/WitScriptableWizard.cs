@@ -25,7 +25,6 @@ namespace Facebook.WitAi.Windows
 
         protected virtual void OnEnable()
         {
-            WitAuthUtility.InitEditorTokens();
             createButtonName = ButtonLabel;
         }
         protected override bool DrawWizardGUI()

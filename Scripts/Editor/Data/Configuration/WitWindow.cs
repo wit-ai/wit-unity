@@ -44,13 +44,13 @@ namespace Facebook.WitAi.Windows
             GUILayout.BeginHorizontal();
             bool updated = false;
             WitEditorUI.LayoutPasswordField(WitTexts.SettingsServerTokenContent, ref serverToken, ref updated);
-            if (updated && witInspector != null)
+            if (updated)
             {
-                witInspector.ApplyServerToken(serverToken);
+                RelinkServerToken(false);
             }
             if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsRelinkButtonLabel))
             {
-                RelinkServerToken();
+                RelinkServerToken(true);
             }
             if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsAddButtonLabel))
             {
@@ -78,22 +78,31 @@ namespace Facebook.WitAi.Windows
             }
         }
         // Apply server token
-        private void RelinkServerToken()
+        private void RelinkServerToken(bool closeIfInvalid)
         {
             // Open Setup if Invalid
-            if (!WitConfigurationUtility.IsServerTokenValid(serverToken))
+            bool invalid = !WitConfigurationUtility.IsServerTokenValid(serverToken);
+            if (invalid)
             {
-                // Open Setup
-                WitWindowUtility.OpenSetupWindow(WitWindowUtility.OpenConfigurationWindow);
-                // Close this Window
-                Close();
+                // Clear if desired
+                if (string.IsNullOrEmpty(serverToken))
+                {
+                    WitAuthUtility.ServerToken = serverToken;
+                }
+                // Close if desired
+                if (closeIfInvalid)
+                {
+                    // Open Setup
+                    WitWindowUtility.OpenSetupWindow(WitWindowUtility.OpenConfigurationWindow);
+                    // Close this Window
+                    Close();
+                }
                 return;
             }
-            // Set server token
-            WitConfigurationUtility.SetServerToken(serverToken, (e) =>
-            {
-                serverToken = WitAuthUtility.ServerToken;
-            });
+
+            // Set valid server token
+            WitAuthUtility.ServerToken = serverToken;
+            WitConfigurationUtility.SetServerToken(serverToken);
         }
     }
 }

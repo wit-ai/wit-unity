@@ -43,11 +43,6 @@ namespace Facebook.WitAi.Windows
                 SetConfiguration(newConfigIndex);
             }
         }
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            WitAuthUtility.InitEditorTokens();
-        }
         protected override void LayoutContent()
         {
             // Layout popup
