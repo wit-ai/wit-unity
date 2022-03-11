@@ -122,14 +122,19 @@ namespace Facebook.WitAi.Data.Configuration
             string rootDirectory = Application.dataPath;
             if (Selection.activeObject)
             {
+                // Get asset path
                 string selectedPath = AssetDatabase.GetAssetPath(Selection.activeObject);
-                if (AssetDatabase.IsValidFolder(selectedPath))
+                // Only allow if in assets
+                if (selectedPath.StartsWith("Assets"))
                 {
-                    rootDirectory = selectedPath;
-                }
-                else if (!string.IsNullOrEmpty(selectedPath))
-                {
-                    rootDirectory = new System.IO.FileInfo(selectedPath).DirectoryName;
+                    if (AssetDatabase.IsValidFolder(selectedPath))
+                    {
+                        rootDirectory = selectedPath;
+                    }
+                    else if (!string.IsNullOrEmpty(selectedPath))
+                    {
+                        rootDirectory = new System.IO.FileInfo(selectedPath).DirectoryName;
+                    }
                 }
             }
 
@@ -145,9 +150,16 @@ namespace Facebook.WitAi.Data.Configuration
             {
                 return -1;
             }
+            // Must be in assets
+            string unityPath = savePath.Replace("\\", "/");
+            if (!unityPath.StartsWith(Application.dataPath))
+            {
+                Debug.LogError($"Configuration Utility - Cannot Create Configuration Outside of Assets Directory\nPath: {unityPath}");
+                return -1;
+            }
 
             // Determine local unity path
-            string unityPath = savePath.Replace("\\", "/").Replace(Application.dataPath, "Assets");
+            unityPath = unityPath.Replace(Application.dataPath, "Assets");
             AssetDatabase.CreateAsset(configurationAsset, unityPath);
             AssetDatabase.SaveAssets();
 
