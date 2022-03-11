@@ -20,7 +20,7 @@ using UnityEngine.Serialization;
 
 namespace Facebook.WitAi
 {
-    public class WitService : VoiceService, IWitRuntimeConfigProvider
+    public class Wit : VoiceService, IWitRuntimeConfigProvider
     {
         [FormerlySerializedAs("runtimeConfiguration")]
         [Header("Wit Configuration")]
