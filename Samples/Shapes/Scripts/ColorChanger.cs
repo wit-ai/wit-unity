@@ -70,7 +70,7 @@ namespace Facebook.WitAi.Samples.Shapes
         {
             var intent = node.GetFirstIntentData();
 
-            var size = node.GetFirstWitIntEntity("wit:number") ?? 1;
+            var size = node.GetFirstWitIntValue("wit:number", 1);
             var shape = node.GetFirstWitEntity("shape:shape");
 
             if (shape.confidence > .5)

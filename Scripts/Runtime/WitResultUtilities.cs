@@ -53,10 +53,26 @@ namespace Facebook.WitAi
         /// <param name="witResponse"></param>
         /// <param name="name">The entity name typically something like name:name</param>
         /// <returns></returns>
-        public static WitEntityIntData GetFirstWitIntEntity(this WitResponseNode witResponse, string name)
+        public static WitEntityIntData GetFirstWitIntEntity(this WitResponseNode witResponse,
+            string name)
         {
             var array = witResponse?["entities"]?[name].AsArray;
             return array?.Count > 0 ? array[0].AsWitIntEntity : null;
+        }
+
+        /// <summary>
+        /// Gets The first entity with the given name as int data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static int GetFirstWitIntValue(this WitResponseNode witResponse,
+            string name, int defaultValue)
+        {
+            var array = witResponse?["entities"]?[name].AsArray;
+
+            if (null == array || array.Count == 0) return defaultValue;
+            return array[0].AsWitIntEntity.value;
         }
 
         /// <summary>
@@ -69,6 +85,21 @@ namespace Facebook.WitAi
         {
             var array = witResponse?["entities"]?[name].AsArray;
             return array?.Count > 0 ? array[0].AsWitFloatEntity : null;
+        }
+
+        /// <summary>
+        /// Gets The first entity with the given name as int data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name">The entity name typically something like name:name</param>
+        /// <returns></returns>
+        public static float GetFirstWitFloatValue(this WitResponseNode witResponse,
+            string name, float defaultValue)
+        {
+            var array = witResponse?["entities"]?[name].AsArray;
+
+            if (null == array || array.Count == 0) return defaultValue;
+            return array[0].AsWitFloatEntity.value;
         }
 
         /// <summary>

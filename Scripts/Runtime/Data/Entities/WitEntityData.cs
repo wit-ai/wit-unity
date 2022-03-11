@@ -28,6 +28,8 @@ namespace Facebook.WitAi.Data.Entities
 
         public float confidence;
 
+        public bool hasData;
+
         public WitResponseArray entities;
 
         public WitEntityDataBase<T> FromEntityWitResponseNode(WitResponseNode node)
@@ -41,6 +43,7 @@ namespace Facebook.WitAi.Data.Entities
             type = node[WitEntity.Fields.TYPE];
             body = node[WitEntity.Fields.BODY];
             confidence = node[WitEntity.Fields.CONFIDENCE].AsFloat;
+            hasData = !string.IsNullOrEmpty(node.Value);
             value = OnParseValue(node);
             entities = node[WitEntity.Fields.ENTITIES].AsArray;
             return this;
@@ -98,8 +101,10 @@ namespace Facebook.WitAi.Data.Entities
             return node[WitEntity.Fields.VALUE].AsFloat;
         }
 
+        public static implicit operator bool(WitEntityFloatData data) =>
+            null != data && data.hasData;
+
         public bool Approximately(float v) => Mathf.Approximately(value, v);
-        public static implicit operator float(WitEntityFloatData data) => data.value;
         public static bool operator ==(WitEntityFloatData data, float value) => data?.value == value;
         public static bool operator !=(WitEntityFloatData data, float value) => !(data == value);
         public static bool operator ==(WitEntityFloatData data, int value) => data?.value == value;
@@ -134,7 +139,8 @@ namespace Facebook.WitAi.Data.Entities
             return node[WitEntity.Fields.VALUE].AsInt;
         }
 
-        public static implicit operator int(WitEntityIntData data) => data.value;
+        public static implicit operator bool(WitEntityIntData data) =>
+            null != data && data.hasData;
         public static bool operator ==(WitEntityIntData data, int value) => data?.value == value;
         public static bool operator !=(WitEntityIntData data, int value) => !(data == value);
         public static bool operator ==(int value, WitEntityIntData data) => data?.value == value;
