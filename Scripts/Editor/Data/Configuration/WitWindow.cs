@@ -36,6 +36,11 @@ namespace Facebook.WitAi.Windows
                 witInspector.drawHeader = false;
                 witInspector.Initialize();
             }
+            else if (witInspector != null)
+            {
+                DestroyImmediate(witInspector);
+                witInspector = null;
+            }
         }
 
         protected override void LayoutContent()
@@ -66,7 +71,7 @@ namespace Facebook.WitAi.Windows
             // Configuration select
             base.LayoutContent();
             // Update inspector if needed
-            if (witInspector == null || witInspector.configuration != witConfiguration)
+            if (witInspector == null || witConfiguration == null || witInspector.configuration != witConfiguration)
             {
                 SetWitEditor();
             }

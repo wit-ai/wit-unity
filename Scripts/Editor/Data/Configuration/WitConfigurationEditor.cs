@@ -268,7 +268,7 @@ namespace Facebook.WitAi.Windows
 
             // Layout selected tab using property id
             string propertyID = requestTab >= 0 && requestTab < _tabIds.Length ? _tabIds[requestTab] : string.Empty;
-            if (!string.IsNullOrEmpty(propertyID))
+            if (!string.IsNullOrEmpty(propertyID) && configuration != null)
             {
                 SerializedObject serializedObj = new SerializedObject(configuration);
                 SerializedProperty serializedProp = serializedObj.FindProperty(propertyID);

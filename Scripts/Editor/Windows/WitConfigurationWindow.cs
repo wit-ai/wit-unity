@@ -13,6 +13,7 @@ namespace Facebook.WitAi.Windows
 {
     public abstract class WitConfigurationWindow : BaseWitWindow
     {
+        // Configuration data
         protected int witConfigIndex = -1;
         protected WitConfiguration witConfiguration;
 
@@ -45,6 +46,13 @@ namespace Facebook.WitAi.Windows
         }
         protected override void LayoutContent()
         {
+            // Reload if config is removed
+            if (witConfiguration == null && witConfigIndex != -1)
+            {
+                WitConfigurationUtility.ReloadConfigurationData();
+                SetConfiguration(-1);
+            }
+
             // Layout popup
             int index = witConfigIndex;
             WitConfigurationEditorUI.LayoutConfigurationSelect(ref index);

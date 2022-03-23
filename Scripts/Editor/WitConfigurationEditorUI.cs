@@ -25,24 +25,21 @@ namespace Facebook.WitAi
         {
             // Refresh configurations if needed
             WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
-            if (witConfigs == null)
-            {
-                WitConfigurationUtility.ReloadConfigurationData();
-                witConfigs = WitConfigurationUtility.WitConfigs;
-            }
-
-            // Error if none found
-            if (witConfigs.Length == 0)
+            if (witConfigs == null || witConfigs.Length == 0)
             {
                 WitEditorUI.LayoutErrorLabel(WitTexts.Texts.ConfigurationSelectMissingLabel);
                 return;
             }
 
             // Clamp Config Index
-            configIndex = Mathf.Clamp(configIndex, 0, witConfigs.Length);
+            bool configUpdated = false;
+            if (configIndex < 0 || configIndex >= witConfigs.Length)
+            {
+                configUpdated = true;
+                configIndex = Mathf.Clamp(configIndex, 0, witConfigs.Length);
+            }
 
             // Layout popup
-            bool configUpdated = false;
             WitEditorUI.LayoutPopup(WitTexts.Texts.ConfigurationSelectLabel, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated);
         }
     }
