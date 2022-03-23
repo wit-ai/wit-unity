@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Facebook.WitAi.Interfaces;
 using Facebook.WitAi.Lib;
+using UnityEngine;
 
 namespace Facebook.WitAi.Data.Entities
 {
@@ -21,6 +22,11 @@ namespace Facebook.WitAi.Data.Entities
         public WitDynamicEntities()
         {
 
+        }
+
+        public WitDynamicEntities(IEnumerable<WitDynamicEntity> entity)
+        {
+            entities.AddRange(entity);
         }
 
         public WitDynamicEntities(params WitDynamicEntity[] entity)
@@ -41,7 +47,6 @@ namespace Facebook.WitAi.Data.Entities
                 return json;
             }
         }
-
 
         public override string ToString()
         {
@@ -71,6 +76,39 @@ namespace Facebook.WitAi.Data.Entities
             if (null == mergeEntities) return;
 
             entities.AddRange(mergeEntities);
+        }
+
+        public void Add(WitDynamicEntity dynamicEntity)
+        {
+            int index = entities.FindIndex(e => e.entity == dynamicEntity.entity);
+            if(index < 0) entities.Add(dynamicEntity);
+            else Debug.LogWarning($"Cannot add entity, registry already has an entry for {dynamicEntity.entity}");
+        }
+
+        public void Remove(WitDynamicEntity dynamicEntity)
+        {
+            entities.Remove(dynamicEntity);
+        }
+
+        public void AddKeyword(string entityName, WitEntityKeyword keyword)
+        {
+            var entity = entities.Find(e => entityName == e.entity);
+            if (null == entity)
+            {
+                entity = new WitDynamicEntity(entityName);
+                entities.Add(entity);
+            }
+            entity.keywords.Add(keyword);
+        }
+
+        public void RemoveKeyword(string entityName, WitEntityKeyword keyword)
+        {
+            int index = entities.FindIndex(e => e.entity == entityName);
+            if (index >= 0)
+            {
+                entities[index].keywords.Remove(keyword);
+                if(entities[index].keywords.Count == 0) entities.RemoveAt(index);
+            }
         }
     }
 }

@@ -6,16 +6,13 @@
  */
 
 using Facebook.WitAi.Interfaces;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 using UnityEngine;
 
 namespace Facebook.WitAi.Data.Entities
 {
     public class DynamicEntityProvider : MonoBehaviour, IDynamicEntitiesProvider
     {
-        [SerializeField] internal WitDynamicEntities entities;
+        [SerializeField] protected WitDynamicEntities entities;
 
         public WitDynamicEntities GetDynamicEntities()
         {

@@ -37,8 +37,17 @@ namespace Facebook.WitAi
                     foreach (var providerEntity in provider.GetDynamicEntities())
                     {
                         hasEntities = true;
-                        entities.Add(providerEntity.entity, providerEntity.AsJson);
+                        MergeEntities(entities, providerEntity);
                     }
+                }
+            }
+
+            if (DynamicEntityKeywordRegistry.HasDynamicEntityRegistry)
+            {
+                foreach (var providerEntity in DynamicEntityKeywordRegistry.Instance.GetDynamicEntities())
+                {
+                    hasEntities = true;
+                    MergeEntities(entities, providerEntity);
                 }
             }
 
@@ -54,7 +63,7 @@ namespace Facebook.WitAi
                     foreach (var entity in requestOptions.dynamicEntities.GetDynamicEntities())
                     {
                         hasEntities = true;
-                        entities.Add(entity.entity, entity.AsJson);
+                        MergeEntities(entities, entity);
                     }
                 }
             }
@@ -62,6 +71,43 @@ namespace Facebook.WitAi
             if (hasEntities)
             {
                 queryParams.Add(QueryParam("entities", entities.ToString()));
+            }
+        }
+
+        private static void MergeEntities(WitResponseClass entities, WitDynamicEntity providerEntity)
+        {
+            if (!entities.HasChild(providerEntity.entity))
+            {
+                entities[providerEntity.entity] = new WitResponseArray();
+            }
+            var mergedArray = entities[providerEntity.entity];
+            Dictionary<string, WitResponseClass> map = new Dictionary<string, WitResponseClass>();
+            HashSet<string> synonyms = new HashSet<string>();
+            var existingKeywords = mergedArray.AsArray;
+            for (int i = 0; i < existingKeywords.Count; i++)
+            {
+                var keyword = existingKeywords[i].AsObject;
+                var key = keyword["keyword"].Value;
+                if(!map.ContainsKey(key))
+                {
+                    map[key] = keyword;
+                }
+            }
+            foreach (var keyword in providerEntity.keywords)
+            {
+                if (map.TryGetValue(keyword.keyword, out var keywordObject))
+                {
+                    foreach (var synonym in keyword.synonyms)
+                    {
+                        keywordObject["synonyms"].Add(synonym);
+                    }
+                }
+                else
+                {
+                    keywordObject = keyword.AsJson;
+                    map[keyword.keyword] = keywordObject;
+                    mergedArray.Add(keywordObject);
+                }
             }
         }
 

@@ -815,6 +815,8 @@ namespace Facebook.WitAi.Lib
 
         public string[] ChildNodeNames => m_Dict.Keys.ToArray();
 
+        public bool HasChild(string child) => m_Dict.ContainsKey(child);
+
         public override WitResponseNode this[string aKey]
         {
             get
