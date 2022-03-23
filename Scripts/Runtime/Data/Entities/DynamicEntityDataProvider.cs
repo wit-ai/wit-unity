@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the license found in the
@@ -10,15 +10,17 @@ using UnityEngine;
 
 namespace Facebook.WitAi.Data.Entities
 {
-    public class WitSimpleDynamicEntity : MonoBehaviour, IDynamicEntitiesProvider
+    public class DynamicEntityDataProvider : MonoBehaviour, IDynamicEntitiesProvider
     {
-        [SerializeField] private string entityName;
-        [SerializeField] private string[] keywords;
-
+        [SerializeField] internal WitDynamicEntitiesData[] entitiesDefinition;
         public WitDynamicEntities GetDynamicEntities()
         {
-            var entity = new WitDynamicEntity(entityName, keywords);
-            var entities = new WitDynamicEntities(entity);
+            WitDynamicEntities entities = new WitDynamicEntities();
+            foreach (var entity in entitiesDefinition)
+            {
+                entities.Merge(entity);
+            }
+
             return entities;
         }
     }

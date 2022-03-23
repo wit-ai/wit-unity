@@ -9,6 +9,10 @@ using System.Text;
 using System.Collections.Generic;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Data.Entities;
+using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
+using UnityEngine;
 
 namespace Facebook.WitAi
 {
@@ -19,13 +23,55 @@ namespace Facebook.WitAi
             return new WitRequest.QueryParam() { key = key, value = value };
         }
 
+        private static void HandleWitRequestOptions(WitRequestOptions requestOptions,
+            IDynamicEntitiesProvider[] additionalEntityProviders,
+            List<WitRequest.QueryParam> queryParams)
+        {
+            WitResponseClass entities = new WitResponseClass();
+            bool hasEntities = false;
+
+            if (null != additionalEntityProviders)
+            {
+                foreach (var provider in additionalEntityProviders)
+                {
+                    foreach (var providerEntity in provider.GetDynamicEntities())
+                    {
+                        hasEntities = true;
+                        entities.Add(providerEntity.entity, providerEntity.AsJson);
+                    }
+                }
+            }
+
+            if (null != requestOptions)
+            {
+                if (!string.IsNullOrEmpty(requestOptions.tag))
+                {
+                    queryParams.Add(QueryParam("tag", requestOptions.tag));
+                }
+
+                if (null != requestOptions.dynamicEntities)
+                {
+                    foreach (var entity in requestOptions.dynamicEntities.GetDynamicEntities())
+                    {
+                        hasEntities = true;
+                        entities.Add(entity.entity, entity.AsJson);
+                    }
+                }
+            }
+
+            if (hasEntities)
+            {
+                queryParams.Add(QueryParam("entities", entities.ToString()));
+            }
+        }
+
         /// <summary>
         /// Creates a message request that will process a query string with NLU
         /// </summary>
         /// <param name="config"></param>
         /// <param name="query">Text string to process with the NLU</param>
         /// <returns></returns>
-        public static WitRequest MessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions)
+        public static WitRequest MessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalDynamicEntities = null)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>
             {
@@ -37,10 +83,7 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
 
-            if (null != requestOptions?.dynamicEntities)
-            {
-                queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
-            }
+            HandleWitRequestOptions(requestOptions, additionalDynamicEntities, queryParams);
 
             if (null != requestOptions && !string.IsNullOrEmpty(requestOptions.tag))
             {
@@ -49,7 +92,12 @@ namespace Facebook.WitAi
 
             var path = WitEndpointConfig.GetEndpointConfig(config).Message;
             WitRequest request = new WitRequest(config, path, queryParams.ToArray());
-            request.onResponse = requestOptions.onResponse;
+
+            if (null != requestOptions)
+            {
+                request.onResponse = requestOptions.onResponse;
+            }
+
             return request;
         }
 
@@ -58,7 +106,7 @@ namespace Facebook.WitAi
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions)
+        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
 
@@ -67,19 +115,16 @@ namespace Facebook.WitAi
                 queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
             }
 
-            if (null != requestOptions?.dynamicEntities)
-            {
-                queryParams.Add(QueryParam("entities", requestOptions.dynamicEntities.ToJSON()));
-            }
-
-            if (null != requestOptions && !string.IsNullOrEmpty(requestOptions.tag))
-            {
-                queryParams.Add(QueryParam("tag", requestOptions.tag));
-            }
+            HandleWitRequestOptions(requestOptions, additionalEntityProviders, queryParams);
 
             var path = WitEndpointConfig.GetEndpointConfig(config).Speech;
             WitRequest request = new WitRequest(config, path, queryParams.ToArray());
-            request.onResponse = requestOptions.onResponse;
+
+            if (null != requestOptions)
+            {
+                request.onResponse = requestOptions.onResponse;
+            }
+
             return request;
         }
 

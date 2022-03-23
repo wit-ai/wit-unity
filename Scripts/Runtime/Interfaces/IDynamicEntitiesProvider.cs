@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
+using Facebook.WitAi.Data.Entities;
+
 namespace Facebook.WitAi.Interfaces
 {
     public interface IDynamicEntitiesProvider
     {
-        /// <summary>
-        /// Used to get dynamic entities
-        /// </summary>
-        string ToJSON();
+        WitDynamicEntities GetDynamicEntities();
     }
 }

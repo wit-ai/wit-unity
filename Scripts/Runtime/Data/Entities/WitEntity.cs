@@ -7,7 +7,6 @@
 
 using System;
 using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Keywords;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 
@@ -21,7 +20,7 @@ namespace Facebook.WitAi.Data.Entities
         [SerializeField] public string name;
         [SerializeField] public string[] lookups;
         [SerializeField] public WitEntityRole[] roles;
-        [SerializeField] public WitKeyword[] keywords;
+        [SerializeField] public WitEntityKeyword[] keywords;
 
         public static class Fields
         {
@@ -63,10 +62,10 @@ namespace Facebook.WitAi.Data.Entities
                 roles[i] = WitEntityRole.FromJson(roleArray[i]);
             }
             var keywordArray = entityWitResponse[Fields.KEYWORDS].AsArray;
-            keywords = new WitKeyword[keywordArray.Count];
+            keywords = new WitEntityKeyword[keywordArray.Count];
             for (int i = 0; i < keywordArray.Count; i++)
             {
-                keywords[i] = WitKeyword.FromJson(keywordArray[i]);
+                keywords[i] = WitEntityKeyword.FromJson(keywordArray[i]);
             }
         }
 

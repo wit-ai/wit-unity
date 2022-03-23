@@ -335,7 +335,7 @@ namespace Facebook.WitAi
                 onPreSendRequest(ref uri, out customHeaders);
             }
 
-            WrapHttpWebRequest wr = new WrapHttpWebRequest((HttpWebRequest)WebRequest.Create(uri));
+            WrapHttpWebRequest wr = new WrapHttpWebRequest((HttpWebRequest)WebRequest.Create(uri.AbsoluteUri));
 
             //request = (IRequest)(HttpWebRequest) WebRequest.Create(uri);
             _request = wr;
