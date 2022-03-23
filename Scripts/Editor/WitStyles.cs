@@ -146,6 +146,7 @@ namespace Facebook.WitAi
             TextField.padding = Label.padding;
             TextField.margin = Label.margin;
             TextField.alignment = Label.alignment;
+            TextField.clipping = TextClipping.Clip;
             PasswordField = new GUIStyle(TextField);
             IntField = new GUIStyle(TextField);
             // Miscellaneous
