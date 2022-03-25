@@ -521,6 +521,7 @@ namespace Facebook.WitAi
         /// </summary>
         public override void DeactivateAndAbortRequest()
         {
+            events.OnAborting.Invoke();
             DeactivateRequest(_micInput.IsRecording ? events.OnStoppedListeningDueToDeactivation : null, true);
         }
         // Stop listening if time expires

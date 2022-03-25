@@ -23,6 +23,10 @@ namespace Facebook.WitAi.Events
         public WitErrorEvent OnError = new WitErrorEvent();
 
         [Tooltip(
+            "Called when the activation is about to be aborted by a direct user interaction.")]
+        public UnityEvent OnAborting = new UnityEvent();
+
+        [Tooltip(
             "Called when the activation stopped because the network request was aborted. This can be via a timeout or call to AbortActivation.")]
         public UnityEvent OnAborted = new UnityEvent();
 
