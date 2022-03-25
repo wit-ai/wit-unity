@@ -20,7 +20,7 @@ namespace Facebook.WitAi.Data.Entities
 
         private WitDynamicEntities entities = new WitDynamicEntities();
 
-        public static bool HasDynamicEntityRegistry => instance;
+        public static bool HasDynamicEntityRegistry => Instance;
 
         /// <summary>
         /// Gets the instance in the scene if there is one
