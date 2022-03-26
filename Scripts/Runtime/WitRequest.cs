@@ -76,8 +76,8 @@ namespace Facebook.WitAi
         public const string URI_AUTHORITY = "api.wit.ai";
         public const int URI_DEFAULT_PORT = 0;
 
-        public const string WIT_API_VERSION = "20210928";
-        public const string WIT_SDK_VERSION = "0.0.34";
+        public const string WIT_API_VERSION = "20220222";
+        public const string WIT_SDK_VERSION = "0.0.35";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -487,37 +487,31 @@ namespace Facebook.WitAi
                         {
                             totalRead += bytes;
                             stringResponse = Encoding.UTF8.GetString(buffer, 0, totalRead);
-                            if (stringResponse.Length > 0)
+                            if (stringResponse.EndsWith("\r\n"))
                             {
                                 try
                                 {
-                                    responseData = WitResponseJson.Parse(stringResponse);
-
                                     offset = 0;
-
                                     totalRead = 0;
-                                    if (null != responseData)
-                                    {
-                                        var transcription = responseData["text"];
-                                        if (!string.IsNullOrEmpty(transcription))
-                                        {
-                                            MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
-                                        }
-                                    }
+                                    ProcessStringResponse(stringResponse);
                                 }
                                 catch (JSONParseException e)
                                 {
-                                    // TODO: t105419819 Update the protocol to better handle this issue.
-                                    // This is a bit of a hack to get around an issue with a full
-                                    // socket buffer or partial server response. We will need to
-                                    // address this server side to make sure we're reading all data
-                                    // rather than relying on a json parse exception to catch this.
-                                    // Test case: Utterance with multiple entity responses pushing
-                                    // final data > 1024 bytes.
                                     offset = bytes;
                                     Debug.LogWarning("Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " + e.Message + "\n" + stringResponse);
                                 }
                             }
+                            else
+                            {
+                                offset = totalRead;
+                            }
+                        }
+
+                        // If the final transmission didn't end with \r\n process it as the final
+                        // result
+                        if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
+                        {
+                            ProcessStringResponse(stringResponse);
                         }
 
                         if (stringResponse.Length > 0 && null != responseData)
@@ -620,6 +614,19 @@ namespace Facebook.WitAi
             }
 
             SafeInvoke(onResponse);
+        }
+
+        private void ProcessStringResponse(string stringResponse)
+        {
+            responseData = WitResponseJson.Parse(stringResponse);
+            if (null != responseData)
+            {
+                var transcription = responseData["text"];
+                if (!string.IsNullOrEmpty(transcription))
+                {
+                    MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
+                }
+            }
         }
 
         private void HandleRequestStream(IAsyncResult ar)
