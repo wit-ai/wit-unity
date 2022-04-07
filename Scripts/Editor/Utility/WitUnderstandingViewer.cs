@@ -11,9 +11,7 @@ using System.IO;
 using Facebook.WitAi.CallbackHandlers;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
-using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;
-using Facebook.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -28,16 +26,21 @@ namespace Facebook.WitAi.Windows
         private WitResponseNode _response;
         private Dictionary<string, bool> _foldouts;
 
+        // Current service
+        private VoiceService[] _services;
+        private string[] _serviceNames;
+        private int _currentService = -1;
+        public VoiceService service => _services != null && _currentService >= 0 && _currentService < _services.Length ? _services[_currentService] : null;
+        public bool HasWit => service != null;
+
         private DateTime _submitStart;
         private TimeSpan _requestLength;
         private string _status;
-        private VoiceService _wit;
         private int _responseCode;
         private WitRequest _request;
         private int _savePopup;
         private GUIStyle _hamburgerButton;
 
-        public bool HasWit => null != _wit;
 
         class Content
         {
@@ -65,7 +68,7 @@ namespace Facebook.WitAi.Windows
         {
             base.OnEnable();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            SetWit(GameObject.FindObjectOfType<VoiceService>());
+            RefreshVoiceServices();
             if (!string.IsNullOrEmpty(_responseText))
             {
                 _response = WitResponseNode.Parse(_responseText);
@@ -82,7 +85,7 @@ namespace Facebook.WitAi.Windows
         {
             if (state == PlayModeStateChange.EnteredPlayMode && !HasWit)
             {
-                SetWit(FindObjectOfType<VoiceService>());
+                RefreshVoiceServices();
             }
         }
 
@@ -90,33 +93,7 @@ namespace Facebook.WitAi.Windows
         {
             if (Selection.activeGameObject)
             {
-                _wit = Selection.activeGameObject.GetComponent<VoiceService>();
-                SetWit(_wit);
-            }
-        }
-
-        private void SetWit(VoiceService wit)
-        {
-            if (HasWit)
-            {
-                wit.events.OnRequestCreated.RemoveListener(OnRequestCreated);
-                wit.events.OnError.RemoveListener(OnError);
-                wit.events.OnResponse.RemoveListener(ShowResponse);
-                wit.events.OnFullTranscription.RemoveListener(ShowTranscription);
-                wit.events.OnPartialTranscription.RemoveListener(ShowTranscription);
-            }
-            if (null != wit)
-            {
-                this._wit = wit;
-                wit.events.OnRequestCreated.AddListener(OnRequestCreated);
-                wit.events.OnError.AddListener(OnError);
-                wit.events.OnResponse.AddListener(ShowResponse);
-                wit.events.OnFullTranscription.AddListener(ShowTranscription);
-                wit.events.OnPartialTranscription.AddListener(ShowTranscription);
-                // We will be measuring perceived request time since the actual request starts
-                // as soon as the mic goes active and the user says something.
-                wit.events.OnStoppedListening.AddListener(ResetStartTime);
-                Repaint();
+                SetVoiceService(Selection.activeGameObject.GetComponent<VoiceService>());
             }
         }
 
@@ -186,35 +163,94 @@ namespace Facebook.WitAi.Windows
 
         protected override void LayoutContent()
         {
-            // Layout wit select
-            base.LayoutContent();
+            // Get service
+            VoiceService voiceService = null;
 
-            // Need configuration
-            if (!witConfiguration)
+            // Runtime Mode
+            if (Application.isPlaying)
             {
-                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingConfigLabel);
-                return;
-            }
-            // Need app id
-            string clientAccessToken = witConfiguration.clientAccessToken;
-            if (string.IsNullOrEmpty(clientAccessToken))
-            {
-                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingClientTokenLabel);
-                GUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
-                if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSettingsButtonLabel))
+                // Refresh services
+                if (_services == null)
                 {
-                    Selection.activeObject = witConfiguration;
+                    RefreshVoiceServices();
+                }
+                // Services missing
+                if (_services == null || _services.Length == 0)
+                {
+                    WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingServicesLabel);
+                    return;
+                }
+                // Voice service select
+                int newService = _currentService;
+                bool serviceUpdate = false;
+                GUILayout.BeginHorizontal();
+                // Clamp
+                if (newService < 0 || newService >= _services.Length)
+                {
+                    newService = 0;
+                    serviceUpdate = true;
+                }
+                // Layout
+                WitEditorUI.LayoutPopup(WitTexts.Texts.UnderstandingViewerServicesLabel, _serviceNames, ref newService, ref serviceUpdate);
+                // Update
+                if (serviceUpdate)
+                {
+                    SetVoiceService(newService);
+                }
+                // Refresh
+                if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
+                {
+                    RefreshVoiceServices();
                 }
                 GUILayout.EndHorizontal();
-                return;
+                // Ensure service exists
+                voiceService = service;
+                if (!voiceService)
+                {
+                    WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingServicesLabel);
+                    return;
+                }
             }
-            bool updated = false;
-            bool allowInput = !_wit || !_wit.Active;
+            // Editor Only
+            else
+            {
+                // Configuration select
+                base.LayoutContent();
+                // Ensure configuration exists
+                if (!witConfiguration)
+                {
+                    WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingConfigLabel);
+                    return;
+                }
+                // Check client access token
+                string clientAccessToken = witConfiguration.clientAccessToken;
+                if (string.IsNullOrEmpty(clientAccessToken))
+                {
+                    WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingClientTokenLabel);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSettingsButtonLabel))
+                    {
+                        Selection.activeObject = witConfiguration;
+                    }
+                    GUILayout.EndHorizontal();
+                    return;
+                }
+            }
+
+            // Determine if input is allowed
+            bool allowInput = !Application.isPlaying || (service != null && !service.Active);
             GUI.enabled = allowInput;
+
+            // Utterance field
+            bool updated = false;
             WitEditorUI.LayoutTextField(new GUIContent(WitTexts.Texts.UnderstandingViewerUtteranceLabel), ref _utterance, ref updated);
+
+            // Begin Buttons
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
+
+            // Submit utterance
             if (allowInput && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSubmitButtonLabel))
             {
                 _responseText = "";
@@ -227,34 +263,42 @@ namespace Facebook.WitAi.Windows
                     _response = null;
                 }
             }
+
+            // Service buttons
             GUI.enabled = true;
-
-            if (EditorApplication.isPlaying && _wit)
+            if (EditorApplication.isPlaying && voiceService)
             {
-                if (!_wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerActivateButtonLabel))
+                if (!voiceService.Active)
                 {
-                    _wit.Activate();
+                    // Activate
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerActivateButtonLabel))
+                    {
+                        voiceService.Activate();
+                    }
                 }
-
-                if (_wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerDeactivateButtonLabel))
+                else
                 {
-                    _wit.Deactivate();
-                }
-
-                if (_wit.Active && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerAbortButtonLabel))
-                {
-                    _wit.DeactivateAndAbortRequest();
+                    // Deactivate
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerDeactivateButtonLabel))
+                    {
+                        voiceService.Deactivate();
+                    }
+                    // Abort
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerAbortButtonLabel))
+                    {
+                        voiceService.DeactivateAndAbortRequest();
+                    }
                 }
             }
             GUILayout.EndHorizontal();
 
             // Results
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            if (_wit && _wit.MicActive)
+            if (voiceService && voiceService.MicActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerListeningLabel);
             }
-            else if (_wit && _wit.IsRequestActive)
+            else if (voiceService && voiceService.IsRequestActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerLoadingLabel);
             }
@@ -276,23 +320,21 @@ namespace Facebook.WitAi.Windows
 
         private void SubmitUtterance()
         {
-            if (Application.isPlaying && !HasWit)
-            {
-                SetDefaultWit();
-            }
-
             // Remove response
             _response = null;
 
-            if (_wit && Application.isPlaying)
+            if (Application.isPlaying)
             {
-                _status = WitTexts.Texts.UnderstandingViewerListeningLabel;
-                _responseText = _status;
-                _wit.Activate(_utterance);
-                // Hack to watch for loading to complete. Response does not
-                // come back on the main thread so Repaint in onResponse in
-                // the editor does nothing.
-                EditorApplication.update += WatchForWitResponse;
+                if (service)
+                {
+                    _status = WitTexts.Texts.UnderstandingViewerListeningLabel;
+                    _responseText = _status;
+                    service.Activate(_utterance);
+                    // Hack to watch for loading to complete. Response does not
+                    // come back on the main thread so Repaint in onResponse in
+                    // the editor does nothing.
+                    EditorApplication.update += WatchForWitResponse;
+                }
             }
             else
             {
@@ -307,16 +349,11 @@ namespace Facebook.WitAi.Windows
 
         private void WatchForWitResponse()
         {
-            if (_wit && !_wit.Active)
+            if (service && !service.Active)
             {
                 Repaint();
                 EditorApplication.update -= WatchForWitResponse;
             }
-        }
-
-        private void SetDefaultWit()
-        {
-            SetWit(FindObjectOfType<VoiceService>());
         }
 
         private void OnResponse(WitRequest request)
@@ -521,5 +558,117 @@ namespace Facebook.WitAi.Windows
 
             return newState;
         }
+
+        #region SERVICES
+        // Refresh voice services
+        protected void RefreshVoiceServices()
+        {
+            // Remove previous service
+            VoiceService previous = service;
+            SetVoiceService(-1);
+
+            // Get all services
+            VoiceService[] services = GameObject.FindObjectsOfType<VoiceService>();
+
+            // Get unique services
+            Dictionary<GameObject, VoiceService> serviceGOs = new Dictionary<GameObject, VoiceService>();
+            foreach (var s in services)
+            {
+                // Add unique gameobjects
+                GameObject serviceGO = s.gameObject;
+                if (!serviceGOs.ContainsKey(serviceGO))
+                {
+                    // Uses first component on GO
+                    serviceGOs[serviceGO] = serviceGO.GetComponents<VoiceService>()[0];
+                }
+            }
+
+            // Get service gameobject names
+            _services = new VoiceService[serviceGOs.Keys.Count];
+            _serviceNames = new string[serviceGOs.Keys.Count];
+            int index = 0;
+            foreach (GameObject serviceGO in serviceGOs.Keys)
+            {
+                _services[index] = serviceGOs[serviceGO];
+                _serviceNames[index] = $"{serviceGO.name} ({_services[index].GetType().ToString()})";
+            }
+
+            // Set as first found
+            if (previous == null)
+            {
+                SetVoiceService(0);
+            }
+            // Set as previous
+            else
+            {
+                SetVoiceService(previous);
+            }
+        }
+        // Set voice service
+        protected void SetVoiceService(VoiceService newService)
+        {
+            // Cannot set without services
+            if (_services == null)
+            {
+                return;
+            }
+
+            // Find & apply
+            int newServiceIndex = Array.FindIndex(_services, (s) => s == newService);
+
+            // Apply
+            SetVoiceService(newServiceIndex);
+        }
+        // Set
+        protected void SetVoiceService(int newServiceIndex)
+        {
+            // Cannot set without services
+            if (_services == null)
+            {
+                return;
+            }
+
+            // Remove listeners to current service
+            RemoveVoiceListeners(service);
+
+            // Get current index
+            _currentService = newServiceIndex;
+
+            // Add listeners to current service
+            AddVoiceListeners(service);
+        }
+        // Remove listeners
+        private void RemoveVoiceListeners(VoiceService v)
+        {
+            // Ignore
+            if (v == null)
+            {
+                return;
+            }
+            // Remove delegates
+            v.events.OnRequestCreated.RemoveListener(OnRequestCreated);
+            v.events.OnError.RemoveListener(OnError);
+            v.events.OnResponse.RemoveListener(ShowResponse);
+            v.events.OnFullTranscription.RemoveListener(ShowTranscription);
+            v.events.OnPartialTranscription.RemoveListener(ShowTranscription);
+            v.events.OnStoppedListening.RemoveListener(ResetStartTime);
+        }
+        // Add listeners
+        private void AddVoiceListeners(VoiceService v)
+        {
+            // Ignore
+            if (v == null)
+            {
+                return;
+            }
+            // Add delegates
+            v.events.OnRequestCreated.AddListener(OnRequestCreated);
+            v.events.OnError.AddListener(OnError);
+            v.events.OnResponse.AddListener(ShowResponse);
+            v.events.OnPartialTranscription.AddListener(ShowTranscription);
+            v.events.OnFullTranscription.AddListener(ShowTranscription);
+            v.events.OnStoppedListening.AddListener(ResetStartTime);
+        }
+        #endregion
     }
 }

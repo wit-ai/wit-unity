@@ -39,6 +39,8 @@ namespace Facebook.WitAi
             public string UnderstandingViewerLabel;
             public string UnderstandingViewerMissingConfigLabel;
             public string UnderstandingViewerMissingClientTokenLabel;
+            public string UnderstandingViewerServicesLabel;
+            public string UnderstandingViewerMissingServicesLabel;
             public string UnderstandingViewerSettingsButtonLabel;
             public string UnderstandingViewerUtteranceLabel;
             public string UnderstandingViewerPromptLabel;
