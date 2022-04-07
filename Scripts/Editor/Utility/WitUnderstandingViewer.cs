@@ -198,7 +198,7 @@ namespace Facebook.WitAi.Windows
             string clientAccessToken = witConfiguration.clientAccessToken;
             if (string.IsNullOrEmpty(clientAccessToken))
             {
-                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerNoAppLabel);
+                WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingClientTokenLabel);
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
                 if (WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSettingsButtonLabel))
