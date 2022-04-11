@@ -427,7 +427,7 @@ namespace Facebook.WitAi
 
                     // Flush the marker buffer to catch up
                     int read;
-                    while ((read = _lastSampleMarker.Read(_writeBuffer, 0, _writeBuffer.Length, true)) > 0)
+                    while (null != _lastSampleMarker && (read = _lastSampleMarker.Read(_writeBuffer, 0, _writeBuffer.Length, true)) > 0)
                     {
                         _recordingRequest.Write(_writeBuffer, 0, read);
                         events.OnByteDataSent?.Invoke(_writeBuffer, 0, read);
