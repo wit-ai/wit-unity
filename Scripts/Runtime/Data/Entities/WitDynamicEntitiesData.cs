@@ -10,8 +10,6 @@ using UnityEngine;
 
 namespace Facebook.WitAi.Data.Entities
 {
-    // TODO: AARON: This needs to get moved out
-    [CreateAssetMenu(fileName = "DynamicEntityDefinition", menuName = "Wit", order = 0)]
     public class WitDynamicEntitiesData : ScriptableObject, IDynamicEntitiesProvider
     {
         public WitDynamicEntities entities;
