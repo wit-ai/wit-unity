@@ -52,6 +52,28 @@ namespace Facebook.WitAi
         {
             EditorGUILayout.LabelField(key, text, WitStyles.TextField);
         }
+        public static void LayoutKeyObjectLabels(string key, object obj)
+        {
+            // Null
+            if (obj == null)
+            {
+                LayoutKeyLabel(key, "NULL");
+                return;
+            }
+            // Foldout
+            bool foldoutVoice = WitEditorUI.LayoutFoldout(new GUIContent(key), obj);
+            if (!foldoutVoice)
+            {
+                return;
+            }
+            // Iterate fields
+            EditorGUI.indentLevel++;
+            foreach (var field in obj.GetType().GetFields())
+            {
+                LayoutKeyLabel(field.Name, field.GetValue(obj).ToString());
+            }
+            EditorGUI.indentLevel--;
+        }
         #endregion
 
         #region BUTTONS
