@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Facebook.WitAi;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 
@@ -23,22 +22,33 @@ namespace Facebook.WitAi.Samples.Shapes
             var intent = WitResultUtilities.GetIntentName(response);
             if (intent == "change_color")
             {
-                var colorString = WitResultUtilities.GetFirstEntityValue(response, "color:color");
-                var shapeString = WitResultUtilities.GetFirstEntityValue(response, "shape:shape");
+                var colorString = WitResultUtilities.GetAllEntityValues(response, "color:color");
+                var shapeString = WitResultUtilities.GetAllEntityValues(response, "shape:shape");
 
-                if (ColorUtility.TryParseHtmlString(colorString, out var color))
+                if (colorString.Length != shapeString.Length)
                 {
-                    if (string.IsNullOrEmpty(shapeString))
+                    Debug.LogWarning("Mismatched entity pairings.");
+                    return;
+                }
+                else
+                {
+                    for(var entity = 0; entity < shapeString.Length; entity++)
                     {
-                        for (int i = 0; i < transform.childCount; i++)
+                        if (ColorUtility.TryParseHtmlString(colorString[entity], out var color))
                         {
-                            SetColor(transform.GetChild(i), color);
+                            if (string.IsNullOrEmpty(shapeString[entity]))
+                            {
+                                for (int i = 0; i < transform.childCount; i++)
+                                {
+                                    SetColor(transform.GetChild(i), color);
+                                }
+                            }
+                            else
+                            {
+                                var shape = transform.Find(shapeString[entity]);
+                                if (shape) SetColor(shape, color);
+                            }
                         }
-                    }
-                    else
-                    {
-                        var shape = transform.Find(shapeString);
-                        if(shape) SetColor(shape, color);
                     }
                 }
             }

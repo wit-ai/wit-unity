@@ -25,6 +25,23 @@ namespace Facebook.WitAi
         }
 
         /// <summary>
+        /// Gets a collection of string value containing the selected value from
+        /// each entity in the response.
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static string[] GetAllEntityValues(this WitResponseNode witResponse, string name)
+        {
+            var values = new string[witResponse?["entities"]?[name]?.Count ?? 0];
+            for (var i = 0; i < witResponse?["entities"]?[name]?.Count; i++)
+            {
+                values[i] = witResponse?["entities"]?[name]?[i]?["value"]?.Value;
+            }
+            return values;
+        }
+
+        /// <summary>
         /// Gets the first entity as a WitResponseNode
         /// </summary>
         /// <param name="witResponse"></param>
