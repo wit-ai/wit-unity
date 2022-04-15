@@ -37,9 +37,9 @@ namespace Facebook.WitAi.Data
 
         private byte[] _byteDataBuffer;
 
-        private HashSet<IVoiceService> _activeRecorders = new HashSet<IVoiceService>();
+        private HashSet<Component> _activeRecorders = new HashSet<Component>();
 
-        public bool IsRecording(IVoiceService component) => _activeRecorders.Contains(component);
+        public bool IsRecording(Component component) => _activeRecorders.Contains(component);
         public bool IsInputAvailable => _micInput.IsInputAvailable;
         public AudioEncoding AudioEncoding => _micInput.AudioEncoding;
 
@@ -124,7 +124,7 @@ namespace Facebook.WitAi.Data
             return _micDataBuffer.CreateMarker();
         }
 
-        public void StartRecording(IVoiceService component)
+        public void StartRecording(Component component)
         {
             _activeRecorders.Add(component);
             if (!_micInput.IsRecording)
@@ -132,10 +132,13 @@ namespace Facebook.WitAi.Data
                 _micInput.StartRecording(audioBufferConfiguration.sampleLengthInMs);
             }
 
-            component.VoiceEvents.OnStartListening?.Invoke();
+            if (component is IVoiceEventProvider v)
+            {
+                v.VoiceEvents.OnStartListening?.Invoke();
+            }
         }
 
-        public void StopRecording(IVoiceService component)
+        public void StopRecording(Component component)
         {
             _activeRecorders.Remove(component);
             if (_activeRecorders.Count == 0)
@@ -143,7 +146,10 @@ namespace Facebook.WitAi.Data
                 _micInput.StopRecording();
             }
 
-            component.VoiceEvents.OnStoppedListening?.Invoke();
+            if (component is IVoiceEventProvider v)
+            {
+                v.VoiceEvents.OnStoppedListening?.Invoke();
+            }
         }
     }
 }

@@ -156,7 +156,7 @@ namespace Facebook.WitAi
         }
     }
 
-    public interface IVoiceService
+    public interface IVoiceService : IVoiceEventProvider
     {
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
@@ -167,7 +167,7 @@ namespace Facebook.WitAi
 
         bool MicActive { get; }
 
-        VoiceEvents VoiceEvents { get; set; }
+        new VoiceEvents VoiceEvents { get; set; }
 
         ITranscriptionProvider TranscriptionProvider { get; set; }
 
