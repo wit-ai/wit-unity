@@ -364,12 +364,14 @@ namespace Facebook.WitAi
         // Callback for mic sample ready
         private void OnMicSampleReady(RingBuffer<byte>.Marker marker, float levelMax)
         {
+            if (null == _lastSampleMarker) return;
+            
             if (_minSampleByteCount > _lastSampleMarker.RingBuffer.Capacity)
             {
                 _minSampleByteCount = _lastSampleMarker.RingBuffer.Capacity;
             }
 
-            if (null != _lastSampleMarker && IsRequestActive && _recordingRequest.IsRequestStreamActive && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
+            if (IsRequestActive && _recordingRequest.IsRequestStreamActive && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
             {
                 // Flush the marker since the last read and send it to Wit
                 _lastSampleMarker.ReadIntoWriters(

@@ -1,7 +1,7 @@
 {
   "name": "com.facebook.witai",
   "displayName": "Wit.ai",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "samples": [
     {
       "displayName": "Response Debugger",

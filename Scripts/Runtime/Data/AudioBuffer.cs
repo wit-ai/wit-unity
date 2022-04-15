@@ -27,6 +27,7 @@ namespace Facebook.WitAi.Data
         }
         #endregion
 
+        [SerializeField] private bool alwaysRecording;
         [SerializeField] private AudioBufferConfiguration audioBufferConfiguration = new AudioBufferConfiguration();
         [SerializeField] private AudioBufferEvents events = new AudioBufferEvents();
 
@@ -66,12 +67,16 @@ namespace Facebook.WitAi.Data
 #endif
 
             _micInput.OnSampleReady += OnMicSampleReady;
+
+            if (alwaysRecording) StartRecording(this);
         }
 
         // Remove mic delegates
         private void OnDisable()
         {
             _micInput.OnSampleReady -= OnMicSampleReady;
+            
+            if (alwaysRecording) StopRecording(this);
         }
 
         // Callback for mic sample ready
@@ -137,6 +142,14 @@ namespace Facebook.WitAi.Data
 
         public void StartRecording(Component component)
         {
+            StartCoroutine(WaitForMicToStart(component));
+        }
+
+        private IEnumerator WaitForMicToStart(Component component)
+        {
+            yield return new WaitUntil(() => null != _micInput);
+
+            StartRecording(component);
             _activeRecorders.Add(component);
             if (!_micInput.IsRecording)
             {
