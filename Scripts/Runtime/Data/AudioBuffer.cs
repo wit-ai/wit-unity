@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
@@ -75,7 +76,7 @@ namespace Facebook.WitAi.Data
         private void OnDisable()
         {
             _micInput.OnSampleReady -= OnMicSampleReady;
-            
+
             if (alwaysRecording) StopRecording(this);
         }
 
