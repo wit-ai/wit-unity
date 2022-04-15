@@ -656,7 +656,7 @@ namespace Facebook.WitAi
                     }
                 }
 
-                new Thread(ExecuteWriteThread).Start(stream);
+                writeStream = stream;
             }
             catch (WebException e)
             {
@@ -665,59 +665,6 @@ namespace Facebook.WitAi
                     statusCode = (int) e.Status;
                     statusDescription = e.Message;
                     SafeInvoke(onResponse);
-                }
-            }
-        }
-
-        private void ExecuteWriteThread(object obj)
-        {
-            bytesWritten = 0;
-            Stream stream = (Stream) obj;
-
-            try
-            {
-                while (isRequestStreamActive)
-                {
-                    FlushBuffer(stream);
-                    Thread.Yield();
-                }
-
-                FlushBuffer(stream);
-                stream.Close();
-            }
-            catch (ObjectDisposedException)
-            {
-                // Handling edge case where stream is closed remotely
-                // This problem occurs when the Web server resets or closes the connection after
-                // the client application sends the HTTP header.
-                // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
-                Debug.LogWarning(
-                    "Stream already disposed. It is likely the server reset the connection before streaming started.");
-            }
-            catch (IOException e)
-            {
-                Debug.LogWarning(e.Message);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(e);
-            }
-
-            if (requestRequiresBody && bytesWritten == 0)
-            {
-                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
-                AbortRequest();
-            }
-        }
-
-        private void FlushBuffer(Stream stream)
-        {
-            while (writeBuffer.Count > 0)
-            {
-                if (writeBuffer.TryDequeue(out var buffer))
-                {
-                    bytesWritten += buffer.Length;
-                    stream.Write(buffer, 0, buffer.Length);
                 }
             }
         }
@@ -765,7 +712,6 @@ namespace Facebook.WitAi
             if (requestRequiresBody && bytesWritten == 0)
             {
                 AbortRequest();
-                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
             }
             else
             {
@@ -778,6 +724,11 @@ namespace Facebook.WitAi
             lock (streamLock)
             {
                 isRequestStreamActive = false;
+                if (null != writeStream)
+                {
+                    writeStream.Close();
+                    writeStream = null;
+                }
             }
         }
 
@@ -792,10 +743,34 @@ namespace Facebook.WitAi
         /// <param name="length"></param>
         public void Write(byte[] data, int offset, int length)
         {
-            // TODO: This is going to cause additional allocations, we can probably improve this
-            var buffer = new byte[data.Length];
-            Array.Copy(data, offset, buffer, 0, length);
-            writeBuffer.Enqueue(buffer);
+            try
+            {
+                writeStream.Write(data, offset, length);
+                bytesWritten += length;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Handling edge case where stream is closed remotely
+                // This problem occurs when the Web server resets or closes the connection after
+                // the client application sends the HTTP header.
+                // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
+                Debug.LogWarning(
+                    "Stream already disposed. It is likely the server reset the connection before streaming started.");
+            }
+            catch (IOException e)
+            {
+                Debug.LogWarning(e.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
+            }
+
+            if (requestRequiresBody && bytesWritten == 0)
+            {
+                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
+                AbortRequest();
+            }
         }
 
         #region CALLBACKS
@@ -803,6 +778,7 @@ namespace Facebook.WitAi
         private bool _performing = false;
         // All actions
         private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+        private Stream writeStream;
 
         // Called from background thread
         private void MainThreadCallback(Action action)

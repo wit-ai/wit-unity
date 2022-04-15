@@ -8,13 +8,13 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Lib;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
@@ -29,18 +29,15 @@ namespace Facebook.WitAi
         [SerializeField]
         private WitRuntimeConfiguration _runtimeConfiguration = new WitRuntimeConfiguration();
 
-        private IAudioInputSource _micInput;
         private WitRequestOptions _currentRequestOptions;
         private float _lastMinVolumeLevelTime;
         private WitRequest _recordingRequest;
 
         private bool _isSoundWakeActive;
-        private RingBuffer<byte> _micDataBuffer;
         private RingBuffer<byte>.Marker _lastSampleMarker;
-        private byte[] _writeBuffer;
         private bool _minKeepAliveWasHit;
         private bool _isActive;
-        private byte[] _byteDataBuffer;
+        private long _minSampleByteCount = 1024;
 
         private ITranscriptionProvider _activeTranscriptionProvider;
         private Coroutine _timeLimitCoroutine;
@@ -79,8 +76,6 @@ namespace Facebook.WitAi
             set
             {
                 _runtimeConfiguration = value;
-
-                InitializeConfig();
             }
         }
 
@@ -125,7 +120,7 @@ namespace Facebook.WitAi
             }
         }
 
-        public override bool MicActive => null != _micInput && _micInput.IsRecording;
+        public override bool MicActive => AudioBuffer.Instance.IsRecording(this);
 
         protected override bool ShouldSendMicData => _runtimeConfiguration.sendAudioToWit ||
                                                   null == _activeTranscriptionProvider;
@@ -141,12 +136,6 @@ namespace Facebook.WitAi
                 TranscriptionProvider = _runtimeConfiguration.customTranscriptionProvider;
             }
 
-            _micInput = GetComponent<IAudioInputSource>();
-            if (_micInput == null)
-            {
-                _micInput = gameObject.AddComponent<Mic>();
-            }
-
             _dataReadyHandlers = GetComponents<IWitByteDataReadyHandler>();
             _dataSentHandlers = GetComponents<IWitByteDataSentHandler>();
         }
@@ -154,37 +143,20 @@ namespace Facebook.WitAi
         protected override void OnEnable()
         {
             base.OnEnable();
-#if UNITY_EDITOR
-            // Make sure we have a mic input after a script recompile
-            if (null == _micInput)
-            {
-                _micInput = GetComponent<IAudioInputSource>();
-            }
-#endif
 
-            _micInput.OnSampleReady += OnMicSampleReady;
-            _micInput.OnStartRecording += OnMicStartListening;
-            _micInput.OnStopRecording += OnMicStoppedListening;
+            AudioBuffer.Instance.Events.OnMicLevelChanged.AddListener(OnMicLevelChanged);
+            AudioBuffer.Instance.Events.OnByteDataReady.AddListener(OnByteDataReady);
+            AudioBuffer.Instance.Events.OnSampleReady += OnMicSampleReady;
 
             _dynamicEntityProviders = GetComponents<IDynamicEntitiesProvider>();
+        }
 
-            InitializeConfig();
-        }
-        // If always recording, begin now
-        private void InitializeConfig()
-        {
-            if (_runtimeConfiguration.alwaysRecord)
-            {
-                StartRecording();
-            }
-        }
-        // Remove mic delegates
         protected override void OnDisable()
         {
             base.OnDisable();
-            _micInput.OnSampleReady -= OnMicSampleReady;
-            _micInput.OnStartRecording -= OnMicStartListening;
-            _micInput.OnStopRecording -= OnMicStoppedListening;
+            AudioBuffer.Instance.Events.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
+            AudioBuffer.Instance.Events.OnByteDataReady.RemoveListener(OnByteDataReady);
+            AudioBuffer.Instance.Events.OnSampleReady -= OnMicSampleReady;
         }
         #endregion
 
@@ -208,29 +180,21 @@ namespace Facebook.WitAi
             }
             if (_isActive) return;
             StopRecording();
+            _lastSampleMarker = AudioBuffer.Instance.CreateMarker();
 
-            if (!_micInput.IsRecording && ShouldSendMicData)
+            if (!AudioBuffer.Instance.IsRecording(this) && ShouldSendMicData)
             {
                 _minKeepAliveWasHit = false;
                 _isSoundWakeActive = true;
 
-#if DEBUG_SAMPLE
-                var file = Application.dataPath + "/test.pcm";
-                sampleFile = File.Open(file, FileMode.Create);
-                Debug.Log("Writing recording to file: " + file);
-#endif
-
                 StartRecording();
             }
 
-            if (!_isActive)
-            {
-                _activeTranscriptionProvider?.Activate();
-                _isActive = true;
+            _activeTranscriptionProvider?.Activate();
+            _isActive = true;
 
-                _lastMinVolumeLevelTime = float.PositiveInfinity;
-                _currentRequestOptions = requestOptions;
-            }
+            _lastMinVolumeLevelTime = float.PositiveInfinity;
+            _currentRequestOptions = requestOptions;
         }
         public override void ActivateImmediately()
         {
@@ -254,7 +218,7 @@ namespace Facebook.WitAi
             if (ShouldSendMicData)
             {
                 _recordingRequest = RuntimeConfiguration.witConfiguration.SpeechRequest(requestOptions, _dynamicEntityProviders);
-                _recordingRequest.audioEncoding = _micInput.AudioEncoding;
+                _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
                 _recordingRequest.onPartialTranscription = OnPartialTranscription;
                 _recordingRequest.onFullTranscription = OnFullTranscription;
                 _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
@@ -266,13 +230,19 @@ namespace Facebook.WitAi
 
             if (!_isActive)
             {
-                if (_runtimeConfiguration.alwaysRecord && null != _micDataBuffer)
-                {
-                    _lastSampleMarker = _micDataBuffer.CreateMarker();
-                }
                 _activeTranscriptionProvider?.Activate();
                 _isActive = true;
             }
+
+#if DEBUG_SAMPLE
+            if (null == sampleFile)
+            {
+                var file = Application.dataPath + "/test.pcm";
+                sampleFile = File.Open(file, FileMode.Create);
+                Debug.Log("Writing recording to file: " + file);
+            }
+#endif
+            _lastSampleMarker = AudioBuffer.Instance.CreateMarker();
         }
         /// <summary>
         /// Send text data to Wit.ai for NLU processing
@@ -316,21 +286,22 @@ namespace Facebook.WitAi
                 _micInitCoroutine = null;
             }
 
-            if (_micInput.IsRecording && !_runtimeConfiguration.alwaysRecord)
-            {
-                _micInput.StopRecording();
-                _lastSampleMarker = null;
+            AudioBuffer.Instance.StopRecording(this);
 
 #if DEBUG_SAMPLE
-                sampleFile.Close();
-#endif
+            if (null != sampleFile)
+            {
+                Debug.Log($"Wrote test samples to {Application.dataPath}/test.pcm");
+                sampleFile?.Close();
+                sampleFile = null;
             }
+#endif
         }
         // When wit is ready, start recording
         private void OnWitReadyForData()
         {
             _lastMinVolumeLevelTime = Time.time;
-            if (!_micInput.IsRecording)
+            if (!AudioBuffer.Instance.IsRecording(this))
             {
                 StartRecording();
             }
@@ -346,7 +317,7 @@ namespace Facebook.WitAi
             }
 
             // Wait for input and then try again
-            if (!_micInput.IsInputAvailable)
+            if (!AudioBuffer.Instance.IsInputAvailable)
             {
                 _micInitCoroutine = StartCoroutine(WaitForMic());
                 events.OnError.Invoke("Input Error", "No input source was available. Cannot activate for voice input.");
@@ -354,25 +325,15 @@ namespace Facebook.WitAi
             // Begin recording
             else
             {
-                _micInput.StartRecording(_runtimeConfiguration.sampleLengthInMs);
-                InitializeMicDataBuffer();
+                AudioBuffer.Instance.StartRecording(this);;
             }
         }
         // Wait until mic is available
         private IEnumerator WaitForMic()
         {
-            yield return new WaitUntil(() => _micInput.IsInputAvailable);
+            yield return new WaitUntil(() => AudioBuffer.Instance.IsInputAvailable);
             _micInitCoroutine = null;
             StartRecording();
-        }
-        // Generate mic data buffer if needed
-        private void InitializeMicDataBuffer()
-        {
-            if (null == _micDataBuffer && _runtimeConfiguration.micBufferLengthInSeconds > 0)
-            {
-                _micDataBuffer = new RingBuffer<byte>((int) Mathf.Ceil(2 * _runtimeConfiguration.micBufferLengthInSeconds * 1000 * _runtimeConfiguration.sampleLengthInMs));
-                _lastSampleMarker = _micDataBuffer.CreateMarker();
-            }
         }
         // Callback for mic start
         private void OnMicStartListening()
@@ -384,65 +345,40 @@ namespace Facebook.WitAi
         {
             events?.OnStoppedListening?.Invoke();
         }
-        // Callback for mic sample ready
-        private void OnMicSampleReady(int sampleCount, float[] sample, float levelMax)
+
+        private void OnByteDataReady(byte[] buffer, int offset, int length)
         {
-            if (null == TranscriptionProvider || !TranscriptionProvider.OverrideMicLevel)
+            events?.OnByteDataReady.Invoke(buffer, offset, length);
+
+            for (int i = 0; null != _dataReadyHandlers && i < _dataReadyHandlers.Length; i++)
             {
-                OnMicLevelChanged(levelMax);
+                _dataReadyHandlers[i].OnWitDataReady(buffer, offset, length);
             }
+        }
 
-            if (null != _micDataBuffer)
+        // Callback for mic sample ready
+        private void OnMicSampleReady(RingBuffer<byte>.Marker marker, float levelMax)
+        {
+            if (null != _lastSampleMarker && IsRequestActive && _recordingRequest.IsRequestStreamActive && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
             {
-                if (_isSoundWakeActive && levelMax > _runtimeConfiguration.soundWakeThreshold)
-                {
-                    _lastSampleMarker = _micDataBuffer.CreateMarker(
-                        (int) (-_runtimeConfiguration.micBufferLengthInSeconds * 1000 *
-                               _runtimeConfiguration.sampleLengthInMs));
-                }
-
-                byte[] data = Convert(sample);
-                _micDataBuffer.Push(data, 0, data.Length);
-                if (data.Length > 0)
-                {
-                    events.OnByteDataReady?.Invoke(data, 0, data.Length);
-                    for(int i = 0; null != _dataReadyHandlers && i < _dataReadyHandlers.Length; i++)
+                int read = 0;
+                // Flush the marker since the last read and send it to Wit
+                _lastSampleMarker.ReadIntoWriters(
+                    (buffer, offset, length) =>
                     {
-                        _dataReadyHandlers[i].OnWitDataReady(data, 0, data.Length);
-                    }
-                }
-#if DEBUG_SAMPLE
-                    sampleFile.Write(data, 0, data.Length);
-#endif
-            }
-
-            if (IsRequestActive && _recordingRequest.IsRequestStreamActive)
-            {
-                if (null != _micDataBuffer && _micDataBuffer.Capacity > 0)
-                {
-                    if (null == _writeBuffer)
+                        _recordingRequest.Write(buffer, offset, length);
+                        #if DEBUG_SAMPLE
+                        sampleFile?.Write(buffer, offset, length);
+                        #endif
+                    },
+                    (buffer, offset, length) => events.OnByteDataSent?.Invoke(buffer, offset, length),
+                    (buffer, offset, length) =>
                     {
-                        _writeBuffer = new byte[sample.Length * 2];
-                    }
-
-                    // Flush the marker buffer to catch up
-                    int read;
-                    while (null != _lastSampleMarker && (read = _lastSampleMarker.Read(_writeBuffer, 0, _writeBuffer.Length, true)) > 0)
-                    {
-                        _recordingRequest.Write(_writeBuffer, 0, read);
-                        events.OnByteDataSent?.Invoke(_writeBuffer, 0, read);
-                        for (int i = 0; null != _dataSentHandlers && i < _dataSentHandlers.Length; i++)
+                        for (int i = 0; i < _dataSentHandlers.Length; i++)
                         {
-                            _dataSentHandlers[i].OnWitDataSent(_writeBuffer, 0, read);
+                            _dataSentHandlers[i]?.OnWitDataSent(buffer, offset, length);
                         }
-                    }
-                }
-                else
-                {
-                    byte[] sampleBytes = Convert(sample);
-                    _recordingRequest.Write(sampleBytes, 0, sampleBytes.Length);
-                }
-
+                    });
 
                 if (_receivedTranscription)
                 {
@@ -465,32 +401,14 @@ namespace Facebook.WitAi
                 events.OnMinimumWakeThresholdHit?.Invoke();
                 _isSoundWakeActive = false;
                 ActivateImmediately(_currentRequestOptions);
+                _lastSampleMarker.Offset(_runtimeConfiguration.sampleLengthInMs * -2);
             }
-        }
-        // Convert
-        private byte[] Convert(float[] samples)
-        {
-            var sampleCount = samples.Length;
-
-            if (null == _byteDataBuffer || _byteDataBuffer.Length != sampleCount)
-            {
-                _byteDataBuffer = new byte[sampleCount * 2];
-            }
-
-            int rescaleFactor = 32767; //to convert float to Int16
-
-            for (int i = 0; i < sampleCount; i++)
-            {
-                short data = (short) (samples[i] * rescaleFactor);
-                _byteDataBuffer[i * 2] = (byte) data;
-                _byteDataBuffer[i * 2 + 1] = (byte) (data >> 8);
-            }
-
-            return _byteDataBuffer;
         }
         // Mic level change
         private void OnMicLevelChanged(float level)
         {
+            if (null != TranscriptionProvider && TranscriptionProvider.OverrideMicLevel) return;
+
             if (level > _runtimeConfiguration.minKeepAliveVolume)
             {
                 _lastMinVolumeLevelTime = Time.time;
@@ -514,7 +432,7 @@ namespace Facebook.WitAi
         /// </summary>
         public override void Deactivate()
         {
-            DeactivateRequest(_micInput.IsRecording ? events.OnStoppedListeningDueToDeactivation : null, false);
+            DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? events.OnStoppedListeningDueToDeactivation : null, false);
         }
         /// <summary>
         /// Stop listening and abort any requests that may be active without waiting for a response.
@@ -522,7 +440,7 @@ namespace Facebook.WitAi
         public override void DeactivateAndAbortRequest()
         {
             events.OnAborting.Invoke();
-            DeactivateRequest(_micInput.IsRecording ? events.OnStoppedListeningDueToDeactivation : null, true);
+            DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? events.OnStoppedListeningDueToDeactivation : null, true);
         }
         // Stop listening if time expires
         private IEnumerator DeactivateDueToTimeLimit()
@@ -545,8 +463,6 @@ namespace Facebook.WitAi
 
             // Stop recording
             StopRecording();
-            _micDataBuffer?.Clear();
-            _writeBuffer = null;
 
             // Deactivate transcription provider
             _activeTranscriptionProvider?.Deactivate();
