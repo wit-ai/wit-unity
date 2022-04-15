@@ -105,10 +105,6 @@ namespace Facebook.WitAi.Data
                         ringBuffer.WriteFromBuffer(writers[i], index, length);
                     }
                 }
-                else
-                {
-                    Debug.Log("Marker is not valid, not sending.");
-                }
 
                 bufferDataIndex += length;
                 index = ringBuffer.GetBufferArrayIndex(bufferDataIndex);
