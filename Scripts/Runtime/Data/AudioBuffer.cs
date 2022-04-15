@@ -124,6 +124,17 @@ namespace Facebook.WitAi.Data
             return _micDataBuffer.CreateMarker();
         }
 
+        /// <summary>
+        /// Creates a marker with an offset
+        /// </summary>
+        /// <param name="offset">Number of seconds to offset the marker by</param>
+        /// <returns></returns>
+        public RingBuffer<byte>.Marker CreateMarker(float offset)
+        {
+            var samples = (int) (AudioEncoding.samplerate * offset);
+            return _micDataBuffer.CreateMarker(samples);
+        }
+
         public void StartRecording(Component component)
         {
             _activeRecorders.Add(component);

@@ -66,5 +66,8 @@ namespace Facebook.WitAi.Configuration
 
         [Tooltip("If always record is set the mic will fill the mic data buffer as long as the component is enabled in the scene.")]
         public bool alwaysRecord;
+
+        [Tooltip("The preferred number of seconds to offset from the time the activation happens. A negative value here could help to catch any words that may have been cut off at the beginning of an activation (assuming input is already being read into the buffer)")]
+        public float preferredActivationOffset = -.5f;
     }
 }

@@ -30,7 +30,7 @@ namespace Facebook.WitAi
         private RingBuffer<byte>.Marker _lastSampleMarker;
         private bool _minKeepAliveWasHit;
         private bool _isActive;
-        private long _minSampleByteCount = 1024;
+        private long _minSampleByteCount = 1024 * 10;
 
         private IVoiceEventProvider _voiceEventProvider;
         private IWitRuntimeConfigProvider _runtimeConfigProvider;
@@ -182,7 +182,7 @@ namespace Facebook.WitAi
             }
             if (_isActive) return;
             StopRecording();
-            _lastSampleMarker = AudioBuffer.Instance.CreateMarker();
+            _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider.RuntimeConfiguration.preferredActivationOffset);
 
             if (!AudioBuffer.Instance.IsRecording(this) && ShouldSendMicData)
             {
@@ -244,7 +244,8 @@ namespace Facebook.WitAi
                 Debug.Log("Writing recording to file: " + file);
             }
 #endif
-            _lastSampleMarker = AudioBuffer.Instance.CreateMarker();
+            _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider
+                .RuntimeConfiguration.preferredActivationOffset);
         }
         /// <summary>
         /// Send text data to Wit.ai for NLU processing
@@ -363,6 +364,11 @@ namespace Facebook.WitAi
         // Callback for mic sample ready
         private void OnMicSampleReady(RingBuffer<byte>.Marker marker, float levelMax)
         {
+            if (_minSampleByteCount > _lastSampleMarker.RingBuffer.Capacity)
+            {
+                _minSampleByteCount = _lastSampleMarker.RingBuffer.Capacity;
+            }
+
             if (null != _lastSampleMarker && IsRequestActive && _recordingRequest.IsRequestStreamActive && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
             {
                 // Flush the marker since the last read and send it to Wit

@@ -57,6 +57,8 @@ namespace Facebook.WitAi.Data
             private int index;
             private readonly RingBuffer<T> ringBuffer;
 
+            public RingBuffer<T> RingBuffer => ringBuffer;
+
             public Marker(RingBuffer<T> ringBuffer, long markerPosition, int bufIndex)
             {
                 this.ringBuffer = ringBuffer;
