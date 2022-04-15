@@ -6,13 +6,15 @@
  */
 
 using System;
+using Facebook.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace Facebook.WitAi.Events
 {
     [Serializable]
-    public class VoiceEvents
+    public class VoiceEvents : ITranscriptionEvent
     {
         [Header("Activation Result Events")]
         [Tooltip("Called when a response from Wit.ai has been received")]
@@ -72,14 +74,21 @@ namespace Facebook.WitAi.Events
         public UnityEvent OnMinimumWakeThresholdHit = new UnityEvent();
 
         [Header("Transcription Events")]
+        [FormerlySerializedAs("OnPartialTranscription")]
         [Tooltip("Message fired when a partial transcription has been received.")]
-        public WitTranscriptionEvent OnPartialTranscription = new WitTranscriptionEvent();
+        public WitTranscriptionEvent onPartialTranscription = new WitTranscriptionEvent();
 
+        [FormerlySerializedAs("OnFullTranscription")]
         [Tooltip("Message received when a complete transcription is received.")]
-        public WitTranscriptionEvent OnFullTranscription = new WitTranscriptionEvent();
+        public WitTranscriptionEvent onFullTranscription = new WitTranscriptionEvent();
 
         [Header("Data")]
         public WitByteDataEvent OnByteDataReady = new WitByteDataEvent();
         public WitByteDataEvent OnByteDataSent = new WitByteDataEvent();
+
+        #region Shared Event API
+        public WitTranscriptionEvent OnPartialTranscription => onPartialTranscription;
+        public WitTranscriptionEvent OnFullTranscription => onFullTranscription;
+        #endregion
     }
  }
