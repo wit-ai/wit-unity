@@ -103,12 +103,12 @@ namespace Facebook.WitAi
 
         protected virtual void OnEnable()
         {
-            events.OnResponse.AddListener(OnResponse);
+            VoiceEvents.OnResponse.AddListener(OnResponse);
         }
 
         protected virtual void OnDisable()
         {
-            events.OnResponse.RemoveListener(OnResponse);
+            VoiceEvents.OnResponse.RemoveListener(OnResponse);
         }
 
         protected virtual void OnResponse(WitResponseNode response)

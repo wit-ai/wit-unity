@@ -150,7 +150,6 @@ namespace Facebook.WitAi.Data
         {
             yield return new WaitUntil(() => null != _micInput);
 
-            StartRecording(component);
             _activeRecorders.Add(component);
             if (!_micInput.IsRecording)
             {
