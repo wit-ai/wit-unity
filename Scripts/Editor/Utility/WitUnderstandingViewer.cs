@@ -175,7 +175,7 @@ namespace Facebook.WitAi.Windows
                     RefreshVoiceServices();
                 }
                 // Services missing
-                if (_services == null || _services.Length == 0)
+                if (_services == null || _serviceNames == null || _services.Length == 0)
                 {
                     WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingServicesLabel);
                     return;
@@ -207,7 +207,7 @@ namespace Facebook.WitAi.Windows
                 voiceService = service;
                 if (!voiceService)
                 {
-                    WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingServicesLabel);
+                    RefreshVoiceServices();
                     return;
                 }
             }
@@ -568,29 +568,28 @@ namespace Facebook.WitAi.Windows
             SetVoiceService(-1);
 
             // Get all services
-            VoiceService[] services = GameObject.FindObjectsOfType<VoiceService>();
+            VoiceService[] services = Resources.FindObjectsOfTypeAll<VoiceService>();
 
             // Get unique services
-            Dictionary<GameObject, VoiceService> serviceGOs = new Dictionary<GameObject, VoiceService>();
+            List<GameObject> serviceGOs = new List<GameObject>();
+            List<VoiceService> serviceList = new List<VoiceService>();
             foreach (var s in services)
             {
                 // Add unique gameobjects
                 GameObject serviceGO = s.gameObject;
-                if (!serviceGOs.ContainsKey(serviceGO))
+                if (!serviceGOs.Contains(serviceGO))
                 {
-                    // Uses first component on GO
-                    serviceGOs[serviceGO] = serviceGO.GetComponents<VoiceService>()[0];
+                    serviceGOs.Add(serviceGO);
+                    serviceList.Add(serviceGO.GetComponent<VoiceService>());
                 }
             }
 
             // Get service gameobject names
-            _services = new VoiceService[serviceGOs.Keys.Count];
-            _serviceNames = new string[serviceGOs.Keys.Count];
-            int index = 0;
-            foreach (GameObject serviceGO in serviceGOs.Keys)
+            _services = serviceList.ToArray();
+            _serviceNames = new string[_services.Length];
+            for (int i = 0; i < _services.Length; i++)
             {
-                _services[index] = serviceGOs[serviceGO];
-                _serviceNames[index] = $"{serviceGO.name} ({_services[index].GetType().ToString()})";
+                _serviceNames[i] = GetVoiceServiceName(_services[i]);
             }
 
             // Set as first found
@@ -603,6 +602,16 @@ namespace Facebook.WitAi.Windows
             {
                 SetVoiceService(previous);
             }
+        }
+        // Get voice service name
+        private string GetVoiceServiceName(VoiceService service)
+        {
+            IWitRuntimeConfigProvider configProvider = service.GetComponent<IWitRuntimeConfigProvider>();
+            if (configProvider != null)
+            {
+                return $"{configProvider.RuntimeConfiguration.witConfiguration.name} [{service.gameObject.name}]";
+            }
+            return service.gameObject.name;
         }
         // Set voice service
         protected void SetVoiceService(VoiceService newService)

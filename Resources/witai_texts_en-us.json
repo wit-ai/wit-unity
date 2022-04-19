@@ -12,7 +12,7 @@
   "SetupSubmitFailLabel": "Please enter a valid token before linking.",
   "UnderstandingViewerLabel": "Wit.ai Understanding Viewer",
   "UnderstandingViewerServicesLabel": "Voice Service",
-  "UnderstandingViewerMissingServiceLabel": "A Voice Service must be selected in order to perform runtime requests.",
+  "UnderstandingViewerMissingServicesLabel": "No Voice Services are currently loaded.",
   "UnderstandingViewerUtteranceLabel": "Utterance",
   "UnderstandingViewerPromptLabel": "Enter an utterance and hit 'Send' to see what your app will return.",
   "UnderstandingViewerMissingConfigLabel": "A Wit configuration must be available and selected to test utterances.",
