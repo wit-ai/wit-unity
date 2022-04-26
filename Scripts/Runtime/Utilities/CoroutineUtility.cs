@@ -33,6 +33,7 @@ namespace Facebook.WitAi.Utilities
             // Coroutine
             public bool IsRunning { get; private set; }
             private Coroutine _runtimeCoroutine;
+            private bool _destroyed = false;
 
             // Dont destroy
             private void Awake()
@@ -92,6 +93,7 @@ namespace Facebook.WitAi.Utilities
             // Cancel on destroy
             private void OnDestroy()
             {
+                _destroyed = true;
                 if (IsRunning)
                 {
                     CoroutineCancel();
@@ -134,7 +136,10 @@ namespace Facebook.WitAi.Utilities
                 }
 
                 // Destroy
-                DestroyImmediate(gameObject);
+                if (!_destroyed)
+                {
+                    DestroyImmediate(gameObject);
+                }
             }
         }
     }

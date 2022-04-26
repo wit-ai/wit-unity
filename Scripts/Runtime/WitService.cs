@@ -49,7 +49,6 @@ namespace Facebook.WitAi
         #region Interfaces
         private IWitByteDataReadyHandler[] _dataReadyHandlers;
         private IWitByteDataSentHandler[] _dataSentHandlers;
-        private Coroutine _micInitCoroutine;
         private IDynamicEntitiesProvider[] _dynamicEntityProviders;
 
         #endregion
@@ -289,12 +288,6 @@ namespace Facebook.WitAi
         {
             if (!AudioBuffer.Instance.IsRecording(this)) return;
 
-            if (null != _micInitCoroutine)
-            {
-                StopCoroutine(_micInitCoroutine);
-                _micInitCoroutine = null;
-            }
-
             AudioBuffer.Instance.StopRecording(this);
 
 #if DEBUG_SAMPLE
@@ -318,31 +311,25 @@ namespace Facebook.WitAi
         // Handle begin recording
         private void StartRecording()
         {
-            // Stop any init coroutine
-            if (null != _micInitCoroutine)
+            // Check for input
+            if (!AudioBuffer.Instance.IsInputAvailable)
             {
-                StopCoroutine(_micInitCoroutine);
-                _micInitCoroutine = null;
+                AudioBuffer.Instance.CheckForInput();
             }
-
             // Wait for input and then try again
             if (!AudioBuffer.Instance.IsInputAvailable)
             {
-                _micInitCoroutine = StartCoroutine(WaitForMic());
                 VoiceEvents.OnError.Invoke("Input Error", "No input source was available. Cannot activate for voice input.");
+                return;
             }
-            // Begin recording
-            else if(!AudioBuffer.Instance.IsRecording(this))
+            // Already recording
+            if (AudioBuffer.Instance.IsRecording(this))
             {
-                AudioBuffer.Instance.StartRecording(this);;
+                return;
             }
-        }
-        // Wait until mic is available
-        private IEnumerator WaitForMic()
-        {
-            yield return new WaitUntil(() => AudioBuffer.Instance.IsInputAvailable);
-            _micInitCoroutine = null;
-            StartRecording();
+
+            // Start recording
+            AudioBuffer.Instance.StartRecording(this);
         }
         // Callback for mic start
         private void OnMicStartListening()

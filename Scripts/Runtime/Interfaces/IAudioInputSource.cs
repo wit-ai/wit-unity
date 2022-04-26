@@ -49,5 +49,10 @@ namespace Facebook.WitAi.Interfaces
         /// Return true if input is available.
         /// </summary>
         bool IsInputAvailable { get; }
+
+        /// <summary>
+        /// Checks for input
+        /// </summary>
+        void CheckForInput();
     }
 }

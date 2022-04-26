@@ -43,6 +43,7 @@ namespace Facebook.WitAi.Data
 
         public bool IsRecording(Component component) => _activeRecorders.Contains(component);
         public bool IsInputAvailable => _micInput.IsInputAvailable;
+        public void CheckForInput() => _micInput.CheckForInput();
         public AudioEncoding AudioEncoding => _micInput.AudioEncoding;
 
         private void Awake()
@@ -116,7 +117,7 @@ namespace Facebook.WitAi.Data
         private void Convert(float[] samples)
         {
             var sampleCount = samples.Length;
-            int rescaleFactor = 32767; //to convert float to Int16
+            const int rescaleFactor = 32767; //to convert float to Int16
 
             for (int i = 0; i < sampleCount; i++)
             {
