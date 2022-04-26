@@ -12,17 +12,17 @@ namespace Facebook.WitAi.Data
     {
         #region Singleton
         private static AudioBuffer _instance;
+        private static bool _instanceInit = false;
         public static AudioBuffer Instance
         {
             get
             {
                 if (!_instance) _instance = FindObjectOfType<AudioBuffer>();
-                if (!_instance)
+                if (!_instance && !_instanceInit)
                 {
                     var audioBufferObject = new GameObject("AudioBuffer");
                     _instance = audioBufferObject.AddComponent<AudioBuffer>();
                 }
-
                 return _instance;
             }
         }
@@ -47,6 +47,8 @@ namespace Facebook.WitAi.Data
 
         private void Awake()
         {
+            _instance = this;
+            _instanceInit = true;
             _micInput = GetComponent<IAudioInputSource>();
             if (_micInput == null)
             {
@@ -58,7 +60,6 @@ namespace Facebook.WitAi.Data
 
         private void OnEnable()
         {
-            _instance = this;
 #if UNITY_EDITOR
             // Make sure we have a mic input after a script recompile
             if (null == _micInput)

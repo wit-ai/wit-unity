@@ -156,9 +156,13 @@ namespace Facebook.WitAi
 
         protected void OnDisable()
         {
-            AudioBuffer.Instance.Events.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
-            AudioBuffer.Instance.Events.OnByteDataReady.RemoveListener(OnByteDataReady);
-            AudioBuffer.Instance.Events.OnSampleReady -= OnMicSampleReady;
+            AudioBufferEvents e = AudioBuffer.Instance?.Events;
+            if (e != null)
+            {
+                e.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
+                e.OnByteDataReady.RemoveListener(OnByteDataReady);
+                e.OnSampleReady -= OnMicSampleReady;
+            }
         }
         #endregion
 
@@ -365,7 +369,7 @@ namespace Facebook.WitAi
         private void OnMicSampleReady(RingBuffer<byte>.Marker marker, float levelMax)
         {
             if (null == _lastSampleMarker) return;
-            
+
             if (_minSampleByteCount > _lastSampleMarker.RingBuffer.Capacity)
             {
                 _minSampleByteCount = _lastSampleMarker.RingBuffer.Capacity;
