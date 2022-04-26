@@ -205,11 +205,6 @@ namespace Facebook.WitAi.Windows
                 GUILayout.EndHorizontal();
                 // Ensure service exists
                 voiceService = service;
-                if (!voiceService)
-                {
-                    RefreshVoiceServices();
-                    return;
-                }
             }
             // Editor Only
             else
