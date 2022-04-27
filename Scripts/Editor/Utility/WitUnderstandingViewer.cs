@@ -572,7 +572,7 @@ namespace Facebook.WitAi.Windows
             {
                 // Add unique gameobjects
                 GameObject serviceGO = s.gameObject;
-                if (!serviceGOs.Contains(serviceGO))
+                if (serviceGO.scene.rootCount > 0 && !serviceGOs.Contains(serviceGO))
                 {
                     serviceGOs.Add(serviceGO);
                     serviceList.Add(serviceGO.GetComponent<VoiceService>());
