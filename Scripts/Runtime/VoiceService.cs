@@ -42,7 +42,7 @@ namespace Facebook.WitAi
         /// </summary>
         public abstract bool MicActive { get; }
 
-        public VoiceEvents VoiceEvents
+        public virtual VoiceEvents VoiceEvents
         {
             get => events;
             set => events = value;
