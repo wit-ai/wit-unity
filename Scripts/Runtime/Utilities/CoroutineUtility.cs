@@ -8,6 +8,7 @@
 
 using UnityEngine;
 using System.Collections;
+using System.Linq;
 
 namespace Facebook.WitAi.Utilities
 {
@@ -24,7 +25,6 @@ namespace Facebook.WitAi.Utilities
         private static CoroutinePerformer GetPerformer()
         {
             CoroutinePerformer performer = new GameObject("Coroutine").AddComponent<CoroutinePerformer>();
-            //performer.gameObject.hideFlags = HideFlags.DontSave;
             performer.gameObject.hideFlags = HideFlags.HideAndDontSave;
             return performer;
         }
@@ -34,7 +34,6 @@ namespace Facebook.WitAi.Utilities
             // Coroutine
             public bool IsRunning { get; private set; }
             private Coroutine _runtimeCoroutine;
-            private bool _destroyed = false;
 
             // Dont destroy
             private void Awake()
@@ -60,6 +59,7 @@ namespace Facebook.WitAi.Utilities
                 {
                     _editorMethod = asyncMethod;
                     UnityEditor.EditorApplication.update += EditorCoroutineIterate;
+                    EditorCoroutineIterate();
                     return;
                 }
 #endif
@@ -73,40 +73,50 @@ namespace Facebook.WitAi.Utilities
             private IEnumerator _editorMethod;
             private void EditorCoroutineIterate()
             {
-                if (_editorMethod != null)
+                // Destroyed
+                if (this == null || _editorMethod == null)
                 {
-                    if (!_editorMethod.MoveNext())
+                    CoroutineCancel();
+                }
+                // Continue
+                else if (!MoveNext(_editorMethod))
+                {
+                    CoroutineComplete();
+                }
+            }
+            // Move through methods
+            private bool MoveNext(IEnumerator method)
+            {
+                // Move sub coroutine
+                object current = method.Current;
+                if (current != null && current.GetType().GetInterfaces().Contains(typeof(IEnumerator)))
+                {
+                    if (MoveNext(current as IEnumerator))
                     {
-                        CoroutineComplete();
+                        return true;
                     }
                 }
+                // Move this
+                return method.MoveNext();
             }
 #endif
             // Runtime iterate
             private IEnumerator RuntimeCoroutineIterate(IEnumerator asyncMethod)
             {
                 // Wait for completion
-                yield return StartCoroutine(asyncMethod);
+                yield return asyncMethod;
                 // Complete
                 CoroutineComplete();
             }
-
             // Cancel on destroy
             private void OnDestroy()
             {
-                _destroyed = true;
-                if (IsRunning)
-                {
-                    CoroutineCancel();
-                }
+                CoroutineUnload();
             }
-            // Cancel coroutine
+            // Cancel current coroutine
             public void CoroutineCancel()
             {
-                if (IsRunning)
-                {
-                    CoroutineComplete();
-                }
+                CoroutineComplete();
             }
             // Completed
             private void CoroutineComplete()
@@ -117,6 +127,18 @@ namespace Facebook.WitAi.Utilities
                     return;
                 }
 
+                // Unload
+                CoroutineUnload();
+
+                // Destroy
+                if (this != null && gameObject != null)
+                {
+                    DestroyImmediate(gameObject);
+                }
+            }
+            // Unload
+            private void CoroutineUnload()
+            {
                 // Done
                 IsRunning = false;
 
@@ -134,12 +156,6 @@ namespace Facebook.WitAi.Utilities
                 {
                     StopCoroutine(_runtimeCoroutine);
                     _runtimeCoroutine = null;
-                }
-
-                // Destroy
-                if (!_destroyed)
-                {
-                    DestroyImmediate(gameObject);
                 }
             }
         }
