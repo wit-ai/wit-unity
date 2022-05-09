@@ -10,6 +10,7 @@ using System;
 using System.Reflection;
 using System.Threading;
 using Facebook.WitAi.Utilities;
+using UnityEngine;
 
 namespace Facebook.WitAi
 {
@@ -58,21 +59,33 @@ namespace Facebook.WitAi
             var dictionary = new DictionaryList<string, RegisteredMatchIntent>();
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                foreach (Type t in assembly.GetTypes())
-                {
-                    foreach (var method in t.GetMethods())
-                    {
-                        foreach (var attribute in method.GetCustomAttributes(typeof(MatchIntent)))
-                        {
-                            var mi = (MatchIntent) attribute;
-                            dictionary[mi.Intent].Add(new RegisteredMatchIntent()
-                            {
-                                type = t,
-                                method = method,
-                                matchIntent = mi
-                            });
+                try {
+                    foreach (Type t in assembly.GetTypes()) {
+                        try {
+                            foreach (var method in t.GetMethods()) {
+                                try {
+                                    foreach (var attribute in method.GetCustomAttributes(typeof(MatchIntent))) {
+                                        try {
+                                            var mi = (MatchIntent)attribute;
+                                            dictionary[mi.Intent].Add(new RegisteredMatchIntent() {
+                                                type = t,
+                                                method = method,
+                                                matchIntent = mi
+                                            });
+                                        } catch (Exception e) {
+                                            Debug.LogError(e);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    Debug.LogError(e);
+                                }
+                            }
+                        } catch (Exception e) {
+                            Debug.LogError(e);
                         }
                     }
+                } catch (Exception e) {
+                    Debug.LogError(e);
                 }
             }
 
