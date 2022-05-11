@@ -16,6 +16,7 @@ using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Traits;
 using Facebook.WitAi.CallbackHandlers;
+using Facebook.WitAi.TTS.Editor.Preload;
 
 namespace Facebook.WitAi.Windows
 {
@@ -59,6 +60,11 @@ namespace Facebook.WitAi.Windows
         public static void WitCreateConfiguration()
         {
             WitConfigurationUtility.CreateConfiguration(WitAuthUtility.ServerToken);
+        }
+        [MenuItem("Assets/Create/Voice SDK/TTS Preload Settings")]
+        public static void CreateTTSPreloadSettings()
+        {
+            TTSPreloadUtility.CreatePreloadSettings();
         }
         #endregion
 
