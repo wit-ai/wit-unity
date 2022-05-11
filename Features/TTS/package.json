@@ -1,0 +1,11 @@
+{
+  "name": "com.facebook.witai.tts",
+  "displayName": "Wit.ai - TTS",
+  "version": "0.0.9",
+  "author": {
+    "name": "Wit.ai",
+    "url": "https://wit.ai"
+  },
+  "description": "Text to speech feature package.",
+  "type": "library"
+}
