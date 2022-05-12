@@ -627,8 +627,8 @@ namespace Facebook.WitAi.TTS
             // Fail if not preloaded
             if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
             {
-                string error = $"File is not preloaded\nPath: {downloadPath}";
-                OnWebDownloadError(clipData, downloadPath, error);
+                string error = $"File is not preloaded\nText to Speak: {clipData.textToSpeak}\nVoice ID: {clipData.voiceSettings?.settingsID}";
+                Log(error, LogType.Warning);
                 onDownloadComplete?.Invoke(clipData, downloadPath, error);
                 return;
             }

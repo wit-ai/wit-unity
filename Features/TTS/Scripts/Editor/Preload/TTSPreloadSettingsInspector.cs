@@ -150,6 +150,7 @@ namespace Facebook.WitAi.TTS.Editor
             {
                 EditorUtility.ClearProgressBar();
                 EditorUtility.SetDirty(Settings);
+                AssetDatabase.Refresh();
                 Debug.Log($"TTS Preload Utility - Preload Complete{l}");
             });
         }
