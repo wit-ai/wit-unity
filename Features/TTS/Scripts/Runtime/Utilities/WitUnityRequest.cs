@@ -234,15 +234,8 @@ namespace Facebook.WitAi.TTS.Utilities
         #endregion
 
         #region SHARED
-        // Setup
-        public static bool IsSetup { get; private set; }
-        public static string OperatingSystem { get; private set; }
-        public static string DeviceModel { get; private set; }
-        public static string DeviceName { get; private set; }
-        public static string AppIdentifier { get; private set; }
         // Provide custom headers
         public static event Func<UriBuilder,Uri> OnProvideCustomUri;
-        public static event Func<string> OnProvideCustomUserAgent;
         public static event Func<Dictionary<string, string>> OnProvideCustomHeaders;
 
         // Get uri
@@ -289,7 +282,7 @@ namespace Facebook.WitAi.TTS.Utilities
             // Set authorization
             unityRequest.SetRequestHeader("Authorization", GetAuthorization(configuration));
             // Set user agent
-            unityRequest.SetRequestHeader("User-Agent", GetUserAgent(configuration));
+            unityRequest.SetRequestHeader("User-Agent", WitRequest.GetUserAgent(configuration));
             // Set timeout
             unityRequest.timeout = configuration ? configuration.timeoutMS : 10000;
             // Set custom headers
@@ -312,58 +305,6 @@ namespace Facebook.WitAi.TTS.Utilities
         private static string GetAuthorization(WitConfiguration configuration)
         {
             return $"Bearer {configuration.clientAccessToken.Trim()}";
-        }
-        // Get config user agent
-        private static string GetUserAgent(WitConfiguration configuration)
-        {
-            // Setup if needed
-            if (!IsSetup)
-            {
-                IsSetup = true;
-                OperatingSystem = SystemInfo.operatingSystem;
-                DeviceModel = SystemInfo.deviceModel;
-                DeviceName = SystemInfo.deviceName;
-                AppIdentifier = Application.identifier;
-            }
-
-            // Use config id if found
-            string configId = configuration?.configId;
-
-#if UNITY_EDITOR
-            string userEditor = "Editor";
-            if (string.IsNullOrEmpty(configuration.configId))
-            {
-                configuration.configId = Guid.NewGuid().ToString();
-                UnityEditor.EditorUtility.SetDirty(configuration);
-                UnityEditor.AssetDatabase.SaveAssets();
-                configId = configuration.configId;
-            }
-#else
-            string userEditor = "Runtime";
-#endif
-
-            // If null, set not configured
-            if (string.IsNullOrEmpty(configId))
-            {
-                configId = "not-yet-configured";
-            }
-
-            // Append custom user agents
-            string customUserAgents = string.Empty;
-            if (OnProvideCustomUserAgent != null)
-            {
-                foreach (Func<string> del in OnProvideCustomHeaders.GetInvocationList())
-                {
-                    string custom = del();
-                    if (!string.IsNullOrEmpty(custom))
-                    {
-                        customUserAgents += $",{custom}";
-                    }
-                }
-            }
-
-            // Return full string
-            return $"wit-unity-{WitRequest.WIT_SDK_VERSION},{OperatingSystem},{DeviceModel},{configId},{DeviceName},{userEditor}{customUserAgents}";
         }
         // Generate wit request
         protected static WitUnityRequest RequestWit(WitConfiguration configuration, UnityWebRequest unityRequest, Action<float> onProgress,

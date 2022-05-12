@@ -203,10 +203,6 @@ namespace Facebook.WitAi
 
         public IRequest RequestProvider { get; internal set; }
 
-        private static string operatingSystem;
-        private static string deviceModel;
-        private static string deviceName;
-        private static string appIdentifier;
         private bool configurationRequired;
         private string serverToken;
         private string callingStackTrace;
@@ -227,11 +223,6 @@ namespace Facebook.WitAi
             this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
-
-            if (null == operatingSystem) operatingSystem = SystemInfo.operatingSystem;
-            if (null == deviceModel) deviceModel = SystemInfo.deviceModel;
-            if (null == deviceName) deviceName = SystemInfo.deviceName;
-            if (null == appIdentifier) appIdentifier = Application.identifier;
         }
 
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
@@ -382,14 +373,7 @@ namespace Facebook.WitAi
             }
 #endif
 
-            _request.UserAgent =
-                $"wit-unity-{WIT_SDK_VERSION},{operatingSystem},{deviceModel},{configId},{appIdentifier}";
-
-#if UNITY_EDITOR
-            _request.UserAgent += ",Editor";
-#else
-            _request.UserAgent += ",Runtime";
-#endif
+            _request.UserAgent = GetUserAgent(configuration);
 
             requestStartTime = DateTime.UtcNow;
             isActive = true;
@@ -425,6 +409,60 @@ namespace Facebook.WitAi
             {
                 StartResponse();
             }
+        }
+
+        // Get config user agent
+        private static string _operatingSystem;
+        private static string _deviceModel;
+        private static string _appIdentifier;
+        private static string _unityVersion;
+        public static event Func<string> OnProvideCustomUserAgent;
+        public static string GetUserAgent(WitConfiguration configuration)
+        {
+            // Setup if needed
+            if (_operatingSystem == null) _operatingSystem = SystemInfo.operatingSystem;
+            if (_deviceModel == null) _deviceModel = SystemInfo.deviceModel;
+            if (_appIdentifier == null) _appIdentifier = Application.identifier;
+            if (_unityVersion == null) _unityVersion = Application.unityVersion;
+
+            // Use config id if found
+            string configId = configuration?.configId;
+
+#if UNITY_EDITOR
+            string userEditor = "Editor";
+            if (string.IsNullOrEmpty(configuration.configId))
+            {
+                configuration.configId = Guid.NewGuid().ToString();
+                UnityEditor.EditorUtility.SetDirty(configuration);
+                UnityEditor.AssetDatabase.SaveAssets();
+                configId = configuration.configId;
+            }
+#else
+            string userEditor = "Runtime";
+#endif
+
+            // If null, set not configured
+            if (string.IsNullOrEmpty(configId))
+            {
+                configId = "not-yet-configured";
+            }
+
+            // Append custom user agents
+            string customUserAgents = string.Empty;
+            if (OnProvideCustomUserAgent != null)
+            {
+                foreach (Func<string> del in OnProvideCustomUserAgent.GetInvocationList())
+                {
+                    string custom = del();
+                    if (!string.IsNullOrEmpty(custom))
+                    {
+                        customUserAgents += $",{custom}";
+                    }
+                }
+            }
+
+            // Return full string
+            return $"wit-unity-{WIT_SDK_VERSION},{_operatingSystem},{_deviceModel},{configId},{_appIdentifier},{userEditor},{_unityVersion}{customUserAgents}";
         }
 
         private bool RequestRequiresBody(string command)
