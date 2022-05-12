@@ -161,6 +161,19 @@ namespace Facebook.WitAi.TTS.Editor.Voices
 
                 // Default layout
                 EditorGUI.PropertyField(subfieldRect, subfieldProperty, new GUIContent(subfieldProperty.displayName));
+
+                // Clamp in between range
+                RangeAttribute range = subfield.GetCustomAttribute<RangeAttribute>();
+                if (range != null)
+                {
+                    int newValue = Mathf.Clamp(subfieldProperty.intValue, (int)range.min, (int)range.max);
+                    if (subfieldProperty.intValue != newValue)
+                    {
+                        subfieldProperty.intValue = newValue;
+                    }
+                }
+
+                // Increment
                 y += VAR_HEIGHT + VAR_MARGIN;
             }
 

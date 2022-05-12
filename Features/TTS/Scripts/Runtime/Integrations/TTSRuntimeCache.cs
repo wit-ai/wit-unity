@@ -9,6 +9,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Interfaces;
 using Facebook.WitAi.TTS.Events;
@@ -22,20 +23,30 @@ namespace Facebook.WitAi.TTS.Integrations
         /// Whether or not to unload clip data after the clip capacity is hit
         /// </summary>
         [Header("Runtime Cache Settings")]
-        [SerializeField] private bool _clipLimit = true;
+        [Tooltip("Whether or not to unload clip data after the clip capacity is hit")]
+        [FormerlySerializedAs("_clipLimit")]
+        public bool ClipLimit = true;
+
         /// <summary>
         /// The maximum clips allowed in the runtime cache
         /// </summary>
-        [SerializeField] [Tooltip("Maximum AudioClips allowed in cache")] [Min(1)] private int _clipCapacity = 20;
+        [Tooltip("The maximum clips allowed in the runtime cache")]
+        [FormerlySerializedAs("_clipCapacity")]
+        [Min(1)] public int ClipCapacity = 20;
 
         /// <summary>
         /// Whether or not to unload clip data after the ram capacity is hit
         /// </summary>
-        [SerializeField] private bool _ramLimit = true;
+        [Tooltip("Whether or not to unload clip data after the ram capacity is hit")]
+        [FormerlySerializedAs("_ramLimit")]
+        public bool RamLimit = true;
+
         /// <summary>
         /// The maximum amount of RAM allowed in the runtime cache.  In KBs
         /// </summary>
-        [SerializeField] [Tooltip("Maximum KBs allowed in cache")] [Min(1)] private int _ramCapacity = 1000;
+        [Tooltip("The maximum amount of RAM allowed in the runtime cache.  In KBs")]
+        [FormerlySerializedAs("_ramCapacity")]
+        [Min(1)] public int RamCapacity = 1000;
 
         /// <summary>
         /// On clip added callback
@@ -143,12 +154,12 @@ namespace Facebook.WitAi.TTS.Integrations
         protected bool IsCacheFull()
         {
             // Capacity full
-            if (_clipLimit && _clipOrder.Count > _clipCapacity)
+            if (ClipLimit && _clipOrder.Count > ClipCapacity)
             {
                 return true;
             }
             // Ram full
-            if (_ramLimit && GetCacheDiskSize() > _ramCapacity)
+            if (RamLimit && GetCacheDiskSize() > RamCapacity)
             {
                 return true;
             }

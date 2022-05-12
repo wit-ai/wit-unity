@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Data;
@@ -269,12 +270,27 @@ namespace Facebook.WitAi.TTS.Integrations
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             if (voiceSettings != null)
             {
-                foreach (var field in voiceSettings.GetType().GetFields())
+                foreach (FieldInfo field in voiceSettings.GetType().GetFields())
                 {
                     if (!string.Equals(field.Name, "settingsID", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        string val = field.GetValue(voiceSettings).ToString();
-                        parameters[field.Name] = val;
+                        // Get field value
+                        object fieldVal = field.GetValue(voiceSettings);
+
+                        // Clamp in between range
+                        RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
+                        if (range != null && field.FieldType == typeof(int))
+                        {
+                            int oldFloat = (int) fieldVal;
+                            int newFloat = Mathf.Clamp(oldFloat, (int)range.min, (int)range.max);
+                            if (oldFloat != newFloat)
+                            {
+                                fieldVal = newFloat;
+                            }
+                        }
+
+                        // Apply
+                        parameters[field.Name] = fieldVal.ToString();
                     }
                 }
             }

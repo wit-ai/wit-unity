@@ -29,7 +29,6 @@ namespace Facebook.WitAi.TTS.Editor
         private List<string> _ttsVoiceIDs;
 
         // Layout items
-        public const float VOICE_BTN_HEIGHT = 80f;
         public const float ACTION_BTN_INDENT = 15f;
         public virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
         public virtual string HeaderUrl => WitTexts.GetAppURL(WitConfigurationUtility.GetAppID(null), WitTexts.WitAppEndpointType.Settings);
@@ -95,9 +94,8 @@ namespace Facebook.WitAi.TTS.Editor
             if (WitEditorUI.LayoutTextButton("Import JSON"))
             {
                 EditorUtility.ClearProgressBar();
-                if (TTSPreloadUtility.ImportData(Settings.data))
+                if (TTSPreloadUtility.ImportData(Settings))
                 {
-                    EditorUtility.SetDirty(Settings);
                     RefreshData();
                 }
             }
@@ -175,6 +173,16 @@ namespace Facebook.WitAi.TTS.Editor
 
             // Indent
             EditorGUI.indentLevel++;
+
+            // Generate
+            if (Settings.data == null)
+            {
+                Settings.data = new TTSPreloadData();
+            }
+            if (Settings.data.voices == null)
+            {
+                Settings.data.voices = new TTSPreloadVoiceData[] {new TTSPreloadVoiceData()};
+            }
 
             // Begin scroll
             for (int v = 0; v < Settings.data.voices.Length; v++)
