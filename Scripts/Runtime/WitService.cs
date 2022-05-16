@@ -141,7 +141,7 @@ namespace Facebook.WitAi
             _runtimeConfigProvider = GetComponent<IWitRuntimeConfigProvider>();
             _voiceEventProvider = GetComponent<IVoiceEventProvider>();
 
-            if (null == _activeTranscriptionProvider &&
+            if (null == _activeTranscriptionProvider && null != RuntimeConfiguration &&
                 RuntimeConfiguration.customTranscriptionProvider)
             {
                 TranscriptionProvider = RuntimeConfiguration.customTranscriptionProvider;
