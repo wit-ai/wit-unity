@@ -430,7 +430,7 @@ namespace Facebook.WitAi
 
 #if UNITY_EDITOR
             string userEditor = "Editor";
-            if (string.IsNullOrEmpty(configuration.configId))
+            if (configuration != null && string.IsNullOrEmpty(configuration.configId))
             {
                 configuration.configId = Guid.NewGuid().ToString();
                 UnityEditor.EditorUtility.SetDirty(configuration);
