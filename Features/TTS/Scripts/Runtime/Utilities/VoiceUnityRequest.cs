@@ -135,19 +135,21 @@ namespace Facebook.WitAi.TTS.Utilities
         // Currently transmitting requests
         private static int _requestCount = 0;
 
-        // Sending
+        /// <summary>
+        /// Timeout in seconds
+        /// </summary>
+        public static int Timeout = 5;
+
+        // Access for state
         public bool IsTransmitting => _transmitting;
         private bool _transmitting = false;
-        // Progress
         public float Progress => _progress;
         private float _progress;
 
-        // Request
+        // Internal refs & delegates
         private UnityWebRequest _request;
-        // Delegates
         private Action<float> _onProgress;
         private Action<UnityWebRequest> _onComplete;
-        //
         private CoroutineUtility.CoroutinePerformer _coroutine;
 
         // Request setup
@@ -165,6 +167,12 @@ namespace Facebook.WitAi.TTS.Utilities
             _onComplete = newComplete;
             _transmitting = false;
             _progress = 0f;
+
+            // Use default timeout
+            if (newRequest.timeout <= 0)
+            {
+                newRequest.timeout = Timeout;
+            }
 
             // Begin
             _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());

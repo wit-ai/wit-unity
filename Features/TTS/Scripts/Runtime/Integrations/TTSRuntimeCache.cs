@@ -46,7 +46,7 @@ namespace Facebook.WitAi.TTS.Integrations
         /// </summary>
         [Tooltip("The maximum amount of RAM allowed in the runtime cache.  In KBs")]
         [FormerlySerializedAs("_ramCapacity")]
-        [Min(1)] public int RamCapacity = 1000;
+        [Min(1)] public int RamCapacity = 32768;
 
         /// <summary>
         /// On clip added callback
@@ -98,11 +98,11 @@ namespace Facebook.WitAi.TTS.Integrations
                 return;
             }
             // Remove from order
-            bool wasAdded = false;
+            bool wasAdded = true;
             int clipIndex = _clipOrder.IndexOf(clipData.clipID);
             if (clipIndex != -1)
             {
-                wasAdded = true;
+                wasAdded = false;
                 _clipOrder.RemoveAt(clipIndex);
             }
 
@@ -118,7 +118,7 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Call add delegate
-            if (!wasAdded)
+            if (wasAdded && _clips.Keys.Count > 0)
             {
                 OnClipAdded?.Invoke(clipData);
             }
@@ -177,10 +177,10 @@ namespace Facebook.WitAi.TTS.Integrations
             {
                 total += GetClipBytes(_clips[key].clip);
             }
-            return (int)(total / (long)1000) + 1;
+            return (int)(total / (long)1024) + 1;
         }
         // Return bytes occupied by clip
-        private long GetClipBytes(AudioClip clip)
+        public static long GetClipBytes(AudioClip clip)
         {
             if (clip == null)
             {

@@ -30,8 +30,7 @@ namespace Facebook.WitAi.TTS.Interfaces
         /// Method for performing a web load request
         /// </summary>
         /// <param name="clipData">Clip request data</param>
-        /// <param name="onStreamSetupComplete">Stream setup complete: returns clip and error if applicable</param>
-        void RequestStreamFromWeb(TTSClipData clipData, Action<TTSClipData, string> onStreamSetupComplete);
+        void RequestStreamFromWeb(TTSClipData clipData);
 
         /// <summary>
         /// Cancel web stream
@@ -49,8 +48,7 @@ namespace Facebook.WitAi.TTS.Interfaces
         /// </summary>
         /// <param name="clipData">Clip request data</param>
         /// <param name="downloadPath">Path to save clip</param>
-        /// <param name="onDownloadComplete">Download complete: returns clip, download path, and error if applicable</param>
-        void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath, Action<TTSClipData, string, string> onDownloadComplete);
+        void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath);
 
         /// <summary>
         /// Cancel web download

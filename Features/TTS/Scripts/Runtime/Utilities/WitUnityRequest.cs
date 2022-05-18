@@ -284,7 +284,7 @@ namespace Facebook.WitAi.TTS.Utilities
             // Set user agent
             unityRequest.SetRequestHeader("User-Agent", WitRequest.GetUserAgent(configuration));
             // Set timeout
-            unityRequest.timeout = configuration ? configuration.timeoutMS : 10000;
+            unityRequest.timeout = configuration ? Mathf.CeilToInt(configuration.timeoutMS / 1000f) : 10;
             // Set custom headers
             if (OnProvideCustomHeaders != null)
             {

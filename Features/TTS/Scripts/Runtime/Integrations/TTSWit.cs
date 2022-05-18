@@ -15,6 +15,7 @@ using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
 using Facebook.WitAi.TTS.Utilities;
+using UnityEngine.Serialization;
 
 namespace Facebook.WitAi.TTS.Integrations
 {
@@ -74,9 +75,9 @@ namespace Facebook.WitAi.TTS.Integrations
 
         #region ITTSWebHandler Streams
         // Request settings
-        [Header("Web Request Settings")] [SerializeField]
-        private TTSWitRequestSettings _settings;
-        public  TTSWitRequestSettings RequestSettings => _settings;
+        [Header("Web Request Settings")]
+        [FormerlySerializedAs("_settings")]
+        public TTSWitRequestSettings RequestSettings;
 
         // Use settings web stream events
         public TTSStreamEvents WebStreamEvents { get; set; } = new TTSStreamEvents();
@@ -92,7 +93,7 @@ namespace Facebook.WitAi.TTS.Integrations
         /// </summary>
         /// <param name="clipData">Clip request data</param>
         /// <param name="onStreamSetupComplete">Stream setup complete: returns clip and error if applicable</param>
-        public void RequestStreamFromWeb(TTSClipData clipData, Action<TTSClipData, string> onStreamSetupComplete)
+        public void RequestStreamFromWeb(TTSClipData clipData)
         {
             // Stream begin
             WebStreamEvents?.OnStreamBegin?.Invoke(clipData);
@@ -102,7 +103,6 @@ namespace Facebook.WitAi.TTS.Integrations
             if (!string.IsNullOrEmpty(validError))
             {
                 WebStreamEvents?.OnStreamError?.Invoke(clipData, validError);
-                onStreamSetupComplete?.Invoke(clipData, validError);
                 return;
             }
             // Ignore if already performing
@@ -127,7 +127,6 @@ namespace Facebook.WitAi.TTS.Integrations
                     {
                         WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
                     }
-                    onStreamSetupComplete?.Invoke(clipData, error);
                 });
         }
         /// <summary>
@@ -169,8 +168,7 @@ namespace Facebook.WitAi.TTS.Integrations
         /// </summary>
         /// <param name="clipData">Clip request data</param>
         /// <param name="downloadPath">Path to save clip</param>
-        /// <param name="onDownloadComplete">Download complete: returns clip, download path, and error if applicable</param>
-        public void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath, Action<TTSClipData, string, string> onDownloadComplete)
+        public void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath)
         {
             // Begin
             WebDownloadEvents?.OnDownloadBegin?.Invoke(clipData, downloadPath);
@@ -180,7 +178,6 @@ namespace Facebook.WitAi.TTS.Integrations
             if (!string.IsNullOrEmpty(validError))
             {
                 WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, validError);
-                onDownloadComplete?.Invoke(clipData, downloadPath, validError);
                 return;
             }
             // Abort if already performing
@@ -204,7 +201,6 @@ namespace Facebook.WitAi.TTS.Integrations
                     {
                         WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
                     }
-                    onDownloadComplete?.Invoke(clipData, downloadPath, error);
                 });
         }
         /// <summary>

@@ -41,8 +41,7 @@ namespace Facebook.WitAi.TTS.Interfaces
         /// <summary>
         /// Method for streaming from disk cache
         /// </summary>
-        /// <param name="clipData">Clip request data</param>
-        void StreamFromDiskCache(TTSClipData clipData, Action<TTSClipData, string> onStreamReady);
+        void StreamFromDiskCache(TTSClipData clipData);
 
         /// <summary>
         /// Method for cancelling a running cache load request

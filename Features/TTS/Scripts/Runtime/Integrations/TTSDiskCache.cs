@@ -29,13 +29,13 @@ namespace Facebook.WitAi.TTS.Integrations
         /// <summary>
         /// The cache default settings
         /// </summary>
-        [SerializeField] private TTSDiskCacheSettings _defaultSettings;
+        [SerializeField] private TTSDiskCacheSettings _defaultSettings = new TTSDiskCacheSettings();
         public TTSDiskCacheSettings DiskCacheDefaultSettings => _defaultSettings;
 
         /// <summary>
         /// The cache streaming events
         /// </summary>
-        [SerializeField] private TTSStreamEvents _events;
+        [SerializeField] private TTSStreamEvents _events = new TTSStreamEvents();
         public TTSStreamEvents DiskStreamEvents
         {
             get => _events;
@@ -147,7 +147,7 @@ namespace Facebook.WitAi.TTS.Integrations
         /// <summary>
         /// Performs async load request
         /// </summary>
-        public void StreamFromDiskCache(TTSClipData clipData, Action<TTSClipData, string> onStreamReady)
+        public void StreamFromDiskCache(TTSClipData clipData)
         {
             // Invoke begin
             DiskStreamEvents?.OnStreamBegin?.Invoke(clipData);
@@ -158,7 +158,6 @@ namespace Facebook.WitAi.TTS.Integrations
             {
                 string e = $"Clip not found\nPath: {filePath}";
                 OnStreamComplete(clipData, e);
-                onStreamReady?.Invoke(clipData, e);
                 return;
             }
 
@@ -169,7 +168,6 @@ namespace Facebook.WitAi.TTS.Integrations
                 clipData.clip = clip;
                 // Call on complete
                 OnStreamComplete(clipData, error);
-                onStreamReady?.Invoke(clipData, error);
             });
         }
         /// <summary>

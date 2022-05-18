@@ -60,18 +60,14 @@ namespace Facebook.WitAi.TTS
         // Handles TTS events
         public TTSServiceEvents Events => _events;
         [Header("Event Settings")]
-        [SerializeField] private TTSServiceEvents _events;
+        [SerializeField] private TTSServiceEvents _events = new TTSServiceEvents();
 
         // Set instance
         protected virtual void Awake()
         {
             // Set instance
             _instance = this;
-        }
-        // Add delegates
-        protected virtual void OnEnable()
-        {
-            AddDelegates();
+            _delegates = false;
         }
         // Remove delegates
         protected virtual void OnDisable()
@@ -156,7 +152,7 @@ namespace Facebook.WitAi.TTS
                 _instance = null;
             }
             // Abort & unload all
-            UnloadAll(true);
+            UnloadAll();
         }
         /// <summary>
         /// Logs for TTSService
@@ -280,6 +276,9 @@ namespace Facebook.WitAi.TTS
         #endregion
 
         #region LOAD
+        // Cancel warning
+        public const string CANCEL_WARNING = "Canceled";
+
         // TTS Request options
         public TTSClipData Load(string textToSpeak, Action<TTSClipData, string> onStreamReady = null) => Load(textToSpeak, null, null, null, onStreamReady);
         public TTSClipData Load(string textToSpeak, string presetVoiceId, Action<TTSClipData, string> onStreamReady = null) => Load(textToSpeak, null, GetPresetVoiceSettings(presetVoiceId), null, onStreamReady);
@@ -309,14 +308,6 @@ namespace Facebook.WitAi.TTS
                 return null;
             }
 
-            // Check for invalid text
-            string invalidError = WebHandler.IsTextValid(clipData.textToSpeak);
-            if (!string.IsNullOrEmpty(invalidError))
-            {
-                CoroutineUtility.StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData, invalidError)));
-                return clipData;
-            }
-
             // From Runtime Cache
             if (clipData.loadState != TTSClipLoadState.Unloaded)
             {
@@ -340,8 +331,83 @@ namespace Facebook.WitAi.TTS
                 return clipData;
             }
 
+            // Add to runtime cache if possible
+            if (RuntimeCacheHandler != null)
+            {
+                RuntimeCacheHandler.AddClip(clipData);
+            }
+            // Load begin
+            else
+            {
+                OnLoadBegin(clipData);
+            }
+
+            // Add on ready delegate
+            clipData.onPlaybackReady += (error) => onStreamReady(clipData, error);
+
             // Wait a moment and load
-            CoroutineUtility.StartCoroutine(CallAfterAMoment(() => LoadBegin(clipData, onStreamReady)));
+            CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
+            {
+                // Check for invalid text
+                string invalidError = WebHandler.IsTextValid(clipData.textToSpeak);
+                if (!string.IsNullOrEmpty(invalidError))
+                {
+                    OnStreamError(clipData, invalidError);
+                    return;
+                }
+
+                // If should cache to disk, attempt to do so
+                if (ShouldCacheToDisk(clipData))
+                {
+                    // Download was canceled before starting
+                    if (clipData.loadState != TTSClipLoadState.Preparing)
+                    {
+                        string downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
+                        OnWebDownloadBegin(clipData, downloadPath);
+                        OnWebDownloadCancel(clipData, downloadPath);
+                        OnStreamBegin(clipData);
+                        OnStreamCancel(clipData);
+                        return;
+                    }
+
+                    // Download
+                    DownloadToDiskCache(clipData, (clipData2, downloadPath, error) =>
+                    {
+                        // Download was canceled before starting
+                        if (string.Equals(error, CANCEL_WARNING))
+                        {
+                            OnStreamBegin(clipData);
+                            OnStreamCancel(clipData);
+                            return;
+                        }
+
+                        // Success
+                        if (string.IsNullOrEmpty(error))
+                        {
+                            DiskCacheHandler?.StreamFromDiskCache(clipData);
+                        }
+                        // Failed
+                        else
+                        {
+                            WebHandler?.RequestStreamFromWeb(clipData);
+                        }
+                    });
+                }
+                // Simply stream from the web
+                else
+                {
+                    // Stream was canceled before starting
+                    if (clipData.loadState != TTSClipLoadState.Preparing)
+                    {
+                        OnStreamBegin(clipData);
+                        OnStreamCancel(clipData);
+                        return;
+                    }
+
+                    // Stream
+                    WebHandler?.RequestStreamFromWeb(clipData);
+                }
+            }));
 
             // Return data
             return clipData;
@@ -360,51 +426,14 @@ namespace Facebook.WitAi.TTS
             call();
         }
         // Load begin
-        private void LoadBegin(TTSClipData clipData, Action<TTSClipData, string> onStreamReady)
-        {
-            // Add to runtime cache if possible
-            if (RuntimeCacheHandler != null)
-            {
-                RuntimeCacheHandler.AddClip(clipData);
-            }
-            // Load begin
-            else
-            {
-                OnLoadBegin(clipData);
-            }
-
-            // If should cache to disk, attempt to do so
-            if (ShouldCacheToDisk(clipData))
-            {
-                DownloadToDiskCache(clipData, (clipData2, downloadPath, error) =>
-                {
-                    // Success
-                    if (string.IsNullOrEmpty(error))
-                    {
-                        DiskCacheHandler?.StreamFromDiskCache(clipData, onStreamReady);
-                    }
-                    // Failed
-                    else
-                    {
-                        WebHandler?.RequestStreamFromWeb(clipData, onStreamReady);
-                    }
-                });
-            }
-            // Simply stream from the web
-            else
-            {
-                WebHandler?.RequestStreamFromWeb(clipData, onStreamReady);
-            }
-        }
-        // Load begin
         private void OnLoadBegin(TTSClipData clipData)
         {
+            // Now preparing
+            SetClipLoadState(clipData, TTSClipLoadState.Preparing);
+
             // Begin load
             Log($"Load Clip\nText: {clipData?.textToSpeak}\nID: {clipData.clipID}");
             Events?.OnClipCreated?.Invoke(clipData);
-
-            // Now preparing
-            SetClipLoadState(clipData, TTSClipLoadState.Preparing);
         }
         // Handle begin of disk cache streaming
         private void OnStreamBegin(TTSClipData clipData)
@@ -437,7 +466,7 @@ namespace Facebook.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Error);
 
             // Invoke
-            clipData.onPlaybackReady?.Invoke("Canceled");
+            clipData.onPlaybackReady?.Invoke(CANCEL_WARNING);
             clipData.onPlaybackReady = null;
 
             // Callback delegate
@@ -470,13 +499,12 @@ namespace Facebook.WitAi.TTS
         /// <summary>
         /// Unload all audio clips from the runtime cache
         /// </summary>
-        public void UnloadAll(bool force = false)
+        public void UnloadAll()
         {
             // Failed
             TTSClipData[] clips = RuntimeCacheHandler?.GetClips();
             if (clips == null)
             {
-                Log("Clip Unload All - Failed\nNo Clips Found", LogType.Error);
                 return;
             }
 
@@ -627,14 +655,17 @@ namespace Facebook.WitAi.TTS
             // Fail if not preloaded
             if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
             {
-                string error = $"File is not preloaded\nText to Speak: {clipData.textToSpeak}\nVoice ID: {clipData.voiceSettings?.settingsID}";
-                Log(error, LogType.Warning);
-                onDownloadComplete?.Invoke(clipData, downloadPath, error);
+                string warning = $"File is not preloaded\nText to Speak: {clipData.textToSpeak}\nVoice ID: {clipData.voiceSettings?.settingsID}";
+                Log(warning, LogType.Warning);
+                onDownloadComplete?.Invoke(clipData, downloadPath, warning);
                 return;
             }
 
+            // Return error
+            clipData.onDownloadComplete += (error) => onDownloadComplete(clipData, downloadPath, error);
+
             // Download to cache & then stream
-            WebHandler.RequestDownloadFromWeb(clipData, downloadPath, onDownloadComplete);
+            WebHandler.RequestDownloadFromWeb(clipData, downloadPath);
         }
         // On web download begin
         private void OnWebDownloadBegin(TTSClipData clipData, string downloadPath)
@@ -657,7 +688,7 @@ namespace Facebook.WitAi.TTS
         private void OnWebDownloadCancel(TTSClipData clipData, string downloadPath)
         {
             // Invoke clip callback & clear
-            clipData.onDownloadComplete?.Invoke("Canceled");
+            clipData.onDownloadComplete?.Invoke(CANCEL_WARNING);
             clipData.onDownloadComplete = null;
 
             // Log
