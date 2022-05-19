@@ -1,9 +1,8 @@
 {
-    "name": "Facebook.WitAI",
+    "name": "Facebook.Wit.Conduit.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:f02292e638368584080af0193f81ff5c",
-        "GUID:fe36bfc007f38a54c96a409801c53f52"
+        "Facebook.Wit.Conduit"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

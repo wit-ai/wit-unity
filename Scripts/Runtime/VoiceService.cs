@@ -7,6 +7,8 @@
  */
 
 using System;
+using System.Collections.Generic;
+using Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
@@ -18,6 +20,19 @@ namespace Facebook.WitAi
 {
     public abstract class VoiceService : MonoBehaviour, IVoiceService
     {
+        /// <summary>
+        /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
+        /// </summary>
+        private readonly ConduitDispatcher conduitDispatcher = new ConduitDispatcher();
+
+        // TODO: This hack does not belong here. We should load from Resources.
+        private const string manifestPath = "C:\\Temp\\Manifest.json";
+
+        /// <summary>
+        /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
+        /// </summary>
+        private const bool UseConduit = true;
+
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
         public VoiceEvents events = new VoiceEvents();
 
@@ -99,7 +114,14 @@ namespace Facebook.WitAi
 
         protected virtual void Awake()
         {
-            MatchIntentRegistry.Initialize();
+            if (UseConduit)
+            {
+                this.conduitDispatcher.RegisterCallbacks(manifestPath);
+            }
+            else
+            {
+                MatchIntentRegistry.Initialize();
+            }
         }
 
         protected virtual void OnEnable()
@@ -121,12 +143,34 @@ namespace Facebook.WitAi
             }
         }
 
+
         private void HandleIntent(WitIntentData intent, WitResponseNode response)
         {
-            var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
-            foreach (var method in methods)
+            if (UseConduit)
             {
-                ExecuteRegisteredMatch(method, intent, response);
+                var parameters = new Dictionary<string, string>();
+
+                foreach (var entity in response.AsObject["entities"].Childs)
+                {
+                    var parameterName = entity[0]["role"].Value;
+                    var parameterValue = entity[0]["value"].Value;
+                    parameters.Add(parameterName, parameterValue);
+
+                    Debug.Log($"{parameterName} = {parameterValue}");
+                }
+
+                if (!this.conduitDispatcher.InvokeAction(intent.name, parameters))
+                {
+                    Debug.Log($"Failed to dispatch intent {intent.name}");
+                }
+            }
+            else
+            {
+                var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
+                foreach (var method in methods)
+                {
+                    ExecuteRegisteredMatch(method, intent, response);
+                }
             }
         }
 

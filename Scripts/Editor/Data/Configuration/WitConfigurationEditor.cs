@@ -8,9 +8,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -26,6 +30,7 @@ namespace Facebook.WitAi.Windows
         public bool drawHeader = true;
         private bool foldout = true;
         private int requestTab = -1;
+        private ManifestGenerator manifestGenerator = new ManifestGenerator();
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -87,6 +92,30 @@ namespace Facebook.WitAi.Windows
             }
         }
 
+        private void GenerateManifestButton()
+        {
+            // TODO: This should be in resources
+            const string ManifestPath = @"C:\Temp\Manifest.json";
+
+            if (GUILayout.Button("Generate manifest"))
+            {
+                // TODO: Move this to the right place
+                var startGenerationTime = DateTime.UtcNow;
+
+                var manifest = this.manifestGenerator.GenerateManifest(this.configuration.application.name,
+                    configuration.application.id);
+
+                var endGenerationTime = DateTime.UtcNow;
+                var writer = new StreamWriter(ManifestPath);
+                writer.WriteLine(manifest);
+                writer.Close();
+
+                var generationTime = endGenerationTime - startGenerationTime;
+                Debug.Log($"Done generating manifest. Total time (ms): {generationTime.TotalMilliseconds}");
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(ManifestPath, 1);
+            }
+        }
+
         protected virtual void LayoutContent()
         {
             // Begin vertical box
@@ -95,6 +124,9 @@ namespace Facebook.WitAi.Windows
             // Check for app name/id update
             ReloadAppData();
 
+            // Option to generate manifest
+            GenerateManifestButton();
+
             // Title Foldout
             GUILayout.BeginHorizontal();
             string foldoutText = WitTexts.Texts.ConfigurationHeaderLabel;
@@ -102,6 +134,7 @@ namespace Facebook.WitAi.Windows
             {
                 foldoutText = foldoutText + " - " + appName;
             }
+
             foldout = WitEditorUI.LayoutFoldout(new GUIContent(foldoutText), foldout);
             // Refresh button
             if (CanConfigurationRefresh(configuration))
