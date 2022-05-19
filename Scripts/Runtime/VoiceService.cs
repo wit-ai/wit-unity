@@ -25,9 +25,6 @@ namespace Facebook.WitAi
         /// </summary>
         private readonly ConduitDispatcher conduitDispatcher = new ConduitDispatcher();
 
-        // TODO: This hack does not belong here. We should load from Resources.
-        private const string manifestPath = "C:\\Temp\\Manifest.json";
-
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
@@ -62,6 +59,11 @@ namespace Facebook.WitAi
             get => events;
             set => events = value;
         }
+
+        /// <summary>
+        /// The path to the Conduit manifest.
+        /// </summary>
+        public static string ManifestPath => Application.dataPath + "Oculus/Voice/Resources/" + "ConduitManifest.json";
 
         /// <summary>
         /// Returns true if the audio input should be read in an activation
@@ -116,7 +118,7 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-                this.conduitDispatcher.RegisterCallbacks(manifestPath);
+                this.conduitDispatcher.Initialize(ManifestPath);
             }
             else
             {

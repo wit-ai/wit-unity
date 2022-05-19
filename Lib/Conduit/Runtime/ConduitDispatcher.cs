@@ -29,8 +29,17 @@ namespace Conduit
         /// </summary>
         private readonly Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
         
-        public void RegisterCallbacks(string manifestFilePath)
+        /// <summary>
+        /// Parses the manifest provided and registers its callbacks for dispatching.
+        /// </summary>
+        /// <param name="manifestFilePath">The path to the manifest file.</param>
+        public void Initialize(string manifestFilePath)
         {
+            if (this.manifest != null)
+            {
+                return;
+            }
+            
             manifest = ManifestLoader.LoadManifest(manifestFilePath);
             
             // Map fully qualified role names to internal parameters.
@@ -45,9 +54,10 @@ namespace Conduit
 
         /// <summary>
         /// Invokes the method matching the specified action ID.
+        /// This should NOT be called before the dispatcher is initialized.
         /// </summary>
-        /// <param name="actionId">The action ID (which is also the intent name)</param>
-        /// <param name="parameters">Dictionary of parameters mapping parameter name to value</param>
+        /// <param name="actionId">The action ID (which is also the intent name).</param>
+        /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
         public bool InvokeAction(string actionId, Dictionary<string, string> parameters)
         {
             if (!manifest.ContainsAction(actionId))

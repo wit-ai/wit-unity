@@ -30,7 +30,8 @@ namespace Facebook.WitAi.Windows
         public bool drawHeader = true;
         private bool foldout = true;
         private int requestTab = -1;
-        private ManifestGenerator manifestGenerator = new ManifestGenerator();
+        private readonly ManifestGenerator manifestGenerator = new ManifestGenerator();
+//        private bool useConduit;
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -42,6 +43,8 @@ namespace Facebook.WitAi.Windows
         public virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
         public virtual string HeaderUrl => WitTexts.GetAppURL(WitConfigurationUtility.GetAppID(configuration), WitTexts.WitAppEndpointType.Settings);
         public virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
+
+        private bool manifestAvailable = false;
 
         public void Initialize()
         {
@@ -63,6 +66,8 @@ namespace Facebook.WitAi.Windows
                     SafeRefresh();
                 }
             }
+
+            manifestAvailable = File.Exists(VoiceService.ManifestPath);
         }
 
         public override void OnInspectorGUI()
@@ -92,28 +97,37 @@ namespace Facebook.WitAi.Windows
             }
         }
 
-        private void GenerateManifestButton()
+        private void LayoutConduitContent()
         {
-            // TODO: This should be in resources
-            const string ManifestPath = @"C:\Temp\Manifest.json";
+            configuration.useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit"));
+
+            EditorGUI.BeginDisabledGroup(!configuration.useConduit);
 
             if (GUILayout.Button("Generate manifest"))
             {
-                // TODO: Move this to the right place
                 var startGenerationTime = DateTime.UtcNow;
 
                 var manifest = this.manifestGenerator.GenerateManifest(this.configuration.application.name,
                     configuration.application.id);
 
                 var endGenerationTime = DateTime.UtcNow;
-                var writer = new StreamWriter(ManifestPath);
+                var writer = new StreamWriter(VoiceService.ManifestPath);
                 writer.WriteLine(manifest);
                 writer.Close();
-
                 var generationTime = endGenerationTime - startGenerationTime;
+                manifestAvailable = true;
                 Debug.Log($"Done generating manifest. Total time (ms): {generationTime.TotalMilliseconds}");
-                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(ManifestPath, 1);
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(VoiceService.ManifestPath, 1);
             }
+
+            EditorGUI.BeginDisabledGroup((!manifestAvailable));
+            if (GUILayout.Button("Open manifest"))
+            {
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(VoiceService.ManifestPath, 1);
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUI.EndDisabledGroup();
         }
 
         protected virtual void LayoutContent()
@@ -123,9 +137,6 @@ namespace Facebook.WitAi.Windows
 
             // Check for app name/id update
             ReloadAppData();
-
-            // Option to generate manifest
-            GenerateManifestButton();
 
             // Title Foldout
             GUILayout.BeginHorizontal();
@@ -187,6 +198,10 @@ namespace Facebook.WitAi.Windows
             }
 
             // End vertical box layout
+            GUILayout.EndVertical();
+
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            LayoutConduitContent();
             GUILayout.EndVertical();
 
             // Layout configuration request tabs
