@@ -28,7 +28,7 @@ namespace Facebook.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private const bool UseConduit = true;
+        private const bool UseConduit = false;
 
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
         public VoiceEvents events = new VoiceEvents();
