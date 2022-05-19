@@ -7,14 +7,10 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 

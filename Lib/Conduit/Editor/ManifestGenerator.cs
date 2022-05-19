@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Conduit
@@ -15,11 +14,11 @@ namespace Conduit
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    
+
     /// <summary>
     /// Generates manifests from the codebase that capture the essence of what we need to expose to the backend.
     /// The manifest includes all the information necessary to train the backend services as well as dispatching the
-    /// incoming requests to the right methods with the right parameters. 
+    /// incoming requests to the right methods with the right parameters.
     /// </summary>
     public class ManifestGenerator
     {
@@ -27,7 +26,7 @@ namespace Conduit
         /// These are the types that we natively support.
         /// </summary>
         private readonly HashSet<Type> builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
-        
+
         /// <summary>
         /// The manifest version. This would only change if the schema of the manifest changes.
         /// </summary>
@@ -62,9 +61,9 @@ namespace Conduit
                 entities.AddRange(this.ExtractEntities(assembly));
                 actions.AddRange(this.ExtractActions(assembly));
             }
-            
+
             this.PruneUnreferencedEntities(ref entities, actions);
-            
+
             var manifest = new Manifest()
             {
                 ID = id,
@@ -73,9 +72,8 @@ namespace Conduit
                 Entities = entities,
                 Actions = actions
             };
-            
-            var json = JsonConvert.SerializeObject(manifest, Formatting.Indented);
-            return json;
+
+            return manifest.ToJson();
         }
 
         /// <summary>
@@ -87,7 +85,7 @@ namespace Conduit
         {
             return AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
         }
-        
+
         /// <summary>
         /// Removes unnecessary entities from the manifest to keep it restricted to what is required.
         /// </summary>
@@ -111,7 +109,7 @@ namespace Conduit
                 {
                     continue;
                 }
-                
+
                 entities.RemoveAt(i--);
             }
         }
@@ -139,7 +137,7 @@ namespace Conduit
                         // This is not a tagged entity.
                         // TODO: In these cases we should only include the enum if it's referenced by any of the actions.
                     }
-                    
+
                     enumValues = enumType.GetEnumValues();
                 }
                 catch (Exception e)
@@ -147,7 +145,7 @@ namespace Conduit
                     Debug.Log($"Failed to get enumeration values. {e}");
                     continue;
                 }
-                
+
                 var entity = new ManifestEntity
                 {
                     ID = $"{enumType.Name}",
@@ -156,7 +154,7 @@ namespace Conduit
                 };
 
                 var values = new List<string>();
-                
+
                 foreach (var enumValue in enumValues)
                 {
                     object underlyingValue = Convert.ChangeType(enumValue, enumUnderlyingType);
@@ -251,7 +249,7 @@ namespace Conduit
                     var snakeCaseName = ConduitUtilities.DelimitWithUnderscores(parameter.Name)
                         .ToLower().TrimStart('_');
                     var snakeCaseAction = action.ID.Replace('.', '_');
-                    
+
                     var manifestParameter = new ManifestParameter
                     {
                         Name = parameter.Name,

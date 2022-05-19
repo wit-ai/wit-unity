@@ -7,7 +7,6 @@
  */
 
 using System.IO;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Conduit
@@ -29,7 +28,7 @@ namespace Conduit
             using StreamReader reader = new StreamReader(filePath);
             var rawJson = reader.ReadToEnd();
 
-            var manifest = JsonConvert.DeserializeObject<Manifest>(rawJson);
+            var manifest = Manifest.FromJson(rawJson);
             manifest.ResolveActions();
 
             return manifest;
