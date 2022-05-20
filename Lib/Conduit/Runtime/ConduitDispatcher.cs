@@ -17,7 +17,7 @@ namespace Conduit
     /// The dispatcher is responsible for deciding which method to invoke when a request is received as well as parsing
     /// the parameters and passing them to the handling method.
     /// </summary>
-    public class ConduitDispatcher
+    internal class ConduitDispatcher : IConduitDispatcher
     {
         /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
@@ -25,10 +25,20 @@ namespace Conduit
         private Manifest manifest;
 
         /// <summary>
+        /// The manifest loader.
+        /// </summary>
+        private readonly IManifestLoader manifestLoader;
+
+        /// <summary>
         /// Maps internal parameter names to fully qualified parameter names.
         /// </summary>
         private readonly Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
-        
+
+        public ConduitDispatcher(IManifestLoader manifestLoader)
+        {
+            this.manifestLoader = manifestLoader;
+        }
+
         /// <summary>
         /// Parses the manifest provided and registers its callbacks for dispatching.
         /// </summary>
@@ -40,7 +50,7 @@ namespace Conduit
                 return;
             }
             
-            manifest = ManifestLoader.LoadManifest(manifestFilePath);
+            manifest = this.manifestLoader.LoadManifest(manifestFilePath);
             
             // Map fully qualified role names to internal parameters.
             foreach (var action in manifest.Actions)

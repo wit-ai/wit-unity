@@ -6,8 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 
-[assembly:InternalsVisibleTo("Facebook.Wit.Conduit.Editor")]
-[assembly:InternalsVisibleTo("Facebook.Wit.Tests.Editor")]
-[assembly:InternalsVisibleTo("DynamicProxyGenAssembly2")]
+namespace Conduit
+{
+    internal interface IAssemblyWalker
+    {
+        public IEnumerable<IConduitAssembly> GetTargetAssemblies();
+    }
+}

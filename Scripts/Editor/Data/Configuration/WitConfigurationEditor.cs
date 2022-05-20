@@ -26,8 +26,7 @@ namespace Facebook.WitAi.Windows
         public bool drawHeader = true;
         private bool foldout = true;
         private int requestTab = -1;
-        private readonly ManifestGenerator manifestGenerator = new ManifestGenerator();
-//        private bool useConduit;
+        private readonly ManifestGenerator manifestGenerator = new ManifestGenerator(new AssemblyWalker());
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -107,6 +106,7 @@ namespace Facebook.WitAi.Windows
                     configuration.application.id);
 
                 var endGenerationTime = DateTime.UtcNow;
+                Directory.CreateDirectory(Path.GetDirectoryName(VoiceService.ManifestPath));
                 var writer = new StreamWriter(VoiceService.ManifestPath);
                 writer.WriteLine(manifest);
                 writer.Close();

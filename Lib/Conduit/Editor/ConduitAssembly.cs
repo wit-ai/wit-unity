@@ -6,132 +6,45 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using UnityEngine;
 
 namespace Conduit
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Reflection;
-    using UnityEngine;
-
     /// <summary>
-    /// Generates manifests from the codebase that capture the essence of what we need to expose to the backend.
-    /// The manifest includes all the information necessary to train the backend services as well as dispatching the
-    /// incoming requests to the right methods with the right parameters.
+    /// Wraps an assembly and provides access to Conduit-relevant details.
     /// </summary>
-    public class ManifestGenerator
+    internal class ConduitAssembly : IConduitAssembly
     {
+        private readonly Assembly assembly;
 
         /// <summary>
         /// These are the types that we natively support.
         /// </summary>
         private readonly HashSet<Type> builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
-        private readonly IAssemblyWalker assemblyWalker;
-
+        
         /// <summary>
-        /// The manifest version. This would only change if the schema of the manifest changes.
+        /// Initializes the class with a target assembly.
         /// </summary>
-        private const string CurrentVersion = "0.1";
-
-        internal ManifestGenerator(IAssemblyWalker assemblyWalker)
+        /// <param name="assembly">The assembly to process.</param>
+        public ConduitAssembly(Assembly assembly)
         {
-            this.assemblyWalker = assemblyWalker;
-        }
-
-        /// <summary>
-        /// Generate a manifest for assemblies marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
-        /// </summary>
-        /// <param name="domain">A friendly name to use for this app.</param>
-        /// <param name="id">The App ID.</param>
-        /// <returns>A JSON representation of the manifest.</returns>
-        public string GenerateManifest(string domain, string id)
-        {
-            return GenerateManifest(assemblyWalker.GetTargetAssemblies(), domain, id);
-        }
-
-        /// <summary>
-        /// Generate a manifest for the supplied assemblies.
-        /// </summary>
-        /// <param name="assemblies">List of assemblies to process.</param>
-        /// <param name="domain">A friendly name to use for this app.</param>
-        /// <param name="id">The App ID.</param>
-        /// <returns>A JSON representation of the manifest.</returns>
-        private string GenerateManifest(IEnumerable<IConduitAssembly> assemblies, string domain, string id)
-        {
-            Debug.Log($"Generating manifest.");
-
-            var entities = new List<ManifestEntity>();
-            var actions = new List<ManifestAction>();
-            foreach (var assembly in assemblies)
-            {
-                entities.AddRange(assembly.ExtractEntities());
-                actions.AddRange(assembly.ExtractActions());
-            }
-
-            this.PruneUnreferencedEntities(ref entities, actions);
-
-            var manifest = new Manifest()
-            {
-                ID = id,
-                Version = CurrentVersion,
-                Domain = domain,
-                Entities = entities,
-                Actions = actions
-            };
-
-            return manifest.ToJson().ToString();
-        }
-
-        /// <summary>
-        /// Returns a list of all assemblies that should be processed.
-        /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
-        /// </summary>
-        /// <returns>The list of assemblies.</returns>
-        private IEnumerable<Assembly> GetTargetAssemblies()
-        {
-            return AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
-        }
-
-        /// <summary>
-        /// Removes unnecessary entities from the manifest to keep it restricted to what is required.
-        /// </summary>
-        /// <param name="entities">List of all entities. This list will be changed as a result.</param>
-        /// <param name="actions">List of all actions.</param>
-        private void PruneUnreferencedEntities(ref List<ManifestEntity> entities, List<ManifestAction> actions)
-        {
-            var referencedEntities = new HashSet<string>();
-
-            foreach (var action in actions)
-            {
-                foreach (var parameter in action.Parameters)
-                {
-                    referencedEntities.Add(parameter.EntityType);
-                }
-            }
-
-            for (var i = 0; i < entities.Count; ++i)
-            {
-                if (referencedEntities.Contains(entities[i].ID))
-                {
-                    continue;
-                }
-
-                entities.RemoveAt(i--);
-            }
+            this.assembly = assembly;
         }
 
         /// <summary>
         /// Extracts all entities from the assembly. Entities represent the types used as parameters (such as Enums) of
         /// our methods.
         /// </summary>
-        /// <param name="assembly">The assembly to process.</param>
         /// <returns>The list of entities extracted.</returns>
-        private List<ManifestEntity> ExtractEntities(Assembly assembly)
+        public List<ManifestEntity> ExtractEntities()
         {
             var entities = new List<ManifestEntity>();
 
-            var enums = assembly.GetTypes().Where(p => p.IsEnum);
+            var enums = this.assembly.GetTypes().Where(p => p.IsEnum);
             foreach (var enumType in enums)
             {
                 var enumUnderlyingType = Enum.GetUnderlyingType(enumType);
@@ -144,7 +57,7 @@ namespace Conduit
                         // This is not a tagged entity.
                         // TODO: In these cases we should only include the enum if it's referenced by any of the actions.
                     }
-
+                    
                     enumValues = enumType.GetEnumValues();
                 }
                 catch (Exception e)
@@ -152,7 +65,7 @@ namespace Conduit
                     Debug.Log($"Failed to get enumeration values. {e}");
                     continue;
                 }
-
+                
                 var entity = new ManifestEntity
                 {
                     ID = $"{enumType.Name}",
@@ -161,7 +74,7 @@ namespace Conduit
                 };
 
                 var values = new List<string>();
-
+                
                 foreach (var enumValue in enumValues)
                 {
                     object underlyingValue = Convert.ChangeType(enumValue, enumUnderlyingType);
@@ -175,15 +88,14 @@ namespace Conduit
 
             return entities;
         }
-
+        
         /// <summary>
         /// This method extracts all the marked actions (methods) in the specified assembly.
         /// </summary>
-        /// <param name="assembly">The assembly to process.</param>
         /// <returns>List of actions extracted.</returns>
-        private List<ManifestAction> ExtractActions(Assembly assembly)
+        public List<ManifestAction> ExtractActions()
         {
-            var methods = assembly.GetTypes().SelectMany(type => type.GetMethods());
+            var methods = this.assembly.GetTypes().SelectMany(type => type.GetMethods());
 
             var actions = new List<ManifestAction>();
 
@@ -221,7 +133,7 @@ namespace Conduit
                     ID = $"{method.DeclaringType.FullName}.{method.Name}",
                     Name = actionName,
                     Aliases = actionAttribute.Aliases,
-                    Assembly = assembly.FullName
+                    Assembly = this.assembly.FullName
                 };
 
                 var compatibleParameters = true;
@@ -253,10 +165,9 @@ namespace Conduit
                         aliases = new List<string>();
                     }
 
-                    var snakeCaseName = ConduitUtilities.DelimitWithUnderscores(parameter.Name)
-                        .ToLower().TrimStart('_');
+                    var snakeCaseName= ConduitUtilities.DelimitWithUnderscores(parameter.Name).ToLower().TrimStart('_');
                     var snakeCaseAction = action.ID.Replace('.', '_');
-
+                    
                     var manifestParameter = new ManifestParameter
                     {
                         Name = parameter.Name,
@@ -267,7 +178,6 @@ namespace Conduit
                     };
 
                     parameters.Add(manifestParameter);
-
                 }
 
                 if (compatibleParameters)
@@ -284,7 +194,6 @@ namespace Conduit
 
             return actions;
         }
-
         private bool IsAssistantParameter(ParameterInfo parameter)
         {
             return parameter.ParameterType.IsEnum || this.builtInTypes.Contains(parameter.ParameterType);

@@ -98,14 +98,14 @@ namespace Conduit
         public static Manifest FromJson(string rawJson)
         {
             var json = ConduitNode.Parse(rawJson);
-            Manifest manifest = new Manifest()
+            var manifest = new Manifest
             {
                 ID = json["id"],
                 Version = json["version"],
-                Domain = json["domain"]
+                Domain = json["domain"],
+                Entities = new List<ManifestEntity>()
             };
 
-            manifest.Entities = new List<ManifestEntity>();
             var entities = json["entities"].AsArray;
             for (int i = 0; i < entities.Count; i++)
             {
@@ -114,7 +114,7 @@ namespace Conduit
 
             manifest.Actions = new List<ManifestAction>();
             var actions = json["actions"].AsArray;
-            for (int i = 0; i < entities.Count; i++)
+            for (int i = 0; i < actions.Count; i++)
             {
                 manifest.Actions.Add(ManifestAction.FromJson(actions[i]));
             }
@@ -124,10 +124,12 @@ namespace Conduit
 
         public ConduitObject ToJson()
         {
-            ConduitObject manifest = new ConduitObject();
-            manifest["id"] = ID;
-            manifest["version"] = Version;
-            manifest["domain"] = Domain;
+            var manifest = new ConduitObject
+            {
+                ["id"] = ID,
+                ["version"] = Version,
+                ["domain"] = Domain
+            };
 
             var entities = new ConduitArray();
             foreach (var entity in Entities)

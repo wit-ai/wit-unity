@@ -6,7 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Conduit
 {
@@ -45,7 +47,7 @@ namespace Conduit
         /// Additional names by which the backend can refer to this parameter.
         /// </summary>
         public List<string> Aliases { get; set; }
-
+        
         public static ManifestParameter FromJson(ConduitNode parameterNode)
         {
             ManifestParameter parameter = new ManifestParameter()
@@ -79,9 +81,20 @@ namespace Conduit
             {
                 aliases.Add(value);
             }
+
             parameter["aliases"] = aliases;
 
             return parameter;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ManifestParameter other && this.Equals(other);
+        }
+
+        private bool Equals(ManifestParameter other)
+        {
+            return this.InternalName.Equals(other.InternalName) && this.QualifiedName.Equals(other.QualifiedName) && this.EntityType.Equals(other.EntityType) && this.Aliases.SequenceEqual(other.Aliases);
         }
     }
 }

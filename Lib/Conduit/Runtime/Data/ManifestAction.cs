@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Conduit
 {
@@ -40,7 +41,7 @@ namespace Conduit
         /// Additional names by which the backend can refer to this action.
         /// </summary>
         public List<string> Aliases { get; set; }
-
+        
         public static ManifestAction FromJson(ConduitNode actionNode)
         {
             ManifestAction action = new ManifestAction()
@@ -79,6 +80,7 @@ namespace Conduit
             {
                 parameters.Add(parameter.ToJson());
             }
+
             action["parameters"] = parameters;
 
             var aliases = new ConduitArray();
@@ -86,9 +88,21 @@ namespace Conduit
             {
                 aliases.Add(value);
             }
+
             action["aliases"] = aliases;
 
             return action;
+        }
+        
+
+        public override bool Equals(object obj)
+        {
+            return obj is ManifestAction other && this.Equals(other);
+        }
+
+        private bool Equals(ManifestAction other)
+        {
+            return this.ID == other.ID && this.Assembly == other.Assembly && this.Name == other.Name && this.Parameters.SequenceEqual(other.Parameters) && this.Aliases.SequenceEqual(other.Aliases);
         }
     }
 }

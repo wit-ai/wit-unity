@@ -14,15 +14,14 @@ namespace Conduit
     /// <summary>
     /// Loads the manifest and resolves its actions so they can be used during dispatching.
     /// </summary>
-    internal static class ManifestLoader
+    internal class ManifestLoader : IManifestLoader
     {
-        // TODO: Use DI to inject this class rather than using statics.
         /// <summary>
         /// Loads the manifest from file and into a <see cref="Manifest"/> structure.
         /// </summary>
         /// <param name="filePath">The path to the manifest file.</param>
         /// <returns>The loaded manifest object.</returns>
-        public static Manifest LoadManifest(string filePath)
+        public Manifest LoadManifest(string filePath)
         {
             Debug.Log($"Loading Conduit manifest from {filePath}");
             using StreamReader reader = new StreamReader(filePath);

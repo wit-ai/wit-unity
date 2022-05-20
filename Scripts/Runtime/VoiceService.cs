@@ -21,14 +21,14 @@ namespace Facebook.WitAi
     public abstract class VoiceService : MonoBehaviour, IVoiceService
     {
         /// <summary>
-        /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
-        /// </summary>
-        private readonly ConduitDispatcher conduitDispatcher = new ConduitDispatcher();
-
-        /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
         private const bool UseConduit = false;
+
+        /// <summary>
+        /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
+        /// </summary>
+        private readonly IConduitDispatcher conduitDispatcher;
 
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
         public VoiceEvents events = new VoiceEvents();
@@ -63,12 +63,21 @@ namespace Facebook.WitAi
         /// <summary>
         /// The path to the Conduit manifest.
         /// </summary>
-        public static string ManifestPath => Application.dataPath + "Oculus/Voice/Resources/" + "ConduitManifest.json";
+        public static string ManifestPath => Application.dataPath + "/Oculus/Voice/Resources/" + "ConduitManifest.json";
 
         /// <summary>
         /// Returns true if the audio input should be read in an activation
         /// </summary>
         protected abstract bool ShouldSendMicData { get; }
+
+        /// <summary>
+        /// Constructs a <see cref="VoiceService"/>
+        /// </summary>
+        protected VoiceService()
+        {
+            var conduitDispatcherFactory = new ConduitDispatcherFactory();
+            this.conduitDispatcher = conduitDispatcherFactory.GetDispatcher();
+        }
 
         /// <summary>
         /// Start listening for sound or speech from the user and start sending data to Wit.ai once sound or speech has been detected.
