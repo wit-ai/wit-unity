@@ -32,5 +32,10 @@ namespace Facebook.WitAi.Configuration
         /// Callback for completion
         /// </summary>
         public Action<WitRequest> onResponse;
+
+        /// <summary>
+        /// A GUID - For internal use
+        /// </summary>
+        public string requestID = Guid.NewGuid().ToString();
     }
 }
