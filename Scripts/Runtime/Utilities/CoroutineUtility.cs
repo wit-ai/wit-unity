@@ -15,10 +15,10 @@ namespace Facebook.WitAi.Utilities
     public static class CoroutineUtility
     {
         // Start coroutine
-        public static CoroutinePerformer StartCoroutine(IEnumerator asyncMethod)
+        public static CoroutinePerformer StartCoroutine(IEnumerator asyncMethod, bool useUpdate = false)
         {
             CoroutinePerformer performer = GetPerformer();
-            performer.CoroutineBegin(asyncMethod);
+            performer.CoroutineBegin(asyncMethod, useUpdate);
             return performer;
         }
         // Get performer
@@ -31,9 +31,13 @@ namespace Facebook.WitAi.Utilities
         // Coroutine performer
         public class CoroutinePerformer : MonoBehaviour
         {
-            // Coroutine
+            // Whether currently running
             public bool IsRunning { get; private set; }
-            private Coroutine _runtimeCoroutine;
+
+            // Settings & fields
+            private bool _useUpdate;
+            private IEnumerator _method;
+            private Coroutine _coroutine;
 
             // Dont destroy
             private void Awake()
@@ -42,7 +46,7 @@ namespace Facebook.WitAi.Utilities
             }
 
             // Perform coroutine
-            public void CoroutineBegin(IEnumerator asyncMethod)
+            public void CoroutineBegin(IEnumerator asyncMethod, bool useUpdate)
             {
                 // Cannot call twice
                 if (IsRunning)
@@ -53,38 +57,74 @@ namespace Facebook.WitAi.Utilities
                 // Begin running
                 IsRunning = true;
 
+                // Use update in batch mode
+                if (Application.isBatchMode)
+                {
+                    useUpdate = true;
+                }
 #if UNITY_EDITOR
-                // Editor mode
+                // Use update in editor mode
                 if (!Application.isPlaying)
                 {
-                    _editorMethod = asyncMethod;
-                    UnityEditor.EditorApplication.update += EditorCoroutineIterate;
-                    EditorCoroutineIterate();
-                    return;
+                    useUpdate = true;
+                    UnityEditor.EditorApplication.update += EditorUpdate;
                 }
 #endif
 
+                // Set whether to use update or coroutine implementation
+                _useUpdate = useUpdate;
+                _method = asyncMethod;
+
+                // Begin with initial update
+                if (_useUpdate)
+                {
+                    CoroutineIterateUpdate();
+                }
                 // Begin coroutine
-                _runtimeCoroutine = StartCoroutine(RuntimeCoroutineIterate(asyncMethod));
+                else
+                {
+                    _coroutine = StartCoroutine(CoroutineIterateEnumerator());
+                }
             }
 
 #if UNITY_EDITOR
             // Editor iterate
-            private IEnumerator _editorMethod;
-            private void EditorCoroutineIterate()
+            private void EditorUpdate()
+            {
+                CoroutineIterateUpdate();
+            }
+#endif
+            // Runtime iterate
+            private IEnumerator CoroutineIterateEnumerator()
+            {
+                // Wait for completion
+                yield return _method;
+                // Complete
+                CoroutineComplete();
+            }
+            // Update
+            private void Update()
+            {
+                if (_useUpdate)
+                {
+                    CoroutineIterateUpdate();
+                }
+            }
+            // Batch iterate
+            private void CoroutineIterateUpdate()
             {
                 // Destroyed
-                if (this == null || _editorMethod == null)
+                if (this == null || _method == null)
                 {
                     CoroutineCancel();
                 }
                 // Continue
-                else if (!MoveNext(_editorMethod))
+                else if (!MoveNext(_method))
                 {
                     CoroutineComplete();
                 }
             }
-            // Move through methods
+            // Move through queue
             private bool MoveNext(IEnumerator method)
             {
                 // Move sub coroutine
@@ -98,15 +138,6 @@ namespace Facebook.WitAi.Utilities
                 }
                 // Move this
                 return method.MoveNext();
-            }
-#endif
-            // Runtime iterate
-            private IEnumerator RuntimeCoroutineIterate(IEnumerator asyncMethod)
-            {
-                // Wait for completion
-                yield return asyncMethod;
-                // Complete
-                CoroutineComplete();
             }
             // Cancel on destroy
             private void OnDestroy()
@@ -142,20 +173,20 @@ namespace Facebook.WitAi.Utilities
                 // Done
                 IsRunning = false;
 
-#if UNITY_EDITOR
                 // Complete
-                if (_editorMethod != null)
+                if (_method != null)
                 {
-                    UnityEditor.EditorApplication.update -= EditorCoroutineIterate;
-                    _editorMethod = null;
-                }
+#if UNITY_EDITOR
+                    UnityEditor.EditorApplication.update -= EditorUpdate;
 #endif
+                    _method = null;
+                }
 
                 // Stop coroutine
-                if (_runtimeCoroutine != null)
+                if (_coroutine != null)
                 {
-                    StopCoroutine(_runtimeCoroutine);
-                    _runtimeCoroutine = null;
+                    StopCoroutine(_coroutine);
+                    _coroutine = null;
                 }
             }
         }
