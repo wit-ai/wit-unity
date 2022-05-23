@@ -228,6 +228,7 @@ namespace Facebook.WitAi
                 _recordingRequest.onPartialTranscription = OnPartialTranscription;
                 _recordingRequest.onFullTranscription = OnFullTranscription;
                 _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
+                _recordingRequest.onPartialResponse += HandlePartialResult;
                 _recordingRequest.onResponse += HandleResult;
                 VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
                 _recordingRequest.Request();
@@ -616,6 +617,16 @@ namespace Facebook.WitAi
         #endregion
 
         #region RESPONSE
+        /// <summary>
+        /// Main thread call to handle partial response callbacks
+        /// </summary>
+        private void HandlePartialResult(WitRequest request)
+        {
+            if (request != null && request.ResponseData != null)
+            {
+                VoiceEvents?.OnPartialResponse?.Invoke(request.ResponseData);
+            }
+        }
         /// <summary>
         /// Main thread call to handle result callbacks
         /// </summary>

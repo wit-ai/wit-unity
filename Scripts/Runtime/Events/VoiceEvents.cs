@@ -18,6 +18,9 @@ namespace Facebook.WitAi.Events
     public class VoiceEvents : ITranscriptionEvent
     {
         [Header("Activation Result Events")]
+        [Tooltip("Called when a partial response from Wit.ai has been received")]
+        public WitResponseEvent OnPartialResponse = new WitResponseEvent();
+
         [Tooltip("Called when a response from Wit.ai has been received")]
         public WitResponseEvent OnResponse = new WitResponseEvent();
 

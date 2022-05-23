@@ -137,25 +137,36 @@ namespace Facebook.WitAi
 
         protected virtual void OnEnable()
         {
+            VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
             VoiceEvents.OnResponse.AddListener(OnResponse);
         }
 
         protected virtual void OnDisable()
         {
+            VoiceEvents.OnPartialResponse.RemoveListener(OnPartialResponse);
             VoiceEvents.OnResponse.RemoveListener(OnResponse);
+        }
+
+        protected virtual void OnPartialResponse(WitResponseNode response)
+        {
+            HandleIntents(response, false);
         }
 
         protected virtual void OnResponse(WitResponseNode response)
         {
+            HandleIntents(response, true);
+        }
+
+        private void HandleIntents(WitResponseNode response, bool isFinal)
+        {
             var intents = response.GetIntents();
             foreach (var intent in intents)
             {
-                HandleIntent(intent, response);
+                HandleIntent(intent, response, isFinal);
             }
         }
 
-
-        private void HandleIntent(WitIntentData intent, WitResponseNode response)
+        private void HandleIntent(WitIntentData intent, WitResponseNode response, bool isFinal)
         {
             if (UseConduit)
             {
@@ -180,21 +191,26 @@ namespace Facebook.WitAi
                 var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
                 foreach (var method in methods)
                 {
-                    ExecuteRegisteredMatch(method, intent, response);
+                    ExecuteRegisteredMatch(method, intent, response, isFinal);
                 }
             }
         }
 
         private void ExecuteRegisteredMatch(RegisteredMatchIntent registeredMethod,
-            WitIntentData intent, WitResponseNode response)
+            WitIntentData intent, WitResponseNode response, bool isFinal)
         {
             if (intent.confidence >= registeredMethod.matchIntent.MinConfidence &&
-                intent.confidence <= registeredMethod.matchIntent.MaxConfidence)
+                intent.confidence <= registeredMethod.matchIntent.MaxConfidence &&
+                (isFinal || registeredMethod.matchIntent.AllowPartial))
             {
                 foreach (var obj in FindObjectsOfType(registeredMethod.type))
                 {
                     var parameters = registeredMethod.method.GetParameters();
-                    if (parameters.Length == 1)
+                    if (parameters.Length == 2)
+                    {
+                        registeredMethod.method.Invoke(obj, new object[] {response, isFinal});
+                    }
+                    else if (parameters.Length == 1)
                     {
                         registeredMethod.method.Invoke(obj, new object[] {response});
                     }

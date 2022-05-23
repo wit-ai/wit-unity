@@ -20,6 +20,7 @@ namespace Facebook.WitAi
         public string Intent { get; private set; }
         public float MinConfidence { get; private set; }
         public float MaxConfidence { get; private set; }
+        public bool AllowPartial { get; private set; }
 
         /// <summary>
         /// Triggers a method to be executed if it matches a voice command's intent
@@ -27,11 +28,13 @@ namespace Facebook.WitAi
         /// <param name="intent">The name of the intent to match</param>
         /// <param name="minConfidence">The minimum confidence value (0-1) needed to match</param>
         /// <param name="maxConfidence">The maximum confidence value(0-1) needed to match</param>
-        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f)
+        /// <param name="allowPartial">Whether to match intents with partial responses</param>
+        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f, bool allowPartial = false)
         {
             Intent = intent;
             MinConfidence = minConfidence;
             MaxConfidence = maxConfidence;
+            AllowPartial = allowPartial;
         }
     }
 }

@@ -77,7 +77,7 @@ namespace Facebook.WitAi
         public const string URI_AUTHORITY = "api.wit.ai";
         public const int URI_DEFAULT_PORT = 0;
 
-        public const string WIT_API_VERSION = "20220222";
+        public const string WIT_API_VERSION = "20220519";
         public const string WIT_SDK_VERSION = "0.0.40";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
@@ -87,6 +87,8 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_TRAITS = "traits";
         public const string WIT_ENDPOINT_APPS = "apps";
         public const string WIT_ENDPOINT_UTTERANCES = "utterances";
+
+        public const string WIT_KEY_TRANSCRIPTION = "text";
 
         private WitConfiguration configuration;
 
@@ -111,6 +113,11 @@ namespace Facebook.WitAi
 
         private int bytesWritten;
         private bool requestRequiresBody;
+
+        /// <summary>
+        /// Callback called when a response is received from the server off a partial transcription
+        /// </summary>
+        public Action<WitRequest> onPartialResponse;
 
         /// <summary>
         /// Callback called when a response is received from the server
@@ -655,16 +662,38 @@ namespace Facebook.WitAi
             SafeInvoke(onResponse);
         }
 
+        // Process partial responses
         private void ProcessStringResponse(string stringResponse)
         {
             responseData = WitResponseJson.Parse(stringResponse);
             if (null != responseData)
             {
-                var transcription = responseData["text"];
-                if (!string.IsNullOrEmpty(transcription))
+                // Get children names that are not text
+                List<string> childrenNames = new List<string>(responseData.AsObject.ChildNodeNames);
+
+                // Get transcription
+                int transcriptionIndex = childrenNames.IndexOf(WIT_KEY_TRANSCRIPTION);
+                string transcription = string.Empty;
+                if (transcriptionIndex != -1)
                 {
-                    MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
+                    transcription = responseData[WIT_KEY_TRANSCRIPTION];
+                    childrenNames.RemoveAt(transcriptionIndex);
                 }
+
+                // Callbacks
+                MainThreadCallback(() =>
+                {
+                    // Call partial transcription
+                    if (!string.IsNullOrEmpty(transcription))
+                    {
+                        onPartialTranscription?.Invoke(transcription);
+                    }
+                    // Call partial response
+                    if (childrenNames.Count > 0)
+                    {
+                        onPartialResponse?.Invoke(this);
+                    }
+                });
             }
         }
 
