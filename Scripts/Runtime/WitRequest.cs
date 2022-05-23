@@ -78,7 +78,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20220519";
-        public const string WIT_SDK_VERSION = "0.0.40";
+        public const string WIT_SDK_VERSION = "0.0.41";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -559,11 +559,7 @@ namespace Facebook.WitAi
                         // result
                         if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
                         {
-                            bool sent = ProcessStringResponse(stringResponse);
-                            if (sent)
-                            {
-                                sentResponse = true;
-                            }
+                            sentResponse |= ProcessStringResponse(stringResponse);
                         }
 
                         if (stringResponse.Length > 0 && null != responseData)
