@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Meta.Conduit;
 using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
@@ -23,7 +24,12 @@ namespace Facebook.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private const bool UseConduit = false;
+        private bool UseConduit => witConfiguration.useConduit;
+
+        /// <summary>
+        /// The wit configuration.
+        /// </summary>
+        private WitConfiguration witConfiguration;
 
         /// <summary>
         /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
@@ -125,6 +131,9 @@ namespace Facebook.WitAi
 
         protected virtual void Awake()
         {
+            var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
+            this.witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
+
             if (UseConduit)
             {
                 this.conduitDispatcher.Initialize(ManifestPath);

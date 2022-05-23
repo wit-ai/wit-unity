@@ -94,7 +94,12 @@ namespace Facebook.WitAi.Windows
 
         private void LayoutConduitContent()
         {
-            configuration.useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit"));
+            var useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit (Beta)"));
+            if (configuration.useConduit != useConduit)
+            {
+                configuration.useConduit = useConduit;
+                EditorUtility.SetDirty(configuration);
+            }
 
             EditorGUI.BeginDisabledGroup(!configuration.useConduit);
 
