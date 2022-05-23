@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace DefaultNamespace
-{
-    [assembly: InternalsVisibleTo("witai.tests")]
-}
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("witai.tests")]
