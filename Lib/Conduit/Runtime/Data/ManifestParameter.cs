@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Represents a method parameter/argument in the manifest.
@@ -47,45 +47,6 @@ namespace Conduit
         /// Additional names by which the backend can refer to this parameter.
         /// </summary>
         public List<string> Aliases { get; set; }
-        
-        public static ManifestParameter FromJson(ConduitNode parameterNode)
-        {
-            ManifestParameter parameter = new ManifestParameter()
-            {
-                name = parameterNode["name"],
-                InternalName = parameterNode["internalName"],
-                QualifiedName = parameterNode["qualifiedName"],
-                EntityType = parameterNode["entityType"]
-            };
-
-            var aliases = parameterNode["aliases"];
-            parameter.Aliases = new List<string>();
-            for (int i = 0; i < aliases.Count; i++)
-            {
-                parameter.Aliases.Add(aliases[i]);
-            }
-
-            return parameter;
-        }
-
-        public ConduitObject ToJson()
-        {
-            var parameter = new ConduitObject();
-            parameter["name"] = Name;
-            parameter["internalName"] = InternalName;
-            parameter["qualifiedName"] = QualifiedName;
-            parameter["entityType"] = EntityType;
-
-            var aliases = new ConduitArray();
-            foreach (var value in Aliases)
-            {
-                aliases.Add(value);
-            }
-
-            parameter["aliases"] = aliases;
-
-            return parameter;
-        }
 
         public override bool Equals(object obj)
         {

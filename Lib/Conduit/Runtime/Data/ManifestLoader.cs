@@ -7,9 +7,10 @@
  */
 
 using System.IO;
+using Meta.Wit.LitJson;
 using UnityEngine;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Loads the manifest and resolves its actions so they can be used during dispatching.
@@ -24,10 +25,13 @@ namespace Conduit
         public Manifest LoadManifest(string filePath)
         {
             Debug.Log($"Loading Conduit manifest from {filePath}");
-            using StreamReader reader = new StreamReader(filePath);
-            var rawJson = reader.ReadToEnd();
+            string rawJson;
+            using (var reader = new StreamReader(filePath))
+            {
+                rawJson = reader.ReadToEnd();
+            }
 
-            var manifest = Manifest.FromJson(rawJson);
+            var manifest = JsonMapper.ToObject<Manifest>(rawJson);
             manifest.ResolveActions();
 
             return manifest;

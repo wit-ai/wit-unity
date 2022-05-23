@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Marks a parameter as a Conduit parameter to be supplied when the callback method is called.

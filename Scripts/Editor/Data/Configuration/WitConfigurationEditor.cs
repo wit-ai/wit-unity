@@ -8,7 +8,7 @@
 
 using System;
 using System.IO;
-using Conduit;
+using Meta.Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using UnityEditor;

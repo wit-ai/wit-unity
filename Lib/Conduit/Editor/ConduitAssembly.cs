@@ -12,7 +12,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Wraps an assembly and provides access to Conduit-relevant details.

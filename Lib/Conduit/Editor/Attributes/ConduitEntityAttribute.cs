@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Marks an enumeration as a Conduit entity to be included in the generated manifest. Enums that are directly used

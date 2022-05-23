@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// This can optionally be used on enum values to provide additional information.

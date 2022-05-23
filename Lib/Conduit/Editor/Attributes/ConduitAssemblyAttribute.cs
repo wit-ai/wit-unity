@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Marks an assembly as Conduit-enabled to allow quick filtering.

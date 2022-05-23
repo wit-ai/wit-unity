@@ -8,7 +8,7 @@
 
 using System.Collections.Generic;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Wrapper for assemblies to provide convenience methods and abstract from CLR.

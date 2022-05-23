@@ -8,7 +8,7 @@
 
 using System.Text.RegularExpressions;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Utility class for Conduit.

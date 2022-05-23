@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Conduit
+namespace Meta.Conduit
 {
     internal interface IManifestLoader
     {
@@ -15,6 +15,6 @@ namespace Conduit
         /// </summary>
         /// <param name="filePath">The path to the manifest file.</param>
         /// <returns>The loaded manifest object.</returns>
-        public Manifest LoadManifest(string filePath);
+        Manifest LoadManifest(string filePath);
     }
 }

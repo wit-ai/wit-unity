@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// The dispatcher is responsible for deciding which method to invoke when a request is received as well as parsing

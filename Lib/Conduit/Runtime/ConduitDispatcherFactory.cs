@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// Creates and caches conduit dispatchers.
@@ -24,7 +24,7 @@ namespace Conduit
         /// <returns>A Conduit dispatcher instance</returns>
         public IConduitDispatcher GetDispatcher()
         {
-            return instance ??= new ConduitDispatcher(new ManifestLoader());
+            return instance = instance ?? new ConduitDispatcher(new ManifestLoader());
         }
     }
 }

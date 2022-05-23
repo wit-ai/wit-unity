@@ -8,10 +8,10 @@
 
 using System.Collections.Generic;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     internal interface IAssemblyWalker
     {
-        public IEnumerable<IConduitAssembly> GetTargetAssemblies();
+        IEnumerable<IConduitAssembly> GetTargetAssemblies();
     }
 }

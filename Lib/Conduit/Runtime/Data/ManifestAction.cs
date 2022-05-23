@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// An action entry in the manifest.
@@ -42,59 +42,6 @@ namespace Conduit
         /// </summary>
         public List<string> Aliases { get; set; }
         
-        public static ManifestAction FromJson(ConduitNode actionNode)
-        {
-            ManifestAction action = new ManifestAction()
-            {
-                ID = actionNode["id"],
-                Assembly = actionNode["assembly"],
-                Name = actionNode["name"]
-            };
-
-            action.Parameters = new List<ManifestParameter>();
-            var parameters = actionNode["parameters"].AsArray;
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                action.Parameters.Add(ManifestParameter.FromJson(parameters[i]));
-            }
-
-            var aliases = actionNode["aliases"];
-            action.Aliases = new List<string>();
-            for (int i = 0; i < aliases.Count; i++)
-            {
-                action.Aliases.Add(aliases[i]);
-            }
-
-            return action;
-        }
-
-        public ConduitObject ToJson()
-        {
-            var action = new ConduitObject();
-            action["id"] = ID;
-            action["assembly"] = Assembly;
-            action["name"] = Name;
-
-            var parameters = new ConduitArray();
-            foreach (var parameter in Parameters)
-            {
-                parameters.Add(parameter.ToJson());
-            }
-
-            action["parameters"] = parameters;
-
-            var aliases = new ConduitArray();
-            foreach (var value in Aliases)
-            {
-                aliases.Add(value);
-            }
-
-            action["aliases"] = aliases;
-
-            return action;
-        }
-        
-
         public override bool Equals(object obj)
         {
             return obj is ManifestAction other && this.Equals(other);

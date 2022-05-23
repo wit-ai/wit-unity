@@ -7,7 +7,9 @@
  */
 
 
-namespace Conduit
+using Meta.Wit.LitJson;
+
+namespace Meta.Conduit
 {
     using System;
     using System.Collections.Generic;
@@ -80,7 +82,7 @@ namespace Conduit
                 Actions = actions
             };
 
-            return manifest.ToJson().ToString();
+            return JsonMapper.ToJson(manifest);
         }
 
         /// <summary>

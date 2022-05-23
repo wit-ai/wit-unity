@@ -8,7 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-using Conduit;
+using Meta.Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;

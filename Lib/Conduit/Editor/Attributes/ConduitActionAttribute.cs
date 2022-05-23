@@ -9,7 +9,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     using System;
 

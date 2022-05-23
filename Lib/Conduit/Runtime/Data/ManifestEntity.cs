@@ -8,7 +8,7 @@
 
 using System.Collections.Generic;
 
-namespace Conduit
+namespace Meta.Conduit
 {
     /// <summary>
     /// An entity entry in the manifest (for example an enum). Typically used as a method parameter type.
@@ -34,39 +34,5 @@ namespace Conduit
         /// List of values this entity could  assume. For an enum, these would be the enum values.
         /// </summary>
         public List<string> Values { get; set; } = new List<string>();
-
-        public static ManifestEntity FromJson(ConduitNode entityNode)
-        {
-            ManifestEntity entity = new ManifestEntity()
-            {
-                ID = entityNode["id"],
-                Type = entityNode["type"],
-                Name = entityNode["name"]
-            };
-
-            var values = entityNode["values"];
-            entity.Values = new List<string>();
-            for (int i = 0; i < values.Count; i++)
-            {
-                entity.Values.Add(values[i]);
-            }
-
-            return entity;
-        }
-
-        public ConduitObject ToJson()
-        {
-            var entity = new ConduitObject();
-            entity["id"] = ID;
-            entity["type"] = Type;
-            entity["name"] = Name;
-            var values = new ConduitArray();
-            foreach (var value in Values)
-            {
-                values.Add(value);
-            }
-            entity["values"] = values;
-            return entity;
-        }
     }
 }
