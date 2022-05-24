@@ -60,17 +60,23 @@ namespace Facebook.WitAi.TTS.Editor
 
             // Indent
             EditorGUI.indentLevel++;
+            EditorGUILayout.Space();
+
+            // Hide when playing
+            if (Application.isPlaying)
+            {
+                EditorUtility.ClearProgressBar();
+                WitEditorUI.LayoutErrorLabel("TTS preload actions cannot be performed at runtime.");
+                EditorGUI.indentLevel--;
+                return;
+            }
 
             // Get TTS Service if needed
-            EditorGUILayout.Space();
             TtsService = EditorGUILayout.ObjectField("TTS Service", TtsService, typeof(TTSService), true) as TTSService;
             if (TtsService == null)
             {
-                if (!Application.isPlaying)
-                {
-                    EditorUtility.ClearProgressBar();
-                    TtsService = GameObject.FindObjectOfType<TTSService>();
-                }
+                EditorUtility.ClearProgressBar();
+                TtsService = GameObject.FindObjectOfType<TTSService>();
                 WitEditorUI.LayoutErrorLabel("You must add a TTS Service to the loaded scene in order perform TTS actions.");
                 EditorGUI.indentLevel--;
                 return;

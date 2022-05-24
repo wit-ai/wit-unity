@@ -14,7 +14,7 @@ namespace Facebook.WitAi.TTS.Editor.Windows
     public static class WitEditorMenu
     {
         #region CREATION
-        [MenuItem("Assets/Create/Voice SDK/TTS Preload Settings")]
+        [MenuItem("Assets/Create/Wit/TTS Preload Settings")]
         public static void CreateTTSPreloadSettings()
         {
             TTSPreloadUtility.CreatePreloadSettings();
