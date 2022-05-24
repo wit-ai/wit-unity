@@ -91,7 +91,7 @@ namespace Facebook.WitAi.Utilities
                 return false;
             }
 
-            // Successfully created
+            // Successfully deleted
             return true;
         }
     }

@@ -82,8 +82,8 @@ namespace Facebook.WitAi.Lib
             _fileStream = File.Open(path, FileMode.Create);
         }
         // Sample ready
-        private const int BUFFER_RATIO = 2;
-        private const int BUFFER_RESCALE = 0b111111111111111; //dec: 32767
+        private const int FLOAT_TO_SHORT = 0b111111111111111; //dec: 32767
+        private const int BYTES_PER_SHORT = 2;
         private void OnSampleReady(int sampleCount, float[] sample, float levelMax)
         {
             // Ignore without stream
@@ -93,17 +93,17 @@ namespace Facebook.WitAi.Lib
             }
 
             // Recreate buffer
-            if (_buffer == null || _buffer.Length != sample.Length * BUFFER_RATIO)
+            if (_buffer == null || _buffer.Length != sample.Length * BYTES_PER_SHORT)
             {
-                _buffer = new byte[sample.Length * BUFFER_RATIO];
+                _buffer = new byte[sample.Length * BYTES_PER_SHORT];
             }
 
             // Convert float to Int16
             for (int i = 0; i < sample.Length; i++)
             {
-                short data = (short) (sample[i] * BUFFER_RESCALE);
-                _buffer[i * BUFFER_RATIO] = (byte) data;
-                _buffer[i * BUFFER_RATIO + 1] = (byte) (data >> 8);
+                short data = (short) (sample[i] * FLOAT_TO_SHORT);
+                _buffer[i * BYTES_PER_SHORT] = (byte) data;
+                _buffer[i * BYTES_PER_SHORT + 1] = (byte) (data >> 8);
             }
 
             // Write data
