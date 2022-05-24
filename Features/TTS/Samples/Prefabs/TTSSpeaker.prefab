@@ -27,6 +27,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3550832292895390900}
   m_Father: {fileID: 0}
@@ -51,6 +52,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -62,6 +64,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -76,6 +79,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -87,6 +91,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -104,6 +109,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -115,6 +121,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -129,6 +136,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -140,6 +148,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -154,6 +163,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -165,6 +175,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -179,6 +190,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls:
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -190,6 +202,7 @@ MonoBehaviour:
             m_BoolArgument: 0
           m_CallState: 2
         - m_Target: {fileID: 0}
+          m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
           m_MethodName: set_text
           m_Mode: 5
           m_Arguments:
@@ -227,6 +240,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 2, y: 1.665, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3550832292187419420}
   m_RootOrder: 0

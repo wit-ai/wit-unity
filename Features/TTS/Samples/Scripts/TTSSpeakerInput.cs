@@ -7,15 +7,26 @@
  */
 
 using UnityEngine;
-using TMPro;
+using UnityEngine.UI;
 using Facebook.WitAi.TTS.Utilities;
 
 namespace Facebook.WitAi.TTS.Samples
 {
     public class TTSSpeakerInput : MonoBehaviour
     {
+        [SerializeField] private Text _title;
+        [SerializeField] private InputField _input;
         [SerializeField] private TTSSpeaker _speaker;
-        [SerializeField] private TMP_InputField _input;
+
+        // Preset text fields
+        private void Update()
+        {
+            if (!string.Equals(_title.text, _speaker.presetVoiceID))
+            {
+                _title.text = _speaker.presetVoiceID;
+                _input.placeholder.GetComponent<Text>().text = $"Write something to say in {_speaker.presetVoiceID}'s voice";
+            }
+        }
 
         // Either say the current phrase or stop talking/loading
         public void SayPhrase()

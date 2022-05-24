@@ -37,11 +37,6 @@ namespace Facebook.WitAi.TTS
                         // Set as first instance that isn't a prefab
                         _instance = Array.Find(services, (o) => o.gameObject.scene.rootCount != 0);
                     }
-                    // Not found
-                    if (Application.isPlaying && _instance == null)
-                    {
-                        Debug.LogError("TTS Service - No Service found in scene");
-                    }
                 }
                 return _instance;
             }

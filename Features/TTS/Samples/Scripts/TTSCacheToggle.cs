@@ -1,5 +1,6 @@
 ﻿/*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
@@ -7,8 +8,6 @@
 
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Integrations;
-using TMPro;
-using Facebook.WitAi.TTS.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,23 +17,50 @@ namespace Facebook.WitAi.TTS.Samples
     {
         // UI references
         [SerializeField] private TTSDiskCache _diskCache;
+        [SerializeField] private Text _cacheLabel;
         [SerializeField] private Button _button;
 
+        // Current disk cache location
+        private TTSDiskCacheLocation _cacheLocation = (TTSDiskCacheLocation) (-1);
+
         // Add listeners
-        private void Awake()
+        private void OnEnable()
         {
-            RefreshText();
+            // Obtain disk cache if possible
+            if (_diskCache == null)
+            {
+                _diskCache = GameObject.FindObjectOfType<TTSDiskCache>();
+            }
+            // Reset location text
+            RefreshLocation();
             _button.onClick.AddListener(ToggleCache);
         }
+        // Current disk cache location
+        private TTSDiskCacheLocation GetCurrentCacheLocation() => _diskCache == null ? TTSDiskCacheLocation.Stream : _diskCache.DiskCacheDefaultSettings.DiskCacheLocation;
+        // Check for changes
+        private void Update()
+        {
+            if (_cacheLocation != GetCurrentCacheLocation())
+            {
+                RefreshLocation();
+            }
+        }
+        // Refresh location & button text
+        private void RefreshLocation()
+        {
+            _cacheLocation = GetCurrentCacheLocation();
+            _cacheLabel.text = $"Disk Cache: {_cacheLocation}";
+        }
         // Remove listeners
-        private void OnDestroy()
+        private void OnDisable()
         {
             _button.onClick.RemoveListener(ToggleCache);
         }
         // Toggle cache
         public void ToggleCache()
         {
-            TTSDiskCacheLocation cacheLocation = _diskCache.DiskCacheDefaultSettings.DiskCacheLocation;
+            // Toggle to next option
+            TTSDiskCacheLocation cacheLocation = GetCurrentCacheLocation();
             switch (cacheLocation)
             {
                 case TTSDiskCacheLocation.Stream:
@@ -50,14 +76,14 @@ namespace Facebook.WitAi.TTS.Samples
                     cacheLocation = TTSDiskCacheLocation.Stream;
                     break;
             }
+
+            // Set next option
             _diskCache.DiskCacheDefaultSettings.DiskCacheLocation = cacheLocation;
+            // Clear runtime cache
             TTSService.Instance.UnloadAll();
-            RefreshText();
-        }
-        // Refresh text
-        private void RefreshText()
-        {
-            _button.GetComponentInChildren<TextMeshProUGUI>().text = "Disk Cache: " + (_diskCache == null ? "NULL" : _diskCache.DiskCacheDefaultSettings.DiskCacheLocation.ToString());
+
+            // Refresh location
+            RefreshLocation();
         }
     }
 }
