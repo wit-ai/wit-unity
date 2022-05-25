@@ -366,7 +366,7 @@ namespace Facebook.WitAi
                 _request.SendChunked = true;
             }
 
-            _request.Headers["clientRequestID"] = requestId;
+            _request.Headers["X-Wit-Client-Request-Id"] = requestId;
 
             requestRequiresBody = RequestRequiresBody(command);
 
