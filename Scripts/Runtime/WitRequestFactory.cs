@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Text;
 using System.Collections.Generic;
 using Facebook.WitAi.Configuration;
@@ -143,6 +144,7 @@ namespace Facebook.WitAi
             if (null != requestOptions)
             {
                 request.onResponse = requestOptions.onResponse;
+                request.requestId = requestOptions.requestID;
             }
 
             return request;
@@ -170,6 +172,7 @@ namespace Facebook.WitAi
             if (null != requestOptions)
             {
                 request.onResponse = requestOptions.onResponse;
+                request.requestId = requestOptions.requestID;
             }
 
             return request;

@@ -109,6 +109,7 @@ namespace Facebook.WitAi
 
         public byte[] postData;
         public string postContentType;
+        public string requestId = Guid.NewGuid().ToString();
 
         private object streamLock = new object();
 
@@ -364,6 +365,8 @@ namespace Facebook.WitAi
                 _request.Method = "POST";
                 _request.SendChunked = true;
             }
+
+            _request.Headers["clientRequestID"] = requestId;
 
             requestRequiresBody = RequestRequiresBody(command);
 
