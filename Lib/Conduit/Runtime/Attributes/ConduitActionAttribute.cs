@@ -20,16 +20,16 @@ namespace Meta.Conduit
     [AttributeUsage(AttributeTargets.Method)]
     public class ConduitActionAttribute : Attribute
     {
-        public ConduitActionAttribute(string name = "", params string[] aliases)
+        protected ConduitActionAttribute(string name = "", params string[] aliases)
         {
-            this.Name = name;
+            this.Intent = name;
             this.Aliases = aliases.ToList();
         }
 
         /// <summary>
         /// The intent name matching this method. If left blank, the method name will be used to infer the intent name.
         /// </summary>
-        public string Name { get; }
+        public string Intent { get; protected set; }
         
         /// <summary>
         /// Additional aliases to refer to the intent this method represent.

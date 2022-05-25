@@ -30,13 +30,19 @@ namespace Meta.Conduit
         private readonly IManifestLoader manifestLoader;
 
         /// <summary>
-        /// Maps internal parameter names to fully qualified parameter names.
+        /// Resolves instances (objects) based on their type.
+        /// </summary>
+        private readonly IInstanceResolver instanceResolver;
+
+        /// <summary>
+        /// Maps internal parameter names to fully qualified parameter names (roles).
         /// </summary>
         private readonly Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
 
-        public ConduitDispatcher(IManifestLoader manifestLoader)
+        public ConduitDispatcher(IManifestLoader manifestLoader, IInstanceResolver instanceResolver)
         {
             this.manifestLoader = manifestLoader;
+            this.instanceResolver = instanceResolver;
         }
 
         /// <summary>
@@ -76,7 +82,8 @@ namespace Meta.Conduit
                 return false;
             }
 
-            var method = manifest.GetMethod(actionId);
+            var invocationContext = manifest.GetInvocationContext(actionId);
+            var method = invocationContext.MethodInfo;
             var parametersInfo = method.GetParameters();
             var parameterObjects = new object[parametersInfo.Length];
             for (var i = 0; i < parametersInfo.Length; i++)
@@ -105,27 +112,63 @@ namespace Meta.Conduit
                     {
                         parameterObjects[i] = Enum.Parse(parameter.ParameterType, parameterValue, true);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        var error = $"Failed to cast {parameterValue} to enum of type {parameter.ParameterType}";
-                        Console.WriteLine(error);
+                        var error = $"Failed to cast {parameterValue} to enum of type {parameter.ParameterType}. {e}";
+                        Debug.LogError(error);
+                        return false;
                     }
                 }
                 else
                 {
-                    parameterObjects[i] = Convert.ChangeType(parameterValue, parameter.ParameterType);
+                    try
+                    {
+                        parameterObjects[i] = Convert.ChangeType(parameterValue, parameter.ParameterType);
+                    }
+                    catch (Exception e)
+                    {
+                        var error = $"Failed to convert {parameterValue} to {parameter.ParameterType}. {e}";
+                        Debug.LogError(error);
+                        return false;
+                    }
+                    
                 }
             }
 
             if (method.IsStatic)
             {
                 Debug.Log($"About to invoke {method.Name}");
-                method.Invoke(null, parameterObjects.ToArray());
+                try
+                {
+                    method.Invoke(null, parameterObjects.ToArray());
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to invoke static method {method.Name}. {e}");
+                    return false;
+                }
+                
                 return true;
             }
             else
             {
-                throw new NotImplementedException("Non static methods are not supported yet");
+                Debug.Log($"About to invoke {method.Name} on all instances");
+                bool allSucceeded = true;
+                foreach (var obj in this.instanceResolver.GetObjectsOfType(invocationContext.Type))
+                {
+                    try
+                    {
+                        method.Invoke(obj, parameterObjects.ToArray());
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed to method {method.Name}. {e} on {obj}");
+                        allSucceeded = false;
+                        continue;
+                    }
+                }
+
+                return allSucceeded;
             }
         }
     }

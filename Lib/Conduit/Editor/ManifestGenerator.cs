@@ -7,6 +7,7 @@
  */
 
 
+using System.Text;
 using Meta.Wit.LitJson;
 
 namespace Meta.Conduit
@@ -82,7 +83,15 @@ namespace Meta.Conduit
                 Actions = actions
             };
 
-            return JsonMapper.ToJson(manifest);
+            var sb = new StringBuilder();
+            var jsonWriter = new JsonWriter(sb)
+            {
+                PrettyPrint = true,
+                IndentValue = 4,
+            };
+            
+            JsonMapper.ToJson(manifest, jsonWriter);
+            return sb.ToString();
         }
 
         /// <summary>
@@ -210,7 +219,7 @@ namespace Meta.Conduit
                 }
 
                 var actionAttribute = method.GetCustomAttributes(typeof(ConduitActionAttribute), false).First() as ConduitActionAttribute;
-                var actionName = actionAttribute.Name;
+                var actionName = actionAttribute.Intent;
                 if (string.IsNullOrEmpty(actionName))
                 {
                     actionName = $"{method.Name}";

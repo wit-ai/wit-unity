@@ -104,7 +104,8 @@ namespace Meta.Conduit
                 const string indent = "   ";
                 var logMessage = $"{method.DeclaringType.FullName}.{method.Name}()";
 
-                if (method.GetCustomAttributes(typeof(ConduitActionAttribute), false).Length == 0)
+                var attributes = method.GetCustomAttributes(typeof(ConduitActionAttribute), false);
+                if (attributes.Length == 0)
                 {
                     Debug.Log($"{logMessage} - Not tagged for assistant - Excluding");
                     continue;
@@ -119,8 +120,8 @@ namespace Meta.Conduit
                     Debug.Log($"{logMessage} - Instance");
                 }
 
-                var actionAttribute = method.GetCustomAttributes(typeof(ConduitActionAttribute), false).First() as ConduitActionAttribute;
-                var actionName = actionAttribute.Name;
+                var actionAttribute = attributes.First() as ConduitActionAttribute;
+                var actionName = actionAttribute.Intent;
                 if (string.IsNullOrEmpty(actionName))
                 {
                     actionName = $"{method.Name}";
@@ -132,7 +133,6 @@ namespace Meta.Conduit
                 {
                     ID = $"{method.DeclaringType.FullName}.{method.Name}",
                     Name = actionName,
-                    Aliases = actionAttribute.Aliases,
                     Assembly = this.assembly.FullName
                 };
 

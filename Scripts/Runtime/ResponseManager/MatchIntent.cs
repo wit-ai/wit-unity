@@ -7,7 +7,7 @@
  */
 
 using System;
-using UnityEngine;
+using Meta.Conduit;
 
 namespace Facebook.WitAi
 {
@@ -15,12 +15,11 @@ namespace Facebook.WitAi
     /// Triggers a method to be executed if it matches a voice command's intent
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class MatchIntent : Attribute
+    public class MatchIntent : ConduitActionAttribute
     {
-        public string Intent { get; private set; }
-        public float MinConfidence { get; private set; }
-        public float MaxConfidence { get; private set; }
-        public bool AllowPartial { get; private set; }
+        public float MinConfidence { get; }
+        public float MaxConfidence { get; }
+        public bool AllowPartial { get; }
 
         /// <summary>
         /// Triggers a method to be executed if it matches a voice command's intent
@@ -29,9 +28,8 @@ namespace Facebook.WitAi
         /// <param name="minConfidence">The minimum confidence value (0-1) needed to match</param>
         /// <param name="maxConfidence">The maximum confidence value(0-1) needed to match</param>
         /// <param name="allowPartial">Whether to match intents with partial responses</param>
-        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f, bool allowPartial = false)
+        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f, bool allowPartial = false):base(intent)
         {
-            Intent = intent;
             MinConfidence = minConfidence;
             MaxConfidence = maxConfidence;
             AllowPartial = allowPartial;

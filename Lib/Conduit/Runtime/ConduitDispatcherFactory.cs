@@ -17,6 +17,16 @@ namespace Meta.Conduit
         /// Dispatcher instance
         /// </summary>
         private static IConduitDispatcher instance;
+
+        /// <summary>
+        /// The instance resolver used to find instanct objects at runtime.
+        /// </summary>
+        private readonly IInstanceResolver instanceResolver;
+
+        public ConduitDispatcherFactory(IInstanceResolver instanceResolver)
+        {
+            this.instanceResolver = instanceResolver;
+        }
         
         /// <summary>
         /// Returns a Conduit dispatcher instance. The same instance will be reused past the first request.  
@@ -24,7 +34,7 @@ namespace Meta.Conduit
         /// <returns>A Conduit dispatcher instance</returns>
         public IConduitDispatcher GetDispatcher()
         {
-            return instance = instance ?? new ConduitDispatcher(new ManifestLoader());
+            return instance = instance ?? new ConduitDispatcher(new ManifestLoader(), instanceResolver);
         }
     }
 }

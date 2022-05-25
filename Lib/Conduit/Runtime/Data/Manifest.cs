@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEngine;
 
 namespace Meta.Conduit
 {
@@ -46,7 +47,7 @@ namespace Meta.Conduit
         /// <summary>
         /// Maps action IDs (intents) to CLR methods.
         /// </summary>
-        private readonly Dictionary<string, MethodInfo> methodLookup = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, InvocationContext> methodLookup = new Dictionary<string, InvocationContext>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Processes all actions in the manifest and associate them with the methods they should invoke.
@@ -60,17 +61,22 @@ namespace Meta.Conduit
                 var qualifiedTypeName = $"{typeName},{action.Assembly}";
                 var method = action.ID.Substring(lastPeriod + 1);
 
-                // TODO: Support instance resolution
-                var isStatic = true;
-
-                if (isStatic)
+  
+                var targetType = Type.GetType(qualifiedTypeName);
+                if (targetType == null)
                 {
-                    var targetType = Type.GetType(qualifiedTypeName);
-                    var targetMethod = targetType.GetMethod(method);
-                    if (targetMethod != null)
+                    Debug.LogWarning($"Failed to resolve type: {qualifiedTypeName}");
+                    continue;
+                }
+                
+                var targetMethod = targetType.GetMethod(method);
+                if (targetMethod != null)
+                {
+                    this.methodLookup.Add(action.Name, new InvocationContext()
                     {
-                        this.methodLookup.Add(action.Name, targetMethod);
-                    }
+                        Type = targetType,
+                        MethodInfo = targetMethod
+                    });
                 }
             }
         }
@@ -88,9 +94,19 @@ namespace Meta.Conduit
         /// <summary>
         /// Returns the info of the method corresponding to the specified action ID.
         /// </summary>
-        /// <param name="actionId"></param>
-        /// <returns></returns>
+        /// <param name="actionId">The action ID.</param>
+        /// <returns>The method info.</returns>
         public MethodInfo GetMethod(string actionId)
+        {
+            return this.methodLookup[actionId].MethodInfo;
+        }
+
+        /// <summary>
+        /// Returns the invocation context for the specified action ID.
+        /// </summary>
+        /// <param name="actionId">The action ID.</param>
+        /// <returns>The invocationContext.</returns>
+        public InvocationContext GetInvocationContext(string actionId)
         {
             return this.methodLookup[actionId];
         }

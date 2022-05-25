@@ -38,6 +38,11 @@ namespace Meta.Conduit
         public List<ManifestParameter> Parameters { get; set; }
 
         /// <summary>
+        /// Returns the fully qualified name of the declaring type of the action.
+        /// </summary>
+        public string DeclaringTypeName => ID.Substring(0, ID.LastIndexOf('.'));
+
+        /// <summary>
         /// Additional names by which the backend can refer to this action.
         /// </summary>
         public List<string> Aliases { get; set; }

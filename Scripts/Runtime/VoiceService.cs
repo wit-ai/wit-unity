@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace Facebook.WitAi
 {
-    public abstract class VoiceService : MonoBehaviour, IVoiceService
+    public abstract class VoiceService : MonoBehaviour, IVoiceService, IInstanceResolver
     {
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
@@ -81,7 +81,7 @@ namespace Facebook.WitAi
         /// </summary>
         protected VoiceService()
         {
-            var conduitDispatcherFactory = new ConduitDispatcherFactory();
+            var conduitDispatcherFactory = new ConduitDispatcherFactory(this);
             this.conduitDispatcher = conduitDispatcherFactory.GetDispatcher();
         }
 
@@ -128,6 +128,16 @@ namespace Facebook.WitAi
         /// <param name="text"></param>
         /// <param name="requestOptions"></param>
         public abstract void Activate(string text, WitRequestOptions requestOptions);
+
+        /// <summary>
+        /// Returns objects of the specified type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns>Objects of the specified type.</returns>
+        public IEnumerable<object> GetObjectsOfType(Type type)
+        {
+            return FindObjectsOfType(type);
+        }
 
         protected virtual void Awake()
         {
@@ -212,7 +222,7 @@ namespace Facebook.WitAi
                 intent.confidence <= registeredMethod.matchIntent.MaxConfidence &&
                 (isFinal || registeredMethod.matchIntent.AllowPartial))
             {
-                foreach (var obj in FindObjectsOfType(registeredMethod.type))
+                foreach (var obj in GetObjectsOfType(registeredMethod.type))
                 {
                     var parameters = registeredMethod.method.GetParameters();
                     if (parameters.Length == 2)
