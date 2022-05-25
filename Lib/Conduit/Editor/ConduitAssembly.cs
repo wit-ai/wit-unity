@@ -19,20 +19,30 @@ namespace Meta.Conduit
     /// </summary>
     internal class ConduitAssembly : IConduitAssembly
     {
+        /// <summary>
+        /// The assembly this class wraps.
+        /// </summary>
         private readonly Assembly assembly;
+        
+        /// <summary>
+        /// Validates that parameters are compatible. 
+        /// </summary>
+        private readonly IParameterValidator parameterValidator;
 
         /// <summary>
         /// These are the types that we natively support.
         /// </summary>
         private readonly HashSet<Type> builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
-        
+
         /// <summary>
         /// Initializes the class with a target assembly.
         /// </summary>
         /// <param name="assembly">The assembly to process.</param>
-        public ConduitAssembly(Assembly assembly)
+        /// <param name="parameterValidator">The parameter validator.</param>
+        public ConduitAssembly(Assembly assembly, IParameterValidator parameterValidator)
         {
             this.assembly = assembly;
+            this.parameterValidator = parameterValidator;
         }
 
         /// <summary>
@@ -141,7 +151,7 @@ namespace Meta.Conduit
                 {
                     Debug.Log($"{indent}{parameter.Name}:{parameter.ParameterType.Name}");
 
-                    var supported = this.IsAssistantParameter(parameter);
+                    var supported = this.parameterValidator.IsSupportedParameterType(parameter.ParameterType);
 
                     if (!supported)
                     {
@@ -193,10 +203,6 @@ namespace Meta.Conduit
             }
 
             return actions;
-        }
-        private bool IsAssistantParameter(ParameterInfo parameter)
-        {
-            return parameter.ParameterType.IsEnum || this.builtInTypes.Contains(parameter.ParameterType);
         }
     }
 }

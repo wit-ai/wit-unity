@@ -19,6 +19,16 @@ namespace Meta.Conduit
     internal class AssemblyWalker : IAssemblyWalker
     {
         /// <summary>
+        /// Validates that parameters are compatible. 
+        /// </summary>
+        private readonly IParameterValidator parameterValidator;
+
+        public AssemblyWalker(IParameterValidator parameterValidator)
+        {
+            this.parameterValidator = parameterValidator;
+        }
+
+        /// <summary>
         /// Returns a list of all assemblies that should be processed.
         /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
         /// </summary>
@@ -27,7 +37,7 @@ namespace Meta.Conduit
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
 
-            return assemblies.Select(assembly => new ConduitAssembly(assembly)).ToList();
+            return assemblies.Select(assembly => new ConduitAssembly(assembly, parameterValidator)).ToList();
         }
     }
 }

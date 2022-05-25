@@ -76,6 +76,17 @@ namespace Facebook.WitAi.Samples.Shapes
                       color);
         }
 
+        [MatchIntent("change_color")]
+        public void OnHandleColorIntentWithConduit(string color, string shape)
+        {
+            if (color == "red")
+            {
+                Debug.Log("The cube is red!");
+            }
+
+            Debug.Log($"OnHandleColorIntent was triggered via Conduit with color {color} and shape {shape}");
+        }
+
         [MatchIntent("change_size")]
         public void OnHandleSizeIntent(WitResponseNode node)
         {

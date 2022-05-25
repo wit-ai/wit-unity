@@ -31,6 +31,8 @@ namespace Facebook.WitAi
         /// </summary>
         private WitConfiguration witConfiguration;
 
+        private IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
+
         /// <summary>
         /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
         /// </summary>
@@ -81,7 +83,7 @@ namespace Facebook.WitAi
         /// </summary>
         protected VoiceService()
         {
-            var conduitDispatcherFactory = new ConduitDispatcherFactory(this);
+            var conduitDispatcherFactory = new ConduitDispatcherFactory(this, this.conduitParameterProvider);
             this.conduitDispatcher = conduitDispatcherFactory.GetDispatcher();
         }
 
@@ -189,7 +191,7 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-                var parameters = new Dictionary<string, string>();
+                var parameters = new Dictionary<string, object>();
 
                 foreach (var entity in response.AsObject["entities"].Childs)
                 {
@@ -199,6 +201,8 @@ namespace Facebook.WitAi
 
                     Debug.Log($"{parameterName} = {parameterValue}");
                 }
+
+                parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
 
                 if (!this.conduitDispatcher.InvokeAction(intent.name, parameters))
                 {

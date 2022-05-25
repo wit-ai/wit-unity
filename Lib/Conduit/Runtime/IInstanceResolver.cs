@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace Meta.Conduit
 {
-    public interface IInstanceResolver
+    internal interface IInstanceResolver
     {
         IEnumerable<object> GetObjectsOfType(Type type);
     }

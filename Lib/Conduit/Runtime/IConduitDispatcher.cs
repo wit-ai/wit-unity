@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace Meta.Conduit
 {
-    public interface IConduitDispatcher
+    internal interface IConduitDispatcher
     {
         /// <summary>
         /// Parses the manifest provided and registers its callbacks for dispatching.
@@ -24,6 +24,6 @@ namespace Meta.Conduit
         /// </summary>
         /// <param name="actionId">The action ID (which is also the intent name).</param>
         /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
-        bool InvokeAction(string actionId, Dictionary<string, string> parameters);
+        bool InvokeAction(string actionId, Dictionary<string, object> parameters);
     }
 }

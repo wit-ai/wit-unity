@@ -8,7 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -45,10 +45,13 @@ namespace Meta.Conduit
         public List<ManifestAction> Actions { get; set; }
 
         /// <summary>
-        /// Maps action IDs (intents) to CLR methods.
+        /// Maps action IDs (intents) to CLR methods. Each entry in the value list is a different overload of the method.
+        /// The list is sorted with the most parameters listed first, so we get maximal matches during dispatching by
+        /// default without needing to sort them at runtime.
         /// </summary>
-        private readonly Dictionary<string, InvocationContext> methodLookup = new Dictionary<string, InvocationContext>(StringComparer.OrdinalIgnoreCase);
-
+        private readonly Dictionary<string, List<InvocationContext>> methodLookup =
+            new Dictionary<string, List<InvocationContext>>(StringComparer.OrdinalIgnoreCase);
+        
         /// <summary>
         /// Processes all actions in the manifest and associate them with the methods they should invoke.
         /// </summary>
@@ -72,12 +75,27 @@ namespace Meta.Conduit
                 var targetMethod = targetType.GetMethod(method);
                 if (targetMethod != null)
                 {
-                    this.methodLookup.Add(action.Name, new InvocationContext()
+                    var invocationContext = new InvocationContext()
                     {
                         Type = targetType,
                         MethodInfo = targetMethod
-                    });
+                    };
+                    
+                    if (!this.methodLookup.ContainsKey(action.Name))
+                    {
+                        this.methodLookup.Add(action.Name, new List<InvocationContext>());
+                    }
+                    
+                    this.methodLookup[action.Name].Add(invocationContext);
                 }
+            }
+            
+            foreach (var invocationContext in this.methodLookup.Values.Where(invocationContext =>
+                         invocationContext.Count > 1))
+            {
+                // This is a slow operation. If there multiple overloads are common, we should optimize this
+                invocationContext.Sort((one, two) =>
+                    two.MethodInfo.GetParameters().Length - one.MethodInfo.GetParameters().Length);
             }
         }
 
@@ -90,23 +108,13 @@ namespace Meta.Conduit
         {
             return this.methodLookup.ContainsKey(action);
         }
-
-        /// <summary>
-        /// Returns the info of the method corresponding to the specified action ID.
-        /// </summary>
-        /// <param name="actionId">The action ID.</param>
-        /// <returns>The method info.</returns>
-        public MethodInfo GetMethod(string actionId)
-        {
-            return this.methodLookup[actionId].MethodInfo;
-        }
-
+        
         /// <summary>
         /// Returns the invocation context for the specified action ID.
         /// </summary>
         /// <param name="actionId">The action ID.</param>
         /// <returns>The invocationContext.</returns>
-        public InvocationContext GetInvocationContext(string actionId)
+        public List<InvocationContext> GetInvocationContexts(string actionId)
         {
             return this.methodLookup[actionId];
         }

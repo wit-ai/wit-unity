@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -35,14 +36,20 @@ namespace Meta.Conduit
         private readonly IInstanceResolver instanceResolver;
 
         /// <summary>
-        /// Maps internal parameter names to fully qualified parameter names (roles).
+        /// Resolves the actual parameters for method invocations. 
+        /// </summary>
+        private readonly IParameterProvider parameterProvider;
+
+        /// <summary>
+        /// Maps internal parameter names to fully qualified parameter names (roles/slots).
         /// </summary>
         private readonly Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
 
-        public ConduitDispatcher(IManifestLoader manifestLoader, IInstanceResolver instanceResolver)
+        public ConduitDispatcher(IManifestLoader manifestLoader, IInstanceResolver instanceResolver, IParameterProvider parameterProvider)
         {
             this.manifestLoader = manifestLoader;
             this.instanceResolver = instanceResolver;
+            this.parameterProvider = parameterProvider;
         }
 
         /// <summary>
@@ -63,18 +70,51 @@ namespace Meta.Conduit
             {
                 foreach (var parameter in action.Parameters)
                 {
-                    parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);
+                    parameterToRoleMap.TryAdd(parameter.InternalName, parameter.QualifiedName);
                 }
             }
         }
+
+        private InvocationContext ResolveInvocationContext(string actionId, Dictionary<string, object> actualParameters)
+        {
+            var invocationContexts = manifest.GetInvocationContexts(actionId);
+            if (invocationContexts.Count == 1)
+            {
+                // There is a single method with the specified name.
+                return invocationContexts[0];
+            }
+            
+            // We have multiple overloads, find the correct match.
+            foreach (var invocationContext in invocationContexts.Where(invocationContext => CompatibleInvocationContext(invocationContext)))
+            {
+                // Given that the invocations are sorted with most parameters first, we can return the first found.
+                return invocationContext;
+            }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Returns true if the invocation context is compatible with the actual parameters the parameter provider
+        /// is supplying. False otherwise.
+        /// </summary>
+        /// <param name="invocationContext">The invocation context.</param>
+        /// <returns>True if the invocation can be made with the actual parameters. False otherwise.</returns>
+        private bool CompatibleInvocationContext(InvocationContext invocationContext)
+        {
+            var parameters = invocationContext.MethodInfo.GetParameters();
+
+            return parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter));
+        }
+
 
         /// <summary>
         /// Invokes the method matching the specified action ID.
         /// This should NOT be called before the dispatcher is initialized.
         /// </summary>
         /// <param name="actionId">The action ID (which is also the intent name).</param>
-        /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
-        public bool InvokeAction(string actionId, Dictionary<string, string> parameters)
+        /// <param name="actualParameters">Dictionary of parameters mapping parameter name to value.</param>
+        public bool InvokeAction(string actionId, Dictionary<string, object> actualParameters)
         {
             if (!manifest.ContainsAction(actionId))
             {
@@ -82,57 +122,26 @@ namespace Meta.Conduit
                 return false;
             }
 
-            var invocationContext = manifest.GetInvocationContext(actionId);
-            var method = invocationContext.MethodInfo;
-            var parametersInfo = method.GetParameters();
-            var parameterObjects = new object[parametersInfo.Length];
-            for (var i = 0; i < parametersInfo.Length; i++)
+            this.parameterProvider.Populate(actualParameters, this.parameterToRoleMap);
+            
+            var invocationContext = this.ResolveInvocationContext(actionId, actualParameters);
+            if (invocationContext == null)
             {
-                var parameter = parametersInfo[i];
-                var parameterName = parameter.Name;
-                if (!parameters.ContainsKey(parameterName))
+                Debug.LogError($"Failed to find execution context for {actionId}. Parameters could not be matched");
+                return false;
+            }
+            
+            var method = invocationContext.MethodInfo;
+            var formalParametersInfo = method.GetParameters();
+            var parameterObjects = new object[formalParametersInfo.Length];
+            for (var i = 0; i < formalParametersInfo.Length; i++)
+            {
+                if (!parameterProvider.ContainsParameter(formalParametersInfo[i]))
                 {
-                    if (!parameterToRoleMap.ContainsKey(parameterName))
-                    {
-                        Debug.LogError($"Parameter {parameterName} is missing");
-                        return false;
-                    }
-
-                    parameterName = parameterToRoleMap[parameterName];
+                    Debug.LogError($"Failed to find parameter {formalParametersInfo[i].Name} while invoking {method.Name}");
+                    return false;
                 }
-                
-                var parameterValue = parameters[parameterName];
-                if (parameter.ParameterType == typeof(string))
-                {
-                    parameterObjects[i] = parameterValue;
-                }
-                else if (parameter.ParameterType.IsEnum)
-                {
-                    try
-                    {
-                        parameterObjects[i] = Enum.Parse(parameter.ParameterType, parameterValue, true);
-                    }
-                    catch (Exception e)
-                    {
-                        var error = $"Failed to cast {parameterValue} to enum of type {parameter.ParameterType}. {e}";
-                        Debug.LogError(error);
-                        return false;
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        parameterObjects[i] = Convert.ChangeType(parameterValue, parameter.ParameterType);
-                    }
-                    catch (Exception e)
-                    {
-                        var error = $"Failed to convert {parameterValue} to {parameter.ParameterType}. {e}";
-                        Debug.LogError(error);
-                        return false;
-                    }
-                    
-                }
+                parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i]);
             }
 
             if (method.IsStatic)
