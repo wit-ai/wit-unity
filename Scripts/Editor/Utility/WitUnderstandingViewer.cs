@@ -290,17 +290,17 @@ namespace Facebook.WitAi.Windows
 
             // Results
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            if (voiceService && voiceService.MicActive)
+            if (_response != null)
+            {
+                DrawResponse();
+            }
+            else if (voiceService && voiceService.MicActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerListeningLabel);
             }
             else if (voiceService && voiceService.IsRequestActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerLoadingLabel);
-            }
-            else if (_response != null)
-            {
-                DrawResponse();
             }
             else if (string.IsNullOrEmpty(_responseText))
             {
@@ -338,7 +338,8 @@ namespace Facebook.WitAi.Windows
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
                 _request = witConfiguration.MessageRequest(_utterance, new WitRequestOptions());
-                _request.onResponse = OnResponse;
+                _request.onPartialResponse = (r) => OnPartialResponse(r?.ResponseData);
+                _request.onResponse = (r) => OnResponse(r?.ResponseData);
                 _request.Request();
             }
         }
@@ -352,29 +353,36 @@ namespace Facebook.WitAi.Windows
             }
         }
 
-        private void OnResponse(WitRequest request)
+        private void OnPartialResponse(WitResponseNode ResponseData)
         {
-            _responseCode = request.StatusCode;
-            if (null != request.ResponseData)
+            if (null != ResponseData)
             {
-                ShowResponse(request.ResponseData);
+                ShowResponse(ResponseData, true);
             }
-            else if (!string.IsNullOrEmpty(request.StatusDescription))
+        }
+        private void OnResponse(WitResponseNode ResponseData)
+        {
+            _responseCode = _request.StatusCode;
+            if (null != ResponseData)
             {
-                _responseText = request.StatusDescription;
+                ShowResponse(ResponseData, false);
+            }
+            else if (!string.IsNullOrEmpty(_request.StatusDescription))
+            {
+                _responseText = _request.StatusDescription;
             }
             else
             {
-                _responseText = "No response. Status: " + request.StatusCode;
+                _responseText = "No response. Status: " + _request.StatusCode;
             }
         }
 
-        private void ShowResponse(WitResponseNode r)
+        private void ShowResponse(WitResponseNode r, bool isPartial)
         {
             _response = r;
             _responseText = _response.ToString();
             _requestLength = DateTime.Now - _submitStart;
-            _status = $"Response time: {_requestLength}";
+            _status = $"{(isPartial ? "Partial" : "Full")}Response time: {_requestLength}";
         }
 
         private void DrawResponse()
@@ -653,7 +661,8 @@ namespace Facebook.WitAi.Windows
             // Remove delegates
             v.events.OnRequestCreated.RemoveListener(OnRequestCreated);
             v.events.OnError.RemoveListener(OnError);
-            v.events.OnResponse.RemoveListener(ShowResponse);
+            v.events.OnPartialResponse.RemoveListener(OnPartialResponse);
+            v.events.OnResponse.RemoveListener(OnResponse);
             v.events.OnFullTranscription.RemoveListener(ShowTranscription);
             v.events.OnPartialTranscription.RemoveListener(ShowTranscription);
             v.events.OnStoppedListening.RemoveListener(ResetStartTime);
@@ -669,7 +678,8 @@ namespace Facebook.WitAi.Windows
             // Add delegates
             v.events.OnRequestCreated.AddListener(OnRequestCreated);
             v.events.OnError.AddListener(OnError);
-            v.events.OnResponse.AddListener(ShowResponse);
+            v.events.OnPartialResponse.AddListener(OnPartialResponse);
+            v.events.OnResponse.AddListener(OnResponse);
             v.events.OnPartialTranscription.AddListener(ShowTranscription);
             v.events.OnFullTranscription.AddListener(ShowTranscription);
             v.events.OnStoppedListening.AddListener(ResetStartTime);
