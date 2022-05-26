@@ -8,7 +8,9 @@
 
 using System;
 using System.Linq;
+using System.Reflection;
 using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Windows;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,55 +19,71 @@ namespace Facebook.WitAi.CallbackHandlers
     [CustomEditor(typeof(SimpleIntentHandler))]
     public class SimpleIntentHandlerEditor : Editor
     {
-        private SimpleIntentHandler handler;
-        private string[] intentNames;
-        private int intentIndex;
+        private SimpleIntentHandler _handler;
+        private string[] _intentNames;
+        private int _intentIndex;
+
+        private FieldGUI _fieldGUI;
 
         private void OnEnable()
         {
-            handler = target as SimpleIntentHandler;
+            _handler = target as SimpleIntentHandler;
+
+            // Setup field gui
+            if (_fieldGUI == null)
+            {
+                _fieldGUI = new FieldGUI();
+                _fieldGUI.onCustomGuiLayout = OnInspectorCustomGUI;
+                _fieldGUI.onAdditionalGuiLayout = OnInspectorAdditionalGUI;
+            }
         }
 
         public override void OnInspectorGUI()
         {
-            if (!handler.wit)
+            if (!_handler.wit)
             {
                 GUILayout.Label(
                     "Wit component is not present in the scene. Add wit to scene to get intent and entity suggestions.",
                     EditorStyles.helpBox);
             }
 
-            if (handler && handler.wit && null == intentNames)
+            if (_handler && _handler.wit && null == _intentNames)
             {
-                if (handler.wit is IWitRuntimeConfigProvider provider && null != provider.RuntimeConfiguration && provider.RuntimeConfiguration.witConfiguration)
+                if (_handler.wit is IWitRuntimeConfigProvider provider
+                    && null != provider.RuntimeConfiguration
+                    && provider.RuntimeConfiguration.witConfiguration)
                 {
                     provider.RuntimeConfiguration.witConfiguration.RefreshData();
-                    intentNames = provider.RuntimeConfiguration.witConfiguration.intents.Select(i => i.name).ToArray();
-                    intentIndex = Array.IndexOf(intentNames, handler.intent);
+                    _intentNames = provider.RuntimeConfiguration.witConfiguration.intents.Select(i => i.name).ToArray();
+                    _intentIndex = Array.IndexOf(_intentNames, _handler.intent);
                 }
             }
 
-            WitEditorUI.LayoutSerializedObjectPopup(serializedObject, "intent",
-                intentNames, ref intentIndex);
-
-
-            var confidenceProperty = serializedObject.FindProperty("confidence");
-            EditorGUILayout.PropertyField(confidenceProperty);
-
-            GUILayout.Space(16);
-
-            var allowConfidenceOverlap = serializedObject.FindProperty("allowConfidenceOverlap");
-            EditorGUILayout.PropertyField(allowConfidenceOverlap);
-
-            var confidenceRanges = serializedObject.FindProperty("confidenceRanges");
-            EditorGUILayout.PropertyField(confidenceRanges);
-
-            GUILayout.Space(16);
-
+            // Layout fields
+            _fieldGUI.OnGuiLayout(serializedObject);
+        }
+        // Custom GUI
+        private bool OnInspectorCustomGUI(FieldInfo fieldInfo)
+        {
+            // Custom layout
+            if (string.Equals(fieldInfo.Name, "intent"))
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Intent", EditorStyles.boldLabel);
+                WitEditorUI.LayoutSerializedObjectPopup(serializedObject, "intent",
+                    _intentNames, ref _intentIndex);
+                return true;
+            }
+            // Layout intent triggered
+            return false;
+        }
+        // Additional GUI
+        private void OnInspectorAdditionalGUI()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
             var eventProperty = serializedObject.FindProperty("onIntentTriggered");
             EditorGUILayout.PropertyField(eventProperty);
-
-            serializedObject.ApplyModifiedProperties();
         }
     }
 }
