@@ -20,9 +20,9 @@ namespace Meta.Conduit
     [AttributeUsage(AttributeTargets.Method)]
     public class ConduitActionAttribute : Attribute
     {
-        protected ConduitActionAttribute(string name = "", params string[] aliases)
+        protected ConduitActionAttribute(string intent = "", params string[] aliases)
         {
-            this.Intent = name;
+            this.Intent = intent;
             this.Aliases = aliases.ToList();
         }
 

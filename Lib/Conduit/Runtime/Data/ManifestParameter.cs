@@ -41,7 +41,24 @@ namespace Meta.Conduit
         /// <summary>
         /// This is the data type of the parameter, exposed as an entity type.
         /// </summary>
-        public string EntityType { get; set; }
+        public string EntityType
+        {
+            get
+            {
+                var lastPeriod = QualifiedTypeName.LastIndexOf('.');
+                return lastPeriod < 0 ? string.Empty : QualifiedTypeName.Substring(0, lastPeriod);
+            }
+        }
+        
+        /// <summary>
+        /// The assembly containing the data type.
+        /// </summary>
+        public string TypeAssembly { get; set; }
+                
+        /// <summary>
+        /// The fully qualified name of the parameter data type.
+        /// </summary>
+        public string QualifiedTypeName { get; set; }
 
         /// <summary>
         /// Additional names by which the backend can refer to this parameter.

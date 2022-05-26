@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -37,12 +38,12 @@ namespace Meta.Conduit
         /// <summary>
         /// List of relevant entities.
         /// </summary>
-        public List<ManifestEntity> Entities { get; set; }
+        public List<ManifestEntity> Entities { get; set; } = new List<ManifestEntity>();
 
         /// <summary>
         /// List of relevant actions (methods).
         /// </summary>
-        public List<ManifestAction> Actions { get; set; }
+        public List<ManifestAction> Actions { get; set; } = new List<ManifestAction>();
 
         /// <summary>
         /// Maps action IDs (intents) to CLR methods. Each entry in the value list is a different overload of the method.
@@ -55,24 +56,35 @@ namespace Meta.Conduit
         /// <summary>
         /// Processes all actions in the manifest and associate them with the methods they should invoke.
         /// </summary>
-        public void ResolveActions()
+        public bool ResolveActions()
         {
+            var resolvedAll = true;
             foreach (var action in this.Actions)
             {
                 var lastPeriod = action.ID.LastIndexOf('.');
                 var typeName = action.ID.Substring(0, lastPeriod);
                 var qualifiedTypeName = $"{typeName},{action.Assembly}";
                 var method = action.ID.Substring(lastPeriod + 1);
-
   
                 var targetType = Type.GetType(qualifiedTypeName);
                 if (targetType == null)
                 {
                     Debug.LogWarning($"Failed to resolve type: {qualifiedTypeName}");
+                    resolvedAll = false;
                     continue;
                 }
-                
-                var targetMethod = targetType.GetMethod(method);
+
+                var types = new Type[action.Parameters.Count];
+                for (var i = 0; i < action.Parameters.Count; i++)
+                {
+                    var manifestParameter = action.Parameters[i];
+                    var fullTypeName = $"{manifestParameter.QualifiedTypeName},{manifestParameter.TypeAssembly}";
+                    types[i] = Type.GetType(fullTypeName);
+                }
+
+                var targetMethod = targetType.GetMethod(method,
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any,
+                    types, null);
                 if (targetMethod != null)
                 {
                     var invocationContext = new InvocationContext()
@@ -97,6 +109,8 @@ namespace Meta.Conduit
                 invocationContext.Sort((one, two) =>
                     two.MethodInfo.GetParameters().Length - one.MethodInfo.GetParameters().Length);
             }
+
+            return resolvedAll;
         }
 
         /// <summary>

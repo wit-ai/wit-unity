@@ -182,7 +182,8 @@ namespace Meta.Conduit
                     {
                         Name = parameter.Name,
                         InternalName = parameter.Name,
-                        EntityType = parameter.ParameterType.Name,
+                        QualifiedTypeName = parameter.ParameterType.FullName,
+                        TypeAssembly = parameter.ParameterType.Assembly.FullName,
                         Aliases = aliases,
                         QualifiedName = $"{snakeCaseAction}_{snakeCaseName}"
                     };

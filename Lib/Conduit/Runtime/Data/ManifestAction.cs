@@ -35,7 +35,7 @@ namespace Meta.Conduit
         /// <summary>
         /// The parameters used by the action.
         /// </summary>
-        public List<ManifestParameter> Parameters { get; set; }
+        public List<ManifestParameter> Parameters { get; set; } = new List<ManifestParameter>();
 
         /// <summary>
         /// Returns the fully qualified name of the declaring type of the action.
@@ -45,7 +45,7 @@ namespace Meta.Conduit
         /// <summary>
         /// Additional names by which the backend can refer to this action.
         /// </summary>
-        public List<string> Aliases { get; set; }
+        public List<string> Aliases { get; set; } = new List<string>();
         
         public override bool Equals(object obj)
         {

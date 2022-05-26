@@ -69,7 +69,10 @@ namespace Meta.Conduit
             {
                 foreach (var parameter in action.Parameters)
                 {
-                    parameterToRoleMap.TryAdd(parameter.InternalName, parameter.QualifiedName);
+                    if (!parameterToRoleMap.ContainsKey(parameter.InternalName))
+                    {
+                        parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);    
+                    }
                 }
             }
         }
