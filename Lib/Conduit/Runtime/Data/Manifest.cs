@@ -62,6 +62,13 @@ namespace Meta.Conduit
             foreach (var action in this.Actions)
             {
                 var lastPeriod = action.ID.LastIndexOf('.');
+                if (lastPeriod <= 0)
+                {
+                    Debug.LogError($"Invalid Action ID: {action.ID}");
+                    resolvedAll = false;
+                    continue;
+                }
+                
                 var typeName = action.ID.Substring(0, lastPeriod);
                 var qualifiedTypeName = $"{typeName},{action.Assembly}";
                 var method = action.ID.Substring(lastPeriod + 1);
@@ -69,7 +76,7 @@ namespace Meta.Conduit
                 var targetType = Type.GetType(qualifiedTypeName);
                 if (targetType == null)
                 {
-                    Debug.LogWarning($"Failed to resolve type: {qualifiedTypeName}");
+                    Debug.LogError($"Failed to resolve type: {qualifiedTypeName}");
                     resolvedAll = false;
                     continue;
                 }
@@ -85,21 +92,25 @@ namespace Meta.Conduit
                 var targetMethod = targetType.GetMethod(method,
                     BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any,
                     types, null);
-                if (targetMethod != null)
+                if (targetMethod == null)
                 {
-                    var invocationContext = new InvocationContext()
-                    {
-                        Type = targetType,
-                        MethodInfo = targetMethod
-                    };
-                    
-                    if (!this.methodLookup.ContainsKey(action.Name))
-                    {
-                        this.methodLookup.Add(action.Name, new List<InvocationContext>());
-                    }
-                    
-                    this.methodLookup[action.Name].Add(invocationContext);
+                    Debug.LogError($"Failed to resolve method {method}.");
+                    resolvedAll = false;
+                    continue;
                 }
+                
+                var invocationContext = new InvocationContext()
+                {
+                    Type = targetType,
+                    MethodInfo = targetMethod
+                };
+                    
+                if (!this.methodLookup.ContainsKey(action.Name))
+                {
+                    this.methodLookup.Add(action.Name, new List<InvocationContext>());
+                }
+                    
+                this.methodLookup[action.Name].Add(invocationContext);
             }
             
             foreach (var invocationContext in this.methodLookup.Values.Where(invocationContext =>
