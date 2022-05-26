@@ -544,7 +544,7 @@ namespace Facebook.WitAi
                                 {
                                     offset = 0;
                                     totalRead = 0;
-                                   sentResponse |=  ProcessStringResponse(stringResponse);
+                                    ProcessStringResponse(stringResponse, ref sentResponse);
                                 }
                                 catch (JSONParseException e)
                                 {
@@ -562,12 +562,11 @@ namespace Facebook.WitAi
                         // result
                         if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
                         {
-                            sentResponse |= ProcessStringResponse(stringResponse);
+                            ProcessStringResponse(stringResponse, ref sentResponse);
                         }
 
                         if (stringResponse.Length > 0 && null != responseData)
                         {
-                            MainThreadCallback(() => onFullTranscription?.Invoke(responseData["text"]));
                             MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                         }
                     }
@@ -675,30 +674,32 @@ namespace Facebook.WitAi
         /// </summary>
         /// <param name="stringResponse">string recieved</param>
         /// <returns>Returns true if final</returns>
-        private bool ProcessStringResponse(string stringResponse)
+        private void ProcessStringResponse(string stringResponse, ref bool isFinal)
         {
             // Decode json if possible
             responseData = WitResponseJson.Parse(stringResponse);
-            if (responseData == null)
+            if (responseData == null || isFinal)
             {
-                return false;
+                return;
             }
 
             // Check for transcription
             string transcription = responseData[WIT_KEY_TRANSCRIPTION];
             if (string.IsNullOrEmpty(transcription))
             {
-                return false;
+                return;
             }
 
-            // Send partial transcription
-            MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
 
             // Continue if more returned than transcription
             string[] childNames = responseData.AsObject.ChildNodeNames;
             if (childNames.Length <= 1)
             {
-                return false;
+                // Send partial transcription
+                MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
+
+                // Skip
+                return;
             }
 
             // Send partial response
@@ -707,12 +708,15 @@ namespace Facebook.WitAi
             // Check for is final tag
             if (!responseData[WIT_KEY_FINAL].AsBool)
             {
-                return false;
+                return;
             }
+
+            // Send final transcription
+            MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
 
             // Final tag received
             SafeInvoke(onResponse);
-            return true;
+            isFinal = true;
         }
 
         private void HandleRequestStream(IAsyncResult ar)
