@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -75,23 +74,12 @@ namespace Meta.Conduit
             }
         }
 
-        private InvocationContext ResolveInvocationContext(string actionId, Dictionary<string, object> actualParameters)
+        private List<InvocationContext> ResolveInvocationContexts(string actionId, Dictionary<string, object> actualParameters)
         {
             var invocationContexts = manifest.GetInvocationContexts(actionId);
-            if (invocationContexts.Count == 1)
-            {
-                // There is a single method with the specified name.
-                return invocationContexts[0];
-            }
-            
+
             // We have multiple overloads, find the correct match.
-            foreach (var invocationContext in invocationContexts.Where(invocationContext => CompatibleInvocationContext(invocationContext)))
-            {
-                // Given that the invocations are sorted with most parameters first, we can return the first found.
-                return invocationContext;
-            }
-            
-            return null;
+            return invocationContexts.Where(this.CompatibleInvocationContext).ToList();
         }
 
         /// <summary>
@@ -114,23 +102,52 @@ namespace Meta.Conduit
         /// </summary>
         /// <param name="actionId">The action ID (which is also the intent name).</param>
         /// <param name="actualParameters">Dictionary of parameters mapping parameter name to value.</param>
+        /// <returns>True if all invocations succeeded. False if at least one failed or no callbacks were found.</returns>
         public bool InvokeAction(string actionId, Dictionary<string, object> actualParameters)
         {
             if (!manifest.ContainsAction(actionId))
             {
-                Console.WriteLine($"Failed to find action ID: {actionId}");
+                Debug.LogError($"Failed to find action ID: {actionId}");
                 return false;
             }
 
             this.parameterProvider.Populate(actualParameters, this.parameterToRoleMap);
             
-            var invocationContext = this.ResolveInvocationContext(actionId, actualParameters);
-            if (invocationContext == null)
+            var invocationContexts = this.ResolveInvocationContexts(actionId, actualParameters);
+            if (invocationContexts.Count < 1)
             {
-                Debug.LogError($"Failed to find execution context for {actionId}. Parameters could not be matched");
+                Debug.Log($"Failed to find execution context for {actionId}. Parameters could not be matched");
                 return false;
             }
-            
+
+            var allSucceeded = true;
+            foreach (var invocationContext in invocationContexts)
+            {
+                try
+                {
+                    if (!this.InvokeMethod(invocationContext))
+                    {
+                        allSucceeded = false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to invoke {invocationContext.MethodInfo.Name}. {e}");
+                    allSucceeded = false;
+                }
+            }
+
+            return allSucceeded;
+        }
+
+        /// <summary>
+        /// Invokes a method on all callbacks of a specific invocation context. If the method is static, then only a
+        /// single call is made. If it's an instance method, then it is invoked on all instances.
+        /// </summary>
+        /// <param name="invocationContext">The invocation context.</param>
+        /// <returns>True if the method was invoked successfully on all valid targets.</returns>
+        private bool InvokeMethod(InvocationContext invocationContext)
+        {
             var method = invocationContext.MethodInfo;
             var formalParametersInfo = method.GetParameters();
             var parameterObjects = new object[formalParametersInfo.Length];
@@ -162,7 +179,7 @@ namespace Meta.Conduit
             else
             {
                 Debug.Log($"About to invoke {method.Name} on all instances");
-                bool allSucceeded = true;
+                var allSucceeded = true;
                 foreach (var obj in this.instanceResolver.GetObjectsOfType(invocationContext.Type))
                 {
                     try
@@ -171,7 +188,7 @@ namespace Meta.Conduit
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Failed to method {method.Name}. {e} on {obj}");
+                        Debug.LogError($"Failed to invoke method {method.Name}. {e} on {obj}");
                         allSucceeded = false;
                         continue;
                     }
