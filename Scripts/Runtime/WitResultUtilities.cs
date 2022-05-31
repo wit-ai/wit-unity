@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Lib;
@@ -14,6 +15,69 @@ namespace Facebook.WitAi
 {
     public static class WitResultUtilities
     {
+        // Keys
+        public const string WIT_KEY_TRANSCRIPTION = "text";
+        public const string WIT_KEY_FINAL = "is_final";
+
+        /// <summary>
+        /// Handle a wit response by returning callbacks when applicable and returning true if final response
+        /// </summary>
+        /// <param name="witResponse">The parsed response</param>
+        /// <param name="onResponse">The response data callback that returns a WitResponseNode & a boolean representing whether it is a final response</param>
+        /// <param name="onTranscription">The transcription string callback that returns text & a boolean representing whether it is a final transcription</param>
+        public static bool HandleResponse(this WitResponseNode witResponse, Action<WitResponseNode, bool> onResponse, Action<string, bool> onTranscription)
+        {
+            // Failed if null
+            if (witResponse == null)
+            {
+                return false;
+            }
+
+            // Decode transcription
+            string transcription = witResponse.GetTranscription();
+            if (string.IsNullOrEmpty(transcription))
+            {
+                return false;
+            }
+
+            // Partial Transcription
+            string[] childNames = witResponse.AsObject.ChildNodeNames;
+            if (childNames.Length == 1)
+            {
+                onTranscription?.Invoke(transcription, false);
+                return false;
+            }
+
+            // Check for final
+            bool final = witResponse.GetIsFinal();
+            if (final)
+            {
+                onTranscription?.Invoke(witResponse, true);
+                onResponse?.Invoke(witResponse, true);
+                return true;
+            }
+
+            // Partial Response
+            onResponse?.Invoke(witResponse, false);
+            return false;
+        }
+
+        /// <summary>
+        /// Get the transcription from a wit response node
+        /// </summary>
+        public static string GetTranscription(this WitResponseNode witResponse) =>
+            null != witResponse && witResponse.AsObject.HasChild(WIT_KEY_TRANSCRIPTION)
+                ? witResponse[WIT_KEY_TRANSCRIPTION].Value
+                : string.Empty;
+
+        /// <summary>
+        /// Get whether this response is a 'final' response
+        /// </summary>
+        public static bool GetIsFinal(this WitResponseNode witResponse) =>
+            null != witResponse
+            && witResponse.AsObject.HasChild(WIT_KEY_FINAL)
+            && witResponse[WIT_KEY_FINAL].AsBool;
+
         /// <summary>
         /// Gets the string value of the first entity
         /// </summary>

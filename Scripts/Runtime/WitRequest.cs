@@ -88,9 +88,6 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_APPS = "apps";
         public const string WIT_ENDPOINT_UTTERANCES = "utterances";
 
-        public const string WIT_KEY_TRANSCRIPTION = "text";
-        public const string WIT_KEY_FINAL = "is_final";
-
         private WitConfiguration configuration;
 
         private string command;
@@ -677,7 +674,11 @@ namespace Facebook.WitAi
         // Safely handles
         private bool ProcessStringResponse(string stringResponse)
         {
-            return DecodeResponse(stringResponse, (response, final) =>
+            // Decode full response
+            WitResponseNode responseNode = WitResponseJson.Parse(stringResponse);
+
+            // Handle responses
+            bool isFinal = responseNode.HandleResponse((response, final) =>
             {
                 // Set data
                 responseData = response;
@@ -700,51 +701,10 @@ namespace Facebook.WitAi
                     MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
                 }
             });
+
+            // Return final
+            return isFinal;
         }
-        /// <summary>
-        /// Handle a response decode & return response/transcriptions when possible
-        /// </summary>
-        /// <param name="responseJson">The response json to be parsed</param>
-        /// <param name="onResponse">The response data callback that returns a WitResponseNode & a boolean representing whether it is a final response</param>
-        /// <param name="onTranscription">The transcription string callback that returns text & a boolean representing whether it is a final transcription</param>
-        public static bool DecodeResponse(string responseJson, Action<WitResponseNode, bool> onResponse, Action<string, bool> onTranscription)
-        {
-            // Decode full response
-            WitResponseNode responseNode = WitResponseJson.Parse(responseJson);
-            if (responseNode == null)
-            {
-                return false;
-            }
-
-            // Decode transcription
-            string transcription = responseNode[WIT_KEY_TRANSCRIPTION];
-            if (string.IsNullOrEmpty(transcription))
-            {
-                return false;
-            }
-
-            // Decode & return if final
-            bool final = responseNode[WIT_KEY_FINAL].AsBool;
-            if (final)
-            {
-                onTranscription?.Invoke(responseNode, true);
-                onResponse?.Invoke(responseNode, true);
-                return true;
-            }
-
-            // Partial Transcription
-            string[] childNames = responseNode.AsObject.ChildNodeNames;
-            if (childNames.Length <= 1)
-            {
-                onTranscription?.Invoke(transcription, false);
-                return false;
-            }
-
-            // Partial Response
-            onResponse?.Invoke(responseNode, false);
-            return false;
-        }
-
         private void HandleRequestStream(IAsyncResult ar)
         {
             try
