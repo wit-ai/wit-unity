@@ -46,7 +46,21 @@ namespace Meta.Conduit
             get
             {
                 var lastPeriod = QualifiedTypeName.LastIndexOf('.');
-                return lastPeriod < 0 ? string.Empty : QualifiedTypeName.Substring(0, lastPeriod);
+                if (lastPeriod < 0)
+                {
+                    return string.Empty;
+                }
+                var entityName = QualifiedTypeName.Substring(lastPeriod + 1);
+                
+                // Identify whether it's a nested type
+                var lastPlus = entityName.LastIndexOf('+');
+                
+                if (lastPlus < 0)
+                {
+                    return entityName;
+                }
+
+                return entityName.Substring(lastPlus + 1);
             }
         }
         
@@ -72,7 +86,10 @@ namespace Meta.Conduit
 
         private bool Equals(ManifestParameter other)
         {
-            return this.InternalName.Equals(other.InternalName) && this.QualifiedName.Equals(other.QualifiedName) && this.EntityType.Equals(other.EntityType) && this.Aliases.SequenceEqual(other.Aliases);
+            return Equals(this.InternalName, other.InternalName) && Equals(this.QualifiedName, other.QualifiedName) &&
+                   Equals(this.EntityType, other.EntityType) && this.Aliases.SequenceEqual(other.Aliases) &&
+                   Equals(this.TypeAssembly, other.TypeAssembly) &&
+                   Equals(this.QualifiedTypeName, other.QualifiedTypeName);
         }
     }
 }

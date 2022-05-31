@@ -26,7 +26,7 @@ namespace Meta.Conduit
         public string ID { get; set; }
 
         /// <summary>
-        /// The version of the Manifest format
+        /// The version of the Manifest format.
         /// </summary>
         public string Version { get; set; }
 

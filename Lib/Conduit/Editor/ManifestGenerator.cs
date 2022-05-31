@@ -28,16 +28,22 @@ namespace Meta.Conduit
         /// <summary>
         /// Provides access to available assemblies.
         /// </summary>
-        private readonly IAssemblyWalker assemblyWalker;
+        private readonly IAssemblyWalker _assemblyWalker;
+
+        /// <summary>
+        /// Mines assemblies for callback methods and entities.
+        /// </summary>
+        private readonly IAssemblyMiner _assemblyMiner;
         
         /// <summary>
         /// The manifest version. This would only change if the schema of the manifest changes.
         /// </summary>
         private const string CurrentVersion = "0.1";
 
-        internal ManifestGenerator(IAssemblyWalker assemblyWalker)
+        internal ManifestGenerator(IAssemblyWalker assemblyWalker, IAssemblyMiner assemblyMiner)
         {
-            this.assemblyWalker = assemblyWalker;
+            this._assemblyWalker = assemblyWalker;
+            this._assemblyMiner = assemblyMiner;
         }
 
         /// <summary>
@@ -48,7 +54,7 @@ namespace Meta.Conduit
         /// <returns>A JSON representation of the manifest.</returns>
         public string GenerateManifest(string domain, string id)
         {
-            return GenerateManifest(assemblyWalker.GetTargetAssemblies(), domain, id);
+            return GenerateManifest(_assemblyWalker.GetTargetAssemblies(), domain, id);
         }
 
         /// <summary>
@@ -66,8 +72,8 @@ namespace Meta.Conduit
             var actions = new List<ManifestAction>();
             foreach (var assembly in assemblies)
             {
-                entities.AddRange(assembly.ExtractEntities());
-                actions.AddRange(assembly.ExtractActions());
+                entities.AddRange(this._assemblyMiner.ExtractEntities(assembly));
+                actions.AddRange(this._assemblyMiner.ExtractActions(assembly));
             }
 
             this.PruneUnreferencedEntities(ref entities, actions);

@@ -19,14 +19,16 @@ namespace Facebook.WitAi.Windows
     public class WitConfigurationEditor : Editor
     {
         public WitConfiguration configuration { get; private set; }
-        private string serverToken;
-        private string appName;
-        private string appID;
-        private bool initialized = false;
+        private string _serverToken;
+        private string _appName;
+        private string _appID;
+        private bool _initialized = false;
         public bool drawHeader = true;
-        private bool foldout = true;
-        private int requestTab = -1;
-        private readonly ManifestGenerator manifestGenerator = new ManifestGenerator(new AssemblyWalker(new WitParameterValidator()));
+        private bool _foldout = true;
+        private int _requestTab = -1;
+
+        private readonly ManifestGenerator manifestGenerator =
+            new ManifestGenerator(new AssemblyWalker(), new AssemblyMiner(new WitParameterValidator()));
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -46,14 +48,14 @@ namespace Facebook.WitAi.Windows
             // Refresh configuration & auth tokens
             configuration = target as WitConfiguration;
             // Get app server token
-            serverToken = WitAuthUtility.GetAppServerToken(configuration);
-            if (CanConfigurationRefresh(configuration) && WitConfigurationUtility.IsServerTokenValid(serverToken))
+            _serverToken = WitAuthUtility.GetAppServerToken(configuration);
+            if (CanConfigurationRefresh(configuration) && WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
                 // Get client token if needed
-                appID = WitConfigurationUtility.GetAppID(configuration);
-                if (string.IsNullOrEmpty(appID))
+                _appID = WitConfigurationUtility.GetAppID(configuration);
+                if (string.IsNullOrEmpty(_appID))
                 {
-                    configuration.SetServerToken(serverToken);
+                    configuration.SetServerToken(_serverToken);
                 }
                 // Refresh additional data
                 else
@@ -68,10 +70,10 @@ namespace Facebook.WitAi.Windows
         public override void OnInspectorGUI()
         {
             // Init if needed
-            if (!initialized || configuration != target)
+            if (!_initialized || configuration != target)
             {
                 Initialize();
-                initialized = true;
+                _initialized = true;
             }
 
             // Draw header
@@ -142,22 +144,22 @@ namespace Facebook.WitAi.Windows
             // Title Foldout
             GUILayout.BeginHorizontal();
             string foldoutText = WitTexts.Texts.ConfigurationHeaderLabel;
-            if (!string.IsNullOrEmpty(appName))
+            if (!string.IsNullOrEmpty(_appName))
             {
-                foldoutText = foldoutText + " - " + appName;
+                foldoutText = foldoutText + " - " + _appName;
             }
 
-            foldout = WitEditorUI.LayoutFoldout(new GUIContent(foldoutText), foldout);
+            _foldout = WitEditorUI.LayoutFoldout(new GUIContent(foldoutText), _foldout);
             // Refresh button
             if (CanConfigurationRefresh(configuration))
             {
-                if (string.IsNullOrEmpty(appName))
+                if (string.IsNullOrEmpty(_appName))
                 {
-                    bool isValid =  WitConfigurationUtility.IsServerTokenValid(serverToken);
+                    bool isValid =  WitConfigurationUtility.IsServerTokenValid(_serverToken);
                     GUI.enabled = isValid;
                     if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
-                        ApplyServerToken(serverToken);
+                        ApplyServerToken(_serverToken);
                     }
                 }
                 else
@@ -175,17 +177,17 @@ namespace Facebook.WitAi.Windows
             GUILayout.Space(WitStyles.ButtonMargin);
 
             // Show configuration app data
-            if (foldout)
+            if (_foldout)
             {
                 // Indent
                 EditorGUI.indentLevel++;
 
                 // Server access token
                 bool updated = false;
-                WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationServerTokenContent, ref serverToken, ref updated);
+                WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationServerTokenContent, ref _serverToken, ref updated);
                 if (updated)
                 {
-                    ApplyServerToken(serverToken);
+                    ApplyServerToken(_serverToken);
                 }
 
                 // Additional data
@@ -227,18 +229,18 @@ namespace Facebook.WitAi.Windows
                 checkID = configuration.application.id;
             }
             // Reset
-            if (!string.Equals(appName, checkName) || !string.Equals(appID, checkID))
+            if (!string.Equals(_appName, checkName) || !string.Equals(_appID, checkID))
             {
-                appName = checkName;
-                appID = checkID;
-                serverToken = WitAuthUtility.GetAppServerToken(configuration);
+                _appName = checkName;
+                _appID = checkID;
+                _serverToken = WitAuthUtility.GetAppServerToken(configuration);
             }
         }
         // Apply server token
         public void ApplyServerToken(string newToken)
         {
-            serverToken = newToken;
-            configuration.SetServerToken(serverToken);
+            _serverToken = newToken;
+            configuration.SetServerToken(_serverToken);
         }
         // Whether or not to allow a configuration to refresh
         protected virtual bool CanConfigurationRefresh(WitConfiguration configuration)
@@ -296,20 +298,20 @@ namespace Facebook.WitAi.Windows
                 for (int i = 0; i < _tabIds.Length; i++)
                 {
                     // Enable if not selected
-                    GUI.enabled = requestTab != i;
+                    GUI.enabled = _requestTab != i;
                     // If valid and clicked, begin selecting
                     string tabPropertyID = _tabIds[i];
                     if (ShouldTabShow(configuration, tabPropertyID))
                     {
                         if (WitEditorUI.LayoutTabButton(GetTabText(configuration, tabPropertyID, true)))
                         {
-                            requestTab = i;
+                            _requestTab = i;
                         }
                     }
                     // If invalid, stop selecting
-                    else if (requestTab == i)
+                    else if (_requestTab == i)
                     {
-                        requestTab = -1;
+                        _requestTab = -1;
                     }
                 }
                 GUI.enabled = true;
@@ -317,7 +319,7 @@ namespace Facebook.WitAi.Windows
             }
 
             // Layout selected tab using property id
-            string propertyID = requestTab >= 0 && requestTab < _tabIds.Length ? _tabIds[requestTab] : string.Empty;
+            string propertyID = _requestTab >= 0 && _requestTab < _tabIds.Length ? _tabIds[_requestTab] : string.Empty;
             if (!string.IsNullOrEmpty(propertyID) && configuration != null)
             {
                 SerializedObject serializedObj = new SerializedObject(configuration);
@@ -372,9 +374,9 @@ namespace Facebook.WitAi.Windows
         // Safe refresh
         protected virtual void SafeRefresh()
         {
-            if (WitConfigurationUtility.IsServerTokenValid(serverToken))
+            if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
-                configuration.SetServerToken(serverToken);
+                configuration.SetServerToken(_serverToken);
             }
             else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))
             {

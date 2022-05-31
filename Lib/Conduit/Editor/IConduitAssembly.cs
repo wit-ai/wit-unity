@@ -6,7 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Meta.Conduit
 {
@@ -15,17 +17,10 @@ namespace Meta.Conduit
     /// </summary>
     internal interface IConduitAssembly
     {
-        /// <summary>
-        /// Extracts all entities from the assembly. Entities represent the types used as parameters (such as Enums) of
-        /// our methods.
-        /// </summary>
-        /// <returns>The list of entities extracted.</returns>
-        List<ManifestEntity> ExtractEntities();
+        string FullName { get; }
 
-        /// <summary>
-        /// This method extracts all the marked actions (methods) in the specified assembly.
-        /// </summary>
-        /// <returns>List of actions extracted.</returns>
-        List<ManifestAction> ExtractActions();
+        IEnumerable<Type> GetEnumTypes();
+
+        IEnumerable<MethodInfo> GetMethods();
     }
 }

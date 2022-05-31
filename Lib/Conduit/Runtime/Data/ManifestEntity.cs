@@ -6,7 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Meta.Conduit
 {
@@ -34,5 +36,16 @@ namespace Meta.Conduit
         /// List of values this entity could  assume. For an enum, these would be the enum values.
         /// </summary>
         public List<string> Values { get; set; } = new List<string>();
+
+        public override bool Equals(object obj)
+        {
+            return obj is ManifestEntity other && this.Equals(other);
+        }
+
+        private bool Equals(ManifestEntity other)
+        {
+            return ID == other.ID && Type == other.Type && Name == other.Name &&
+                   this.Values.SequenceEqual(other.Values);
+        }
     }
 }

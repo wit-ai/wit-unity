@@ -24,14 +24,14 @@ namespace Facebook.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private bool UseConduit => witConfiguration.useConduit;
+        private bool UseConduit => _witConfiguration.useConduit;
 
         /// <summary>
         /// The wit configuration.
         /// </summary>
-        private WitConfiguration witConfiguration;
+        private WitConfiguration _witConfiguration;
 
-        private IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
+        private readonly IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
 
         /// <summary>
         /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
@@ -144,7 +144,7 @@ namespace Facebook.WitAi
         protected virtual void Awake()
         {
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            this.witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
+            this._witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
 
             if (UseConduit)
             {
