@@ -544,7 +544,10 @@ namespace Facebook.WitAi
                                 {
                                     offset = 0;
                                     totalRead = 0;
-                                    ProcessStringResponse(stringResponse, ref sentResponse);
+                                    if (!sentResponse)
+                                    {
+                                        sentResponse = ProcessStringResponse(stringResponse);
+                                    }
                                 }
                                 catch (JSONParseException e)
                                 {
@@ -562,7 +565,10 @@ namespace Facebook.WitAi
                         // result
                         if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
                         {
-                            ProcessStringResponse(stringResponse, ref sentResponse);
+                            if (!sentResponse)
+                            {
+                                sentResponse = ProcessStringResponse(stringResponse);
+                            }
                         }
 
                         if (stringResponse.Length > 0 && null != responseData)
@@ -668,55 +674,75 @@ namespace Facebook.WitAi
                 SafeInvoke(onResponse);
             }
         }
-
-        /// <summary>
-        /// Process a partial string response
-        /// </summary>
-        /// <param name="stringResponse">string recieved</param>
-        /// <returns>Returns true if final</returns>
-        private void ProcessStringResponse(string stringResponse, ref bool isFinal)
+        // Safely handles
+        private bool ProcessStringResponse(string stringResponse)
         {
-            // Decode json if possible
-            responseData = WitResponseJson.Parse(stringResponse);
-            if (responseData == null || isFinal)
+            return DecodeResponse(stringResponse, (response, final) =>
             {
-                return;
+                // Set data
+                responseData = response;
+                // Call partial response
+                if (!final)
+                {
+                    MainThreadCallback(() => onPartialResponse?.Invoke(this));
+                }
+                // Call final response
+                else
+                {
+                    SafeInvoke(onResponse);
+                }
+            },
+            (transcription, final) =>
+            {
+                // Call partial transcription
+                if (!final)
+                {
+                    MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
+                }
+            });
+        }
+        /// <summary>
+        /// Handle a response decode & return response/transcriptions when possible
+        /// </summary>
+        /// <param name="responseJson">The response json to be parsed</param>
+        /// <param name="onResponse">The response data callback that returns a WitResponseNode & a boolean representing whether it is a final response</param>
+        /// <param name="onTranscription">The transcription string callback that returns text & a boolean representing whether it is a final transcription</param>
+        public static bool DecodeResponse(string responseJson, Action<WitResponseNode, bool> onResponse, Action<string, bool> onTranscription)
+        {
+            // Decode full response
+            WitResponseNode responseNode = WitResponseJson.Parse(responseJson);
+            if (responseNode == null)
+            {
+                return false;
             }
 
-            // Check for transcription
-            string transcription = responseData[WIT_KEY_TRANSCRIPTION];
+            // Decode transcription
+            string transcription = responseNode[WIT_KEY_TRANSCRIPTION];
             if (string.IsNullOrEmpty(transcription))
             {
-                return;
+                return false;
             }
 
+            // Decode & return if final
+            bool final = responseNode[WIT_KEY_FINAL].AsBool;
+            if (final)
+            {
+                onTranscription?.Invoke(responseNode, true);
+                onResponse?.Invoke(responseNode, true);
+                return true;
+            }
 
-            // Continue if more returned than transcription
-            string[] childNames = responseData.AsObject.ChildNodeNames;
+            // Partial Transcription
+            string[] childNames = responseNode.AsObject.ChildNodeNames;
             if (childNames.Length <= 1)
             {
-                // Send partial transcription
-                MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
-
-                // Skip
-                return;
+                onTranscription?.Invoke(transcription, false);
+                return false;
             }
 
-            // Send partial response
-            MainThreadCallback(() => onPartialResponse?.Invoke(this));
-
-            // Check for is final tag
-            if (!responseData[WIT_KEY_FINAL].AsBool)
-            {
-                return;
-            }
-
-            // Send final transcription
-            MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
-
-            // Final tag received
-            SafeInvoke(onResponse);
-            isFinal = true;
+            // Partial Response
+            onResponse?.Invoke(responseNode, false);
+            return false;
         }
 
         private void HandleRequestStream(IAsyncResult ar)
