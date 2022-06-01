@@ -12,6 +12,7 @@ using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -52,7 +53,18 @@ namespace Facebook.WitAi.Data.Configuration
         [Tooltip("Conduit enables manifest-based dispatching to invoke callbacks with native types directly without requiring manual parsing.")]
         [SerializeField] public bool useConduit;
 
+        /// <summary>
+        /// The path to the Conduit manifest.
+        /// </summary>
+        [SerializeField] public string manifestPath;
+
+        /// <summary>
+        /// When true, Conduit will automatically generate manifests each time code changes.
+        /// </summary>
+        [SerializeField] public bool autoGenerateManifest = false;
+
         public WitApplication Application => application;
+
         private void OnEnable()
         {
             #if UNITY_EDITOR
@@ -61,6 +73,14 @@ namespace Facebook.WitAi.Data.Configuration
                 configId = GUID.Generate().ToString();
                 EditorUtility.SetDirty(this);
             }
+
+            if (string.IsNullOrEmpty(manifestPath))
+            {
+                manifestPath =
+                    $"{UnityEngine.Application.dataPath}/Oculus/Voice/Resources/ConduitManifest-{Guid.NewGuid()}.json";
+                EditorUtility.SetDirty(this);
+            }
+
             #endif
         }
     }

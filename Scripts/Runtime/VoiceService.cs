@@ -69,11 +69,6 @@ namespace Facebook.WitAi
         }
 
         /// <summary>
-        /// The path to the Conduit manifest.
-        /// </summary>
-        public static string ManifestPath => Application.dataPath + "/Oculus/Voice/Resources/" + "ConduitManifest.json";
-
-        /// <summary>
         /// Returns true if the audio input should be read in an activation
         /// </summary>
         protected abstract bool ShouldSendMicData { get; }
@@ -144,13 +139,9 @@ namespace Facebook.WitAi
         protected virtual void Awake()
         {
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            this._witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
+            _witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
 
-            if (UseConduit)
-            {
-                this.conduitDispatcher.Initialize(ManifestPath);
-            }
-            else
+            if (!UseConduit)
             {
                 MatchIntentRegistry.Initialize();
             }
@@ -158,6 +149,12 @@ namespace Facebook.WitAi
 
         protected virtual void OnEnable()
         {
+            if (UseConduit)
+            {
+
+                this.conduitDispatcher.Initialize(_witConfiguration.manifestPath);
+            }
+
             VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
             VoiceEvents.OnResponse.AddListener(OnResponse);
         }

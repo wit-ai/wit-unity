@@ -26,9 +26,7 @@ namespace Facebook.WitAi.Windows
         public bool drawHeader = true;
         private bool _foldout = true;
         private int _requestTab = -1;
-
-        private readonly ManifestGenerator manifestGenerator =
-            new ManifestGenerator(new AssemblyWalker(), new AssemblyMiner(new WitParameterValidator()));
+        private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(new AssemblyWalker(), new AssemblyMiner(new WitParameterValidator()));
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -63,8 +61,6 @@ namespace Facebook.WitAi.Windows
                     SafeRefresh();
                 }
             }
-
-            manifestAvailable = File.Exists(VoiceService.ManifestPath);
         }
 
         public override void OnInspectorGUI()
@@ -96,6 +92,8 @@ namespace Facebook.WitAi.Windows
 
         private void LayoutConduitContent()
         {
+            manifestAvailable = File.Exists(configuration.manifestPath);
+
             var useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit (Beta)"));
             if (configuration.useConduit != useConduit)
             {
@@ -104,29 +102,19 @@ namespace Facebook.WitAi.Windows
             }
 
             EditorGUI.BeginDisabledGroup(!configuration.useConduit);
-
-            if (GUILayout.Button("Generate manifest"))
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Generate Manifest"))
             {
-                var startGenerationTime = DateTime.UtcNow;
-
-                var manifest = this.manifestGenerator.GenerateManifest(this.configuration.application.name,
-                    configuration.application.id);
-
-                var endGenerationTime = DateTime.UtcNow;
-                Directory.CreateDirectory(Path.GetDirectoryName(VoiceService.ManifestPath));
-                var writer = new StreamWriter(VoiceService.ManifestPath);
-                writer.WriteLine(manifest);
-                writer.Close();
-                var generationTime = endGenerationTime - startGenerationTime;
-                manifestAvailable = true;
-                Debug.Log($"Done generating manifest. Total time (ms): {generationTime.TotalMilliseconds}");
-                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(VoiceService.ManifestPath, 1);
+                GenerateManifest(configuration, true);
             }
 
+            configuration.autoGenerateManifest = (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
+            GUILayout.EndHorizontal();
+
             EditorGUI.BeginDisabledGroup((!manifestAvailable));
-            if (GUILayout.Button("Open manifest"))
+            if (GUILayout.Button("Open Manifest"))
             {
-                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(VoiceService.ManifestPath, 1);
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(configuration.manifestPath, 1);
             }
             EditorGUI.EndDisabledGroup();
 
@@ -381,6 +369,53 @@ namespace Facebook.WitAi.Windows
             else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))
             {
                 configuration.RefreshData();
+            }
+        }
+
+        [UnityEditor.Callbacks.DidReloadScripts]
+        private static void OnScriptsReloaded() {
+            foreach (var witConfig in WitConfigurationUtility.WitConfigs)
+            {
+                if (witConfig.useConduit && witConfig.autoGenerateManifest)
+                {
+                    GenerateManifest(witConfig, false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generates a manifest and optionally opens it in the editor.
+        /// </summary>
+        /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
+        private void GenerateLocalManifest(bool openManifest)
+        {
+            GenerateManifest(this.configuration, openManifest);
+            manifestAvailable = true;
+        }
+
+        /// <summary>
+        /// Generates a manifest and optionally opens it in the editor.
+        /// </summary>
+        /// <param name="configuration">The configuration that we are generating the manifest for.</param>
+        /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
+        private static void GenerateManifest(WitConfiguration configuration, bool openManifest)
+        {
+            var startGenerationTime = DateTime.UtcNow;
+            var manifest = ManifestGenerator.GenerateManifest(configuration.application.name,
+                configuration.application.id);
+
+            var endGenerationTime = DateTime.UtcNow;
+            Directory.CreateDirectory(Path.GetDirectoryName(configuration.manifestPath));
+            var writer = new StreamWriter(configuration.manifestPath);
+            writer.WriteLine(manifest);
+            writer.Close();
+            var generationTime = endGenerationTime - startGenerationTime;
+
+            Debug.Log($"Done generating manifest. Total time: {generationTime.TotalMilliseconds} ms");
+
+            if (openManifest)
+            {
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(configuration.manifestPath, 1);
             }
         }
     }

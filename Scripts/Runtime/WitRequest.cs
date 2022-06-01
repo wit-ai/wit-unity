@@ -78,7 +78,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20220519";
-        public const string WIT_SDK_VERSION = "0.0.42";
+        public const string WIT_SDK_VERSION = "0.0.43";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
