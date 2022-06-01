@@ -229,22 +229,31 @@ namespace Facebook.WitAi
                 foreach (var obj in GetObjectsOfType(registeredMethod.type))
                 {
                     var parameters = registeredMethod.method.GetParameters();
+                    if (parameters.Length == 0)
+                    {
+                        registeredMethod.method.Invoke(obj, Array.Empty<object>());
+                        continue;
+                    }
+
+                    if (parameters[0].ParameterType != typeof(WitResponseNode) || parameters.Length > 2)
+                    {
+                        Debug.LogError("Match intent only supports methods with no parameters or with a WitResponseNode parameter. Enable Conduit or adjust the parameters");
+                        continue;
+                    }
+
                     if (parameters.Length == 2)
                     {
+                        if (parameters[1].ParameterType != typeof(bool))
+                        {
+                            Debug.LogError("Match intent only supports methods with no parameters or with a WitResponseNode parameter. Enable Conduit or adjust the parameters");
+                            continue;
+                        }
+
                         registeredMethod.method.Invoke(obj, new object[] {response, isFinal});
                     }
                     else if (parameters.Length == 1)
                     {
                         registeredMethod.method.Invoke(obj, new object[] {response});
-                    }
-                    else if (parameters.Length == 0)
-                    {
-                        registeredMethod.method.Invoke(obj, Array.Empty<object>());
-                    }
-                    else
-                    {
-                        throw new ArgumentException(
-                            "Too many parameters on method tagged with MatchIntent. Match intent only supports methods with no parameters or with a WitResponseNode parameter.");
                     }
                 }
             }
