@@ -143,7 +143,7 @@ namespace Facebook.WitAi
 
             if (null != requestOptions)
             {
-                request.onResponse = requestOptions.onResponse;
+                request.onResponse += requestOptions.onResponse;
                 request.requestId = requestOptions.requestID;
             }
 
@@ -171,7 +171,7 @@ namespace Facebook.WitAi
 
             if (null != requestOptions)
             {
-                request.onResponse = requestOptions.onResponse;
+                request.onResponse += requestOptions.onResponse;
                 request.requestId = requestOptions.requestID;
             }
 

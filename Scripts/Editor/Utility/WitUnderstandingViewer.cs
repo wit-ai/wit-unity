@@ -338,8 +338,8 @@ namespace Facebook.WitAi.Windows
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
                 _request = witConfiguration.MessageRequest(_utterance, new WitRequestOptions());
-                _request.onPartialResponse = (r) => OnPartialResponse(r?.ResponseData);
-                _request.onResponse = (r) => OnResponse(r?.ResponseData);
+                _request.onPartialResponse += (r) => OnPartialResponse(r?.ResponseData);
+                _request.onResponse += (r) => OnResponse(r?.ResponseData);
                 _request.Request();
             }
         }

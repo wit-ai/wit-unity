@@ -545,6 +545,7 @@ namespace Facebook.WitAi
             // Create request & add response delegate
             WitRequest request = RuntimeConfiguration.witConfiguration.MessageRequest(transcription, requestOptions, _dynamicEntityProviders);
             request.onResponse += HandleResult;
+            request.onPartialResponse += HandlePartialResult;
 
             // Call on create delegate
             VoiceEvents?.OnRequestCreated?.Invoke(request);

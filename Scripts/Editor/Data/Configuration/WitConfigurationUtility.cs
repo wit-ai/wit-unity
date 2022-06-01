@@ -461,7 +461,7 @@ namespace Facebook.WitAi.Data.Configuration
         private static void PerformRequest(WitRequest request, Action<WitResponseNode, Action<string>> onApply, Action<string> onComplete)
         {
             // Add response delegate
-            request.onResponse = (response) =>
+            request.onResponse += (response) =>
             {
                 // Get status
                 int status = response.StatusCode;

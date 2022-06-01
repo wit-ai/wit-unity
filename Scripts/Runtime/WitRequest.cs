@@ -78,7 +78,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20220519";
-        public const string WIT_SDK_VERSION = "0.0.41";
+        public const string WIT_SDK_VERSION = "0.0.42";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -116,12 +116,12 @@ namespace Facebook.WitAi
         /// <summary>
         /// Callback called when a response is received from the server off a partial transcription
         /// </summary>
-        public Action<WitRequest> onPartialResponse;
+        public event Action<WitRequest> onPartialResponse;
 
         /// <summary>
         /// Callback called when a response is received from the server
         /// </summary>
-        public Action<WitRequest> onResponse;
+        public event Action<WitRequest> onResponse;
 
         /// <summary>
         /// Callback called when the server is ready to receive data from the WitRequest's input
@@ -541,10 +541,7 @@ namespace Facebook.WitAi
                                 {
                                     offset = 0;
                                     totalRead = 0;
-                                    if (!sentResponse)
-                                    {
-                                        sentResponse = ProcessStringResponse(stringResponse);
-                                    }
+                                    sentResponse |= ProcessStringResponse(stringResponse);
                                 }
                                 catch (JSONParseException e)
                                 {
@@ -562,10 +559,7 @@ namespace Facebook.WitAi
                         // result
                         if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
                         {
-                            if (!sentResponse)
-                            {
-                                sentResponse = ProcessStringResponse(stringResponse);
-                            }
+                            sentResponse |= ProcessStringResponse(stringResponse);
                         }
 
                         if (stringResponse.Length > 0 && null != responseData)
@@ -666,26 +660,28 @@ namespace Facebook.WitAi
                     stringResponse);
             }
 
+            // Send final response if have not yet
             if (!sentResponse)
             {
                 SafeInvoke(onResponse);
             }
+
+            // Complete
+            responseStarted = false;
         }
         // Safely handles
         private bool ProcessStringResponse(string stringResponse)
         {
             // Decode full response
-            WitResponseNode responseNode = WitResponseJson.Parse(stringResponse);
+            responseData = WitResponseJson.Parse(stringResponse);
 
             // Handle responses
-            bool isFinal = responseNode.HandleResponse((response, final) =>
+            bool isFinal = responseData.HandleResponse((response, final) =>
             {
-                // Set data
-                responseData = response;
                 // Call partial response
                 if (!final)
                 {
-                    MainThreadCallback(() => onPartialResponse?.Invoke(this));
+                    SafeInvoke(onPartialResponse);
                 }
                 // Call final response
                 else
@@ -752,7 +748,7 @@ namespace Facebook.WitAi
                 // We want to allow each invocation to run even if there is an exception thrown by one
                 // of the callbacks in the invocation list. This protects shared invocations from
                 // clients blocking things like UI updates from other parts of the sdk being invoked.
-                foreach (var responseDelegate in action.GetInvocationList())
+                foreach (Action<WitRequest> responseDelegate in action.GetInvocationList())
                 {
                     try
                     {
@@ -851,7 +847,7 @@ namespace Facebook.WitAi
 
         #region CALLBACKS
         // Check performing
-        private bool _performing = false;
+        private CoroutineUtility.CoroutinePerformer _performer = null;
         // All actions
         private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
         private Stream writeStream;
@@ -865,25 +861,30 @@ namespace Facebook.WitAi
         private void WatchMainThreadCallbacks()
         {
             // Ifnore if already performing
-            if (_performing)
+            if (_performer != null)
             {
                 return;
             }
 
             // Check callbacks every frame (editor or runtime)
-            CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
+            _performer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
         }
         // Every frame check for callbacks & perform any found
         private System.Collections.IEnumerator PerformMainThreadCallbacks()
         {
-            // Begin performing
-            _performing = true;
-
             // While checking, continue
             while (HasMainThreadCallbacks())
             {
                 // Wait for frame
-                yield return new WaitForEndOfFrame();
+                if (Application.isPlaying && !Application.isBatchMode)
+                {
+                    yield return new WaitForEndOfFrame();
+                }
+                // Wait for a tick
+                else
+                {
+                    yield return null;
+                }
 
                 // Perform if possible
                 while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
@@ -893,12 +894,12 @@ namespace Facebook.WitAi
             }
 
             // Done performing
-            _performing = false;
+            _performer = null;
         }
         // Check actions
         private bool HasMainThreadCallbacks()
         {
-            return IsActive || isRequestStreamActive || _mainThreadCallbacks.Count > 0;
+            return IsActive || isRequestStreamActive || HasResponseStarted || _mainThreadCallbacks.Count > 0;
         }
         #endregion
     }

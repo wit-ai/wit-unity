@@ -28,7 +28,7 @@ namespace Facebook.WitAi.Configuration
             }
 
             var request = OnCreateRequest();
-            request.onResponse = (r) => OnUpdateData(r, onUpdateComplete);
+            request.onResponse += (r) => OnUpdateData(r, onUpdateComplete);
             request.Request();
         }
 
