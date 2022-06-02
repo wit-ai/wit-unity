@@ -102,22 +102,19 @@ namespace Facebook.WitAi.Windows
             }
 
             EditorGUI.BeginDisabledGroup(!configuration.useConduit);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Generate Manifest"))
             {
-                GenerateManifest(configuration, true);
+                GUILayout.BeginHorizontal();
+                {
+                    if (GUILayout.Button("Generate Manifest"))
+                    {
+                        GenerateManifest(configuration, configuration.openManifestOnGeneration);
+                    }
+
+                    configuration.autoGenerateManifest =
+                        (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
+                }
+                GUILayout.EndHorizontal();
             }
-
-            configuration.autoGenerateManifest = (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
-            GUILayout.EndHorizontal();
-
-            EditorGUI.BeginDisabledGroup((!manifestAvailable));
-            if (GUILayout.Button("Open Manifest"))
-            {
-                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(configuration.manifestPath, 1);
-            }
-            EditorGUI.EndDisabledGroup();
-
             EditorGUI.EndDisabledGroup();
         }
 
@@ -381,16 +378,6 @@ namespace Facebook.WitAi.Windows
                     GenerateManifest(witConfig, false);
                 }
             }
-        }
-
-        /// <summary>
-        /// Generates a manifest and optionally opens it in the editor.
-        /// </summary>
-        /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
-        private void GenerateLocalManifest(bool openManifest)
-        {
-            GenerateManifest(this.configuration, openManifest);
-            manifestAvailable = true;
         }
 
         /// <summary>

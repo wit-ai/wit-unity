@@ -100,25 +100,12 @@ namespace Meta.Conduit
 
             foreach (var method in methods)
             {
-                const string indent = "   ";
-                var logMessage = $"{method.DeclaringType.FullName}.{method.Name}()";
-
                 var attributes = method.GetCustomAttributes(typeof(ConduitActionAttribute), false);
                 if (attributes.Length == 0)
                 {
-                    Debug.Log($"{logMessage} - Not tagged for assistant - Excluding");
                     continue;
                 }
-
-                if (method.IsStatic)
-                {
-                    Debug.Log($"{logMessage} - Static");
-                }
-                else
-                {
-                    Debug.Log($"{logMessage} - Instance");
-                }
-
+                
                 var actionAttribute = attributes.First() as ConduitActionAttribute;
                 var actionName = actionAttribute.Intent;
                 if (string.IsNullOrEmpty(actionName))
@@ -138,18 +125,14 @@ namespace Meta.Conduit
                 var compatibleParameters = true;
                 foreach (var parameter in method.GetParameters())
                 {
-                    Debug.Log($"{indent}{parameter.Name}:{parameter.ParameterType.Name}");
-
                     var supported = this._parameterValidator.IsSupportedParameterType(parameter.ParameterType);
 
                     if (!supported)
                     {
                         compatibleParameters = false;
-                        Debug.Log(" (Not supported)");
                         continue;
                     }
-
-                    Debug.Log(" (Supported)");
+                    
                     List<string> aliases;
 
                     if (parameter.GetCustomAttributes(typeof(ConduitParameterAttribute), false).Length > 0)
@@ -182,13 +165,12 @@ namespace Meta.Conduit
 
                 if (compatibleParameters)
                 {
-                    Debug.Log($"{indent}Eligible for Assistant");
                     action.Parameters = parameters;
                     actions.Add(action);
                 }
                 else
                 {
-                    Debug.Log($"{indent}Not eligible for Assistant");
+                    Debug.Log($"{method} has Conduit-incompatible parameters");
                 }
             }
 
