@@ -52,6 +52,17 @@ namespace Meta.Conduit
             return obj is ManifestAction other && this.Equals(other);
         }
 
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            hash = hash * 31 + ID.GetHashCode();
+            hash = hash * 31 + Assembly.GetHashCode();
+            hash = hash * 31 + Name.GetHashCode();
+            hash = hash * 31 + Parameters.GetHashCode();
+            hash = hash * 31 + Aliases.GetHashCode();
+            return hash;
+        }
+
         private bool Equals(ManifestAction other)
         {
             return this.ID == other.ID && this.Assembly == other.Assembly && this.Name == other.Name && this.Parameters.SequenceEqual(other.Parameters) && this.Aliases.SequenceEqual(other.Aliases);
