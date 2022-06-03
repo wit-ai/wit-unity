@@ -25,7 +25,7 @@ namespace Facebook.WitAi
         /// <param name="witResponse">The parsed response</param>
         /// <param name="onResponse">The response data callback that returns a WitResponseNode & a boolean representing whether it is a final response</param>
         /// <param name="onTranscription">The transcription string callback that returns text & a boolean representing whether it is a final transcription</param>
-        public static bool HandleResponse(this WitResponseNode witResponse, Action<WitResponseNode, bool> onResponse, Action<string, bool> onTranscription)
+        public static bool HandleResponse(this WitResponseNode witResponse, Action<string, bool> onTranscription, Action<WitResponseNode, bool> onResponse)
         {
             // Failed if null
             if (witResponse == null)

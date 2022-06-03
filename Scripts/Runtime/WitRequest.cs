@@ -663,6 +663,13 @@ namespace Facebook.WitAi
             // Send final response if have not yet
             if (!sentResponse)
             {
+                // Final transcription
+                string transcription = responseData.GetTranscription();
+                if (!string.IsNullOrEmpty(transcription))
+                {
+                    MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
+                }
+                // Final response
                 SafeInvoke(onResponse);
             }
 
@@ -676,7 +683,19 @@ namespace Facebook.WitAi
             responseData = WitResponseJson.Parse(stringResponse);
 
             // Handle responses
-            bool isFinal = responseData.HandleResponse((response, final) =>
+            bool isFinal = responseData.HandleResponse((transcription, final) =>
+            {
+                // Call partial transcription
+                if (!final)
+                {
+                    MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
+                }
+                // Call full transcription
+                else
+                {
+                    MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
+                }
+            }, (response, final) =>
             {
                 // Call partial response
                 SafeInvoke(onPartialResponse);
@@ -684,14 +703,6 @@ namespace Facebook.WitAi
                 if (final)
                 {
                     SafeInvoke(onResponse);
-                }
-            },
-            (transcription, final) =>
-            {
-                // Call partial transcription
-                if (!final)
-                {
-                    MainThreadCallback(() => onPartialTranscription?.Invoke(transcription));
                 }
             });
 
