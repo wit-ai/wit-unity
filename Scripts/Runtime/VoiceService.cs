@@ -33,11 +33,6 @@ namespace Facebook.WitAi
 
         private readonly IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
 
-        /// <summary>
-        /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
-        /// </summary>
-        private readonly IConduitDispatcher conduitDispatcher;
-
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
         public VoiceEvents events = new VoiceEvents();
 
@@ -45,6 +40,11 @@ namespace Facebook.WitAi
         /// Returns true if this voice service is currently active and listening with the mic
         /// </summary>
         public abstract bool Active { get; }
+
+        /// <summary>
+        /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
+        /// </summary>
+        internal IConduitDispatcher ConduitDispatcher { get; set; }
 
         /// <summary>
         /// Returns true if the service is actively communicating with Wit.ai during an Activation. The mic may or may not still be active while this is true.
@@ -79,7 +79,7 @@ namespace Facebook.WitAi
         protected VoiceService()
         {
             var conduitDispatcherFactory = new ConduitDispatcherFactory(this, this.conduitParameterProvider);
-            this.conduitDispatcher = conduitDispatcherFactory.GetDispatcher();
+            ConduitDispatcher = conduitDispatcherFactory.GetDispatcher();
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace Facebook.WitAi
             if (UseConduit)
             {
 
-                this.conduitDispatcher.Initialize(_witConfiguration.manifestPath);
+                ConduitDispatcher.Initialize(_witConfiguration.manifestPath);
             }
 
             VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
@@ -201,7 +201,7 @@ namespace Facebook.WitAi
 
                 parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
 
-                if (!this.conduitDispatcher.InvokeAction(intent.name, parameters))
+                if (!ConduitDispatcher.InvokeAction(intent.name, parameters))
                 {
                     Debug.Log($"Failed to dispatch intent {intent.name}");
                 }
