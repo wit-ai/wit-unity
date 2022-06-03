@@ -35,16 +35,14 @@ namespace Facebook.WitAi
 
             // Decode transcription
             string transcription = witResponse.GetTranscription();
-            if (string.IsNullOrEmpty(transcription))
-            {
-                return false;
-            }
 
-            // Partial Transcription
-            string[] childNames = witResponse.AsObject.ChildNodeNames;
-            if (childNames.Length == 1)
+            // Partial Transcription has no intents
+            if (!witResponse.AsObject.HasChild("intents"))
             {
-                onTranscription?.Invoke(transcription, false);
+                if (!string.IsNullOrEmpty(transcription))
+                {
+                    onTranscription?.Invoke(transcription, false);
+                }
                 return false;
             }
 
@@ -52,7 +50,10 @@ namespace Facebook.WitAi
             bool final = witResponse.GetIsFinal();
             if (final)
             {
-                onTranscription?.Invoke(witResponse, true);
+                if (!string.IsNullOrEmpty(transcription))
+                {
+                    onTranscription?.Invoke(transcription, true);
+                }
                 onResponse?.Invoke(witResponse, true);
                 return true;
             }

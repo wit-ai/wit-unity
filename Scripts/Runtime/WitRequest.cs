@@ -679,12 +679,9 @@ namespace Facebook.WitAi
             bool isFinal = responseData.HandleResponse((response, final) =>
             {
                 // Call partial response
-                if (!final)
-                {
-                    SafeInvoke(onPartialResponse);
-                }
+                SafeInvoke(onPartialResponse);
                 // Call final response
-                else
+                if (final)
                 {
                     SafeInvoke(onResponse);
                 }
