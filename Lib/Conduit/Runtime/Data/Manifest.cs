@@ -99,10 +99,21 @@ namespace Meta.Conduit
                     continue;
                 }
                 
+                var attributes = targetMethod.GetCustomAttributes(typeof(ConduitActionAttribute), false);
+                if (attributes.Length == 0) 
+                {
+                    Debug.LogError($"{targetMethod} - Did not have expected Conduit attribute");
+                    resolvedAll = false;
+                    continue;
+                }
+                var actionAttribute = attributes.First() as ConduitActionAttribute;
+                    
                 var invocationContext = new InvocationContext()
                 {
                     Type = targetType,
-                    MethodInfo = targetMethod
+                    MethodInfo = targetMethod,
+                    MinConfidence = actionAttribute.MinConfidence,
+                    MaxConfidence = actionAttribute.MaxConfidence
                 };
                     
                 if (!this.methodLookup.ContainsKey(action.Name))

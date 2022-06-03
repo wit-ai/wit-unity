@@ -10,6 +10,10 @@ using System.Collections.Generic;
 
 namespace Meta.Conduit
 {
+    /// <summary>
+    /// The dispatcher is responsible for deciding which method to invoke when a request is received as well as parsing
+    /// the parameters and passing them to the handling method.
+    /// </summary>
     internal interface IConduitDispatcher
     {
         /// <summary>
@@ -24,6 +28,7 @@ namespace Meta.Conduit
         /// </summary>
         /// <param name="actionId">The action ID (which is also the intent name).</param>
         /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
-        bool InvokeAction(string actionId, Dictionary<string, object> parameters);
+        /// <param name="confidence">The confidence level (between 0-1) of the intent that's invoking the action.</param>
+        bool InvokeAction(string actionId, Dictionary<string, object> parameters, float confidence = 1f);
     }
 }

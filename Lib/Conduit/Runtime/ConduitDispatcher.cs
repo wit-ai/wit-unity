@@ -77,12 +77,12 @@ namespace Meta.Conduit
             }
         }
 
-        private List<InvocationContext> ResolveInvocationContexts(string actionId, Dictionary<string, object> actualParameters)
+        private List<InvocationContext> ResolveInvocationContexts(string actionId, float confidence)
         {
             var invocationContexts = manifest.GetInvocationContexts(actionId);
 
-            // We have multiple overloads, find the correct match.
-            return invocationContexts.Where(this.CompatibleInvocationContext).ToList();
+            // We may have multiple overloads, find the correct match.
+            return invocationContexts.Where(context=>this.CompatibleInvocationContext(context, confidence)).ToList();
         }
 
         /// <summary>
@@ -90,23 +90,31 @@ namespace Meta.Conduit
         /// is supplying. False otherwise.
         /// </summary>
         /// <param name="invocationContext">The invocation context.</param>
+        /// <param name="confidence">The intent confidence level.</param>
         /// <returns>True if the invocation can be made with the actual parameters. False otherwise.</returns>
-        private bool CompatibleInvocationContext(InvocationContext invocationContext)
+        private bool CompatibleInvocationContext(InvocationContext invocationContext, float confidence)
         {
             var parameters = invocationContext.MethodInfo.GetParameters();
 
-            return parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter));
+            if (invocationContext.MinConfidence > confidence || confidence > invocationContext.MaxConfidence)
+            {
+                return false;
+            }
+            else
+            {
+                return parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter));
+            }
         }
-
-
+        
         /// <summary>
         /// Invokes the method matching the specified action ID.
         /// This should NOT be called before the dispatcher is initialized.
         /// </summary>
         /// <param name="actionId">The action ID (which is also the intent name).</param>
-        /// <param name="actualParameters">Dictionary of parameters mapping parameter name to value.</param>
+        /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
+        /// <param name="confidence">The confidence level (between 0-1) of the intent that's invoking the action.</param>
         /// <returns>True if all invocations succeeded. False if at least one failed or no callbacks were found.</returns>
-        public bool InvokeAction(string actionId, Dictionary<string, object> actualParameters)
+        public bool InvokeAction(string actionId, Dictionary<string, object> parameters, float confidence = 1f)
         {
             if (!manifest.ContainsAction(actionId))
             {
@@ -114,9 +122,9 @@ namespace Meta.Conduit
                 return false;
             }
 
-            this.parameterProvider.Populate(actualParameters, this.parameterToRoleMap);
+            this.parameterProvider.Populate(parameters, this.parameterToRoleMap);
             
-            var invocationContexts = this.ResolveInvocationContexts(actionId, actualParameters);
+            var invocationContexts = this.ResolveInvocationContexts(actionId, confidence);
             if (invocationContexts.Count < 1)
             {
                 Debug.Log($"Failed to find execution context for {actionId}. Parameters could not be matched");

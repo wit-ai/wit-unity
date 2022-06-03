@@ -25,5 +25,15 @@ namespace Meta.Conduit
         /// The method information.
         /// </summary>
         public MethodInfo MethodInfo { get; set; }
+
+        /// <summary>
+        /// The minimum confidence necessary to invoke this method.
+        /// </summary>
+        public float MinConfidence { get; set; } = 0;
+
+        /// <summary>
+        /// The maximum confidence allowed to invoke this method.
+        /// </summary>
+        public float MaxConfidence { get; set; } = 1;
     }
 }
