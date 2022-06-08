@@ -29,7 +29,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Utilities;
 
 namespace Facebook.WitAi.Lib
 {

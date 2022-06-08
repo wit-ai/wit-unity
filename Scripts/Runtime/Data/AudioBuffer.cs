@@ -57,7 +57,21 @@ namespace Facebook.WitAi.Data
         {
             _instance = this;
             _instanceInit = true;
-            _micInput = GetComponent<IAudioInputSource>();
+            // Check this gameobject & it's children for audio input
+            _micInput = gameObject.GetComponentInChildren<IAudioInputSource>();
+            // Check all roots for Mic Input JIC
+            if (_micInput == null)
+            {
+                foreach (var root in gameObject.scene.GetRootGameObjects())
+                {
+                    _micInput = root.GetComponentInChildren<IAudioInputSource>();
+                    if (_micInput != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            // Use default mic script
             if (_micInput == null)
             {
                 _micInput = gameObject.AddComponent<Mic>();

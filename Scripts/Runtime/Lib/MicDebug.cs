@@ -71,7 +71,15 @@ namespace Facebook.WitAi.Lib
 
             // Add & create directory
             path += "/" + fileDirectory;
-            IOUtility.CreateDirectory(fileDirectory);
+            if (path.EndsWith("/"))
+            {
+                path = path.Substring(0, path.Length - 1);
+            }
+            if (!IOUtility.CreateDirectory(path))
+            {
+                Debug.LogError("MicDebug - Create Directory Failed");
+                return;
+            }
 
             // Generate file name
             DateTime now = DateTime.Now;

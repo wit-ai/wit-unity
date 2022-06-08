@@ -29,6 +29,11 @@ namespace Facebook.WitAi.Utilities
         /// <returns>Returns true if the directory exists</returns>
         public static bool CreateDirectory(string directoryPath, bool recursively = true)
         {
+            // Null
+            if (string.IsNullOrEmpty(directoryPath))
+            {
+                return false;
+            }
             // Already exists
             if (Directory.Exists(directoryPath))
             {
