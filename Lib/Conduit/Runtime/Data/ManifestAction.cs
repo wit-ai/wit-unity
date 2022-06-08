@@ -18,6 +18,12 @@ namespace Meta.Conduit
     internal class ManifestAction
     {
         /// <summary>
+        /// Called via JSON reflection, need preserver or it will be stripped on compile
+        /// </summary>
+        [UnityEngine.Scripting.Preserve]
+        public ManifestAction() { }
+
+        /// <summary>
         /// This is the internal fully qualified name of the method in the codebase.
         /// </summary>
         public string ID { get; set; }
@@ -46,7 +52,7 @@ namespace Meta.Conduit
         /// Additional names by which the backend can refer to this action.
         /// </summary>
         public List<string> Aliases { get; set; } = new List<string>();
-        
+
         public override bool Equals(object obj)
         {
             return obj is ManifestAction other && this.Equals(other);

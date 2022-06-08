@@ -7,13 +7,12 @@
  */
 
 using System;
+using System.IO;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
 using UnityEngine;
-using UnityEngine.Serialization;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -56,7 +55,28 @@ namespace Facebook.WitAi.Data.Configuration
         /// <summary>
         /// The path to the Conduit manifest.
         /// </summary>
-        [SerializeField] public string manifestPath;
+        [SerializeField] public string manifestLocalPath;
+
+        #if UNITY_EDITOR
+        // Manifest editor path
+        public string ManifestEditorPath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_manifestFullPath) || !File.Exists(_manifestFullPath))
+                {
+                    string lookup = Path.GetFileNameWithoutExtension(manifestLocalPath);
+                    string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
+                    if (guids != null && guids.Length > 0)
+                    {
+                        _manifestFullPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                    }
+                }
+                return _manifestFullPath;
+            }
+        }
+        private string _manifestFullPath;
+        #endif
 
         /// <summary>
         /// When true, Conduit will automatically generate manifests each time code changes.
@@ -79,10 +99,9 @@ namespace Facebook.WitAi.Data.Configuration
                 EditorUtility.SetDirty(this);
             }
 
-            if (string.IsNullOrEmpty(manifestPath))
+            if (string.IsNullOrEmpty(manifestLocalPath))
             {
-                manifestPath =
-                    $"{UnityEngine.Application.dataPath}/Oculus/Voice/Resources/ConduitManifest-{Guid.NewGuid()}.json";
+                manifestLocalPath = $"ConduitManifest-{Guid.NewGuid()}.json";
                 EditorUtility.SetDirty(this);
             }
 

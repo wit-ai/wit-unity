@@ -17,7 +17,11 @@ namespace Meta.Conduit
     /// </summary>
     internal class ManifestParameter
     {
-        private string name;
+        /// <summary>
+        /// Called via JSON reflection, need preserver or it will be stripped on compile
+        /// </summary>
+        [UnityEngine.Scripting.Preserve]
+        public ManifestParameter() { }
 
         /// <summary>
         /// This is the parameter name as exposed to the backend (slot or role)
@@ -27,6 +31,7 @@ namespace Meta.Conduit
             get => name;
             set => name = ConduitUtilities.DelimitWithUnderscores(value).ToLower();
         }
+        private string name;
 
         /// <summary>
         /// This is the technical name of the parameter in the actual method in codebase.
@@ -51,10 +56,10 @@ namespace Meta.Conduit
                     return string.Empty;
                 }
                 var entityName = QualifiedTypeName.Substring(lastPeriod + 1);
-                
+
                 // Identify whether it's a nested type
                 var lastPlus = entityName.LastIndexOf('+');
-                
+
                 if (lastPlus < 0)
                 {
                     return entityName;
@@ -63,12 +68,12 @@ namespace Meta.Conduit
                 return entityName.Substring(lastPlus + 1);
             }
         }
-        
+
         /// <summary>
         /// The assembly containing the data type.
         /// </summary>
         public string TypeAssembly { get; set; }
-                
+
         /// <summary>
         /// The fully qualified name of the parameter data type.
         /// </summary>

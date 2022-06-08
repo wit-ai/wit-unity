@@ -15,22 +15,26 @@ namespace Meta.Conduit
     /// <summary>
     /// Loads the manifest and resolves its actions so they can be used during dispatching.
     /// </summary>
-    internal class ManifestLoader : IManifestLoader
+    class ManifestLoader : IManifestLoader
     {
         /// <summary>
         /// Loads the manifest from file and into a <see cref="Manifest"/> structure.
         /// </summary>
         /// <param name="filePath">The path to the manifest file.</param>
         /// <returns>The loaded manifest object.</returns>
-        public Manifest LoadManifest(string filePath)
+        public Manifest LoadManifest(string manifestLocalPath)
         {
-            Debug.Log($"Loading Conduit manifest from {filePath}");
-            string rawJson;
-            using (var reader = new StreamReader(filePath))
+            Debug.Log($"Loaded Conduit manifest from Resources/{manifestLocalPath}");
+            int extIndex = manifestLocalPath.LastIndexOf('.');
+            string ignoreEnd = extIndex == -1 ? manifestLocalPath : manifestLocalPath.Substring(0, extIndex);
+            TextAsset jsonFile = Resources.Load<TextAsset>(ignoreEnd);
+            if (jsonFile == null)
             {
-                rawJson = reader.ReadToEnd();
+                Debug.LogError($"Conduit Error - No Manifest found at Resources/{manifestLocalPath}");
+                return null;
             }
 
+            string rawJson = jsonFile.text;
             var manifest = JsonMapper.ToObject<Manifest>(rawJson);
             manifest.ResolveActions();
 

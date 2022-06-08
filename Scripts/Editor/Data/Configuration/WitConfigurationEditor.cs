@@ -11,6 +11,7 @@ using System.IO;
 using Meta.Conduit;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
+using Facebook.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -92,7 +93,8 @@ namespace Facebook.WitAi.Windows
 
         private void LayoutConduitContent()
         {
-            manifestAvailable = File.Exists(configuration.manifestPath);
+            string manifestPath = configuration.ManifestEditorPath;
+            manifestAvailable = File.Exists(manifestPath);
 
             var useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit (Beta)"));
             if (configuration.useConduit != useConduit)
@@ -104,15 +106,27 @@ namespace Facebook.WitAi.Windows
             EditorGUI.BeginDisabledGroup(!configuration.useConduit);
             {
                 GUILayout.BeginHorizontal();
+                EditorGUI.indentLevel++;
+                GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
                 {
-                    if (GUILayout.Button("Generate Manifest"))
+                    if (manifestAvailable)
                     {
-                        GenerateManifest(configuration, configuration.openManifestOnGeneration);
+                        if (WitEditorUI.LayoutTextButton("Select Manifest"))
+                        {
+                            Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
+                        }
                     }
-
-                    configuration.autoGenerateManifest =
-                        (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
+                    else
+                    {
+                        if (WitEditorUI.LayoutTextButton("Generate Manifest"))
+                        {
+                            GenerateManifest(configuration, configuration.openManifestOnGeneration);
+                        }
+                    }
+                    GUILayout.Space(WitStyles.ButtonMargin);
+                    configuration.autoGenerateManifest = (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
                 }
+                EditorGUI.indentLevel--;
                 GUILayout.EndHorizontal();
             }
             EditorGUI.EndDisabledGroup();
@@ -392,17 +406,24 @@ namespace Facebook.WitAi.Windows
                 configuration.application.id);
 
             var endGenerationTime = DateTime.UtcNow;
-            Directory.CreateDirectory(Path.GetDirectoryName(configuration.manifestPath));
-            var writer = new StreamWriter(configuration.manifestPath);
+
+            // Generate resource directory
+            string resourcesDirectory = Application.dataPath + "/Oculus/Voice/Resources";
+            IOUtility.CreateDirectory(resourcesDirectory, true);
+
+            // Get full path
+            string fullPath = resourcesDirectory + "/" + configuration.manifestLocalPath;
+            var writer = new StreamWriter(fullPath);
             writer.WriteLine(manifest);
             writer.Close();
             var generationTime = endGenerationTime - startGenerationTime;
+            AssetDatabase.ImportAsset(fullPath.Replace(Application.dataPath, "Assets"));
 
             Debug.Log($"Done generating manifest. Total time: {generationTime.TotalMilliseconds} ms");
 
             if (openManifest)
             {
-                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(configuration.manifestPath, 1);
+                UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(fullPath, 1);
             }
         }
     }

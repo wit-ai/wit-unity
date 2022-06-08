@@ -21,6 +21,12 @@ namespace Meta.Conduit
     internal class Manifest
     {
         /// <summary>
+        /// Called via JSON reflection, need preserver or it will be stripped on compile
+        /// </summary>
+        [UnityEngine.Scripting.Preserve]
+        public Manifest() { }
+
+        /// <summary>
         /// The App ID.
         /// </summary>
         public string ID { get; set; }
@@ -52,7 +58,7 @@ namespace Meta.Conduit
         /// </summary>
         private readonly Dictionary<string, List<InvocationContext>> methodLookup =
             new Dictionary<string, List<InvocationContext>>(StringComparer.OrdinalIgnoreCase);
-        
+
         /// <summary>
         /// Processes all actions in the manifest and associate them with the methods they should invoke.
         /// </summary>
@@ -68,11 +74,11 @@ namespace Meta.Conduit
                     resolvedAll = false;
                     continue;
                 }
-                
+
                 var typeName = action.ID.Substring(0, lastPeriod);
                 var qualifiedTypeName = $"{typeName},{action.Assembly}";
                 var method = action.ID.Substring(lastPeriod + 1);
-  
+
                 var targetType = Type.GetType(qualifiedTypeName);
                 if (targetType == null)
                 {
@@ -98,16 +104,16 @@ namespace Meta.Conduit
                     resolvedAll = false;
                     continue;
                 }
-                
+
                 var attributes = targetMethod.GetCustomAttributes(typeof(ConduitActionAttribute), false);
-                if (attributes.Length == 0) 
+                if (attributes.Length == 0)
                 {
                     Debug.LogError($"{targetMethod} - Did not have expected Conduit attribute");
                     resolvedAll = false;
                     continue;
                 }
                 var actionAttribute = attributes.First() as ConduitActionAttribute;
-                    
+
                 var invocationContext = new InvocationContext()
                 {
                     Type = targetType,
@@ -115,15 +121,15 @@ namespace Meta.Conduit
                     MinConfidence = actionAttribute.MinConfidence,
                     MaxConfidence = actionAttribute.MaxConfidence
                 };
-                    
+
                 if (!this.methodLookup.ContainsKey(action.Name))
                 {
                     this.methodLookup.Add(action.Name, new List<InvocationContext>());
                 }
-                    
+
                 this.methodLookup[action.Name].Add(invocationContext);
             }
-            
+
             foreach (var invocationContext in this.methodLookup.Values.Where(invocationContext =>
                          invocationContext.Count > 1))
             {
@@ -144,7 +150,7 @@ namespace Meta.Conduit
         {
             return this.methodLookup.ContainsKey(action);
         }
-        
+
         /// <summary>
         /// Returns the invocation context for the specified action ID.
         /// </summary>

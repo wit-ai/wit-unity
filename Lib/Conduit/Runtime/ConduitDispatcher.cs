@@ -35,7 +35,7 @@ namespace Meta.Conduit
         private readonly IInstanceResolver instanceResolver;
 
         /// <summary>
-        /// Resolves the actual parameters for method invocations. 
+        /// Resolves the actual parameters for method invocations.
         /// </summary>
         private readonly IParameterProvider parameterProvider;
 
@@ -61,9 +61,13 @@ namespace Meta.Conduit
             {
                 return;
             }
-            
+
             manifest = this.manifestLoader.LoadManifest(manifestFilePath);
-            
+            if (manifest == null)
+            {
+                return;
+            }
+
             // Map fully qualified role names to internal parameters.
             foreach (var action in manifest.Actions)
             {
@@ -71,7 +75,7 @@ namespace Meta.Conduit
                 {
                     if (!parameterToRoleMap.ContainsKey(parameter.InternalName))
                     {
-                        parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);    
+                        parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);
                     }
                 }
             }
@@ -105,7 +109,7 @@ namespace Meta.Conduit
                 return parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter));
             }
         }
-        
+
         /// <summary>
         /// Invokes the method matching the specified action ID.
         /// This should NOT be called before the dispatcher is initialized.
@@ -123,7 +127,7 @@ namespace Meta.Conduit
             }
 
             this.parameterProvider.Populate(parameters, this.parameterToRoleMap);
-            
+
             var invocationContexts = this.ResolveInvocationContexts(actionId, confidence);
             if (invocationContexts.Count < 1)
             {
@@ -184,7 +188,7 @@ namespace Meta.Conduit
                     Debug.LogError($"Failed to invoke static method {method.Name}. {e}");
                     return false;
                 }
-                
+
                 return true;
             }
             else

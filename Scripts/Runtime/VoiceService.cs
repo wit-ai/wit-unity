@@ -139,7 +139,7 @@ namespace Facebook.WitAi
         protected virtual void Awake()
         {
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            _witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
+            _witConfiguration = witConfigProvider?.RuntimeConfiguration?.witConfiguration;
 
             if (!UseConduit)
             {
@@ -151,8 +151,7 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-
-                ConduitDispatcher.Initialize(_witConfiguration.manifestPath);
+                ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
             }
 
             VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
