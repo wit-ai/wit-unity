@@ -34,12 +34,12 @@ namespace Meta.Conduit
         /// Mines assemblies for callback methods and entities.
         /// </summary>
         private readonly IAssemblyMiner _assemblyMiner;
-        
+
         /// <summary>
         /// The manifest version. This would only change if the schema of the manifest changes.
         /// </summary>
         private const string CurrentVersion = "0.1";
-
+        
         internal ManifestGenerator(IAssemblyWalker assemblyWalker, IAssemblyMiner assemblyMiner)
         {
             this._assemblyWalker = assemblyWalker;
@@ -70,6 +70,7 @@ namespace Meta.Conduit
 
             var entities = new List<ManifestEntity>();
             var actions = new List<ManifestAction>();
+            _assemblyMiner.Initialize();
             foreach (var assembly in assemblies)
             {
                 entities.AddRange(this._assemblyMiner.ExtractEntities(assembly));

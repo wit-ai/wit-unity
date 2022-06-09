@@ -397,39 +397,40 @@ namespace Facebook.WitAi
 
             // Begin Header
             GUILayout.BeginVertical();
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(WitStyles.WindowPaddingLeft);
-            GUILayout.BeginVertical();
-            GUILayout.Space(WitStyles.WindowPaddingTop);
-            // Layout header image
-            if (windowHeader != null)
-            {
-                LayoutHeaderButton(windowHeader, windowHeaderUrl);
-            }
-            // Layout header label
-            if (!string.IsNullOrEmpty(windowTitle))
-            {
-                LayoutHeaderLabel(windowTitle);
-            }
-            // End Header
+                GUILayout.BeginHorizontal();
+                    GUILayout.Space(WitStyles.WindowPaddingLeft);
+                    GUILayout.BeginVertical();
+                        GUILayout.Space(WitStyles.WindowPaddingTop);
+                        // Layout header image
+                        if (windowHeader != null)
+                        {
+                            LayoutHeaderButton(windowHeader, windowHeaderUrl);
+                        }
+                        // Layout header label
+                        if (!string.IsNullOrEmpty(windowTitle))
+                        {
+                            LayoutHeaderLabel(windowTitle);
+                        }
+                        // End Header
+                    GUILayout.EndVertical();
+                    GUILayout.Space(WitStyles.WindowPaddingRight);
+                GUILayout.EndHorizontal();
             GUILayout.EndVertical();
-            GUILayout.Space(WitStyles.WindowPaddingRight);
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
+
             // Begin Content
             GUILayout.BeginVertical();
-            offset = GUILayout.BeginScrollView(offset);
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(WitStyles.WindowPaddingLeft);
-            GUILayout.BeginVertical(GUILayout.MinWidth(minWidth), GUILayout.MaxWidth(WitStyles.WindowMaxSize));
-            // Layout content
-            windowContentLayout?.Invoke();
-            // End Content
-            GUILayout.EndVertical();
-            GUILayout.Space(WitStyles.WindowPaddingRight);
-            GUILayout.EndHorizontal();
-            GUILayout.Space(WitStyles.WindowPaddingBottom);
-            GUILayout.EndScrollView();
+                offset = GUILayout.BeginScrollView(offset);
+                    GUILayout.BeginHorizontal();
+                        GUILayout.Space(WitStyles.WindowPaddingLeft);
+                        GUILayout.BeginVertical(GUILayout.MinWidth(minWidth), GUILayout.MaxWidth(WitStyles.WindowMaxSize));
+                            // Layout content
+                            windowContentLayout?.Invoke();
+                            // End Content
+                        GUILayout.EndVertical();
+                        GUILayout.Space(WitStyles.WindowPaddingRight);
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(WitStyles.WindowPaddingBottom);
+                GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
             // Return size

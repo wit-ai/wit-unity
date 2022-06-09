@@ -36,7 +36,14 @@ namespace Meta.Conduit
 
             string rawJson = jsonFile.text;
             var manifest = JsonMapper.ToObject<Manifest>(rawJson);
-            manifest.ResolveActions();
+            if (manifest.ResolveActions())
+            {
+                Debug.Log($"Successfully Loaded Conduit manifest");
+            }
+            else
+            {
+                Debug.LogError($"Fail to resolve actions from Conduit manifest");
+            }
 
             return manifest;
         }

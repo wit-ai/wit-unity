@@ -9,6 +9,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -22,7 +24,18 @@ namespace Meta.Conduit
         /// Validates that parameters are compatible. 
         /// </summary>
         private readonly IParameterValidator _parameterValidator;
+
+        /// <summary>
+        /// Set to true once the miner is initialized. No interactions with the class should be allowed before then.
+        /// </summary>
+        private bool _initialized = false;
         
+        /// <inheritdoc/>
+        public Dictionary<string, int> SignatureFrequency { get; private set; } = new Dictionary<string, int>();
+        
+        /// <inheritdoc/>
+        public Dictionary<string, int> IncompatibleSignatureFrequency { get; private set; } = new Dictionary<string, int>();
+
         /// <summary>
         /// Initializes the class with a target assembly.
         /// </summary>
@@ -32,14 +45,22 @@ namespace Meta.Conduit
             this._parameterValidator = parameterValidator;
         }
 
-        /// <summary>
-        /// Extracts all entities from the assembly. Entities represent the types used as parameters (such as Enums) of
-        /// our methods.
-        /// </summary>
-        /// <param name="assembly">The assembly to process.</param>
-        /// <returns>The list of entities extracted.</returns>
+        /// <inheritdoc/>
+        public void Initialize()
+        {
+            SignatureFrequency = new Dictionary<string, int>();
+            IncompatibleSignatureFrequency = new Dictionary<string, int>();
+            _initialized = true;
+        }
+
+        /// <inheritdoc/>
         public List<ManifestEntity> ExtractEntities(IConduitAssembly assembly)
         {
+            if (!_initialized)
+            {
+                throw new InvalidOperationException("Assembly Miner not initialized");
+            }
+            
             var entities = new List<ManifestEntity>();
 
             var enums = assembly.GetEnumTypes();
@@ -87,13 +108,14 @@ namespace Meta.Conduit
             return entities;
         }
         
-        /// <summary>
-        /// This method extracts all the marked actions (methods) in the specified assembly.
-        /// </summary>
-        /// <param name="assembly">The assembly to process.</param>
-        /// <returns>List of actions extracted.</returns>
+        /// <inheritdoc/>
         public List<ManifestAction> ExtractActions(IConduitAssembly assembly)
         {
+            if (!_initialized)
+            {
+                throw new InvalidOperationException("Assembly Miner not initialized");
+            }
+            
             var methods = assembly.GetMethods();
 
             var actions = new List<ManifestAction>();
@@ -123,9 +145,16 @@ namespace Meta.Conduit
                 };
 
                 var compatibleParameters = true;
+
+                var signature = GetMethodSignature(method);
+                
+                // We track this first regardless of whether or not Conduit supports it to identify gaps.
+                SignatureFrequency.TryGetValue(signature, out var currentFrequency); 
+                SignatureFrequency[signature] = currentFrequency + 1;
+
                 foreach (var parameter in method.GetParameters())
                 {
-                    var supported = this._parameterValidator.IsSupportedParameterType(parameter.ParameterType);
+                    var supported = _parameterValidator.IsSupportedParameterType(parameter.ParameterType);
 
                     if (!supported)
                     {
@@ -171,10 +200,57 @@ namespace Meta.Conduit
                 else
                 {
                     Debug.Log($"{method} has Conduit-incompatible parameters");
+                    IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency); 
+                    IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
                 }
             }
 
             return actions;
+        }
+
+        /// <summary>
+        /// Generate a method signature summary that ignores method and parameter names but keeps types.
+        /// For example:
+        /// string F(int a, int b, float c) => string!int:2,float:1
+        /// static string F(int a, int b, float c) => #string!int:2,float:1  
+        /// </summary>
+        /// <param name="methodInfo">The method we are capturing.</param>
+        /// <returns>A string representing the relevant data types.</returns>
+        private string GetMethodSignature(MethodInfo methodInfo)
+        {
+            var sb = new StringBuilder();
+            if (methodInfo.IsStatic)
+            {
+                sb.Append('#');
+            }
+            
+            sb.Append(methodInfo.ReturnType);
+            sb.Append('!');
+            var parameters = new SortedDictionary<string, int>();
+            foreach (var parameter in methodInfo.GetParameters())
+            {
+                parameters.TryGetValue(parameter.ParameterType.Name, out var currentFrequency); 
+                parameters[parameter.ParameterType.Name] = currentFrequency + 1;
+            }
+
+            var first = true;
+            foreach (var parameter in parameters)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sb.Append(',');
+                }
+                
+                sb.Append(parameter.Key);
+                sb.Append(':');
+                sb.Append(parameter.Value);
+            }
+
+            return sb.ToString();
         }
     }
 }

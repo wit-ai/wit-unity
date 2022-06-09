@@ -24,7 +24,7 @@ namespace Facebook.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private bool UseConduit => _witConfiguration.useConduit;
+        private bool UseConduit => (_witConfiguration!= null) && _witConfiguration.useConduit;
 
         /// <summary>
         /// The wit configuration.
