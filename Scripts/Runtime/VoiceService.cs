@@ -24,7 +24,7 @@ namespace Facebook.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private bool UseConduit => (_witConfiguration!= null) && _witConfiguration.useConduit;
+        private bool UseConduit => _witConfiguration && _witConfiguration.useConduit;
 
         /// <summary>
         /// The wit configuration.
@@ -139,7 +139,7 @@ namespace Facebook.WitAi
         protected virtual void Awake()
         {
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            _witConfiguration = witConfigProvider?.RuntimeConfiguration?.witConfiguration;
+            _witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
 
             if (!UseConduit)
             {
@@ -151,14 +151,10 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-                ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
+
+                ConduitDispatcher.Initialize(_witConfiguration.manifestPath);
             }
 
-            AddEvents();
-        }
-
-        protected void AddEvents()
-        {
             VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
             VoiceEvents.OnResponse.AddListener(OnResponse);
         }
