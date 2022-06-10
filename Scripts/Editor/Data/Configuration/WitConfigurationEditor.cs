@@ -40,8 +40,19 @@ namespace Facebook.WitAi.Windows
         protected const string TAB_TRAITS_ID = "traits";
         private string[] _tabIds = new string[] { TAB_APPLICATION_ID, TAB_INTENTS_ID, TAB_ENTITIES_ID, TAB_TRAITS_ID };
 
+        // Generate
+        private static ConduitStatistics Statistics
+        {
+            get
+            {
+                if (_statistics == null)
+                {
+                    _statistics = new ConduitStatistics(new PersistenceLayer());
+                }
+                return _statistics;
+            }
+        }
 
-        private static ConduitStatistics Statistics => _statistics ??= new ConduitStatistics(new PersistenceLayer());
         public virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
         public virtual string HeaderUrl => WitTexts.GetAppURL(WitConfigurationUtility.GetAppID(configuration), WitTexts.WitAppEndpointType.Settings);
         public virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
