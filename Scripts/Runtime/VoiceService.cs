@@ -154,6 +154,11 @@ namespace Facebook.WitAi
                 ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
             }
 
+            AddEvents();
+        }
+
+        protected void AddEvents()
+        {
             VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
             VoiceEvents.OnResponse.AddListener(OnResponse);
         }
