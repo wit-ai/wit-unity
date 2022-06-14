@@ -9,7 +9,7 @@
 using System;
 using System.Collections.Generic;
 using Facebook.WitAi.Lib;
-using Meta.Conduit;
+using Meta.Conduit.Editor;
 
 namespace Facebook.WitAi.Windows
 {

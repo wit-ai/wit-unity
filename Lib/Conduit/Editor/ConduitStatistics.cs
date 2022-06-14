@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using Meta.Wit.LitJson;
 using UnityEngine;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Aggregates and persists Conduit statistics.

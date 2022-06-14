@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Validates whether a parameter type is supported or not.

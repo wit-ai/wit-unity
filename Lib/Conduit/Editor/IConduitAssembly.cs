@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Wrapper for assemblies to provide convenience methods and abstract from CLR.

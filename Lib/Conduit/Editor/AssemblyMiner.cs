@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Mines assemblies for callback methods and entities.

@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Wraps an assembly and provides access to Conduit-relevant details.

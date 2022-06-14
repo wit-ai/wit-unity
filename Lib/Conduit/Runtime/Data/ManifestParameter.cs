@@ -89,6 +89,18 @@ namespace Meta.Conduit
             return obj is ManifestParameter other && this.Equals(other);
         }
 
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            hash = hash * 31 + name.GetHashCode();
+            hash = hash * 31 + InternalName.GetHashCode();
+            hash = hash * 31 + QualifiedName.GetHashCode();
+            hash = hash * 31 + TypeAssembly.GetHashCode();
+            hash = hash * 31 + QualifiedTypeName.GetHashCode();
+            hash = hash * 31 + Aliases.GetHashCode();
+            return hash;
+        }
+
         private bool Equals(ManifestParameter other)
         {
             return Equals(this.InternalName, other.InternalName) && Equals(this.QualifiedName, other.QualifiedName) &&

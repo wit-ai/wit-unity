@@ -8,7 +8,7 @@
 
 using System.Collections.Generic;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     internal interface IAssemblyWalker
     {

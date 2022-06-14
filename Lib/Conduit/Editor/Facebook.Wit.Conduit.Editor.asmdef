@@ -5,7 +5,9 @@
         "Facebook.Wit.Conduit",
         "LitJson"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

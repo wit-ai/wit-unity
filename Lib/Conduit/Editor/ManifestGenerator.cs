@@ -10,7 +10,7 @@
 using System.Text;
 using Meta.Wit.LitJson;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     using System;
     using System.Collections.Generic;

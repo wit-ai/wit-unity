@@ -42,6 +42,16 @@ namespace Meta.Conduit
             return obj is ManifestEntity other && this.Equals(other);
         }
 
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            hash = hash * 31 + ID.GetHashCode();
+            hash = hash * 31 + Type.GetHashCode();
+            hash = hash * 31 + Name.GetHashCode();
+            hash = hash * 31 + Values.GetHashCode();
+            return hash;
+        }
+
         private bool Equals(ManifestEntity other)
         {
             return ID == other.ID && Type == other.Type && Name == other.Name &&

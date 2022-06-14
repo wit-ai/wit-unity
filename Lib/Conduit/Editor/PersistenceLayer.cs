@@ -8,7 +8,7 @@
 
 using UnityEditor;
 
-namespace Meta.Conduit
+namespace Meta.Conduit.Editor
 {
     /// <inheritdoc/>
     internal class PersistenceLayer : IPersistenceLayer
