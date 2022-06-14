@@ -17,7 +17,7 @@ namespace Meta.Conduit
     internal interface IParameterProvider
     {
         /// <summary>
-        /// Must be called after all parameters have been obtained and mapped but before any are extracted.
+        /// Must be called after all parameters have been obtained and mapped but before any are read.
         /// </summary>
         void Populate(Dictionary<string, object> actualParameters, Dictionary<string, string> parameterToRoleMap);
 

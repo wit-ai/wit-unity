@@ -41,7 +41,10 @@ namespace Meta.Conduit
         /// <returns>True if a parameter with the specified name can be provided.</returns>
         public bool ContainsParameter(ParameterInfo parameter)
         {
-            return this.parameterToRoleMap.ContainsKey(parameter.Name) || this.SupportedSpecializedParameter(parameter);
+            return (ActualParameters.ContainsKey(parameter.Name) &&
+                    this.parameterToRoleMap.ContainsKey(parameter.Name) &&
+                    ActualParameters[parameter.Name].GetType() == parameter.ParameterType) ||
+                   this.SupportedSpecializedParameter(parameter);
         }
 
         /// <summary>

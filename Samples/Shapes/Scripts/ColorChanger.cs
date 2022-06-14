@@ -67,6 +67,11 @@ namespace Facebook.WitAi.Samples.Shapes
             var intent = node.GetFirstIntentData();
 
             var color = node.GetFirstWitEntity("color:color");
+            if (color == null)
+            {
+                return;
+            }
+
             if (color == "red")
             {
                 Debug.Log("The cube is red!");
@@ -81,7 +86,7 @@ namespace Facebook.WitAi.Samples.Shapes
         {
             if (color == "red")
             {
-                Debug.Log("The cube is red!");
+                Debug.Log("Red string supplied!");
             }
 
             Debug.Log($"OnHandleColorIntent was triggered via Conduit with color {color} and shape {shape}");

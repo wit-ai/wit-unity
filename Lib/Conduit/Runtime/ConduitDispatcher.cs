@@ -81,12 +81,18 @@ namespace Meta.Conduit
             }
         }
 
+        /// <summary>
+        /// Finds invocation contexts that are applicable to the given action and supplied parameter set.
+        /// </summary>
+        /// <param name="actionId">The action ID.</param>
+        /// <param name="confidence">The confidence level between 0 and 1.</param>
+        /// <returns></returns>
         private List<InvocationContext> ResolveInvocationContexts(string actionId, float confidence)
         {
             var invocationContexts = manifest.GetInvocationContexts(actionId);
 
             // We may have multiple overloads, find the correct match.
-            return invocationContexts.Where(context=>this.CompatibleInvocationContext(context, confidence)).ToList();
+            return invocationContexts.Where(context => this.CompatibleInvocationContext(context, confidence)).ToList();
         }
 
         /// <summary>
