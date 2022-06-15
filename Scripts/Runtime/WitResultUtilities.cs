@@ -67,15 +67,18 @@ namespace Facebook.WitAi
         /// Get the transcription from a wit response node
         /// </summary>
         public static string GetTranscription(this WitResponseNode witResponse) =>
-            null != witResponse && witResponse.AsObject.HasChild(WIT_KEY_TRANSCRIPTION)
-                ? witResponse[WIT_KEY_TRANSCRIPTION].Value
-                : string.Empty;
+            null != witResponse
+            && witResponse.AsObject != null
+            && witResponse.AsObject.HasChild(WIT_KEY_TRANSCRIPTION)
+            ? witResponse[WIT_KEY_TRANSCRIPTION].Value
+            : string.Empty;
 
         /// <summary>
         /// Get whether this response is a 'final' response
         /// </summary>
         public static bool GetIsFinal(this WitResponseNode witResponse) =>
             null != witResponse
+            && witResponse.AsObject != null
             && witResponse.AsObject.HasChild(WIT_KEY_FINAL)
             && witResponse[WIT_KEY_FINAL].AsBool;
 
