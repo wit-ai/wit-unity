@@ -85,6 +85,24 @@ namespace Facebook.WitAi.TTS.Integrations
         // Requests bly clip id
         private Dictionary<string, WitUnityRequest> _webStreams = new Dictionary<string, WitUnityRequest>();
 
+        // Whether TTSService is valid
+        public override string IsValid()
+        {
+            string validText = base.IsValid();
+            if (!string.IsNullOrEmpty(validText))
+            {
+                return validText;
+            }
+            if (RequestSettings.configuration == null)
+            {
+                return "No WitConfiguration Set";
+            }
+            if (string.IsNullOrEmpty(RequestSettings.configuration.clientAccessToken))
+            {
+                return "No WitConfiguration Client Token";
+            }
+            return string.Empty;
+        }
         // Ensures text can be sent to wit web service
         public string IsTextValid(string textToSpeak) => WitUnityRequest.IsTextValid(textToSpeak);
 
@@ -295,16 +313,16 @@ namespace Facebook.WitAi.TTS.Integrations
         // Returns an error if request is not valid
         private string IsRequestValid(TTSClipData clipData, WitConfiguration configuration)
         {
+            // Invalid tts
+            string valid = IsValid();
+            if (!string.IsNullOrEmpty(valid))
+            {
+                return valid;
+            }
             // Invalid clip
             if (clipData == null)
             {
                 return "No clip data provided";
-            }
-            // Invalid configuration
-            if (RequestSettings.configuration == null ||
-                string.IsNullOrEmpty(RequestSettings.configuration.clientAccessToken))
-            {
-                return "No wit configuration provided";
             }
             // Success
             return string.Empty;

@@ -12,11 +12,13 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
 using Facebook.WitAi.Utilities;
+using UnityEditor.Build;
 
 namespace Facebook.WitAi.TTS
 {
@@ -52,6 +54,20 @@ namespace Facebook.WitAi.TTS
         // Handles TTS voice presets
         public abstract ITTSVoiceProvider VoiceProvider { get; }
 
+        // Ensure valid, if not return why
+        public virtual string IsValid()
+        {
+            if (WebHandler == null)
+            {
+                return "Web Handler Missing";
+            }
+            if (VoiceProvider == null)
+            {
+                return "Voice Provider Missing";
+            }
+            return string.Empty;
+        }
+
         // Handles TTS events
         public TTSServiceEvents Events => _events;
         [Header("Event Settings")]
@@ -63,6 +79,15 @@ namespace Facebook.WitAi.TTS
             // Set instance
             _instance = this;
             _delegates = false;
+        }
+        // Log if invalid
+        protected virtual void OnEnable()
+        {
+            string validError = IsValid();
+            if (!string.IsNullOrEmpty(validError))
+            {
+                Log(validError, LogType.Error);
+            }
         }
         // Remove delegates
         protected virtual void OnDisable()
