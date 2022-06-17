@@ -201,7 +201,7 @@ namespace Facebook.WitAi
 
                 parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
 
-                if (!ConduitDispatcher.InvokeAction(intent.name, parameters))
+                if (isFinal && !ConduitDispatcher.InvokeAction(intent.name, parameters))
                 {
                     Debug.Log($"Failed to dispatch intent {intent.name}");
                 }
