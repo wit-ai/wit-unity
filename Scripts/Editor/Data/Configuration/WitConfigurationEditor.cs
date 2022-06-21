@@ -129,20 +129,18 @@ namespace Facebook.WitAi.Windows
                 EditorGUI.indentLevel++;
                 GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
                 {
-                    if (manifestAvailable)
+                    GUILayout.BeginHorizontal();
+                    if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                     {
-                        if (WitEditorUI.LayoutTextButton("Select Manifest"))
-                        {
-                            Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
-                        }
+                        GenerateManifest(configuration, configuration.openManifestOnGeneration);
                     }
-                    else
+                    GUI.enabled = manifestAvailable;
+                    if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
                     {
-                        if (WitEditorUI.LayoutTextButton("Generate Manifest"))
-                        {
-                            GenerateManifest(configuration, configuration.openManifestOnGeneration);
-                        }
+                        Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
                     }
+                    GUI.enabled = true;
+                    GUILayout.EndHorizontal();
                     GUILayout.Space(WitStyles.ButtonMargin);
                     configuration.autoGenerateManifest = (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
                 }
@@ -421,21 +419,33 @@ namespace Facebook.WitAi.Windows
         /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
         private static void GenerateManifest(WitConfiguration configuration, bool openManifest)
         {
+            // Generate
             var startGenerationTime = DateTime.UtcNow;
             var manifest = ManifestGenerator.GenerateManifest(configuration.application.name,
                 configuration.application.id);
-
             var endGenerationTime = DateTime.UtcNow;
-            // Generate resource directory
-            string resourcesDirectory = Application.dataPath + "/Oculus/Voice/Resources";
-            IOUtility.CreateDirectory(resourcesDirectory, true);
 
-            // Get full path
-            string fullPath = resourcesDirectory + "/" + configuration.manifestLocalPath;
-            var writer = new StreamWriter(fullPath);
+            // Get file path
+            string fullPath = configuration.ManifestEditorPath;
+            if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
+            {
+                string directory = Application.dataPath + "/Oculus/Voice/Resources";
+                IOUtility.CreateDirectory(directory, true);
+                fullPath = directory + "/" + configuration.manifestLocalPath;
+            }
 
-            writer.WriteLine(manifest);
-            writer.Close();
+            // Write to file
+            try
+            {
+                var writer = new StreamWriter(fullPath);
+                writer.WriteLine(manifest);
+                writer.Close();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Wit Configuration Editor - Conduit Manifest Creation Failed\nPath: {fullPath}\n{e}");
+                return;
+            }
 
             Statistics.SuccessfulGenerations++;
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);

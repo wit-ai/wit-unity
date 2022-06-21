@@ -128,7 +128,6 @@ namespace Meta.Conduit
         {
             if (!manifest.ContainsAction(actionId))
             {
-                Debug.LogError($"Failed to find action ID: {actionId}");
                 return false;
             }
 
@@ -137,7 +136,7 @@ namespace Meta.Conduit
             var invocationContexts = this.ResolveInvocationContexts(actionId, confidence);
             if (invocationContexts.Count < 1)
             {
-                Debug.Log($"Failed to find execution context for {actionId}. Parameters could not be matched");
+                Debug.LogError($"Failed to find execution context for {actionId}. Parameters could not be matched");
                 return false;
             }
 

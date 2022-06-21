@@ -195,15 +195,13 @@ namespace Facebook.WitAi
                     var parameterName = entity[0]["role"].Value;
                     var parameterValue = entity[0]["value"].Value;
                     parameters.Add(parameterName, parameterValue);
-
-                    Debug.Log($"{parameterName} = {parameterValue}");
                 }
 
                 parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
 
-                if (isFinal && !ConduitDispatcher.InvokeAction(intent.name, parameters))
+                if (isFinal)
                 {
-                    Debug.Log($"Failed to dispatch intent {intent.name}");
+                    ConduitDispatcher.InvokeAction(intent.name, parameters);
                 }
             }
             else
