@@ -36,7 +36,6 @@ namespace Facebook.WitAi.Lib
             }
             if (_micSource != null)
             {
-                Debug.Log("MicDebug - Add Mic Delegates");
                 _micSource.OnStartRecording += OnStartRecording;
                 _micSource.OnSampleReady += OnSampleReady;
                 _micSource.OnStopRecording += OnStopRecording;
@@ -47,7 +46,6 @@ namespace Facebook.WitAi.Lib
         {
             if (_micSource != null)
             {
-                Debug.Log("MicDebug - Remove Mic Delegates");
                 _micSource.OnStartRecording -= OnStartRecording;
                 _micSource.OnSampleReady -= OnSampleReady;
                 _micSource.OnStopRecording -= OnStopRecording;

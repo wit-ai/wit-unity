@@ -73,7 +73,6 @@ namespace Facebook.WitAi.Lib
         protected virtual IEnumerator ReadRawAudio(int sampleDurationMS)
         {
             // Start recording
-            Debug.Log("Mic Ref - Start Recording");
             OnStartRecording?.Invoke();
 
             // Get data
@@ -171,7 +170,6 @@ namespace Facebook.WitAi.Lib
             }
 
             // Stop recording
-            Debug.Log("Mic Ref - Stop Recording");
             OnStopRecording?.Invoke();
         }
     }
