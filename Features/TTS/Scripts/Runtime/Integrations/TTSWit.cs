@@ -307,6 +307,13 @@ namespace Facebook.WitAi.TTS.Integrations
                         parameters[field.Name] = fieldVal.ToString();
                     }
                 }
+
+                // Set default if no style is given
+                const string style = "style";
+                if (parameters.ContainsKey(style) && string.IsNullOrEmpty(parameters[style]))
+                {
+                    parameters[style] = "default";
+                }
             }
             return parameters;
         }
