@@ -37,6 +37,7 @@ namespace Facebook.WitAi
         private IWitRuntimeConfigProvider _runtimeConfigProvider;
         private ITranscriptionProvider _activeTranscriptionProvider;
         private Coroutine _timeLimitCoroutine;
+        private IWitRequestProvider _witRequestProvider;
 
         // Transcription based endpointing
         private bool _receivedTranscription;
@@ -121,6 +122,12 @@ namespace Facebook.WitAi
                         OnMicStoppedListening);
                 }
             }
+        }
+
+        public IWitRequestProvider WitRequestProvider
+        {
+            get => _witRequestProvider;
+            set => _witRequestProvider = value;
         }
 
         public bool MicActive => AudioBuffer.Instance.IsRecording(this);
@@ -223,7 +230,8 @@ namespace Facebook.WitAi
 
             if (ShouldSendMicData)
             {
-                _recordingRequest = RuntimeConfiguration.witConfiguration.SpeechRequest(requestOptions, _dynamicEntityProviders);
+                _recordingRequest = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, _dynamicEntityProviders)
+                    : RuntimeConfiguration.witConfiguration.SpeechRequest(requestOptions, _dynamicEntityProviders);
                 _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
                 _recordingRequest.onPartialTranscription = OnPartialTranscription;
                 _recordingRequest.onFullTranscription = OnFullTranscription;

@@ -82,6 +82,7 @@ namespace Facebook.WitAi
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
+        public const string WIT_ENDPOINT_DICTATION = "dictation";
         public const string WIT_ENDPOINT_ENTITIES = "entities";
         public const string WIT_ENDPOINT_INTENTS = "intents";
         public const string WIT_ENDPOINT_TRAITS = "traits";
@@ -356,7 +357,8 @@ namespace Facebook.WitAi
             }
 
             // Configure additional headers
-            if (WitEndpointConfig.GetEndpointConfig(configuration).Speech == command)
+            if (WitEndpointConfig.GetEndpointConfig(configuration).Speech == command ||
+                WitEndpointConfig.GetEndpointConfig(configuration).Dictation == command)
             {
                 _request.ContentType = audioEncoding.ToString();
                 _request.Method = "POST";
@@ -475,7 +477,8 @@ namespace Facebook.WitAi
 
         private bool RequestRequiresBody(string command)
         {
-            return command == WitEndpointConfig.GetEndpointConfig(configuration).Speech;
+            return command == WitEndpointConfig.GetEndpointConfig(configuration).Speech ||
+                   command == WitEndpointConfig.GetEndpointConfig(configuration).Dictation;
         }
 
         private void StartResponse()

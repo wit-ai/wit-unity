@@ -25,6 +25,7 @@ namespace Facebook.WitAi.Configuration
 
         public string speech;
         public string message;
+        public string dictation;
 
         public string UriScheme => string.IsNullOrEmpty(uriScheme) ? WitRequest.URI_SCHEME : uriScheme;
         public string Authority =>
@@ -39,6 +40,8 @@ namespace Facebook.WitAi.Configuration
 
         public string Message =>
             string.IsNullOrEmpty(message) ? WitRequest.WIT_ENDPOINT_MESSAGE : message;
+
+        public string Dictation => string.IsNullOrEmpty(dictation) ? WitRequest.WIT_ENDPOINT_DICTATION : dictation;
 
         public static WitEndpointConfig GetEndpointConfig(WitConfiguration witConfig)
         {
