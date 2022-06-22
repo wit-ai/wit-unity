@@ -385,7 +385,7 @@ namespace Facebook.WitAi
 
             _request.UserAgent = GetUserAgent(configuration);
 
-            requestStartTime = DateTimeUtility.UtcNow;
+            requestStartTime = DateTime.UtcNow;
             isActive = true;
             statusCode = 0;
             statusDescription = "Starting request";
@@ -497,7 +497,7 @@ namespace Facebook.WitAi
             var request = (IRequest)state;
             if (null != _request)
             {
-                Debug.Log("Request timed out after " + (DateTimeUtility.UtcNow - requestStartTime));
+                Debug.Log("Request timed out after " + (DateTime.UtcNow - requestStartTime));
                 request.Abort();
             }
 
