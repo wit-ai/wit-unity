@@ -39,14 +39,22 @@ namespace Facebook.WitAi.TTS.Interfaces
         bool ShouldCacheToDisk(TTSClipData clipData);
 
         /// <summary>
+        /// Performs a check to determine if a file is cached to disk or not
+        /// </summary>
+        /// <param name="clipData">Clip request data</param>
+        /// <returns>Returns true if currently on disk (Except for Android Streaming Assets)</returns>
+        bool IsCachedToDisk(TTSClipData clipData);
+
+        /// <summary>
         /// Method for streaming from disk cache
         /// </summary>
+        /// <param name="clipData">Clip request data</param>
         void StreamFromDiskCache(TTSClipData clipData);
 
         /// <summary>
         /// Method for cancelling a running cache load request
         /// </summary>
-        /// <param name="clipID">Clip unique identifier</param>
+        /// <param name="clipData">Clip request data</param>
         void CancelDiskCacheStream(TTSClipData clipData);
     }
 }

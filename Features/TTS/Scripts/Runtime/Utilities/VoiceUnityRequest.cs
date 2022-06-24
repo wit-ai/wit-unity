@@ -47,7 +47,7 @@ namespace Facebook.WitAi.TTS.Utilities
             // Get url
             string finalUrl = audioUrl;
             // Add file:// if needed
-            if (!audioUrl.StartsWith("http") && !audioUrl.StartsWith("file://"))
+            if (!audioUrl.StartsWith("http") && !audioUrl.StartsWith("file://") && !audioUrl.StartsWith("jar:"))
             {
                 finalUrl = $"file://{audioUrl}";
             }

@@ -14,6 +14,7 @@ using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
 using Facebook.WitAi.TTS.Utilities;
+using Facebook.WitAi.Utilities;
 
 namespace Facebook.WitAi.TTS.Integrations
 {
@@ -59,8 +60,9 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get directory path
+            TTSDiskCacheLocation location = clipData.diskCacheSettings.DiskCacheLocation;
             string directory = string.Empty;
-            switch (clipData.diskCacheSettings.DiskCacheLocation)
+            switch (location)
             {
                 case TTSDiskCacheLocation.Persistent:
                     directory = Application.persistentDataPath;
@@ -77,44 +79,21 @@ namespace Facebook.WitAi.TTS.Integrations
                 return string.Empty;
             }
 
-            // Generate root directory if needed
-            if (!Directory.Exists(directory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"TTS Cache - Failed to create root directory\nPath: {directory}\n{e}");
-                    return string.Empty;
-                }
-            }
-
             // Add tts cache path & clean
-            directory += "/" + DiskPath;
-            directory = directory.Replace("\\", "/");
-            if (!directory.EndsWith("/"))
-            {
-                directory += "/";
-            }
+            directory = Path.Combine(directory, DiskPath);
 
             // Generate tts directory if possible
-            if (!Directory.Exists(directory))
+            if (location != TTSDiskCacheLocation.Preload || !Application.isPlaying)
             {
-                try
+                if (!IOUtility.CreateDirectory(directory, true))
                 {
-                    Directory.CreateDirectory(directory);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"TTS Cache - Failed to create tts directory\nPath: {directory}\n{e}");
+                    Debug.LogError($"TTS Cache - Failed to create tts directory\nPath: {directory}\nLocation: {location}");
                     return string.Empty;
                 }
             }
 
             // Return clip path
-            return $"{directory}{clipData.clipID}.{clipData.audioType.ToString().ToLower()}";
+            return Path.Combine(directory, clipData.clipID + "." + clipData.audioType.ToString().ToLower());
         }
 
         /// <summary>
@@ -140,6 +119,16 @@ namespace Facebook.WitAi.TTS.Integrations
             {
                 return false;
             }
+
+            #if UNITY_ANDROID
+            // Cannot use File.Exists with Streaming Assets on Android
+            // This will try and fail to load if the file is missing and then stream it
+            if (clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload && Application.isPlaying)
+            {
+                return true;
+            }
+            #endif
+
             // Check if file exists
             return File.Exists(cachePath);
         }
@@ -154,7 +143,9 @@ namespace Facebook.WitAi.TTS.Integrations
 
             // Get file path
             string filePath = GetDiskCachePath(clipData);
-            if (!File.Exists(filePath))
+
+            // Ensures possible
+            if (!IsCachedToDisk(clipData))
             {
                 string e = $"Clip not found\nPath: {filePath}";
                 OnStreamComplete(clipData, e);

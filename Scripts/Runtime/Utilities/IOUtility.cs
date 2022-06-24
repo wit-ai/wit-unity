@@ -34,6 +34,7 @@ namespace Facebook.WitAi.Utilities
             {
                 return false;
             }
+
             // Already exists
             if (Directory.Exists(directoryPath))
             {
@@ -41,17 +42,10 @@ namespace Facebook.WitAi.Utilities
             }
 
             // Check parent
-            string parentDirectoryPath = Path.GetDirectoryName(directoryPath);
-            if (!Directory.Exists(parentDirectoryPath))
+            if (recursively)
             {
-                // Not allowed
-                if (!recursively)
-                {
-                    LogError($"Cannot Create Directory\nDirectory Path: {directoryPath}");
-                    return false;
-                }
-                // Failed in parent
-                else if (!CreateDirectory(parentDirectoryPath, recursively))
+                string parentDirectoryPath = Path.GetDirectoryName(directoryPath);
+                if (!string.IsNullOrEmpty(parentDirectoryPath) && !CreateDirectory(parentDirectoryPath, true))
                 {
                     return false;
                 }
@@ -60,10 +54,6 @@ namespace Facebook.WitAi.Utilities
             try
             {
                 Directory.CreateDirectory(directoryPath);
-                #if UNITY_EDITOR
-                // Import if in editor
-                UnityEditor.AssetDatabase.ImportAsset(directoryPath.Replace("\\", "/").Replace(Application.dataPath.Replace("\\", "/"), "Assets"));
-                #endif
             }
             catch (Exception e)
             {

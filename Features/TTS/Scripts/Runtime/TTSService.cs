@@ -664,7 +664,7 @@ namespace Facebook.WitAi.TTS
 
             // Already in cache
             string downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
-            if (File.Exists(downloadPath))
+            if (DiskCacheHandler.IsCachedToDisk(clipData))
             {
                 onDownloadComplete?.Invoke(clipData, downloadPath, string.Empty);
                 return;
