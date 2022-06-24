@@ -11,7 +11,6 @@ using System.Collections;
 using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;

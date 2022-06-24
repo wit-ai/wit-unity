@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Linq;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 using UnityEngine.Events;

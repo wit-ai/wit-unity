@@ -10,14 +10,12 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Facebook.WitAi.Utilities;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;
-using NUnit.Framework;
 
 namespace Facebook.WitAi.TTS.Editor.Preload
 {

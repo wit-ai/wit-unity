@@ -18,7 +18,6 @@ using Facebook.WitAi.Data.Traits;
 using Facebook.WitAi.Lib;
 using Facebook.WitAi.Configuration;
 using UnityEditor;
-using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace Facebook.WitAi.Data.Configuration

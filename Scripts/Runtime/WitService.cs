@@ -9,7 +9,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using Facebook.WitAi.Configuration;
@@ -17,7 +16,6 @@ using Facebook.WitAi.Data;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 
 namespace Facebook.WitAi
 {

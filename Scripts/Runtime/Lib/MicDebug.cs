@@ -8,8 +8,6 @@
 
 using System;
 using System.IO;
-using System.Collections;
-using Facebook.WitAi.Data;
 using Facebook.WitAi.Interfaces;
 using Facebook.WitAi.Utilities;
 using UnityEngine;

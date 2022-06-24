@@ -7,9 +7,7 @@
  */
 
 using System;
-using Facebook.WitAi.TTS.Data;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Facebook.WitAi.TTS.Events
 {

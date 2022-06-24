@@ -7,7 +7,6 @@
  */
 
 using Facebook.WitAi.Events;
-using UnityEngine;
 
 namespace Facebook.WitAi.Interfaces
 {

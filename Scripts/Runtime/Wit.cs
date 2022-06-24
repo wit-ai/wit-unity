@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using Facebook.WitAi;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Interfaces;
 using UnityEngine;

@@ -8,7 +8,6 @@
 
 using System;
 using Facebook.WitAi.Data.Configuration;
-using UnityEngine;
 
 namespace Facebook.WitAi.Configuration
 {

@@ -7,11 +7,6 @@
  */
 
 using System;
-using System.Collections;
-using System.IO;
-using System.Collections.Generic;
-using Facebook.WitAi.Utilities;
-using UnityEditor;
 using UnityEngine;
 
 namespace Facebook.WitAi.TTS.Editor.Preload

@@ -8,7 +8,6 @@
 
 using System;
 using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Integrations;
 using UnityEditor;
 using UnityEngine;
 

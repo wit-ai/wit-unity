@@ -8,8 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Editor.Preload;
