@@ -42,7 +42,6 @@ namespace Facebook.WitAi.Utilities
 
             // Check parent
             string parentDirectoryPath = Path.GetDirectoryName(directoryPath);
-            Debug.Log($"Check Parent\nDir: {directoryPath}\nParent: {parentDirectoryPath}");
             if (!Directory.Exists(parentDirectoryPath))
             {
                 // Not allowed
@@ -61,6 +60,10 @@ namespace Facebook.WitAi.Utilities
             try
             {
                 Directory.CreateDirectory(directoryPath);
+                #if UNITY_EDITOR
+                // Import if in editor
+                UnityEditor.AssetDatabase.ImportAsset(directoryPath.Replace("\\", "/").Replace(Application.dataPath.Replace("\\", "/"), "Assets"));
+                #endif
             }
             catch (Exception e)
             {
