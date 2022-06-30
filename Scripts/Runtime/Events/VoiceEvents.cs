@@ -15,7 +15,7 @@ using UnityEngine.Serialization;
 namespace Facebook.WitAi.Events
 {
     [Serializable]
-    public class VoiceEvents : ITranscriptionEvent
+    public class VoiceEvents : ITranscriptionEvent, IAudioInputEvents
     {
         [Header("Activation Result Events")]
         [Tooltip("Called when a partial response from Wit.ai has been received")]
@@ -90,9 +90,16 @@ namespace Facebook.WitAi.Events
         public WitByteDataEvent OnByteDataReady = new WitByteDataEvent();
         public WitByteDataEvent OnByteDataSent = new WitByteDataEvent();
 
-        #region Shared Event API
+        #region Shared Event API - Transcription
         public WitTranscriptionEvent OnPartialTranscription => onPartialTranscription;
         public WitTranscriptionEvent OnFullTranscription => onFullTranscription;
+        #endregion
+
+        #region Shared Event API - Audio Input
+        public WitMicLevelChangedEvent OnMicAudioLevelChanged => OnMicLevelChanged;
+        public UnityEvent OnMicStartedListening => OnStartListening;
+        public UnityEvent OnMicStoppedListening => OnStoppedListening;
+
         #endregion
     }
  }

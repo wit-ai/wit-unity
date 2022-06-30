@@ -13,13 +13,14 @@ using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
+using Facebook.WitAi.Events.UnityEventListeners;
 using Facebook.WitAi.Interfaces;
 using Facebook.WitAi.Lib;
 using UnityEngine;
 
 namespace Facebook.WitAi
 {
-    public abstract class VoiceService : MonoBehaviour, IVoiceService, IInstanceResolver
+    public abstract class VoiceService : MonoBehaviour, IVoiceService, IInstanceResolver, IAudioEventProvider
     {
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
@@ -67,6 +68,16 @@ namespace Facebook.WitAi
             get => events;
             set => events = value;
         }
+
+        /// <summary>
+        /// A subset of events around collection of audio data
+        /// </summary>
+        public IAudioInputEvents AudioEvents => VoiceEvents;
+
+        /// <summary>
+        /// A subset of events around receiving transcriptions
+        /// </summary>
+        public ITranscriptionEvent TranscriptionEvents => VoiceEvents;
 
         /// <summary>
         /// Returns true if the audio input should be read in an activation
@@ -141,9 +152,26 @@ namespace Facebook.WitAi
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
             _witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
 
+            InitializeEventListeners();
+
             if (!UseConduit)
             {
                 MatchIntentRegistry.Initialize();
+            }
+        }
+
+        private void InitializeEventListeners()
+        {
+            var audioEventListener = GetComponent<AudioEventListener>();
+            if (!audioEventListener)
+            {
+                gameObject.AddComponent<AudioEventListener>();
+            }
+
+            var transcriptionEventListener = GetComponent<TranscriptionEventListener>();
+            if (!transcriptionEventListener)
+            {
+                gameObject.AddComponent<TranscriptionEventListener>();
             }
         }
 
