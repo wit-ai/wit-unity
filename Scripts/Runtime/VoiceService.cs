@@ -179,7 +179,6 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-
                 ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
             }
 

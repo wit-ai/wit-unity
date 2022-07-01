@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace Facebook.WitAi.ServiceReferences
 {
-    public class VoiceServiceAudioEventReference : MicrophoneServiceReference
+    public class VoiceServiceAudioEventReference : AudioInputServiceReference
     {
         [SerializeField] private VoiceServiceReference _voiceServiceReference;
-        public override IAudioInputEvents AudioInputEvents => _voiceServiceReference.VoiceService.VoiceEvents;
+        public override IAudioInputEvents AudioEvents => _voiceServiceReference.VoiceService.AudioEvents;
     }
 }
