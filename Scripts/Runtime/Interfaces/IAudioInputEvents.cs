@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 using Facebook.WitAi.Events;
 using UnityEngine.Events;
 
@@ -5,8 +13,8 @@ namespace Facebook.WitAi.Interfaces
 {
     public interface IAudioInputEvents
     {
-        public WitMicLevelChangedEvent OnMicAudioLevelChanged { get; }
-        public UnityEvent OnMicStartedListening { get; }
-        public UnityEvent OnMicStoppedListening { get; }
+        WitMicLevelChangedEvent OnMicAudioLevelChanged { get; }
+        UnityEvent OnMicStartedListening { get; }
+        UnityEvent OnMicStoppedListening { get; }
     }
 }

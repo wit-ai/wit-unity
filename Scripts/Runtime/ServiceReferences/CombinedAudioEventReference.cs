@@ -19,7 +19,9 @@ namespace Facebook.WitAi.ServiceReferences
     /// This is good for creating generic attention systems that are shown for
     /// the same way for any voice based service active in the scene.
     /// </summary>
+#if UNITY_2020_1_OR_NEWER
     [Tooltip("Finds all voice based services and listens for changes in their audio input state.")]
+#endif
     public class CombinedAudioEventReference : AudioInputServiceReference, IAudioInputEvents
     {
         public override IAudioInputEvents AudioEvents => this;
@@ -31,7 +33,11 @@ namespace Facebook.WitAi.ServiceReferences
 
         private void Awake()
         {
+            #if UNITY_2020_1_OR_NEWER
             _sourceListeners = FindObjectsOfType<AudioEventListener>(true);
+            #else
+            _sourceListeners = FindObjectsOfType<AudioEventListener>();
+            #endif
         }
 
         private void OnEnable()
