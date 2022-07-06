@@ -24,8 +24,7 @@ namespace Facebook.WitAi
         /// <param name="minConfidence">The minimum confidence value (0-1) needed to match</param>
         /// <param name="maxConfidence">The maximum confidence value(0-1) needed to match</param>
         /// <param name="allowPartial">Whether to match intents with partial responses</param>
-        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f,
-            bool allowPartial = false) : base(intent, minConfidence, maxConfidence, allowPartial)
+        public MatchIntent(string intent, float minConfidence = .9f, float maxConfidence = 1f) : base(intent, minConfidence, maxConfidence)
         {
         }
     }

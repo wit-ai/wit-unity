@@ -78,7 +78,7 @@ namespace Facebook.WitAi
         public const int URI_DEFAULT_PORT = 0;
 
         public const string WIT_API_VERSION = "20220608";
-        public const string WIT_SDK_VERSION = "0.0.45";
+        public const string WIT_SDK_VERSION = "0.0.46";
 
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
@@ -591,8 +591,13 @@ namespace Facebook.WitAi
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError(
-                        $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                    if (response.StatusCode == HttpStatusCode.OK)
+                    {
+                        response.Close();
+                        CloseRequestStream();
+                        return;
+                    }
+                    Debug.LogError($"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                     statusCode = ERROR_CODE_GENERAL;
                     statusDescription = e.Message;
                 }
@@ -686,7 +691,12 @@ namespace Facebook.WitAi
             responseData = WitResponseJson.Parse(stringResponse);
 
             // Handle responses
-            bool isFinal = responseData.HandleResponse((transcription, final) =>
+            bool hasResponse = responseData.HasResponse();
+            bool final = hasResponse && responseData.GetIsFinal();
+
+            // Return transcription
+            string transcription = responseData.GetTranscription();
+            if (!string.IsNullOrEmpty(transcription) && (!hasResponse || final))
             {
                 // Call partial transcription
                 if (!final)
@@ -698,19 +708,25 @@ namespace Facebook.WitAi
                 {
                     MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
                 }
-            }, (response, final) =>
+            }
+
+            // No response
+            if (!hasResponse)
             {
-                // Call partial response
-                SafeInvoke(onPartialResponse);
-                // Call final response
-                if (final)
-                {
-                    SafeInvoke(onResponse);
-                }
-            });
+                return false;
+            }
+
+            // Call partial response
+            SafeInvoke(onPartialResponse);
+
+            // Call final response
+            if (final)
+            {
+                SafeInvoke(onResponse);
+            }
 
             // Return final
-            return isFinal;
+            return final;
         }
         private void HandleRequestStream(IAsyncResult ar)
         {
@@ -754,6 +770,10 @@ namespace Facebook.WitAi
 
         private void SafeInvoke(Action<WitRequest> action)
         {
+            if (action == null)
+            {
+                return;
+            }
             MainThreadCallback(() =>
             {
                 // We want to allow each invocation to run even if there is an exception thrown by one

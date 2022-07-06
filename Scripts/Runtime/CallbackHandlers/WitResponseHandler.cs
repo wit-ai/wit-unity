@@ -15,11 +15,6 @@ namespace Facebook.WitAi.CallbackHandlers
     {
         [SerializeField] public VoiceService wit;
 
-        /// <summary>
-        /// Whether or not to handle partial responses the same as final responses
-        /// </summary>
-        [SerializeField] public bool handlePartialResponses = false;
-
         private void OnValidate()
         {
             if (!wit) wit = FindObjectOfType<VoiceService>();
@@ -36,7 +31,6 @@ namespace Facebook.WitAi.CallbackHandlers
             }
             else
             {
-                wit.events.OnPartialResponse.AddListener(OnHandlePartialResponse);
                 wit.events.OnResponse.AddListener(OnHandleResponse);
             }
         }
@@ -45,21 +39,11 @@ namespace Facebook.WitAi.CallbackHandlers
         {
             if (wit)
             {
-                wit.events.OnPartialResponse.RemoveListener(OnHandlePartialResponse);
                 wit.events.OnResponse.RemoveListener(OnHandleResponse);
             }
         }
 
         public void HandleResponse(WitResponseNode response) => OnHandleResponse(response);
         protected abstract void OnHandleResponse(WitResponseNode response);
-
-        public void HandlePartialResponse(WitResponseNode response) => OnHandlePartialResponse(response);
-        protected virtual void OnHandlePartialResponse(WitResponseNode response)
-        {
-            if (handlePartialResponses)
-            {
-                OnHandleResponse(response);
-            }
-        }
     }
 }

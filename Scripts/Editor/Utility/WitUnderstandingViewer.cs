@@ -338,7 +338,6 @@ namespace Facebook.WitAi.Windows
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
                 _request = witConfiguration.MessageRequest(_utterance, new WitRequestOptions());
-                _request.onPartialResponse += (r) => OnPartialResponse(r?.ResponseData);
                 _request.onResponse += (r) => OnResponse(r?.ResponseData);
                 _request.Request();
             }
@@ -353,13 +352,6 @@ namespace Facebook.WitAi.Windows
             }
         }
 
-        private void OnPartialResponse(WitResponseNode ResponseData)
-        {
-            if (null != ResponseData)
-            {
-                ShowResponse(ResponseData, true);
-            }
-        }
         private void OnResponse(WitResponseNode ResponseData)
         {
             _responseCode = _request.StatusCode;
@@ -661,7 +653,6 @@ namespace Facebook.WitAi.Windows
             // Remove delegates
             v.events.OnRequestCreated.RemoveListener(OnRequestCreated);
             v.events.OnError.RemoveListener(OnError);
-            v.events.OnPartialResponse.RemoveListener(OnPartialResponse);
             v.events.OnResponse.RemoveListener(OnResponse);
             v.events.OnFullTranscription.RemoveListener(ShowTranscription);
             v.events.OnPartialTranscription.RemoveListener(ShowTranscription);
@@ -678,7 +669,6 @@ namespace Facebook.WitAi.Windows
             // Add delegates
             v.events.OnRequestCreated.AddListener(OnRequestCreated);
             v.events.OnError.AddListener(OnError);
-            v.events.OnPartialResponse.AddListener(OnPartialResponse);
             v.events.OnResponse.AddListener(OnResponse);
             v.events.OnPartialTranscription.AddListener(ShowTranscription);
             v.events.OnFullTranscription.AddListener(ShowTranscription);

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Meta.Conduit;
 using Facebook.WitAi.Configuration;
+using Facebook.WitAi.Data;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
@@ -181,72 +182,84 @@ namespace Facebook.WitAi
             {
                 ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
             }
-
-            VoiceEvents.OnPartialResponse.AddListener(OnPartialResponse);
-            VoiceEvents.OnResponse.AddListener(OnResponse);
+            VoiceEvents.OnPartialResponse.AddListener(ValidateShortResponse);
+            VoiceEvents.OnResponse.AddListener(HandleResponse);
         }
 
         protected virtual void OnDisable()
         {
-            VoiceEvents.OnPartialResponse.RemoveListener(OnPartialResponse);
-            VoiceEvents.OnResponse.RemoveListener(OnResponse);
+            VoiceEvents.OnPartialResponse.RemoveListener(ValidateShortResponse);
+            VoiceEvents.OnResponse.RemoveListener(HandleResponse);
         }
 
-        protected virtual void OnPartialResponse(WitResponseNode response)
+        protected virtual void ValidateShortResponse(WitResponseNode response)
         {
-            HandleIntents(response, false);
+            if (VoiceEvents.OnPartialResponse != null)
+            {
+                // Create short response data
+                VoiceSession validationData = new VoiceSession();
+                validationData.service = this;
+                validationData.response = response;
+                validationData.validResponse = false;
+
+                // Call short response
+                VoiceEvents.OnValidatePartialResponse.Invoke(validationData);
+
+                // Deactivate
+                if (validationData.validResponse)
+                {
+                    // Call response
+                    VoiceEvents.OnResponse?.Invoke(response);
+
+                    // Deactivate immediately
+                    DeactivateAndAbortRequest();
+                }
+            }
         }
 
-        protected virtual void OnResponse(WitResponseNode response)
+        protected virtual void HandleResponse(WitResponseNode response)
         {
-            HandleIntents(response, true);
+            HandleIntents(response);
         }
 
-        private void HandleIntents(WitResponseNode response, bool isFinal)
+        private void HandleIntents(WitResponseNode response)
         {
             var intents = response.GetIntents();
             foreach (var intent in intents)
             {
-                HandleIntent(intent, response, isFinal);
+                HandleIntent(intent, response);
             }
         }
 
-        private void HandleIntent(WitIntentData intent, WitResponseNode response, bool isFinal)
+        private void HandleIntent(WitIntentData intent, WitResponseNode response)
         {
             if (UseConduit)
             {
                 var parameters = new Dictionary<string, object>();
-
                 foreach (var entity in response.AsObject["entities"].Childs)
                 {
                     var parameterName = entity[0]["role"].Value;
                     var parameterValue = entity[0]["value"].Value;
                     parameters.Add(parameterName, parameterValue);
                 }
-
                 parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
-
-                if (isFinal)
-                {
-                    ConduitDispatcher.InvokeAction(intent.name, parameters);
-                }
+                ConduitDispatcher.InvokeAction(intent.name, parameters);
             }
             else
             {
                 var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
                 foreach (var method in methods)
                 {
-                    ExecuteRegisteredMatch(method, intent, response, isFinal);
+                    ExecuteRegisteredMatch(method, intent, response);
                 }
             }
         }
 
         private void ExecuteRegisteredMatch(RegisteredMatchIntent registeredMethod,
-            WitIntentData intent, WitResponseNode response, bool isFinal)
+            WitIntentData intent, WitResponseNode response)
         {
             if (intent.confidence >= registeredMethod.matchIntent.MinConfidence &&
-                intent.confidence <= registeredMethod.matchIntent.MaxConfidence &&
-                (isFinal || registeredMethod.matchIntent.AllowPartial))
+                intent.confidence <= registeredMethod.matchIntent.MaxConfidence)
             {
                 foreach (var obj in GetObjectsOfType(registeredMethod.type))
                 {
@@ -256,24 +269,12 @@ namespace Facebook.WitAi
                         registeredMethod.method.Invoke(obj, Array.Empty<object>());
                         continue;
                     }
-
                     if (parameters[0].ParameterType != typeof(WitResponseNode) || parameters.Length > 2)
                     {
                         Debug.LogError("Match intent only supports methods with no parameters or with a WitResponseNode parameter. Enable Conduit or adjust the parameters");
                         continue;
                     }
-
-                    if (parameters.Length == 2)
-                    {
-                        if (parameters[1].ParameterType != typeof(bool))
-                        {
-                            Debug.LogError("Match intent only supports methods with no parameters or with a WitResponseNode parameter. Enable Conduit or adjust the parameters");
-                            continue;
-                        }
-
-                        registeredMethod.method.Invoke(obj, new object[] {response, isFinal});
-                    }
-                    else if (parameters.Length == 1)
+                    if (parameters.Length == 1)
                     {
                         registeredMethod.method.Invoke(obj, new object[] {response});
                     }
@@ -333,6 +334,5 @@ namespace Facebook.WitAi
         /// <param name="text"></param>
         /// <param name="requestOptions"></param>
         void Activate(string text, WitRequestOptions requestOptions);
-
     }
 }
