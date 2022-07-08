@@ -33,5 +33,6 @@ namespace Facebook.WitAi
         WebResponse EndGetResponse(IAsyncResult asyncResult);
 
         void Abort();
+        void Dispose();
     }
 }
