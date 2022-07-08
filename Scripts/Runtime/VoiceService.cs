@@ -194,7 +194,7 @@ namespace Facebook.WitAi
 
         protected virtual void ValidateShortResponse(WitResponseNode response)
         {
-            if (VoiceEvents.OnPartialResponse != null)
+            if (VoiceEvents.OnValidatePartialResponse != null)
             {
                 // Create short response data
                 VoiceSession validationData = new VoiceSession();
