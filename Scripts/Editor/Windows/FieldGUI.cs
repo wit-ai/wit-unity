@@ -36,10 +36,17 @@ namespace Facebook.WitAi.Windows
             baseType = newBaseType;
 
             // Obtain all public, instance fields
-            fields = baseType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            fields = GetFields(baseType);
+        }
+
+        // Obtain all public, instance fields
+        public static FieldInfo[] GetFields(Type newBaseType)
+        {
+            // Results
+            FieldInfo[] results = newBaseType.GetFields(BindingFlags.Public | BindingFlags.Instance);
 
             // Sort parent class fields to top
-            Array.Sort(fields, (f1, f2) =>
+            Array.Sort(results, (f1, f2) =>
             {
                 if (f1.DeclaringType != f2.DeclaringType)
                 {
@@ -54,6 +61,9 @@ namespace Facebook.WitAi.Windows
                 }
                 return 0;
             });
+
+            // Return results
+            return results;
         }
 
         // Gui Layout
