@@ -16,7 +16,7 @@ namespace Facebook.WitAi.Drawers
     [CustomPropertyDrawer(typeof(DynamicRangeAttribute))]
     public class DynamicRangeAttributeDrawer : PropertyDrawer
     {
-        private object _targetObject;
+        private Object _targetObject;
         private float _min;
         private float _max;
         private PropertyInfo _rangePropertyField;
