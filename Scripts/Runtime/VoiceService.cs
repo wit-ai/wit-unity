@@ -208,10 +208,14 @@ namespace Facebook.WitAi
                 // Invoke
                 if (UseConduit)
                 {
+                    // Ignore without an intent
                     WitIntentData intent = response.GetFirstIntentData();
-                    Dictionary<string, object> parameters = GetConduitResponseParameters(response);
-                    parameters[WitConduitParameterProvider.VoiceSessionReservedName] = validationData;
-                    ConduitDispatcher.InvokeAction(intent.name, parameters, intent.confidence, true);
+                    if (intent != null)
+                    {
+                        Dictionary<string, object> parameters = GetConduitResponseParameters(response);
+                        parameters[WitConduitParameterProvider.VoiceSessionReservedName] = validationData;
+                        ConduitDispatcher.InvokeAction(intent.name, parameters, intent.confidence, true);
+                    }
                 }
 
                 // Deactivate
