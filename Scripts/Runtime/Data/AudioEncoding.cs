@@ -42,7 +42,6 @@ namespace Facebook.WitAi.Data
         public override string ToString()
         {
             return $"audio/raw;bits={bits};rate={samplerate / 1000}k;encoding={encoding};endian={endian.ToString().ToLower()}";
-            ;
         }
     }
 }
