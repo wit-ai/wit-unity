@@ -205,6 +205,15 @@ namespace Facebook.WitAi
                 // Call short response
                 VoiceEvents.OnValidatePartialResponse.Invoke(validationData);
 
+                // Invoke
+                if (UseConduit)
+                {
+                    WitIntentData intent = response.GetFirstIntentData();
+                    Dictionary<string, object> parameters = GetConduitResponseParameters(response);
+                    parameters[WitConduitParameterProvider.VoiceSessionReservedName] = validationData;
+                    ConduitDispatcher.InvokeAction(intent.name, parameters, intent.confidence, true);
+                }
+
                 // Deactivate
                 if (validationData.validResponse)
                 {
@@ -235,15 +244,7 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-                var parameters = new Dictionary<string, object>();
-                foreach (var entity in response.AsObject["entities"].Childs)
-                {
-                    var parameterName = entity[0]["role"].Value;
-                    var parameterValue = entity[0]["value"].Value;
-                    parameters.Add(parameterName, parameterValue);
-                }
-                parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
-                ConduitDispatcher.InvokeAction(intent.name, parameters);
+                ConduitDispatcher.InvokeAction(intent.name, GetConduitResponseParameters(response), intent.confidence, false);
             }
             else
             {
@@ -253,6 +254,20 @@ namespace Facebook.WitAi
                     ExecuteRegisteredMatch(method, intent, response);
                 }
             }
+        }
+
+        // Handle conduit response parameters
+        private Dictionary<string, object> GetConduitResponseParameters(WitResponseNode response)
+        {
+            var parameters = new Dictionary<string, object>();
+            foreach (var entity in response.AsObject["entities"].Childs)
+            {
+                var parameterName = entity[0]["role"].Value;
+                var parameterValue = entity[0]["value"].Value;
+                parameters.Add(parameterName, parameterValue);
+            }
+            parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
+            return parameters;
         }
 
         private void ExecuteRegisteredMatch(RegisteredMatchIntent registeredMethod,

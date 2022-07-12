@@ -29,6 +29,6 @@ namespace Meta.Conduit
         /// <param name="actionId">The action ID (which is also the intent name).</param>
         /// <param name="parameters">Dictionary of parameters mapping parameter name to value.</param>
         /// <param name="confidence">The confidence level (between 0-1) of the intent that's invoking the action.</param>
-        bool InvokeAction(string actionId, Dictionary<string, object> parameters, float confidence = 1f);
+        bool InvokeAction(string actionId, Dictionary<string, object> parameters, float confidence = 1f, bool partial = false);
     }
 }

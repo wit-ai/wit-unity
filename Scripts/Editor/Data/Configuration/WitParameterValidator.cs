@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Facebook.WitAi.Data;
 using Facebook.WitAi.Lib;
 using Meta.Conduit.Editor;
 
@@ -30,7 +31,7 @@ namespace Facebook.WitAi.Windows
         /// <returns>True if the parameter type is supported. False otherwise.</returns>
         public bool IsSupportedParameterType(Type type)
         {
-            return type.IsEnum || this.builtInTypes.Contains(type) || type == typeof(WitResponseNode);
+            return type.IsEnum || this.builtInTypes.Contains(type) || type == typeof(WitResponseNode) || type == typeof(VoiceSession);
         }
     }
 }

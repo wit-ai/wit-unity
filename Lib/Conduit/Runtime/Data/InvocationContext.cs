@@ -20,7 +20,7 @@ namespace Meta.Conduit
         /// The type that declares the method.
         /// </summary>
         public Type Type { get; set; }
-        
+
         /// <summary>
         /// The method information.
         /// </summary>
@@ -35,5 +35,10 @@ namespace Meta.Conduit
         /// The maximum confidence allowed to invoke this method.
         /// </summary>
         public float MaxConfidence { get; set; } = 1;
+
+        /// <summary>
+        /// Whether partial responses should be validated
+        /// </summary>
+        public bool ValidatePartial { get; set; } = false;
     }
 }

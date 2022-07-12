@@ -15,7 +15,7 @@ namespace Facebook.WitAi
     /// Triggers a method to be executed if it matches a voice command's intent
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class MatchIntent : ConduitActionAttribute
+    public class ValidatePartialIntent : ConduitActionAttribute
     {
         /// <summary>
         /// Triggers a method to be executed if it matches a voice command's intent
@@ -23,7 +23,7 @@ namespace Facebook.WitAi
         /// <param name="intent">The name of the intent to match</param>
         /// <param name="minConfidence">The minimum confidence value (0-1) needed to match</param>
         /// <param name="maxConfidence">The maximum confidence value(0-1) needed to match</param>
-        public MatchIntent(string intent, float minConfidence = DEFAULT_MIN_CONFIDENCE, float maxConfidence = DEFAULT_MAX_CONFIDENCE) : base(intent, minConfidence, maxConfidence, false)
+        public ValidatePartialIntent(string intent, float minConfidence = DEFAULT_MIN_CONFIDENCE, float maxConfidence = DEFAULT_MAX_CONFIDENCE) : base(intent, minConfidence, maxConfidence, true)
         {
         }
     }
