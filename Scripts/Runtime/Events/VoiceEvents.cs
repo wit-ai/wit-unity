@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using Facebook.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
@@ -103,7 +104,48 @@ namespace Facebook.WitAi.Events
         public WitMicLevelChangedEvent OnMicAudioLevelChanged => OnMicLevelChanged;
         public UnityEvent OnMicStartedListening => OnStartListening;
         public UnityEvent OnMicStoppedListening => OnStoppedListening;
+        #endregion
 
+        #region Callback Registration
+        [SerializeField]
+        private List<string> _overriddenCallbacks = new List<string>();
+        private HashSet<string> _overriddenCallbacksHash;
+
+        public HashSet<string> OverriddenCallbacks
+        {
+            get
+            {
+                if (_overriddenCallbacksHash == null)
+                {
+                    _overriddenCallbacksHash = new HashSet<string>(_overriddenCallbacks);
+                }
+
+                return _overriddenCallbacksHash;
+            }
+        }
+
+        public void RegisterOverriddenCallback(string callback)
+        {
+            if (!_overriddenCallbacks.Contains(callback))
+            {
+                _overriddenCallbacks.Add(callback);
+                _overriddenCallbacksHash.Add(callback);
+            }
+        }
+
+        public void RemoveOverriddenCallback(string callback)
+        {
+            if (_overriddenCallbacks.Contains(callback))
+            {
+                _overriddenCallbacks.Remove(callback);
+                _overriddenCallbacksHash.Remove(callback);
+            }
+        }
+
+        public bool IsCallbackOverridden(string callback)
+        {
+            return _overriddenCallbacksHash.Contains(callback);
+        }
         #endregion
     }
  }

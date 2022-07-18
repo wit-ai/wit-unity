@@ -421,7 +421,7 @@ namespace Facebook.WitAi.Windows
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(15 * EditorGUI.indentLevel);
-                if (GUILayout.Button($"{child} = {childNode.Value}", "Label"))
+                if (GUILayout.Button($"{child} = {childNode.Value}", WitStyles.LabelWrap))
                 {
                     ShowNodeMenu(childNode, childPath);
                 }
