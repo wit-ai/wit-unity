@@ -20,24 +20,15 @@ namespace Facebook.WitAi
         public const string VoiceSessionReservedName = "@VoiceSession";
         protected override object GetSpecializedParameter(ParameterInfo formalParameter)
         {
-            if (!SupportedSpecializedParameter(formalParameter))
+            if (formalParameter.ParameterType == typeof(WitResponseNode) && ActualParameters.ContainsKey(WitResponseNodeReservedName))
             {
-                throw new ArgumentException(nameof(formalParameter));
+                return ActualParameters[WitResponseNodeReservedName];
             }
-
-            var parameterValue = this.ActualParameters[WitResponseNodeReservedName];
-            if (parameterValue == null)
+            else if (formalParameter.ParameterType == typeof(VoiceSession) && ActualParameters.ContainsKey(VoiceSessionReservedName))
             {
-                throw new NotSupportedException("Missing WitResponseNode parameter");
+                return ActualParameters[VoiceSessionReservedName];
             }
-
-            parameterValue = this.ActualParameters[VoiceSessionReservedName];
-            if (parameterValue == null)
-            {
-                throw new NotSupportedException("Missing VoiceSession parameter");
-            }
-
-            return parameterValue;
+            return null;
         }
 
         protected override bool SupportedSpecializedParameter(ParameterInfo formalParameter)
