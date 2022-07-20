@@ -16,6 +16,7 @@ using Facebook.WitAi.Data;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Interfaces;
 using UnityEngine.Events;
+using System.IO;
 
 namespace Facebook.WitAi
 {
