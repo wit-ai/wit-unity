@@ -31,7 +31,7 @@ namespace Facebook.WitAi.Events.Editor
         {
             ["Activation Result"] = new []
             {
-                "OnPartialResponse", "OnResponse", "OnError", "OnAborting", "OnAborted", "OnRequestCompleted"
+                "OnValidatePartialResponse", "OnResponse", "OnError", "OnAborting", "OnAborted", "OnRequestCompleted"
             },
             ["Microphone"] = new [] {"OnMicLevelChanged"},
             ["Activation - Deactivation"] = new []
