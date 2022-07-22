@@ -176,13 +176,7 @@ namespace Facebook.WitAi
         /// <summary>
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
-        public void Activate()
-        {
-            Activate(new WitRequestOptions());
-        }
-        /// <summary>
-        /// Activate the microphone and send data to Wit for NLU processing.
-        /// </summary>
+        public void Activate() => Activate(new WitRequestOptions());
         public void Activate(WitRequestOptions requestOptions)
         {
             if (!IsConfigurationValid())
@@ -193,6 +187,9 @@ namespace Facebook.WitAi
             if (_isActive) return;
             StopRecording();
             _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider.RuntimeConfiguration.preferredActivationOffset);
+
+            // Handle option setup
+            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
 
             if (!AudioBuffer.Instance.IsRecording(this) && ShouldSendMicData)
             {
@@ -208,10 +205,7 @@ namespace Facebook.WitAi
             _lastMinVolumeLevelTime = float.PositiveInfinity;
             _currentRequestOptions = requestOptions;
         }
-        public void ActivateImmediately()
-        {
-            ActivateImmediately(new WitRequestOptions());
-        }
+        public void ActivateImmediately() => ActivateImmediately(new WitRequestOptions());
         public void ActivateImmediately(WitRequestOptions requestOptions)
         {
             if (!IsConfigurationValid())
@@ -226,6 +220,9 @@ namespace Facebook.WitAi
             _lastMinVolumeLevelTime = float.PositiveInfinity;
             _lastWordTime = float.PositiveInfinity;
             _receivedTranscription = false;
+
+            // Handle option setup
+            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
 
             if (ShouldSendMicData)
             {
@@ -263,15 +260,8 @@ namespace Facebook.WitAi
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="text">Text to be processed</param>
-        public void Activate(string text)
-        {
-            Activate(text, new WitRequestOptions());
-        }
-        /// <summary>
-        /// Send text data to Wit.ai for NLU processing
-        /// </summary>
-        /// <param name="text">Text to be processed</param>
         /// <param name="requestOptions">Additional options</param>
+        public void Activate(string text) => Activate(text, new WitRequestOptions());
         public void Activate(string text, WitRequestOptions requestOptions)
         {
             if (!IsConfigurationValid())
@@ -279,6 +269,11 @@ namespace Facebook.WitAi
                 Debug.LogError("Cannot activate without valid Wit Configuration.");
                 return;
             }
+
+            // Handle option setup
+            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
+
+            // Send transcription
             SendTranscription(text, requestOptions);
         }
         /// <summary>

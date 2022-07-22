@@ -95,9 +95,22 @@ namespace Facebook.WitAi
         }
 
         /// <summary>
+        /// Send text data for NLU processing. Results will return the same way a voice based activation would.
+        /// </summary>
+        /// <param name="text"></param>
+        public void Activate(string text) => Activate(text, new WitRequestOptions());
+
+        /// <summary>
+        /// Send text data for NLU processing with custom request options.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="requestOptions"></param>
+        public abstract void Activate(string text, WitRequestOptions requestOptions);
+
+        /// <summary>
         /// Start listening for sound or speech from the user and start sending data to Wit.ai once sound or speech has been detected.
         /// </summary>
-        public abstract void Activate();
+        public void Activate() => Activate(new WitRequestOptions());
 
         /// <summary>
         /// Activate the microphone and send data for NLU processing. Includes optional additional request parameters like dynamic entities and maximum results.
@@ -108,7 +121,7 @@ namespace Facebook.WitAi
         /// <summary>
         /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.
         /// </summary>
-        public abstract void ActivateImmediately();
+        public void ActivateImmediately() => ActivateImmediately(new WitRequestOptions());
 
         /// <summary>
         /// Activate the microphone and send data for NLU processing immediately without waiting for sound/speech from the user to begin.  Includes optional additional request parameters like dynamic entities and maximum results.
@@ -124,19 +137,6 @@ namespace Facebook.WitAi
         /// Stop listening and abort any requests that may be active without waiting for a response.
         /// </summary>
         public abstract void DeactivateAndAbortRequest();
-
-        /// <summary>
-        /// Send text data for NLU processing. Results will return the same way a voice based activation would.
-        /// </summary>
-        /// <param name="text"></param>
-        public abstract void Activate(string text);
-
-        /// <summary>
-        /// Send text data for NLU processing with custom request options.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="requestOptions"></param>
-        public abstract void Activate(string text, WitRequestOptions requestOptions);
 
         /// <summary>
         /// Returns objects of the specified type.
@@ -318,17 +318,22 @@ namespace Facebook.WitAi
         ITranscriptionProvider TranscriptionProvider { get; set; }
 
         /// <summary>
-        /// Activate the microphone and send data for NLU processing.
+        /// Send text data for NLU processing with custom request options.
         /// </summary>
-        void Activate();
+        /// <param name="text"></param>
+        /// <param name="requestOptions">Custom request options</param>
+        void Activate(string text, WitRequestOptions requestOptions);
+
+        /// <summary>
+        /// Activate the microphone and wait for threshold and then send data
+        /// </summary>
+        /// <param name="requestOptions">Custom request options</param>
+        void Activate(WitRequestOptions requestOptions);
 
         /// <summary>
         /// Activate the microphone and send data for NLU processing with custom request options.
         /// </summary>
-        /// <param name="requestOptions"></param>
-        void Activate(WitRequestOptions requestOptions);
-
-        void ActivateImmediately();
+        /// <param name="requestOptions">Custom request options</param>
         void ActivateImmediately(WitRequestOptions requestOptions);
 
         /// <summary>
@@ -340,18 +345,5 @@ namespace Facebook.WitAi
         /// Stop listening and abort any requests that may be active without waiting for a response.
         /// </summary>
         void DeactivateAndAbortRequest();
-
-        /// <summary>
-        /// Send text data for NLU processing
-        /// </summary>
-        /// <param name="text"></param>
-        void Activate(string transcription);
-
-        /// <summary>
-        /// Send text data for NLU processing with custom request options.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="requestOptions"></param>
-        void Activate(string text, WitRequestOptions requestOptions);
     }
 }

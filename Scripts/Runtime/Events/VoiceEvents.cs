@@ -64,6 +64,11 @@ namespace Facebook.WitAi.Events
         [Tooltip("Called when the volume level of the mic input has changed")]
         public WitMicLevelChangedEvent OnMicLevelChanged = new WitMicLevelChangedEvent();
 
+        [Header(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
+        [EventCategory(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
+        [Tooltip("Called on initial wit request option set for custom overrides")]
+        public WitRequestOptionsEvent OnRequestOptionSetup = new WitRequestOptionsEvent();
+
         /// <summary>
         /// Called when a request is created. This happens at the beginning of
         /// an activation before the microphone is activated (if in use).
