@@ -8,6 +8,7 @@
 
 using System;
 using System.IO;
+using System.Runtime.Remoting.Messaging;
 using Meta.Conduit.Editor;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
@@ -26,7 +27,7 @@ namespace Facebook.WitAi.Windows
         private bool _initialized = false;
         public bool drawHeader = true;
         private bool _foldout = true;
-        private int _requestTab = -1;
+        private int _requestTab = 0;
         private bool manifestAvailable = false;
 
         private static ConduitStatistics _statistics;
@@ -257,6 +258,7 @@ namespace Facebook.WitAi.Windows
         public void ApplyServerToken(string newToken)
         {
             _serverToken = newToken;
+            configuration.ResetData();
             configuration.SetServerToken(_serverToken);
         }
         // Whether or not to allow a configuration to refresh
@@ -370,6 +372,22 @@ namespace Facebook.WitAi.Windows
         // Determine if tab should show
         protected virtual bool ShouldTabShow(WitConfiguration configuration, string tabID)
         {
+            if(null == configuration.application ||
+                   string.IsNullOrEmpty(configuration.application.id))
+            {
+                return false;
+            }
+
+            switch (tabID)
+            {
+                case TAB_INTENTS_ID:
+                    return null != configuration.intents;
+                case TAB_ENTITIES_ID:
+                    return null != configuration.entities;
+                case TAB_TRAITS_ID:
+                    return null != configuration.traits;
+            }
+
             return true;
         }
         // Get tab text
@@ -393,6 +411,7 @@ namespace Facebook.WitAi.Windows
         {
             if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
+                configuration.ResetData();
                 configuration.SetServerToken(_serverToken);
             }
             else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))

@@ -107,5 +107,14 @@ namespace Facebook.WitAi.Data.Configuration
 
             #endif
         }
+
+        public void ResetData()
+        {
+            application = null;
+            clientAccessToken = null;
+            entities = null;
+            intents = null;
+            traits = null;
+        }
     }
 }
