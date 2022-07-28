@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using Facebook.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
@@ -16,7 +15,7 @@ using UnityEngine.Serialization;
 namespace Facebook.WitAi.Events
 {
     [Serializable]
-    public class VoiceEvents : ITranscriptionEvent, IAudioInputEvents
+    public class VoiceEvents : EventRegistry, ITranscriptionEvent, IAudioInputEvents
     {
         private const string EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS = "Activation Result Events";
         private const string EVENT_CATEGORY_MIC_EVENTS = "Mic Events";
@@ -61,7 +60,6 @@ namespace Facebook.WitAi.Events
         [Tooltip("Called when the volume level of the mic input has changed")]
         public WitMicLevelChangedEvent OnMicLevelChanged = new WitMicLevelChangedEvent();
 
-        [Header(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
         [EventCategory(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
         [Tooltip("Called on initial wit request option set for custom overrides")]
         public WitRequestOptionsEvent OnRequestOptionSetup = new WitRequestOptionsEvent();
@@ -130,48 +128,6 @@ namespace Facebook.WitAi.Events
         public WitMicLevelChangedEvent OnMicAudioLevelChanged => OnMicLevelChanged;
         public UnityEvent OnMicStartedListening => OnStartListening;
         public UnityEvent OnMicStoppedListening => OnStoppedListening;
-        #endregion
-
-        #region Callback Registration
-        [SerializeField]
-        private List<string> _overriddenCallbacks = new List<string>();
-        private HashSet<string> _overriddenCallbacksHash;
-
-        public HashSet<string> OverriddenCallbacks
-        {
-            get
-            {
-                if (_overriddenCallbacksHash == null)
-                {
-                    _overriddenCallbacksHash = new HashSet<string>(_overriddenCallbacks);
-                }
-
-                return _overriddenCallbacksHash;
-            }
-        }
-
-        public void RegisterOverriddenCallback(string callback)
-        {
-            if (!_overriddenCallbacks.Contains(callback))
-            {
-                _overriddenCallbacks.Add(callback);
-                _overriddenCallbacksHash.Add(callback);
-            }
-        }
-
-        public void RemoveOverriddenCallback(string callback)
-        {
-            if (_overriddenCallbacks.Contains(callback))
-            {
-                _overriddenCallbacks.Remove(callback);
-                _overriddenCallbacksHash.Remove(callback);
-            }
-        }
-
-        public bool IsCallbackOverridden(string callback)
-        {
-            return _overriddenCallbacksHash.Contains(callback);
-        }
         #endregion
     }
  }

@@ -7,24 +7,26 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Events;
 
 namespace Facebook.WitAi.Events.Editor
 {
     public abstract class EventPropertyDrawer<T> : PropertyDrawer
     {
+        private const int CONTROL_SPACING = 5;
         private const int UNSELECTED = -1;
+        private const int BUTTON_WIDTH = 75;
+        private const int PROPERTY_FIELD_SPACING = 25;
 
         private bool showEvents = false;
 
         private int selectedCategoryIndex = UNSELECTED;
         private int selectedEventIndex = UNSELECTED;
+
+        private int propertyOffset;
 
         private static Dictionary<string, List<string>> eventCategories;
 
@@ -47,58 +49,116 @@ namespace Facebook.WitAi.Events.Editor
                         {
                             eventCategories[eventCategory.Category] = new List<string>();
                         }
-
+                        
                         eventCategories[eventCategory.Category].Add(field.Name);
                     }
                 }
             }
         }
 
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        {
+            var eventObject = fieldInfo.GetValue(property.serializedObject.targetObject) as EventRegistry;
+            
+            var lineHeight = EditorGUIUtility.singleLineHeight;
+            var lines = 1;
+            var height = 0;
+
+            // Allocate enough lines to display dropdown elements depending on which ones are showing.
+            if (showEvents && Selection.activeTransform)
+                lines++;
+
+            if (selectedCategoryIndex != UNSELECTED)
+                lines++;
+
+            height = Mathf.RoundToInt(lineHeight * lines);
+
+            // By default, the property elements appear directly below the dropdowns.
+            propertyOffset = height + (int)WitStyles.TextButtonPadding;
+
+            // If the Events foldout is expanded and there are overridden properties, allocate space for them.
+            if (eventObject != null && eventObject.OverriddenCallbacks.Count != 0 && showEvents)
+            {
+                var callbacksArray = eventObject.OverriddenCallbacks.ToArray();
+                
+                height += Mathf.RoundToInt(eventObject.OverriddenCallbacks.Count *
+                          EditorGUI.GetPropertyHeight(property.FindPropertyRelative(callbacksArray[0])) + CONTROL_SPACING);
+
+                // Add some extra space so the last property field's +/- buttons don't overlap the next control.
+                height += PROPERTY_FIELD_SPACING;
+            }
+            
+            return height;
+        }
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            showEvents = EditorGUI.Foldout(position, showEvents, "Events");
-
+            showEvents = EditorGUI.Foldout(new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight), showEvents, "Events");
+            
             if (showEvents && Selection.activeTransform)
             {
                 if (eventCategories == null)
                     InitializeEventCategories(fieldInfo.FieldType);
 
-                var voiceEvents = fieldInfo.GetValue(property.serializedObject.targetObject) as VoiceEvents;
+                var eventObject = fieldInfo.GetValue(property.serializedObject.targetObject) as EventRegistry;
 
                 var eventCategoriesKeyArray = eventCategories.Keys.ToArray();
 
                 EditorGUI.indentLevel++;
+                
+                // Shift the control rectangle down one line to accomodate the category dropdown.
+                position.y += EditorGUIUtility.singleLineHeight;
+                position.height = EditorGUIUtility.singleLineHeight;
 
-                selectedCategoryIndex = EditorGUILayout.Popup("Event Category", selectedCategoryIndex,
-                    eventCategoriesKeyArray);
+                selectedCategoryIndex = EditorGUI.Popup(position, "Event Category", 
+                    selectedCategoryIndex, eventCategoriesKeyArray);
 
                 if (selectedCategoryIndex != UNSELECTED)
                 {
-                    GUILayout.BeginHorizontal();
+                    // Create a new rectangle to position the events dropdown and Add button.
+                    var selectedEventDropdownPosition = new Rect(position);
 
-                    selectedEventIndex = EditorGUILayout.Popup("Event", selectedEventIndex,
+                    selectedEventDropdownPosition.y += EditorGUIUtility.singleLineHeight + 2;
+                    selectedEventDropdownPosition.width = position.width - (BUTTON_WIDTH + (int)WitStyles.TextButtonPadding);
+                    
+                    selectedEventIndex = EditorGUI.Popup(selectedEventDropdownPosition, "Event", selectedEventIndex,
                         eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]].ToArray());
+                    
+                    var selectedEventButtonPosition = new Rect(selectedEventDropdownPosition);
 
-                    if (GUILayout.Button("Add"))
+                    selectedEventButtonPosition.width = BUTTON_WIDTH;
+                    selectedEventButtonPosition.x =
+                        selectedEventDropdownPosition.x + selectedEventDropdownPosition.width + CONTROL_SPACING;
+                    
+                    if (GUI.Button(selectedEventButtonPosition, "Add"))
                     {
                         var eventName = eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]][
                             selectedEventIndex];
-
-                        if (voiceEvents != null && selectedEventIndex != UNSELECTED &&
-                            !voiceEvents.IsCallbackOverridden(eventName))
+                        
+                        if (eventObject != null && selectedEventIndex != UNSELECTED &&
+                            !eventObject.IsCallbackOverridden(eventName))
                         {
-                            voiceEvents.RegisterOverriddenCallback(eventName);
+                            eventObject.RegisterOverriddenCallback(eventName);
                         }
                     }
-
-                    GUILayout.EndHorizontal();
                 }
 
-                if (voiceEvents != null && voiceEvents.OverriddenCallbacks.Count != 0)
+                // If any overrides have been added to the property, allow them to be edited
+                if (eventObject != null && eventObject.OverriddenCallbacks.Count != 0)
                 {
-                    foreach (var callback in voiceEvents.OverriddenCallbacks)
+                    var propertyRect = new Rect(position.x, position.y + propertyOffset, position.width, 0);
+
+                    SerializedProperty callbackProperty;
+
+                    foreach (var callback in eventObject.OverriddenCallbacks)
                     {
-                        EditorGUILayout.PropertyField(property.FindPropertyRelative(callback));
+                        callbackProperty = property.FindPropertyRelative(callback);
+                        
+                        propertyRect.height = EditorGUI.GetPropertyHeight(callbackProperty);
+                        
+                        EditorGUI.PropertyField(propertyRect, property.FindPropertyRelative(callback));
+
+                        propertyRect.y += propertyRect.height + CONTROL_SPACING;
                     }
                 }
 
