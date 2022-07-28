@@ -181,7 +181,7 @@ namespace Facebook.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
             if (_isActive) return;
@@ -210,7 +210,7 @@ namespace Facebook.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
             // Make sure we aren't checking activation time until
@@ -266,7 +266,7 @@ namespace Facebook.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError("Cannot activate without valid Wit Configuration.");
+                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
 
