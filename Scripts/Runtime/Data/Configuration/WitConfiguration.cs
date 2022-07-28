@@ -57,6 +57,26 @@ namespace Facebook.WitAi.Data.Configuration
         /// </summary>
         [SerializeField] public string manifestLocalPath;
 
+        public string WitApplicationId
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(application?.id))
+                {
+                    // NOTE: If a dev only provides a client token we may not have the application id.
+                    if (!string.IsNullOrEmpty(clientAccessToken))
+                    {
+                        return INVALID_APP_ID_WITH_CLIENT_TOKEN;
+                    }
+
+                    return INVALID_APP_ID_NO_CLIENT_TOKEN;
+                }
+
+                return application.id;
+            }
+        }
+
+
         #if UNITY_EDITOR
         // Manifest editor path
         public string ManifestEditorPath
@@ -87,6 +107,11 @@ namespace Facebook.WitAi.Data.Configuration
         /// When true, will open Conduit manifests when they are manually generated.
         /// </summary>
         [SerializeField] public bool openManifestOnGeneration = false;
+
+        public const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
+
+        public const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
+            "App Info Not Set - Has Client Token";
 
         public WitApplication Application => application;
 
