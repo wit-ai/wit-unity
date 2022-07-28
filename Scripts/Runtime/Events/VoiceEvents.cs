@@ -18,14 +18,12 @@ namespace Facebook.WitAi.Events
     [Serializable]
     public class VoiceEvents : ITranscriptionEvent, IAudioInputEvents
     {
-        // Define the event category headers as constants because we will need these strings in the property drawer.
         private const string EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS = "Activation Result Events";
         private const string EVENT_CATEGORY_MIC_EVENTS = "Mic Events";
         private const string EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS = "Activation - Deactivation Events";
         private const string EVENT_CATEGORY_TRANSCRIPTION_EVENTS = "Transcription Events";
         private const string EVENT_CATEGORY_DATA_EVENTS = "Data Events";
 
-        [Header(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
         [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
         [Tooltip("Called when a response from Wit.ai has been received")]
         public WitResponseEvent OnResponse = new WitResponseEvent();
@@ -59,7 +57,6 @@ namespace Facebook.WitAi.Events
             "Called when a a request has completed and all response and error callbacks have fired.")]
         public UnityEvent OnRequestCompleted = new UnityEvent();
 
-        [Header(EVENT_CATEGORY_MIC_EVENTS)]
         [EventCategory(EVENT_CATEGORY_MIC_EVENTS)]
         [Tooltip("Called when the volume level of the mic input has changed")]
         public WitMicLevelChangedEvent OnMicLevelChanged = new WitMicLevelChangedEvent();
@@ -73,7 +70,6 @@ namespace Facebook.WitAi.Events
         /// Called when a request is created. This happens at the beginning of
         /// an activation before the microphone is activated (if in use).
         /// </summary>
-        [Header(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
         [EventCategory(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
         [Tooltip(
             "Called when a request is created. This happens at the beginning of an activation before the microphone is activated (if in use)")]
@@ -110,7 +106,6 @@ namespace Facebook.WitAi.Events
         [Tooltip("Fired when the minimum wake threshold is hit after an activation")]
         public UnityEvent OnMinimumWakeThresholdHit = new UnityEvent();
 
-        [Header(EVENT_CATEGORY_TRANSCRIPTION_EVENTS)]
         [EventCategory(EVENT_CATEGORY_TRANSCRIPTION_EVENTS)]
         [FormerlySerializedAs("OnPartialTranscription")]
         [Tooltip("Message fired when a partial transcription has been received.")]
@@ -121,7 +116,6 @@ namespace Facebook.WitAi.Events
         [Tooltip("Message received when a complete transcription is received.")]
         public WitTranscriptionEvent onFullTranscription = new WitTranscriptionEvent();
 
-        [Header(EVENT_CATEGORY_DATA_EVENTS)]
         [EventCategory(EVENT_CATEGORY_DATA_EVENTS)]
         public WitByteDataEvent OnByteDataReady = new WitByteDataEvent();
         [EventCategory(EVENT_CATEGORY_DATA_EVENTS)]
