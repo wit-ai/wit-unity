@@ -246,7 +246,7 @@ namespace Facebook.WitAi.Lib
 
             // Ignore if already setup & recording
             string micID = CurrentDeviceName;
-            if (!string.IsNullOrEmpty(micID) && AudioClip != null && string.Equals(micID, AudioClip.name) && Microphone.IsRecording(micID))
+            if (!string.IsNullOrEmpty(micID) && AudioClip != null && string.Equals(micID, AudioClip.name) && MicrophoneIsRecording(micID))
             {
                 return;
             }
@@ -263,7 +263,7 @@ namespace Facebook.WitAi.Lib
             string oldDevice = CurrentDeviceName;
             _devices = new List<string>();
             UnityEngine.Profiling.Profiler.BeginSample("Microphone Devices");
-            string[] micIDs = Microphone.devices;
+            string[] micIDs = MicrophoneGetDevices();
             if (micIDs != null)
             {
                 _devices.AddRange(micIDs);
@@ -302,17 +302,21 @@ namespace Facebook.WitAi.Lib
 
         private void StartMicrophone()
         {
+#if !UNITY_WEBGL
             Log("Reserved mic " + CurrentDeviceName);
             AudioClip = Microphone.Start(CurrentDeviceName, true, 1, AudioEncoding.samplerate);
             AudioClip.name = CurrentDeviceName;
+#endif
         }
 
         private void StopMicrophone()
         {
-            if (Microphone.IsRecording(CurrentDeviceName))
+            if (MicrophoneIsRecording(CurrentDeviceName))
             {
+#if !UNITY_WEBGL
                 Log("Released mic " + CurrentDeviceName);
                 Microphone.End(CurrentDeviceName);
+#endif
             }
             if (AudioClip != null)
             {
@@ -355,10 +359,12 @@ namespace Facebook.WitAi.Lib
             {
                 StartCoroutine(ReadRawAudio());
 
+#if !UNITY_WEBGL
                 // Make sure we seek before we start reading data
-                Microphone.GetPosition(CurrentDeviceName);
+                MicrophoneGetPosition(CurrentDeviceName);
 
                 Log("Started recording with " + CurrentDeviceName);
+#endif
                 if (OnStartRecording != null)
                     OnStartRecording.Invoke();
             }
@@ -387,17 +393,17 @@ namespace Facebook.WitAi.Lib
         IEnumerator ReadRawAudio()
         {
             int loops = 0;
-            int readAbsPos = Microphone.GetPosition(CurrentDeviceName);
+            int readAbsPos = MicrophoneGetPosition(CurrentDeviceName);
             int prevPos = readAbsPos;
             float[] temp = new float[Sample.Length];
 
-            while (AudioClip != null && Microphone.IsRecording(CurrentDeviceName) && IsRecording)
+            while (AudioClip != null && MicrophoneIsRecording(CurrentDeviceName) && IsRecording)
             {
                 bool isNewDataAvailable = true;
 
                 while (isNewDataAvailable && AudioClip)
                 {
-                    int currPos = Microphone.GetPosition(CurrentDeviceName);
+                    int currPos = MicrophoneGetPosition(CurrentDeviceName);
                     if (currPos < prevPos)
                         loops++;
                     prevPos = currPos;
@@ -434,6 +440,38 @@ namespace Facebook.WitAi.Lib
             }
         }
 
+        #endregion
+
+        #region Microphone Wrappers
+        // Wrapper methods to handle platforms where the UnityEngine.Microphone class is non-existent
+        private bool MicrophoneIsRecording(string device)
+        {
+#if UNITY_WEBGL
+            return false;
+#else
+            return Microphone.IsRecording(device);
+#endif
+        }
+
+        private string[] MicrophoneGetDevices()
+        {
+#if UNITY_WEBGL
+            return new string[] {};
+#else
+            return Microphone.devices;
+#endif
+        }
+
+        private int MicrophoneGetPosition(string device)
+        {
+#if UNITY_WEBGL
+            // This should (probably) never happen, since the Start/Stop Recording methods will
+            // silently fail under webGL.
+            return 0;
+#else
+            return Microphone.GetPosition(device);
+#endif
+        }
         #endregion
     }
 }
