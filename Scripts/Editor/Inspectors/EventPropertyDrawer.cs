@@ -23,8 +23,8 @@ namespace Facebook.WitAi.Events.Editor
 
         private bool showEvents = false;
 
-        private int selectedCategoryIndex = UNSELECTED;
-        private int selectedEventIndex = UNSELECTED;
+        private int selectedCategoryIndex = 0;
+        private int selectedEventIndex = 0;
 
         private int propertyOffset;
 
@@ -68,7 +68,7 @@ namespace Facebook.WitAi.Events.Editor
             if (showEvents && Selection.activeTransform)
                 lines++;
 
-            if (selectedCategoryIndex != UNSELECTED)
+            if (showEvents && selectedCategoryIndex != UNSELECTED)
                 lines++;
 
             height = Mathf.RoundToInt(lineHeight * lines);
@@ -115,6 +115,11 @@ namespace Facebook.WitAi.Events.Editor
 
                 if (selectedCategoryIndex != UNSELECTED)
                 {
+                    var eventsArray = eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]].ToArray();
+
+                    if (selectedCategoryIndex >= eventsArray.Length)
+                        selectedEventIndex = 0;
+                    
                     // Create a new rectangle to position the events dropdown and Add button.
                     var selectedEventDropdownPosition = new Rect(position);
 
@@ -122,7 +127,7 @@ namespace Facebook.WitAi.Events.Editor
                     selectedEventDropdownPosition.width = position.width - (BUTTON_WIDTH + (int)WitStyles.TextButtonPadding);
                     
                     selectedEventIndex = EditorGUI.Popup(selectedEventDropdownPosition, "Event", selectedEventIndex,
-                        eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]].ToArray());
+                        eventsArray);
                     
                     var selectedEventButtonPosition = new Rect(selectedEventDropdownPosition);
 
