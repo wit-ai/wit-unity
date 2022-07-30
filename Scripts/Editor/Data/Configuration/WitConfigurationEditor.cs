@@ -177,6 +177,7 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = isValid;
                     if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
+                        configuration.ResetData();
                         ApplyServerToken(_serverToken);
                     }
                 }
@@ -186,7 +187,7 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = !isRefreshing;
                     if (WitEditorUI.LayoutTextButton(isRefreshing ? WitTexts.Texts.ConfigurationRefreshingButtonLabel : WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
-                        SafeRefresh();
+                        SafeRefresh(true);
                     }
                 }
             }
@@ -203,8 +204,9 @@ namespace Facebook.WitAi.Windows
                 // Server access token
                 bool updated = false;
                 WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationServerTokenContent, ref _serverToken, ref updated);
-                if (updated)
+                if (updated && WitConfigurationUtility.IsServerTokenValid(_serverToken))
                 {
+                    configuration.ResetData();
                     ApplyServerToken(_serverToken);
                 }
 
@@ -257,8 +259,12 @@ namespace Facebook.WitAi.Windows
         // Apply server token
         public void ApplyServerToken(string newToken)
         {
-            _serverToken = newToken;
-            configuration.ResetData();
+            if (newToken != _serverToken)
+            {
+                _serverToken = newToken;
+                configuration.ResetData();
+            }
+
             configuration.SetServerToken(_serverToken);
         }
         // Whether or not to allow a configuration to refresh
@@ -406,12 +412,24 @@ namespace Facebook.WitAi.Windows
             }
             return string.Empty;
         }
-        // Safe refresh
+
         protected virtual void SafeRefresh()
         {
-            if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            SafeRefresh(false);
+        }
+
+        // Safe refresh
+        private void SafeRefresh(bool resetData)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+
+            if (resetData)
             {
                 configuration.ResetData();
+            }
+
+            if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            {
                 configuration.SetServerToken(_serverToken);
             }
             else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))

@@ -363,7 +363,9 @@ namespace Facebook.WitAi.Data.Configuration
             }
             if (IsRefreshing(appID))
             {
-                RefreshDataComplete(configuration, "Already Refreshing", onRefreshComplete);
+                // Return without error if we're already refreshing. Data will get updated by the
+                // active requests.
+                RefreshDataComplete(configuration, "", onRefreshComplete);
                 return;
             }
             if (!IsClientTokenValid(configuration.clientAccessToken))
