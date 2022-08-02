@@ -90,12 +90,12 @@ namespace Facebook.WitAi.TTS.Integrations
         /// Add clip to cache and ensure it is most recently referenced
         /// </summary>
         /// <param name="clipData"></param>
-        public void AddClip(TTSClipData clipData)
+        public bool AddClip(TTSClipData clipData)
         {
             // Do not add null
             if (clipData == null)
             {
-                return;
+                return false;
             }
             // Remove from order
             bool wasAdded = true;
@@ -114,14 +114,18 @@ namespace Facebook.WitAi.TTS.Integrations
             // Evict least recently used clips
             while (IsCacheFull() && _clipOrder.Count > 0)
             {
+                // Remove clip
                 RemoveClip(_clipOrder[0]);
             }
 
-            // Call add delegate
+            // Call add delegate even if removed
             if (wasAdded && _clips.Keys.Count > 0)
             {
                 OnClipAdded?.Invoke(clipData);
             }
+
+            // True if successfully added
+            return _clips.Keys.Count > 0;
         }
 
         /// <summary>

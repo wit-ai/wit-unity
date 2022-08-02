@@ -34,7 +34,9 @@ namespace Facebook.WitAi.TTS.Interfaces
         /// <summary>
         /// Method for adding a clip to the cache
         /// </summary>
-        void AddClip(TTSClipData clipData);
+        /// <param name="clipData"></param>
+        /// <returns></returns>
+        bool AddClip(TTSClipData clipData);
         /// <summary>
         /// Method for removing a clip from the cache
         /// </summary>

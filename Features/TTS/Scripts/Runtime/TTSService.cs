@@ -403,7 +403,14 @@ namespace Facebook.WitAi.TTS
             // Add to runtime cache if possible
             if (RuntimeCacheHandler != null)
             {
-                RuntimeCacheHandler.AddClip(clipData);
+                if (!RuntimeCacheHandler.AddClip(clipData))
+                {
+                    // Call
+                    CoroutineUtility.StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData, "Could not add to runtime cache")));
+
+                    // Return clip
+                    return clipData;
+                }
             }
             // Load begin
             else
@@ -519,7 +526,21 @@ namespace Facebook.WitAi.TTS
         private void OnStreamReady(TTSClipData clipData, bool fromDisk)
         {
             // Refresh cache for file size
-            RuntimeCacheHandler?.AddClip(clipData);
+            if (RuntimeCacheHandler != null)
+            {
+                // Stop forcing an unload if runtime cache update fails
+                RuntimeCacheHandler.OnClipRemoved.RemoveListener(OnRuntimeClipRemoved);
+                bool failed = !RuntimeCacheHandler.AddClip(clipData);
+                RuntimeCacheHandler.OnClipRemoved.AddListener(OnRuntimeClipRemoved);
+
+                // Handle fail directly
+                if (failed)
+                {
+                    OnStreamError(clipData, "Removed from runtime cache due to file size", fromDisk);
+                    OnRuntimeClipRemoved(clipData);
+                    return;
+                }
+            }
 
             // Now loaded
             SetClipLoadState(clipData, TTSClipLoadState.Loaded);
@@ -655,6 +676,7 @@ namespace Facebook.WitAi.TTS
         /// </summary>
         /// <param name="clipData"></param>
         protected virtual void OnRuntimeClipAdded(TTSClipData clipData) => OnLoadBegin(clipData);
+
         /// <summary>
         /// Called when runtime cache unloads a clip
         /// </summary>

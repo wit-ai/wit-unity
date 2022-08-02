@@ -228,10 +228,17 @@ namespace Facebook.WitAi.TTS.Utilities
             // Loading complete
             _loadingClip = null;
 
-            // Load failed
-            if (clipData.clip == null)
+            // Load error
+            if (!string.IsNullOrEmpty(error))
             {
                 Debug.LogError($"TTS Speaker - Load Clip - Failed\n{error}");
+                Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
+                return;
+            }
+            // No clip failure
+            if (clipData.clip == null)
+            {
+                Debug.LogError($"TTS Speaker - Load Clip - Failed\nNo clip returned");
                 Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
                 return;
             }
