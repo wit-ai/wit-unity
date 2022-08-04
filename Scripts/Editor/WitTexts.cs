@@ -48,6 +48,7 @@ namespace Facebook.WitAi
             public string UnderstandingViewerAbortButtonLabel;
             public string UnderstandingViewerListeningLabel;
             public string UnderstandingViewerLoadingLabel;
+            public string UnderstandingViewerSelectLabel;
             [Header("Settings Texts")]
             public string SettingsTitleLabel;
             public string SettingsServerTokenLabel;

@@ -198,6 +198,11 @@ namespace Facebook.WitAi.Windows
                 {
                     SetVoiceService(newService);
                 }
+                // Select
+                if (_currentService >= 0 && _currentService < _services.Length && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSelectLabel))
+                {
+                    Selection.activeObject = _services[_currentService];
+                }
                 // Refresh
                 if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
                 {

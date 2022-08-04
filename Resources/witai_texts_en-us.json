@@ -24,6 +24,7 @@
   "UnderstandingViewerAbortButtonLabel": "Abort",
   "UnderstandingViewerListeningLabel": "Listening...",
   "UnderstandingViewerLoadingLabel": "Loading...",
+  "UnderstandingViewerSelectLabel": "Select",
   "SettingsTitleLabel": "Wit.ai Settings",
   "SettingsServerTokenLabel": "Server Access Token",
   "SettingsServerTokenTooltip": "The shared server access token.",
