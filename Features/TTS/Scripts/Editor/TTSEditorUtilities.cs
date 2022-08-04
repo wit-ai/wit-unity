@@ -6,13 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Editor.Voices;
 using Facebook.WitAi.TTS.Integrations;
 using Facebook.WitAi.TTS.Utilities;
-using Facebook.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 

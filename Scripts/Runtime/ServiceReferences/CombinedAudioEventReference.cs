@@ -9,7 +9,6 @@
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Events.UnityEventListeners;
 using Facebook.WitAi.Interfaces;
-using UnityEngine;
 using UnityEngine.Events;
 
 namespace Facebook.WitAi.ServiceReferences
