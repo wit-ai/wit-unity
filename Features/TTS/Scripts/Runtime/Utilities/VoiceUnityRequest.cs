@@ -7,7 +7,9 @@
  */
 
 using System;
+using System.Text.RegularExpressions;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -17,6 +19,108 @@ namespace Facebook.WitAi.TTS.Utilities
 {
     public class VoiceUnityRequest
     {
+        #region FILE
+        // Final Url determination
+        public static string GetFinalUrl(string fileUrl)
+        {
+            // Get url
+            string result = fileUrl;
+            // Add file:// if needed
+            if (!Regex.IsMatch(result, "(http:|https:|file:|jar:).*"))
+            {
+                result = $"file://{result}";
+            }
+            // Return url
+            return result;
+        }
+        // Request a file
+        public static VoiceUnityRequest RequestFile(string fileUrl, Action<string, UnityWebRequest> onFileLoaded) => RequestFile(fileUrl, null, onFileLoaded);
+        public static VoiceUnityRequest RequestFile(string fileUrl, Action<string, float> onFileProgress, Action<string, UnityWebRequest> onFileLoaded)
+        {
+
+            // Generate get request
+            UnityWebRequest request = UnityWebRequest.Get(GetFinalUrl(fileUrl));
+            // Perform request & callback file with original file url
+            return Request(request, (p) => onFileProgress?.Invoke(fileUrl, p), (r) => onFileLoaded?.Invoke(fileUrl, r));
+        }
+        #endregion
+
+        #region HEADER
+        // Request a file header
+        public static VoiceUnityRequest RequestHeaders(string fileUrl, Action<string, Dictionary<string, string>> onHeadersObtained)
+        {
+            // Header request
+            UnityWebRequest request = UnityWebRequest.Head(GetFinalUrl(fileUrl));
+
+            // Perform request
+            return Request(request, null, (response) =>
+            {
+                // Headers dictionary if possible
+                Dictionary<string, string> headers = null;
+                // Log error if applicable
+                if (!string.IsNullOrEmpty(response.error))
+                {
+                    Debug.LogWarning($"Voice Unity Request - Header Failure\nError: {response.error}\nUrl: {fileUrl}");
+                }
+                // Set headers & log error if failure
+                else
+                {
+                    headers = response.GetResponseHeaders();
+                    if (headers == null)
+                    {
+                        Debug.LogWarning($"Voice Unity Request - No headers found\nUrl: {fileUrl}");
+                    }
+                }
+                // Return original file url with headers if possible
+                onHeadersObtained?.Invoke(fileUrl, headers);
+            });
+        }
+        #endregion
+
+        #region EXISTS
+        // Determine if local file exists
+        public static VoiceUnityRequest CheckFileExists(string filePath, Action<string, bool> onFileExistDetermined)
+        {
+            // WebGL & web files, perform a header lookup
+            if (filePath.StartsWith("http"))
+            {
+                return RequestHeaders(filePath, (url, headers) => onFileExistDetermined?.Invoke(filePath, headers != null));
+            }
+
+            // For Android jar files in streaming assets, begin a file load & cancel once it successfully begins
+            #if UNITY_ANDROID && UNITY_EDITOR
+            if (Application.isPlaying)
+            #else
+            if (filePath.StartsWith("jar"))
+            #endif
+            {
+                VoiceUnityRequest request = null;
+                request = RequestFile(filePath, (url, progress) =>
+                {
+                    // Stop as early as possible
+                    if (progress > 0f && progress < 1f && request != null)
+                    {
+                        request.Unload();
+                        request = null;
+                        onFileExistDetermined?.Invoke(filePath, true);
+                    }
+                }, (url, response) =>
+                {
+                    // If getting here, most likely failed but double check anyway
+                    onFileExistDetermined?.Invoke(filePath, string.IsNullOrEmpty(response.error));
+                });
+                return request;
+            }
+
+            // Can simply use File.IO
+            bool found = File.Exists(filePath);
+            onFileExistDetermined?.Invoke(filePath, found);
+
+            // Nothing to send back
+            return null;
+        }
+        #endregion
+
         #region AUDIO
         // Request audio clip with url & ready delegate
         public static VoiceUnityRequest RequestAudioClip(string audioUrl, Action<string, AudioClip, string> onAudioClipReady) =>
@@ -44,16 +148,8 @@ namespace Facebook.WitAi.TTS.Utilities
                 }
             }
 
-            // Get url
-            string finalUrl = audioUrl;
-            // Add file:// if needed
-            if (!audioUrl.StartsWith("http") && !audioUrl.StartsWith("file://") && !audioUrl.StartsWith("jar:"))
-            {
-                finalUrl = $"file://{audioUrl}";
-            }
-
             // Audio clip request
-            UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(finalUrl, audioType);
+            UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(GetFinalUrl(audioUrl), audioType);
 
             // Stream audio
             ((DownloadHandlerAudioClip)request.downloadHandler).streamAudio = true;
@@ -97,18 +193,6 @@ namespace Facebook.WitAi.TTS.Utilities
                     }
                 }
             });
-        }
-        #endregion
-
-        #region FILE
-        // Request a file
-        public static VoiceUnityRequest RequestFile(string fileUrl, Action<string, UnityWebRequest> onFileLoaded) => RequestFile(fileUrl, null, onFileLoaded);
-        public static VoiceUnityRequest RequestFile(string fileUrl, Action<string, float> onFileProgress, Action<string, UnityWebRequest> onFileLoaded)
-        {
-            // Generate get request
-            UnityWebRequest request = UnityWebRequest.Get(fileUrl);
-            // Perform request
-            return Request(request, (p) => onFileProgress?.Invoke(fileUrl, p), (r) => onFileLoaded?.Invoke(fileUrl, r));
         }
         #endregion
 

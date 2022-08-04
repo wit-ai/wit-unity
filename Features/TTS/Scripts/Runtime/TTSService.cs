@@ -745,28 +745,31 @@ namespace Facebook.WitAi.TTS
 
             // Check if cached to disk & log
             string downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
-            bool found = DiskCacheHandler.IsCachedToDisk(clipData);
-            LogClip($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipData);
-
-            // Found
-            if (found)
+            DiskCacheHandler.CheckCachedToDisk(clipData, (clip, found) =>
             {
-                onDownloadComplete?.Invoke(clipData, downloadPath, string.Empty);
-                return;
-            }
+                // Cache checked
+                LogClip($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipData);
 
-            // Fail if not preloaded
-            if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
-            {
-                onDownloadComplete?.Invoke(clipData, downloadPath, "File is not Preloaded");
-                return;
-            }
+                // Already downloaded, return successful
+                if (found)
+                {
+                    onDownloadComplete?.Invoke(clipData, downloadPath, string.Empty);
+                    return;
+                }
 
-            // Return error
-            clipData.onDownloadComplete += (error) => onDownloadComplete(clipData, downloadPath, error);
+                // Preload selected but not in disk cache, return an error
+                if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
+                {
+                    onDownloadComplete?.Invoke(clipData, downloadPath, "File is not Preloaded");
+                    return;
+                }
 
-            // Download to cache & then stream
-            WebHandler.RequestDownloadFromWeb(clipData, downloadPath);
+                // Add download completion callback
+                clipData.onDownloadComplete += (error) => onDownloadComplete(clipData, downloadPath, error);
+
+                // Download to cache
+                WebHandler.RequestDownloadFromWeb(clipData, downloadPath);
+            });
         }
         // On web download begin
         private void OnWebDownloadBegin(TTSClipData clipData, string downloadPath)

@@ -6,8 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
+using System;
 using System.IO;
+using System.Collections.Generic;
 using UnityEngine;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
@@ -110,26 +111,34 @@ namespace Facebook.WitAi.TTS.Integrations
         /// </summary>
         /// <param name="clipData">Request data</param>
         /// <returns>True if file is on disk</returns>
-        public bool IsCachedToDisk(TTSClipData clipData)
+        public void CheckCachedToDisk(TTSClipData clipData, Action<TTSClipData, bool> onCheckComplete)
         {
             // Get path
             string cachePath = GetDiskCachePath(clipData);
             if (string.IsNullOrEmpty(cachePath))
             {
-                return false;
+                onCheckComplete?.Invoke(clipData, false);
+                return;
             }
-
-            #if UNITY_ANDROID
-            // Cannot use File.Exists with Streaming Assets on Android
-            // This will try and fail to load if the file is missing and then stream it
-            if (clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload && Application.isPlaying)
-            {
-                return true;
-            }
-            #endif
 
             // Check if file exists
-            return File.Exists(cachePath);
+            VoiceUnityRequest request =
+                VoiceUnityRequest.CheckFileExists(cachePath, (path, success) =>
+                {
+                    // Remove
+                    if (_streamRequests.ContainsKey(clipData.clipID))
+                    {
+                        _streamRequests.Remove(clipData.clipID);
+                    }
+                    // Complete
+                    onCheckComplete(clipData, success);
+                });
+
+            // Return request
+            if (request != null)
+            {
+                _streamRequests[clipData.clipID] = request;
+            }
         }
 
         /// <summary>
@@ -142,14 +151,6 @@ namespace Facebook.WitAi.TTS.Integrations
 
             // Get file path
             string filePath = GetDiskCachePath(clipData);
-
-            // Ensures possible
-            if (!IsCachedToDisk(clipData))
-            {
-                string e = $"Clip not found\nPath: {filePath}";
-                OnStreamComplete(clipData, e);
-                return;
-            }
 
             // Load clip async
             _streamRequests[clipData.clipID] = VoiceUnityRequest.RequestAudioClip(filePath, (path, progress) => clipData.loadProgress = progress, (path, clip, error) =>

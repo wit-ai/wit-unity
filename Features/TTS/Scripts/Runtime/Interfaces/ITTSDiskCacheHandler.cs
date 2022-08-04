@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 
@@ -42,7 +43,7 @@ namespace Facebook.WitAi.TTS.Interfaces
         /// </summary>
         /// <param name="clipData">Clip request data</param>
         /// <returns>Returns true if currently on disk (Except for Android Streaming Assets)</returns>
-        bool IsCachedToDisk(TTSClipData clipData);
+        void CheckCachedToDisk(TTSClipData clipData, Action<TTSClipData, bool> onCheckComplete);
 
         /// <summary>
         /// Method for streaming from disk cache
