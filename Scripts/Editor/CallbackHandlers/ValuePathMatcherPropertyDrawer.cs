@@ -13,6 +13,7 @@ using UnityEngine;
 
 namespace Facebook.WitAi.CallbackHandlers
 {
+    [CustomPropertyDrawer(typeof(ValuePathMatcher))]
     public class ValuePathMatcherPropertyDrawer : PropertyDrawer
     {
         private string currentEditPath;
