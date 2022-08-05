@@ -442,7 +442,7 @@ namespace Facebook.WitAi.Lib
 
         #endregion
 
-        #region Microphone Wrappers
+        #region NO_MIC_WRAPPERS
         // Wrapper methods to handle platforms where the UnityEngine.Microphone class is non-existent
         private bool MicrophoneIsRecording(string device)
         {
