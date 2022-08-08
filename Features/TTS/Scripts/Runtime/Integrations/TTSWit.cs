@@ -260,6 +260,9 @@ namespace Facebook.WitAi.TTS.Integrations
         #region ITTSVoiceProvider
         // Preset voice settings
         [Header("Voice Settings")]
+        #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
+        [NonReorderable]
+        #endif
         [SerializeField] private TTSWitVoiceSettings[] _presetVoiceSettings;
         public TTSWitVoiceSettings[] PresetWitVoiceSettings => _presetVoiceSettings;
 

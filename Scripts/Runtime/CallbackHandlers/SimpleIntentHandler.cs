@@ -22,6 +22,9 @@ namespace Facebook.WitAi.CallbackHandlers
 
         [Tooltip("Confidence ranges are executed in order. If checked, all confidence values will be checked instead of stopping on the first one that matches.")]
         [SerializeField] public bool allowConfidenceOverlap;
+#if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
+        [NonReorderable]
+#endif
         [SerializeField] public ConfidenceRange[] confidenceRanges;
 
         public UnityEvent OnIntentTriggered => onIntentTriggered;
