@@ -80,9 +80,12 @@ namespace Facebook.WitAi.Events.Editor
             if (eventObject != null && eventObject.OverriddenCallbacks.Count != 0 && showEvents)
             {
                 var callbacksArray = eventObject.OverriddenCallbacks.ToArray();
-                
-                height += Mathf.RoundToInt(eventObject.OverriddenCallbacks.Count *
-                          EditorGUI.GetPropertyHeight(property.FindPropertyRelative(callbacksArray[0])) + CONTROL_SPACING);
+
+                foreach (var callback in callbacksArray)
+                {
+                    height += Mathf.RoundToInt(EditorGUI.GetPropertyHeight(property.FindPropertyRelative(callback),
+                                                   true) + CONTROL_SPACING);
+                }
 
                 // Add some extra space so the last property field's +/- buttons don't overlap the next control.
                 height += PROPERTY_FIELD_SPACING;
@@ -159,10 +162,10 @@ namespace Facebook.WitAi.Events.Editor
                     {
                         callbackProperty = property.FindPropertyRelative(callback);
                         
-                        propertyRect.height = EditorGUI.GetPropertyHeight(callbackProperty);
+                        propertyRect.height = EditorGUI.GetPropertyHeight(callbackProperty, true);
                         
                         EditorGUI.PropertyField(propertyRect, property.FindPropertyRelative(callback));
-
+                        
                         propertyRect.y += propertyRect.height + CONTROL_SPACING;
                     }
                 }
