@@ -60,7 +60,7 @@ namespace Facebook.WitAi.TTS.Utilities
                 // Log error if applicable
                 if (!string.IsNullOrEmpty(response.error))
                 {
-                    Debug.LogWarning($"Voice Unity Request - Header Failure\nError: {response.error}\nUrl: {fileUrl}");
+                    VLog.W($"Header Failure\nError: {response.error}\nUrl: {fileUrl}");
                 }
                 // Set headers & log error if failure
                 else
@@ -68,7 +68,7 @@ namespace Facebook.WitAi.TTS.Utilities
                     headers = response.GetResponseHeaders();
                     if (headers == null)
                     {
-                        Debug.LogWarning($"Voice Unity Request - No headers found\nUrl: {fileUrl}");
+                        VLog.W($"No headers found\nUrl: {fileUrl}");
                     }
                 }
                 // Return original file url with headers if possible

@@ -60,16 +60,6 @@ namespace Facebook.WitAi.TTS.Editor.Voices
         // Init gui
         private static bool _isGuiInit = false;
 
-        // Log
-        private static void Log(string comment, bool error = false)
-        {
-            string final = "TTS Wit Voice Utility - " + comment;
-            if (error)
-            {
-                Debug.LogError(final);
-            }
-        }
-
         #region LOAD
         // Persistent cache file path for getting voices without network
         public static string GetVoiceFilePath()
@@ -107,11 +97,11 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             try
             {
                 json = File.ReadAllText(backupPath);
-                Log($"Load Success\n{json}");
+                VLog.D($"Load Success\n{json}");
             }
             catch (Exception e)
             {
-                Log($"Load Failure\n{e}", true);
+                VLog.E($"Load Failure\n{e}");
                 _loading = false;
                 onComplete?.Invoke(false);
                 return;
@@ -127,7 +117,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             WitResponseNode response = WitResponseNode.Parse(json);
             if (response == null)
             {
-                Log($"Decode Failure\nCould not parse", true);
+                VLog.E($"Decode Failure\nCould not parse");
                 _loading = false;
                 onComplete?.Invoke(false);
                 return;
@@ -137,9 +127,10 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             string[] locales = localeRoot.ChildNodeNames;
             if (locales == null)
             {
-                Log($"Decode Failure\nNo locales found", true);
+                VLog.E($"Decode Failure\nNo locales found");
                 _loading = false;
                 onComplete?.Invoke(false);
+                return;
             }
             // Iterate locales
             List<TTSWitVoiceData> voiceList = new List<TTSWitVoiceData>();
@@ -190,7 +181,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 }
                 else
                 {
-                    Log($"Decode Warning\nUnknown field: {voiceFieldName}", true);
+                    VLog.W($"Decode Warning\nUnknown field: {voiceFieldName}");
                 }
             }
 
@@ -203,7 +194,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             // Decode failed
             if (newVoices == null || newVoices.Length == 0)
             {
-                Log($"Decode Failure", true);
+                VLog.E($"Decode Failure\nNo voices found");
                 _loading = false;
                 onComplete?.Invoke(false);
                 return;
@@ -216,14 +207,19 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             foreach (var voice in _voices)
             {
                 _voiceNames.Add(voice.name);
-                voiceLog.Append($"\n{voice.name}");
-                voiceLog.Append($"\n\tLocale: {voice.locale}");
-                voiceLog.Append($"\n\tGender: {voice.gender}");
-                voiceLog.Append($"\n\tStyles: {voice.styles.Length}");
+                voiceLog.AppendLine(voice.name);
+                voiceLog.AppendLine($"\tLocale: {voice.locale}");
+                voiceLog.AppendLine($"\tGender: {voice.gender}");
+                if (voice.styles != null)
+                {
+                    StringBuilder styleLog = new StringBuilder();
+                    styleLog.AppendJoin(", ", voice.styles);
+                    voiceLog.AppendLine($"\tStyles: {styleLog}");
+                }
             }
 
             // Success
-            Log($"Decode Success{voiceLog}");
+            VLog.D($"Decode Success\n{voiceLog}");
 
             // Complete
             _loading = false;
@@ -246,19 +242,19 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             _updating = true;
 
             // Download
-            Log("Service Download Begin");
+            VLog.D("Service Download Begin");
             WitUnityRequest.RequestTTSVoices(configuration, null, (json, error) =>
             {
                 // Failed
                 if (!string.IsNullOrEmpty(error))
                 {
-                    Log($"Service Download Failure\n{error}", true);
+                    VLog.E($"Service Download Failure\n{error}");
                     OnUpdateComplete(false, onComplete);
                     return;
                 }
 
                 // Success
-                Log($"Service Download Success\n{json}");
+                VLog.D($"Service Download Success\n{json}");
 
                 // Decode if possible
                 DecodeVoices(json, (success) =>
@@ -270,11 +266,11 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                         try
                         {
                             File.WriteAllText(backupPath, json);
-                            Log($"Service Save Success\nPath: {backupPath}");
+                            VLog.D($"Service Save Success\nPath: {backupPath}");
                         }
                         catch (Exception e)
                         {
-                            Log($"Service Save Failed\nPath: {backupPath}\n{e}", true);
+                            VLog.E($"Service Save Failed\nPath: {backupPath}\n{e}");
                         }
                     }
 

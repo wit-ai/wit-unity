@@ -487,7 +487,18 @@ namespace Facebook.WitAi
         private static string GetCallingCategory()
         {
             StackTrace stackTrace = new StackTrace();
-            return System.IO.Path.GetExtension(stackTrace.GetFrame(3).GetMethod().DeclaringType.ToString()).Substring(1);
+            string path = stackTrace.GetFrame(3).GetMethod().DeclaringType.ToString();
+            int index = path.LastIndexOf('.');
+            if (index != -1)
+            {
+                path = path.Substring(index + 1);
+            }
+            index = path.IndexOf("+<");
+            if (index != -1)
+            {
+                path = path.Substring(0, index);
+            }
+            return path;
         }
 
         /// <summary>

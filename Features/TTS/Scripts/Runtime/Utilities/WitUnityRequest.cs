@@ -108,7 +108,7 @@ namespace Facebook.WitAi.TTS.Utilities
             }
             catch (Exception e)
             {
-                Debug.LogError($"Deleting Temp File Failed\nPath: {tempDownloadPath}\n{e}");
+                VLog.E($"Deleting Temp File Failed\nPath: {tempDownloadPath}\n{e}");
             }
 
             // Request file
@@ -136,10 +136,9 @@ namespace Facebook.WitAi.TTS.Utilities
                         }
                     }
                 }
-                catch (Exception exception)
+                catch (Exception e)
                 {
-                    error = exception.ToString();
-                    Debug.LogError($"Moving File Failed\nFrom: {tempDownloadPath}\nTo: {downloadPath}\nError: {error}");
+                    VLog.E($"Moving File Failed\nFrom: {tempDownloadPath}\nTo: {downloadPath}\n{e}");
                 }
                 onDownloadComplete?.Invoke(error);
             });

@@ -87,7 +87,7 @@ namespace Facebook.WitAi.TTS.Integrations
             {
                 if (!IOUtility.CreateDirectory(directory, true))
                 {
-                    Debug.LogError($"TTS Cache - Failed to create tts directory\nPath: {directory}\nLocation: {location}");
+                    VLog.E($"Failed to create tts directory\nPath: {directory}\nLocation: {location}");
                     return string.Empty;
                 }
             }
