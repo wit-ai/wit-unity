@@ -21,6 +21,7 @@ namespace Facebook.WitAi
         public const string WIT_KEY_TRAITS = "traits";
         public const string WIT_KEY_FINAL = "is_final";
 
+        #region Base Response methods
         /// <summary>
         /// Get the transcription from a wit response node
         /// </summary>
@@ -50,6 +51,9 @@ namespace Facebook.WitAi
             && witResponse.AsObject.HasChild(WIT_KEY_FINAL)
             && witResponse[WIT_KEY_FINAL].AsBool;
 
+        #endregion
+
+        #region Entity methods
         /// <summary>
         /// Gets the string value of the first entity
         /// </summary>
@@ -157,54 +161,6 @@ namespace Facebook.WitAi
         }
 
         /// <summary>
-        /// Gets the first intent's name
-        /// </summary>
-        /// <param name="witResponse"></param>
-        /// <returns></returns>
-        public static string GetIntentName(this WitResponseNode witResponse)
-        {
-            return witResponse?[WIT_KEY_INTENTS]?[0]?["name"]?.Value;
-        }
-
-        /// <summary>
-        /// Gets the first intent node
-        /// </summary>
-        /// <param name="witResponse"></param>
-        /// <returns></returns>
-        public static WitResponseNode GetFirstIntent(this WitResponseNode witResponse)
-        {
-            return witResponse?[WIT_KEY_INTENTS]?[0];
-        }
-
-        /// <summary>
-        /// Gets the first set of intent data
-        /// </summary>
-        /// <param name="witResponse"></param>
-        /// <returns>WitIntentData or null if no intents are found</returns>
-        public static WitIntentData GetFirstIntentData(this WitResponseNode witResponse)
-        {
-            var array = witResponse?[WIT_KEY_INTENTS]?.AsArray;
-            return array?.Count > 0 ? array[0].AsWitIntent : null;
-        }
-
-        /// <summary>
-        /// Gets all intents in the given response
-        /// </summary>
-        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
-        /// <returns></returns>
-        public static WitIntentData[] GetIntents(this WitResponseNode witResponse)
-        {
-            var intentResponseArray = witResponse?[WIT_KEY_INTENTS].AsArray;
-            var intents = new WitIntentData[intentResponseArray?.Count ?? 0];
-            for (int i = 0; i < intents.Length; i++)
-            {
-                intents[i] = intentResponseArray[i].AsWitIntent;
-            }
-
-            return intents;
-        }
-
-        /// <summary>
         /// Gets all entities in the given response
         /// </summary>
         /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
@@ -256,7 +212,59 @@ namespace Facebook.WitAi
 
             return entities;
         }
+        #endregion
 
+        #region Intent methods
+        /// <summary>
+        /// Gets the first intent's name
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns></returns>
+        public static string GetIntentName(this WitResponseNode witResponse)
+        {
+            return witResponse?[WIT_KEY_INTENTS]?[0]?["name"]?.Value;
+        }
+
+        /// <summary>
+        /// Gets the first intent node
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns></returns>
+        public static WitResponseNode GetFirstIntent(this WitResponseNode witResponse)
+        {
+            return witResponse?[WIT_KEY_INTENTS]?[0];
+        }
+
+        /// <summary>
+        /// Gets the first set of intent data
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <returns>WitIntentData or null if no intents are found</returns>
+        public static WitIntentData GetFirstIntentData(this WitResponseNode witResponse)
+        {
+            var array = witResponse?[WIT_KEY_INTENTS]?.AsArray;
+            return array?.Count > 0 ? array[0].AsWitIntent : null;
+        }
+
+        /// <summary>
+        /// Gets all intents in the given response
+        /// </summary>
+        /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
+        /// <returns></returns>
+        public static WitIntentData[] GetIntents(this WitResponseNode witResponse)
+        {
+            var intentResponseArray = witResponse?[WIT_KEY_INTENTS].AsArray;
+            var intents = new WitIntentData[intentResponseArray?.Count ?? 0];
+            for (int i = 0; i < intents.Length; i++)
+            {
+                intents[i] = intentResponseArray[i].AsWitIntent;
+            }
+
+            return intents;
+        }
+        #endregion
+
+        #region Misc. Helper Methods
         public static string GetPathValue(this WitResponseNode response, string path)
         {
 
@@ -344,8 +352,23 @@ namespace Facebook.WitAi
 
             return nodes;
         }
+        #endregion
+
+        #region Trait Methods
+        /// <summary>
+        /// Gets the string value of the first trait
+        /// </summary>
+        /// <param name="witResponse"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static string GetTraitValue(this WitResponseNode witResponse, string name)
+        {
+            return witResponse?[WIT_KEY_TRAITS]?[name]?[0]?["value"]?.Value;
+        }
+        #endregion
     }
 
+    #region WitResponseReference Child Classes
     public class WitResponseReference
     {
         public WitResponseReference child;
@@ -436,4 +459,5 @@ namespace Facebook.WitAi
             return response[key].AsFloat;
         }
     }
+    #endregion
 }
