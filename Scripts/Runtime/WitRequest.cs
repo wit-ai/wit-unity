@@ -87,6 +87,7 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_TRAITS = "traits";
         public const string WIT_ENDPOINT_APPS = "apps";
         public const string WIT_ENDPOINT_UTTERANCES = "utterances";
+        public const string WIT_CLIENT_NAME = "wit-unity";
 
         private WitConfiguration configuration;
 
