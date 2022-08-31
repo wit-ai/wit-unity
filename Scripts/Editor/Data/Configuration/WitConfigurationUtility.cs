@@ -349,16 +349,17 @@ namespace Facebook.WitAi.Data.Configuration
         // Refreshes configuration data
         public static void RefreshData(this WitConfiguration configuration, Action<string> onRefreshComplete = null)
         {
+            // Ignore during runtime
+            if (Application.isPlaying)
+            {
+                onRefreshComplete?.Invoke(null);
+                return;
+            }
             // Get refresh id
             string appID = GetAppID(configuration);
             if (string.IsNullOrEmpty(appID))
             {
                 RefreshDataComplete(configuration, "Cannot refresh without application data", onRefreshComplete);
-                return;
-            }
-            if (Application.isPlaying)
-            {
-                RefreshDataComplete(configuration, "Cannot refresh while playing", onRefreshComplete);
                 return;
             }
             if (IsRefreshing(appID))
