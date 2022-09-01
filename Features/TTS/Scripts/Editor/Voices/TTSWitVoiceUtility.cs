@@ -213,7 +213,14 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 if (voice.styles != null)
                 {
                     StringBuilder styleLog = new StringBuilder();
-                    styleLog.AppendJoin(", ", voice.styles);
+                    foreach (var style in voice.styles)
+                    {
+                        if (styleLog.Length > 0)
+                        {
+                            styleLog.Append(", ");
+                        }
+                        styleLog.Append(style);
+                    }
                     voiceLog.AppendLine($"\tStyles: {styleLog}");
                 }
             }
