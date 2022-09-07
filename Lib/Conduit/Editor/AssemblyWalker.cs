@@ -10,6 +10,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using UnityEngine;
+using UnityEditor.Compilation;
 
 namespace Meta.Conduit.Editor
 {
@@ -19,14 +22,18 @@ namespace Meta.Conduit.Editor
     internal class AssemblyWalker : IAssemblyWalker
     {
         /// <summary>
+        /// The assembly that code not within an assembly is added to
+        /// </summary>
+        public const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
+
+        /// <summary>
         /// Returns a list of all assemblies that should be processed.
         /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
         /// </summary>
         /// <returns>The list of assemblies.</returns>
         public IEnumerable<IConduitAssembly> GetTargetAssemblies()
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
-
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)) || string.Equals(DEFAULT_ASSEMBLY_NAME, assembly.GetName().Name));
             return assemblies.Select(assembly => new ConduitAssembly(assembly)).ToList();
         }
     }
