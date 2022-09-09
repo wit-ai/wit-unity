@@ -39,7 +39,7 @@ namespace Meta.Conduit.Editor
         /// The manifest version. This would only change if the schema of the manifest changes.
         /// </summary>
         private const string CurrentVersion = "0.1";
-        
+
         internal ManifestGenerator(IAssemblyWalker assemblyWalker, IAssemblyMiner assemblyMiner)
         {
             this._assemblyWalker = assemblyWalker;
@@ -66,8 +66,6 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         private string GenerateManifest(IEnumerable<IConduitAssembly> assemblies, string domain, string id)
         {
-            Debug.Log($"Generating manifest.");
-
             var entities = new List<ManifestEntity>();
             var actions = new List<ManifestAction>();
             _assemblyMiner.Initialize();
@@ -94,7 +92,7 @@ namespace Meta.Conduit.Editor
                 PrettyPrint = true,
                 IndentValue = 4,
             };
-            
+
             JsonMapper.ToJson(manifest, jsonWriter);
             return sb.ToString();
         }

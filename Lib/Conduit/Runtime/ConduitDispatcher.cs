@@ -188,7 +188,6 @@ namespace Meta.Conduit
 
             if (method.IsStatic)
             {
-                Debug.Log($"About to invoke {method.Name}");
                 try
                 {
                     method.Invoke(null, parameterObjects.ToArray());
@@ -203,7 +202,6 @@ namespace Meta.Conduit
             }
             else
             {
-                Debug.Log($"About to invoke {method.Name} on all instances");
                 var allSucceeded = true;
                 foreach (var obj in this.instanceResolver.GetObjectsOfType(invocationContext.Type))
                 {

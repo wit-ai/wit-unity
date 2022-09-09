@@ -479,17 +479,27 @@ namespace Facebook.WitAi.Windows
             }
             catch (Exception e)
             {
-                Debug.LogError($"Wit Configuration Editor - Conduit Manifest Creation Failed\nPath: {fullPath}\n{e}");
+                Debug.LogError($"Wit Configuration Editor - Conduit manifest generation Failed\nPath: {fullPath}\n{e}");
                 return;
             }
 
             Statistics.SuccessfulGenerations++;
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);
             Statistics.AddIncompatibleFrequencies(AssemblyMiner.IncompatibleSignatureFrequency);
-            var generationTime = endGenerationTime - startGenerationTime;
-            AssetDatabase.ImportAsset(fullPath.Replace(Application.dataPath, "Assets"));
 
-            Debug.Log($"Done generating manifest. Total time: {generationTime.TotalMilliseconds} ms");
+            string unityPath = fullPath.Replace(Application.dataPath, "Assets");
+            AssetDatabase.ImportAsset(unityPath);
+
+            string configName = configuration.name;
+            string manifestName = Path.GetFileNameWithoutExtension(unityPath);
+#if UNITY_2021_2_OR_NEWER
+            string configPath = AssetDatabase.GetAssetPath(configuration);
+            configName = $"<a href=\"{configPath}\">{configName}</a>";
+            manifestName = $"<a href=\"{unityPath}\">{manifestName}</a>";
+#endif
+            Debug.Log($"Ref: {unityPath}");
+            var generationTime = endGenerationTime - startGenerationTime;
+            Debug.Log($"Wit Configuration Editor - Conduit manifest generated\nConfiguration: {configName}\nManifest: {manifestName}\nGeneration Time: {generationTime.TotalMilliseconds} ms");
 
             if (openManifest)
             {
