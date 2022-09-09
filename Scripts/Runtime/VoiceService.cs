@@ -153,7 +153,7 @@ namespace Facebook.WitAi
         protected virtual void Awake()
         {
             var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            _witConfiguration = witConfigProvider.RuntimeConfiguration.witConfiguration;
+            _witConfiguration = witConfigProvider?.RuntimeConfiguration?.witConfiguration;
 
             InitializeEventListeners();
 
