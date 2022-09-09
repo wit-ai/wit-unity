@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Editor.Preload;
+using Facebook.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -73,13 +74,16 @@ namespace Facebook.WitAi.TTS.Editor
             TtsService = EditorGUILayout.ObjectField("TTS Service", TtsService, typeof(TTSService), true) as TTSService;
             if (TtsService == null)
             {
-                EditorUtility.ClearProgressBar();
-                TtsService = GameObject.FindObjectOfType<TTSService>();
-                WitEditorUI.LayoutErrorLabel("You must add a TTS Service to the loaded scene in order perform TTS actions.");
-                EditorGUI.indentLevel--;
-                return;
+                TtsService = GameObjectSearchUtility.FindSceneObject<TTSService>(true);
+                if (TtsService == null)
+                {
+                    EditorUtility.ClearProgressBar();
+                    WitEditorUI.LayoutErrorLabel("You must add a TTS Service to the loaded scene in order perform TTS actions.");
+                    EditorGUI.indentLevel--;
+                    return;
+                }
             }
-            if (TtsService != null && _ttsVoiceIDs == null)
+            if (_ttsVoiceIDs == null)
             {
                 _ttsVoiceIDs = GetVoiceIDs(TtsService);
             }
