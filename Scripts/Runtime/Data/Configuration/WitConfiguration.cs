@@ -99,11 +99,6 @@ namespace Facebook.WitAi.Data.Configuration
         #endif
 
         /// <summary>
-        /// When true, Conduit will automatically generate manifests each time code changes.
-        /// </summary>
-        [SerializeField] public bool autoGenerateManifest = false;
-
-        /// <summary>
         /// When true, will open Conduit manifests when they are manually generated.
         /// </summary>
         [SerializeField] public bool openManifestOnGeneration = false;

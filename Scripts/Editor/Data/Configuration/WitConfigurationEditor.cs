@@ -114,9 +114,11 @@ namespace Facebook.WitAi.Windows
 
         private void LayoutConduitContent()
         {
+            // Get full manifest path & ensure it exists
             string manifestPath = configuration.ManifestEditorPath;
             manifestAvailable = File.Exists(manifestPath);
 
+            // Set conduit
             var useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit (Beta)"));
             if (configuration.useConduit != useConduit)
             {
@@ -124,28 +126,31 @@ namespace Facebook.WitAi.Windows
                 EditorUtility.SetDirty(configuration);
             }
 
-            EditorGUI.BeginDisabledGroup(!configuration.useConduit);
+            // Auto-generate manifest
+            if (configuration.useConduit && !manifestAvailable)
+            {
+                GenerateManifest(configuration, configuration.openManifestOnGeneration);
+            }
+
             {
                 EditorGUI.indentLevel++;
                 GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
                 {
+                    GUI.enabled = configuration.useConduit;
                     GUILayout.BeginHorizontal();
                     if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                     {
                         GenerateManifest(configuration, configuration.openManifestOnGeneration);
                     }
-                    GUI.enabled = manifestAvailable;
+                    GUI.enabled = configuration.useConduit && manifestAvailable;
                     if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
                     {
                         Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
                     }
                     GUI.enabled = true;
                     GUILayout.EndHorizontal();
-                    GUILayout.Space(WitStyles.ButtonMargin);
-                    configuration.autoGenerateManifest = (GUILayout.Toggle(configuration.autoGenerateManifest, "Auto Generate"));
                 }
                 EditorGUI.indentLevel--;
-                GUILayout.TextField($"Manifests generated: {Statistics.SuccessfulGenerations}");
             }
             EditorGUI.EndDisabledGroup();
         }
@@ -441,7 +446,7 @@ namespace Facebook.WitAi.Windows
         private static void OnScriptsReloaded() {
             foreach (var witConfig in WitConfigurationUtility.WitConfigs)
             {
-                if (witConfig.useConduit && witConfig.autoGenerateManifest)
+                if (witConfig.useConduit)
                 {
                     GenerateManifest(witConfig, false);
                 }
