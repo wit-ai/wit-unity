@@ -191,7 +191,12 @@ namespace Facebook.WitAi.Data.Configuration
             // Get new index following reload
             string name = System.IO.Path.GetFileNameWithoutExtension(unityPath);
             int index = GetConfigurationIndex(name);
-            _witConfigs[index].SetServerToken(serverToken);
+
+            // Set server token
+            if (!string.IsNullOrEmpty(serverToken))
+            {
+                _witConfigs[index].SetServerToken(serverToken);
+            }
 
             // Return index
             return index;
