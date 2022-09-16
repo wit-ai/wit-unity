@@ -12,7 +12,7 @@ using System.IO;
 using Facebook.WitAi.CallbackHandlers;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;

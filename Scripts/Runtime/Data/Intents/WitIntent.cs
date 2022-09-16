@@ -9,7 +9,7 @@
 using System;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using UnityEngine;
 
 namespace Facebook.WitAi.Data.Intents

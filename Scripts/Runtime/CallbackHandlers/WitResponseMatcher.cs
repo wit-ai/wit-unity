@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Facebook.WitAi.Data;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;

@@ -7,7 +7,7 @@
  */
 
 using System.Text.RegularExpressions;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using Facebook.WitAi.Utilities;
 using UnityEngine;
 

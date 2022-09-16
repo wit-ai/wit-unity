@@ -8,7 +8,7 @@
 
 using System.Reflection;
 using Facebook.WitAi.Data;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using Meta.Conduit;
 
 namespace Facebook.WitAi

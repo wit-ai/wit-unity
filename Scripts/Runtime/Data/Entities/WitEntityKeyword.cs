@@ -9,7 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 
 namespace Facebook.WitAi.Data.Entities
 {

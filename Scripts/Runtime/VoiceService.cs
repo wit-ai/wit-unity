@@ -16,7 +16,7 @@ using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Events;
 using Facebook.WitAi.Events.UnityEventListeners;
 using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using UnityEngine;
 using Meta.WitAi;
 

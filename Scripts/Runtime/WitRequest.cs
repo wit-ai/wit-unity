@@ -17,8 +17,8 @@ using System.Threading;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Lib;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -576,7 +576,7 @@ namespace Facebook.WitAi
                             {
                                 stringResponse = reader.ReadToEnd();
                                 MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                responseData = WitResponseJson.Parse(stringResponse);
+                                responseData = WitResponseNode.Parse(stringResponse);
                             }
                         }
                     }
@@ -627,7 +627,7 @@ namespace Facebook.WitAi
                                 {
                                     stringResponse = errorReader.ReadToEnd();
                                     MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                    responseData = WitResponseJson.Parse(stringResponse);
+                                    responseData = WitResponseNode.Parse(stringResponse);
                                 }
                             }
                         }
@@ -696,7 +696,7 @@ namespace Facebook.WitAi
         private bool ProcessStringResponse(string stringResponse)
         {
             // Decode full response
-            responseData = WitResponseJson.Parse(stringResponse);
+            responseData = WitResponseNode.Parse(stringResponse);
 
             // Handle responses
             bool hasResponse = responseData.HasResponse();

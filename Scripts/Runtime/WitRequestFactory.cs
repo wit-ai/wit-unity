@@ -12,7 +12,7 @@ using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 
 namespace Facebook.WitAi
 {

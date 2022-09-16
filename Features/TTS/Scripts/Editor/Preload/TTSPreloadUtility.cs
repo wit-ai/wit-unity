@@ -15,7 +15,7 @@ using UnityEngine;
 using Meta.WitAi;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 
 namespace Facebook.WitAi.TTS.Editor.Preload
 {

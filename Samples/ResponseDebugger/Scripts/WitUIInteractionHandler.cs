@@ -7,7 +7,7 @@
  */
 
 using System.Net;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using TMPro;
 using UnityEngine;
 

@@ -53,12 +53,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Data.Intents;
 using UnityEngine;
 
-
-namespace Facebook.WitAi.Lib
+namespace Meta.WitAi.Json
 {
     public enum JSONBinaryTag
     {
@@ -70,6 +67,17 @@ namespace Facebook.WitAi.Lib
         BoolValue = 6,
         FloatValue = 7,
     }
+
+    #region deprecated
+    public static class WitResponseJson
+    {
+        [Obsolete("Instead use WitResponseNode.Parse")]
+        public static WitResponseNode Parse(string aJSON)
+        {
+            return WitResponseNode.Parse(aJSON);
+        }
+    }
+    #endregion
 
     public class WitResponseNode
     {
@@ -271,12 +279,6 @@ namespace Facebook.WitAi.Lib
             // Return result
             return (T)result;
         }
-
-        public virtual WitEntityData AsWitEntity => new WitEntityData(this);
-        public virtual WitEntityFloatData AsWitFloatEntity => new WitEntityFloatData(this);
-        public virtual WitEntityIntData AsWitIntEntity => new WitEntityIntData(this);
-
-        public virtual WitIntentData AsWitIntent => new WitIntentData(this);
 
         #endregion typecasting properties
 
@@ -1295,14 +1297,6 @@ namespace Facebook.WitAi.Lib
             }
         }
     } // End of JSONLazyCreator
-
-    public static class WitResponseJson
-    {
-        public static WitResponseNode Parse(string aJSON)
-        {
-            return WitResponseNode.Parse(aJSON);
-        }
-    }
 
     public class JSONParseException : Exception
     {

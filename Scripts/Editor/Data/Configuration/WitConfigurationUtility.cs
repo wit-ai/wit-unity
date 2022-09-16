@@ -15,7 +15,7 @@ using System.Collections.Generic;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Json;
 using Facebook.WitAi.Configuration;
 using UnityEditor;
 using UnityEngine;
