@@ -15,11 +15,11 @@ namespace Meta.Conduit
     /// </summary>
     public class WitFullOutgoingEntity : WitOutgoingEntity
     {
-        public List<WitKeyword> Keywords { get; set; }
+        public List<WitKeyword> keywords { get; set; }
 
         public WitFullOutgoingEntity(WitIncomingEntity incoming): base(incoming)
         {
-            this.Keywords = incoming.Keywords;
+            this.keywords = incoming.keywords;
         }
     }
 }

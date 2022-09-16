@@ -99,7 +99,7 @@ namespace Meta.Conduit.Editor
                     if (parameter.EntityType == entityType)
                     {
                         roles.Add(new WitRole()
-                            {Name = parameter.QualifiedName}
+                            {name = parameter.QualifiedName}
                         );
                     }
                 }
@@ -121,13 +121,13 @@ namespace Meta.Conduit.Editor
             // TODO: Optimize this for larger sets
             foreach (var role in rolesToAdd)
             {
-                if (witOutgoingEntity.Roles.Contains(role.Name))
+                if (witOutgoingEntity.roles.Contains(role.name))
                 {
                     continue;
                 }
 
                 Debug.Log($"Adding role {role}");
-                witOutgoingEntity.Roles.Add(role.Name);
+                witOutgoingEntity.roles.Add(role.name);
                 rolesAdded = true;
             }
 
@@ -140,7 +140,7 @@ namespace Meta.Conduit.Editor
 
             var entityData = JsonConvert.SerializeObject(witOutgoingEntity);
             Debug.Log($"About to put entity: {entityData}");
-            yield return this.WitHttp.MakeUnityWebRequest($"/entities/{witOutgoingEntity.Name}", WebRequestMethods.Http.Put, entityData, completionCallback);
+            yield return this.WitHttp.MakeUnityWebRequest($"/entities/{witOutgoingEntity.name}", WebRequestMethods.Http.Put, entityData, completionCallback);
         }
 
         private IEnumerator GetEntity(string entityName, Action<WitIncomingEntity> callBack)
@@ -170,8 +170,8 @@ namespace Meta.Conduit.Editor
             {
                 keywords.Add(new WitKeyword()
                 {
-                    Keyword = keyword,
-                    Synonyms = new List<string>()
+                    keyword = keyword,
+                    synonyms = new List<string>()
                     {
                         keyword
                     }
@@ -180,9 +180,9 @@ namespace Meta.Conduit.Editor
 
             var witIncomingEntity = new WitIncomingEntity()
             {
-                Name = entity.Name,
-                Keywords = keywords,
-                Roles = this.GetRolesForEntityType(entity.ID).ToList()
+                name = entity.Name,
+                keywords = keywords,
+                roles = this.GetRolesForEntityType(entity.ID).ToList()
             };
 
             var witOutgoingEntity = new WitOutgoingEntity(witIncomingEntity);

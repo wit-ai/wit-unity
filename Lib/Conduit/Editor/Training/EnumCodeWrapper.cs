@@ -12,6 +12,7 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CSharp;
 
 namespace Meta.Conduit.Editor
@@ -67,10 +68,12 @@ namespace Meta.Conduit.Editor
         /// <param name="enumName"></param>
         /// <param name="enumValues"></param>
         /// <param name="sourceCodeFile"></param>
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, List<string> enumValues, string sourceCodeFile)
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, List<string> enumValues, string sourceCodeDirectory)
         {
             this._compileUnit = new CodeCompileUnit();
-            this._sourceFilePath = sourceCodeFile;
+
+            string cleanName = SanitizeValue(enumName);
+            this._sourceFilePath = $"{sourceCodeDirectory}\\{cleanName}.cs";
             this._fileIo = fileIo;
 
             const string defaultNameSpace = "Conduit.Generated";
@@ -78,15 +81,19 @@ namespace Meta.Conduit.Editor
             _compileUnit.Namespaces.Add(nameSpace);
             _namespaces.Add(defaultNameSpace, nameSpace);
 
-            _typeDeclaration = new CodeTypeDeclaration(enumName)
+            _typeDeclaration = new CodeTypeDeclaration(cleanName)
             {
                 IsEnum = true
             };
 
             foreach (var value in enumValues)
             {
-                _enumValues.Add(value);
-                _typeDeclaration.Members.Add(new CodeMemberField(enumName, value));
+                string cleanValue = SanitizeValue(value, false);
+                if (!_enumValues.Contains(cleanName))
+                {
+                    _enumValues.Add(cleanValue);
+                    _typeDeclaration.Members.Add(new CodeMemberField(cleanName, cleanValue));
+                }
             }
 
             nameSpace.Types.Add(_typeDeclaration);
@@ -102,6 +109,28 @@ namespace Meta.Conduit.Editor
             }
 
             return _namespaces[_enumNamespace];
+        }
+
+        /// <summary>
+        /// Script that sanitizes enum name & values to ensure they can be used in a class
+        /// </summary>
+        /// <param name="oldValue"></param>
+        /// <returns></returns>
+        public static string SanitizeValue(string oldValue, bool capitalFirst = true)
+        {
+            // Remove all non word characters, underscore & hyphen
+            string result = Regex.Replace(oldValue, @"[^\w_-]", "");
+            // Starts with number, append N
+            if (Regex.IsMatch(result[0].ToString(), @"^\d$"))
+            {
+                result = $"n{result}";
+            }
+            // Capitalize first letter
+            if (capitalFirst)
+            {
+                result = result[0].ToString().ToUpper() + result.Substring(1);
+            }
+            return result;
         }
 
         /// <summary>
@@ -153,6 +182,7 @@ namespace Meta.Conduit.Editor
                 _provider.GenerateCodeFromCompileUnit(this._compileUnit, tw,
                     new CodeGeneratorOptions()
                     {
+                        BracingStyle = "C",
                         BlankLinesBetweenMembers = false,
                         VerbatimOrder = true,
                     });

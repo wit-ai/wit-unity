@@ -10,6 +10,6 @@ namespace Meta.Conduit
 {
     public class WitEntity
     {
-        public string Name { get; set; }
+        public string name { get; set; }
     }
 }

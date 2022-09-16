@@ -13,6 +13,7 @@ using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Utilities;
 using Meta.Conduit;
+using Meta.WitAi;
 using UnityEditor;
 using UnityEngine;
 
@@ -37,8 +38,7 @@ namespace Facebook.WitAi.Windows
         private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
         private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
 
-        private readonly EnumSynchronizer _enumSynchronizer =
-            new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(WitAuthUtility.ServerToken, 60));
+        private EnumSynchronizer _enumSynchronizer;
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -156,19 +156,33 @@ namespace Facebook.WitAi.Windows
             {
                 Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
             }
-            GUI.enabled = true;
             // Generate local entities
             GUILayout.FlexibleSpace();
-            if (!syncInProgress && WitEditorUI.LayoutTextButton("Sync Entities"))
+            GUI.enabled = configuration.useConduit && !syncInProgress;
+            if (WitEditorUI.LayoutTextButton("Sync Entities"))
             {
+                // Generate
+                if (_enumSynchronizer == null)
+                {
+                    _enumSynchronizer = new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(_serverToken, 60));
+                }
+                // Sync
                 syncInProgress = true;
-                var manifest = ManifestLoader.LoadManifest(manifestPath);
-                _enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
+                var manifest = ManifestLoader.LoadManifest(configuration.manifestLocalPath);
+                CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
                 {
                     syncInProgress = false;
-                    Debug.Log($"Sync result: {success}");
-                });
+                    if (!success)
+                    {
+                        VLog.E($"Conduit Sync Failed\nError: {data}");
+                    }
+                    else
+                    {
+                        VLog.D("Conduit Sync Success");
+                    }
+                }));
             }
+            GUI.enabled = true;
 
             // Complete
             GUILayout.EndHorizontal();
@@ -289,6 +303,7 @@ namespace Facebook.WitAi.Windows
                 configuration.ResetData();
             }
 
+            WitAuthUtility.ServerToken = _serverToken;
             configuration.SetServerToken(_serverToken);
         }
         // Whether or not to allow a configuration to refresh
@@ -305,7 +320,7 @@ namespace Facebook.WitAi.Windows
             WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationClientTokenContent, ref configuration.clientAccessToken, ref updated);
             if (updated && string.IsNullOrEmpty(configuration.clientAccessToken))
             {
-                Debug.LogError("Client access token is not defined. Cannot perform requests with '" + configuration.name + "'.");
+                VLog.E("Client access token is not defined. Cannot perform requests with '" + configuration.name + "'.");
             }
             // Timeout field
             WitEditorUI.LayoutIntField(WitTexts.ConfigurationRequestTimeoutContent, ref configuration.timeoutMS, ref updated);
@@ -363,37 +378,41 @@ namespace Facebook.WitAi.Windows
                         _requestTab = -1;
                     }
                 }
+
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
-            }
 
-            // Layout selected tab using property id
-            string propertyID = _requestTab >= 0 && _requestTab < _tabIds.Length ? _tabIds[_requestTab] : string.Empty;
-            if (!string.IsNullOrEmpty(propertyID) && configuration != null)
-            {
-                SerializedObject serializedObj = new SerializedObject(configuration);
-                SerializedProperty serializedProp = serializedObj.FindProperty(propertyID);
-                if (serializedProp == null)
+                // Layout selected tab using property id
+                string propertyID = _requestTab >= 0 && _requestTab < _tabIds.Length
+                    ? _tabIds[_requestTab]
+                    : string.Empty;
+                if (!string.IsNullOrEmpty(propertyID) && configuration != null)
                 {
-                    WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
-                }
-                else if (!serializedProp.isArray)
-                {
-                    EditorGUILayout.PropertyField(serializedProp);
-                }
-                else if (serializedProp.arraySize == 0)
-                {
-                    WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
-                }
-                else
-                {
-                    for (int i = 0; i < serializedProp.arraySize; i++)
+                    SerializedObject serializedObj = new SerializedObject(configuration);
+                    SerializedProperty serializedProp = serializedObj.FindProperty(propertyID);
+                    if (serializedProp == null)
                     {
-                        SerializedProperty serializedPropChild = serializedProp.GetArrayElementAtIndex(i);
-                        EditorGUILayout.PropertyField(serializedPropChild);
+                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
                     }
+                    else if (!serializedProp.isArray)
+                    {
+                        EditorGUILayout.PropertyField(serializedProp);
+                    }
+                    else if (serializedProp.arraySize == 0)
+                    {
+                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
+                    }
+                    else
+                    {
+                        for (int i = 0; i < serializedProp.arraySize; i++)
+                        {
+                            SerializedProperty serializedPropChild = serializedProp.GetArrayElementAtIndex(i);
+                            EditorGUILayout.PropertyField(serializedPropChild);
+                        }
+                    }
+
+                    serializedObj.ApplyModifiedProperties();
                 }
-                serializedObj.ApplyModifiedProperties();
             }
 
             // Undent
@@ -504,27 +523,25 @@ namespace Facebook.WitAi.Windows
             }
             catch (Exception e)
             {
-                Debug.LogError($"Wit Configuration Editor - Conduit manifest generation Failed\nPath: {fullPath}\n{e}");
+                VLog.E($"Conduit manifest failed to generate\nPath: {fullPath}\n{e}");
                 return;
             }
 
             Statistics.SuccessfulGenerations++;
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);
             Statistics.AddIncompatibleFrequencies(AssemblyMiner.IncompatibleSignatureFrequency);
-
+            var generationTime = endGenerationTime - startGenerationTime;
             string unityPath = fullPath.Replace(Application.dataPath, "Assets");
             AssetDatabase.ImportAsset(unityPath);
 
             string configName = configuration.name;
             string manifestName = Path.GetFileNameWithoutExtension(unityPath);
-#if UNITY_2021_2_OR_NEWER
+            #if UNITY_2021_2_OR_NEWER
             string configPath = AssetDatabase.GetAssetPath(configuration);
             configName = $"<a href=\"{configPath}\">{configName}</a>";
             manifestName = $"<a href=\"{unityPath}\">{manifestName}</a>";
-#endif
-            Debug.Log($"Ref: {unityPath}");
-            var generationTime = endGenerationTime - startGenerationTime;
-            Debug.Log($"Wit Configuration Editor - Conduit manifest generated\nConfiguration: {configName}\nManifest: {manifestName}\nGeneration Time: {generationTime.TotalMilliseconds} ms");
+            #endif
+            VLog.D($"Conduit manifest generated\nConfiguration: {configName}\nManifest: {manifestName}\nGeneration Time: {generationTime.TotalMilliseconds} ms");
 
             if (openManifest)
             {

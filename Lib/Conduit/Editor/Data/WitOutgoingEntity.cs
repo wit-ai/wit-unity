@@ -18,15 +18,15 @@ namespace Meta.Conduit
     {
         public WitOutgoingEntity(WitIncomingEntity incoming)
         {
-            this.Name = incoming.Name;
+            this.name = incoming.name;
 
-            this.Roles = new List<string>();
-            foreach (var role in incoming.Roles)
+            this.roles = new List<string>();
+            foreach (var role in incoming.roles)
             {
-                this.Roles.Add(role.Name);
+                this.roles.Add(role.name);
             }
         }
 
-        public List<string> Roles { get; set; }
+        public List<string> roles { get; set; }
     }
 }

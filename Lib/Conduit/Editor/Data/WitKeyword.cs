@@ -12,8 +12,8 @@ namespace Meta.Conduit
 {
     public class WitKeyword
     {
-        public string Keyword { get; set; }
+        public string keyword { get; set; }
 
-        public List<string> Synonyms { get; set; }
+        public List<string> synonyms { get; set; }
     }
 }

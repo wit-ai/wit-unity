@@ -10,13 +10,13 @@ namespace Meta.Conduit
 {
     public class WitRole
     {
-        public string Id { get; set; }
+        public string id { get; set; }
 
-        public string Name { get; set; }
+        public string name { get; set; }
 
         public override string ToString()
         {
-            return $"{this.Name} ({this.Id})";
+            return $"{this.name} ({this.id})";
         }
     }
 }

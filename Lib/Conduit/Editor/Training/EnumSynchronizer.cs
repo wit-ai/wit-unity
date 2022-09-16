@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Meta.WitAi.Json;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meta.Conduit.Editor
@@ -43,14 +44,18 @@ namespace Meta.Conduit.Editor
             // For entities not available locally, add them
             // For all other entities, sync them with manifest
 
-            var witEntityNames = new List<string>();
+            List<string> witEntityNames = null;
             yield return this.GetAllWitEntityNames(list =>
             {
-                if (list != null)
-                {
-                    witEntityNames = list;
-                }
+                witEntityNames = list;
             });
+
+            // Error handling for service failure
+            if (witEntityNames == null)
+            {
+                completionCallback?.Invoke(false, "Failed to obtain entities from service");
+                yield break;
+            }
 
             var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToHashSet();
 
@@ -63,6 +68,9 @@ namespace Meta.Conduit.Editor
                     yield return CreateEnumFromWitEntity(entityName);
                 }
             }
+
+            // Import newly generated entities
+            AssetDatabase.Refresh();
 
             bool allEntitiesSynced = true;
             foreach (var manifestEntity in manifest.Entities)
@@ -121,11 +129,10 @@ namespace Meta.Conduit.Editor
                 throw new ArgumentException($"Entity {entityName} was not found on Wit.Ai");
             }
 
-            var keywords = witIncomingEntity.Keywords.Select(keyword => keyword.Keyword).ToList();
+            var keywords = witIncomingEntity.keywords.Select(keyword => keyword.keyword).ToList();
 
-            var wrapper = new EnumCodeWrapper(_fileIo, entityName, keywords, $"{GeneratedAssetsPath}\\{entityName}.cs");
+            var wrapper = new EnumCodeWrapper(_fileIo, $"{entityName}Entity", keywords, $"{GeneratedAssetsPath}");
             wrapper.WriteToFile();
-
         }
 
         private bool AddValuesToLocalEnum(ManifestEntity manifestEntity,
@@ -200,9 +207,9 @@ namespace Meta.Conduit.Editor
 
             var witEntityValues = new HashSet<string>();
 
-            foreach (var keyword in witEntity.Keywords)
+            foreach (var keyword in witEntity.keywords)
             {
-                witEntityValues.Add(keyword.Keyword);
+                witEntityValues.Add(keyword.keyword);
             }
 
             var originalWitValues = witEntityValues.ToList();
@@ -241,14 +248,23 @@ namespace Meta.Conduit.Editor
             var response = "";
             var result = false;
             yield return _witHttp.MakeUnityWebRequest($"/entities", WebRequestMethods.Http.Get,
-                (success, data) => { response = data;
+                (success, data) =>
+                {
+                    response = data;
                     result = success;
                 });
 
-            var entityNames = JsonConvert.DeserializeObject<List<EntityRecord>>(response);
-
             if (!result)
             {
+                Debug.LogError($"Wit Entities Load Failed\nError: {response}");
+                callBack(null);
+                yield break;
+            }
+
+            var entityNames = JsonConvert.DeserializeObject<List<EntityRecord>>(response);
+            if (entityNames == null)
+            {
+                Debug.LogError($"Wit Entities Decode Failed\nJSON:\n{response}");
                 callBack(null);
                 yield break;
             }
@@ -261,26 +277,28 @@ namespace Meta.Conduit.Editor
             var response = "";
             var result = false;
             yield return _witHttp.MakeUnityWebRequest($"/entities/{manifestEntityName}", WebRequestMethods.Http.Get,
-                (success, data) => { response = data;
+                (success, data) =>
+                {
+                    response = data;
                     result = success;
                 });
 
             if (!result)
             {
+                Debug.LogError($"Wit {manifestEntityName} Entity Load Failed\nError: {response}");
                 callBack(null);
                 yield break;
             }
 
-            Debug.Log($"Got entity: {response}");
             var entity = JsonConvert.DeserializeObject<WitIncomingEntity>(response);
-            if (entity.Keywords == null && entity.Roles == null && entity.Name == null)
+            if (entity.keywords == null && entity.roles == null && entity.name == null)
             {
+                Debug.LogError($"Wit {manifestEntityName} Entity Decode Failed\nKeywords: {(entity.keywords == null)}\nRoles: {(entity.roles == null)}\nName: {(entity.name == null)}\nJSON:\n{response}");
                 callBack(null);
+                yield break;
             }
-            else
-            {
-                callBack(entity);
-            }
+
+            callBack(entity);
         }
 
         private bool EntitiesEquivalent(ManifestEntity manifestEntity, WitIncomingEntity witEntity)

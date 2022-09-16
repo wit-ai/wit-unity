@@ -16,8 +16,8 @@ namespace Meta.Conduit
     /// </summary>
     public class WitIncomingEntity : WitEntity
     {
-        public List<WitRole> Roles { get; set; }
+        public List<WitRole> roles { get; set; }
 
-        public List<WitKeyword> Keywords { get; set; }
+        public List<WitKeyword> keywords { get; set; }
     }
 }

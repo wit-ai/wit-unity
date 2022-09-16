@@ -52,6 +52,10 @@ namespace Facebook.WitAi
 
             // Get file path
             string settingsFilePath = GetSettingsFilePath();
+            if (string.IsNullOrEmpty(settingsFilePath))
+            {
+                return;
+            }
             if (!File.Exists(settingsFilePath))
             {
                 Debug.LogWarning($"Wit Settings Utility - Generating new settings file\nPath{settingsFilePath}");
@@ -83,7 +87,6 @@ namespace Facebook.WitAi
             {
                 Debug.LogError($"Wit Settings Utility - Failed to decode settings file\nPath{settingsFilePath}\nError: {e}");
                 _settings = new WitSettings();
-                return;
             }
         }
         // Save Settings
