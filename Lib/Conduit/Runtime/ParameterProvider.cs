@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -19,7 +20,7 @@ namespace Meta.Conduit
     internal class ParameterProvider : IParameterProvider
     {
         protected Dictionary<string, object> ActualParameters = new Dictionary<string, object>();
-        
+
         /// <summary>
         /// Maps internal parameter names to fully qualified parameter names (roles/slots).
         /// </summary>
@@ -35,16 +36,27 @@ namespace Meta.Conduit
         }
 
         /// <summary>
-        /// Returns true if a parameter with the specified name can be provided. 
+        /// Returns true if a parameter with the specified name can be provided.
         /// </summary>
         /// <param name="parameter">The name of the parameter.</param>
         /// <returns>True if a parameter with the specified name can be provided.</returns>
-        public bool ContainsParameter(ParameterInfo parameter)
+        public bool ContainsParameter(ParameterInfo parameter, StringBuilder log)
         {
-            return (ActualParameters.ContainsKey(parameter.Name) &&
-                    this.parameterToRoleMap.ContainsKey(parameter.Name) &&
-                    ActualParameters[parameter.Name].GetType() == parameter.ParameterType) ||
-                   this.SupportedSpecializedParameter(parameter);
+            if (this.SupportedSpecializedParameter(parameter))
+            {
+                return true;
+            }
+            if (!ActualParameters.ContainsKey(parameter.Name))
+            {
+                log.AppendLine($"\tParameter '{parameter.Name}' not sent in invoke");
+                return false;
+            }
+            if (!this.parameterToRoleMap.ContainsKey(parameter.Name))
+            {
+                log.AppendLine($"\tParameter '{parameter.Name}' not found in role map");
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -59,31 +71,29 @@ namespace Meta.Conduit
             {
                 if (!this.parameterToRoleMap.ContainsKey(formalParameterName))
                 {
-                    Debug.LogError($"Parameter {formalParameterName} is missing");
+                    Debug.LogError($"Parameter '{formalParameterName}' is missing");
                     return false;
                 }
 
                 formalParameterName = this.parameterToRoleMap[formalParameterName];
             }
-            
+
             //var parameterValue = this.ActualParameters[formalParameterName];
             if (this.ActualParameters.TryGetValue(formalParameterName, out var parameterValue))
             {
                 if (formalParameter.ParameterType == typeof(string))
                 {
-                    return parameterValue;
+                    return parameterValue.ToString();
                 }
                 else if (formalParameter.ParameterType.IsEnum)
                 {
                     try
                     {
-                        return Enum.Parse(formalParameter.ParameterType, parameterValue.ToString(), true);
+                        return Enum.Parse(formalParameter.ParameterType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
                     }
                     catch (Exception e)
                     {
-                        var error =
-                            $"Failed to cast {parameterValue} to enum of type {formalParameter.ParameterType}. {e}";
-                        Debug.LogError(error);
+                        Debug.LogError($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
                         return false;
                     }
                 }
@@ -95,8 +105,7 @@ namespace Meta.Conduit
                     }
                     catch (Exception e)
                     {
-                        var error = $"Failed to convert {parameterValue} to {formalParameter.ParameterType}. {e}";
-                        Debug.LogError(error);
+                        Debug.LogError($"Parameter Provider - Parameter '{parameterValue}' could not be cast\nType: {formalParameter.ParameterType.FullName}\n{e}");
                         return false;
                     }
 

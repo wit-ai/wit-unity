@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -109,13 +110,15 @@ namespace Meta.Conduit
             {
                 return false;
             }
-            else if (invocationContext.MinConfidence > confidence || confidence > invocationContext.MaxConfidence)
+            if (invocationContext.MinConfidence > confidence || confidence > invocationContext.MaxConfidence)
             {
                 return false;
             }
-            else if (!parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter)))
+
+            StringBuilder log = new StringBuilder();
+            if (!parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter, log)))
             {
-                Debug.LogError($"Failed to find execution context for {invocationContext.MethodInfo.Name}. Parameters could not be matched");
+                Debug.LogWarning($"Conduit Dispatcher - Failed to dispatch method\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\n{log}");
                 return false;
             }
             return true;
@@ -178,9 +181,10 @@ namespace Meta.Conduit
             var parameterObjects = new object[formalParametersInfo.Length];
             for (var i = 0; i < formalParametersInfo.Length; i++)
             {
-                if (!parameterProvider.ContainsParameter(formalParametersInfo[i]))
+                StringBuilder log = new StringBuilder();
+                if (!parameterProvider.ContainsParameter(formalParametersInfo[i], log))
                 {
-                    Debug.LogError($"Failed to find parameter {formalParametersInfo[i].Name} while invoking {method.Name}");
+                    Debug.LogError($"Conduit Dispatcher - Failed to find method param while invoking\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\nParameter Issues\n{log}");
                     return false;
                 }
                 parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i]);

@@ -121,17 +121,25 @@ namespace Meta.Conduit.Editor
 
         private IEnumerator CreateEnumFromWitEntity(string entityName)
         {
+            // Obtain wit entity
             WitIncomingEntity witIncomingEntity = null;
             yield return this.GetWitEntity(entityName, incomingEntity => witIncomingEntity = incomingEntity);
 
+            // Wit entity not found
             if (witIncomingEntity == null)
             {
-                throw new ArgumentException($"Entity {entityName} was not found on Wit.Ai");
+                Debug.LogError($"Enum Synchronizer - Failed to find {entityName} entity on Wit.AI");
+                yield break;
             }
 
-            var keywords = witIncomingEntity.keywords.Select(keyword => keyword.keyword).ToList();
+            // Get enum name & values
+            var entityEnumName = ConduitUtilities.GetEntityEnumName(entityName);
+            var entityEnumValues = witIncomingEntity.keywords.Select(keyword => ConduitUtilities.GetEntityEnumValue(keyword.keyword)).ToList();
 
-            var wrapper = new EnumCodeWrapper(_fileIo, $"{entityName}Entity", keywords, $"{GeneratedAssetsPath}");
+            // Generate wrapper
+            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumValues, $"{GeneratedAssetsPath}");
+
+            // Write to file
             wrapper.WriteToFile();
         }
 

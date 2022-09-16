@@ -12,7 +12,6 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.CSharp;
 
 namespace Meta.Conduit.Editor
@@ -72,7 +71,7 @@ namespace Meta.Conduit.Editor
         {
             this._compileUnit = new CodeCompileUnit();
 
-            string cleanName = SanitizeValue(enumName);
+            string cleanName = ConduitUtilities.SanitizeName(enumName);
             this._sourceFilePath = $"{sourceCodeDirectory}\\{cleanName}.cs";
             this._fileIo = fileIo;
 
@@ -88,8 +87,8 @@ namespace Meta.Conduit.Editor
 
             foreach (var value in enumValues)
             {
-                string cleanValue = SanitizeValue(value, false);
-                if (!_enumValues.Contains(cleanName))
+                string cleanValue = ConduitUtilities.SanitizeString(value);
+                if (!_enumValues.Contains(cleanValue))
                 {
                     _enumValues.Add(cleanValue);
                     _typeDeclaration.Members.Add(new CodeMemberField(cleanName, cleanValue));
@@ -109,28 +108,6 @@ namespace Meta.Conduit.Editor
             }
 
             return _namespaces[_enumNamespace];
-        }
-
-        /// <summary>
-        /// Script that sanitizes enum name & values to ensure they can be used in a class
-        /// </summary>
-        /// <param name="oldValue"></param>
-        /// <returns></returns>
-        public static string SanitizeValue(string oldValue, bool capitalFirst = true)
-        {
-            // Remove all non word characters, underscore & hyphen
-            string result = Regex.Replace(oldValue, @"[^\w_-]", "");
-            // Starts with number, append N
-            if (Regex.IsMatch(result[0].ToString(), @"^\d$"))
-            {
-                result = $"n{result}";
-            }
-            // Capitalize first letter
-            if (capitalFirst)
-            {
-                result = result[0].ToString().ToUpper() + result.Substring(1);
-            }
-            return result;
         }
 
         /// <summary>
