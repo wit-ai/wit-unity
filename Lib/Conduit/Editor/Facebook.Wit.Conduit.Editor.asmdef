@@ -3,7 +3,6 @@
     "rootNamespace": "",
     "references": [
         "Meta.WitAi.Lib",
-        "LitJson",
         "Facebook.Wit.Conduit"
     ],
     "includePlatforms": [

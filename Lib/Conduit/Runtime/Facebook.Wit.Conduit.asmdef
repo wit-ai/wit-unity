@@ -2,8 +2,7 @@
     "name": "Facebook.Wit.Conduit",
     "rootNamespace": "",
     "references": [
-        "GUID:1c28d8b71ced07540b7c271537363cc6",
-        "GUID:07d52870abb2972488970771fb159cc4"
+        "GUID:1c28d8b71ced07540b7c271537363cc6"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

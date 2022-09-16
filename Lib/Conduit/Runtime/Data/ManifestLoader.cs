@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.Wit.LitJson;
+using Meta.WitAi.Json;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -34,7 +34,7 @@ namespace Meta.Conduit
             }
 
             string rawJson = jsonFile.text;
-            var manifest = JsonMapper.ToObject<Manifest>(rawJson);
+            var manifest = JsonConvert.DeserializeObject<Manifest>(rawJson);
             if (manifest.ResolveActions())
             {
                 Debug.Log($"Successfully Loaded Conduit manifest");
