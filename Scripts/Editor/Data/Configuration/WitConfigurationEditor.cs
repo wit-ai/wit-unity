@@ -139,53 +139,30 @@ namespace Facebook.WitAi.Windows
                 GenerateManifest(configuration, configuration.openManifestOnGeneration);
             }
 
-            // Begin
+            // Configuration buttons
             EditorGUI.indentLevel++;
             GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
-            GUILayout.BeginHorizontal();
-
-            // Generate/Update manifest
-            GUI.enabled = configuration.useConduit;
-            if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
             {
-                GenerateManifest(configuration, configuration.openManifestOnGeneration);
-            }
-            // Select manifest asset
-            GUI.enabled = configuration.useConduit && manifestAvailable;
-            if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
-            {
-                Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
-            }
-            // Generate local entities
-            GUILayout.FlexibleSpace();
-            GUI.enabled = configuration.useConduit && !syncInProgress;
-            if (WitEditorUI.LayoutTextButton("Sync Entities"))
-            {
-                // Generate
-                if (_enumSynchronizer == null)
+                GUI.enabled = configuration.useConduit;
+                GUILayout.BeginHorizontal();
+                if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                 {
-                    _enumSynchronizer = new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(_serverToken, 60));
+                    GenerateManifest(configuration, configuration.openManifestOnGeneration);
                 }
-                // Sync
-                syncInProgress = true;
-                var manifest = ManifestLoader.LoadManifest(configuration.manifestLocalPath);
-                CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
+                GUI.enabled = configuration.useConduit && manifestAvailable;
+                if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
                 {
-                    syncInProgress = false;
-                    if (!success)
-                    {
-                        VLog.E($"Conduit Sync Failed\nError: {data}");
-                    }
-                    else
-                    {
-                        VLog.D("Conduit Sync Success");
-                    }
-                }));
+                    Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
+                }
+                GUILayout.FlexibleSpace();
+                GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
+                if (WitEditorUI.LayoutTextButton("Sync Entities"))
+                {
+                    SyncEntities();
+                }
+                GUI.enabled = true;
+                GUILayout.EndHorizontal();
             }
-            GUI.enabled = true;
-
-            // Complete
-            GUILayout.EndHorizontal();
             EditorGUI.indentLevel--;
         }
 
@@ -547,6 +524,40 @@ namespace Facebook.WitAi.Windows
             {
                 UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(fullPath, 1);
             }
+        }
+
+        // Sync entities
+        private void SyncEntities()
+        {
+            // Fail without server token
+            bool validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
+            if (!validServerToken)
+            {
+                VLog.E($"Conduit Sync Failed\nError: Invalid server token");
+                return;
+            }
+
+            // Generate
+            if (_enumSynchronizer == null)
+            {
+                _enumSynchronizer = new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(_serverToken, 60));
+            }
+
+            // Sync
+            syncInProgress = true;
+            var manifest = ManifestLoader.LoadManifest(configuration.manifestLocalPath);
+            CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
+            {
+                syncInProgress = false;
+                if (!success)
+                {
+                    VLog.E($"Conduit Sync Failed\nError: {data}");
+                }
+                else
+                {
+                    VLog.D("Conduit Sync Success");
+                }
+            }));
         }
     }
 }
