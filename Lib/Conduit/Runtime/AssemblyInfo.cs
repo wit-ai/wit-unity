@@ -13,3 +13,4 @@ using System.Runtime.CompilerServices;
 [assembly:InternalsVisibleTo("Facebook.Wit.Tests.Editor")]
 [assembly:InternalsVisibleTo("Facebook.Wit.Tests")]
 [assembly:InternalsVisibleTo("DynamicProxyGenAssembly2")]
+[assembly:InternalsVisibleTo("Facebook.Wit.Editor")]

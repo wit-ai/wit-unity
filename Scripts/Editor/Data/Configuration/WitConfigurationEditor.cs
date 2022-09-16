@@ -12,6 +12,7 @@ using Meta.Conduit.Editor;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Utilities;
+using Meta.Conduit;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,10 +29,16 @@ namespace Facebook.WitAi.Windows
         private bool _foldout = true;
         private int _requestTab = 0;
         private bool manifestAvailable = false;
+        private bool syncInProgress = false;
 
         private static ConduitStatistics _statistics;
         private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
-        private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(new AssemblyWalker(), AssemblyMiner);
+        private static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
+        private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
+        private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
+
+        private readonly EnumSynchronizer _enumSynchronizer =
+            new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(WitAuthUtility.ServerToken, 60));
 
         // Tab IDs
         protected const string TAB_APPLICATION_ID = "application";
@@ -132,27 +139,40 @@ namespace Facebook.WitAi.Windows
                 GenerateManifest(configuration, configuration.openManifestOnGeneration);
             }
 
+            // Begin
+            EditorGUI.indentLevel++;
+            GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
+            GUILayout.BeginHorizontal();
+
+            // Generate/Update manifest
+            GUI.enabled = configuration.useConduit;
+            if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
             {
-                EditorGUI.indentLevel++;
-                GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
-                {
-                    GUI.enabled = configuration.useConduit;
-                    GUILayout.BeginHorizontal();
-                    if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
-                    {
-                        GenerateManifest(configuration, configuration.openManifestOnGeneration);
-                    }
-                    GUI.enabled = configuration.useConduit && manifestAvailable;
-                    if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
-                    {
-                        Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
-                    }
-                    GUI.enabled = true;
-                    GUILayout.EndHorizontal();
-                }
-                EditorGUI.indentLevel--;
+                GenerateManifest(configuration, configuration.openManifestOnGeneration);
             }
-            EditorGUI.EndDisabledGroup();
+            // Select manifest asset
+            GUI.enabled = configuration.useConduit && manifestAvailable;
+            if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
+            {
+                Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
+            }
+            GUI.enabled = true;
+            // Generate local entities
+            GUILayout.FlexibleSpace();
+            if (!syncInProgress && WitEditorUI.LayoutTextButton("Sync Entities"))
+            {
+                syncInProgress = true;
+                var manifest = ManifestLoader.LoadManifest(manifestPath);
+                _enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
+                {
+                    syncInProgress = false;
+                    Debug.Log($"Sync result: {success}");
+                });
+            }
+
+            // Complete
+            GUILayout.EndHorizontal();
+            EditorGUI.indentLevel--;
         }
 
         protected virtual void LayoutContent()

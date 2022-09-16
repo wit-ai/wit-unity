@@ -6,12 +6,27 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
+using UnityEditor.Compilation;
 
 namespace Meta.Conduit.Editor
 {
     internal interface IAssemblyWalker
     {
+        /// <summary>
+        /// Returns a list of all assemblies that should be processed.
+        /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
+        /// </summary>
+        /// <returns>The list of assemblies.</returns>
         IEnumerable<IConduitAssembly> GetTargetAssemblies();
+
+        /// <summary>
+        /// Returns a list of assemblies that Unity will build for Edit or Run time.
+        /// </summary>
+        /// <returns>The list of assemblies in the compilation pipeline.</returns>
+        IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType);
+
+        public bool GetSourceCode(Type type, out string sourceCodeFile);
     }
 }

@@ -8,11 +8,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using UnityEngine;
+using System.Text.RegularExpressions;
 using UnityEditor.Compilation;
+using Assembly = UnityEditor.Compilation.Assembly;
 
 namespace Meta.Conduit.Editor
 {
@@ -21,20 +22,75 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class AssemblyWalker : IAssemblyWalker
     {
-        /// <summary>
-        /// The assembly that code not within an assembly is added to
-        /// </summary>
-        public const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
-
-        /// <summary>
-        /// Returns a list of all assemblies that should be processed.
-        /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
-        /// </summary>
-        /// <returns>The list of assemblies.</returns>
+        /// <inheritdoc/>
         public IEnumerable<IConduitAssembly> GetTargetAssemblies()
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)) || string.Equals(DEFAULT_ASSEMBLY_NAME, assembly.GetName().Name));
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
+
             return assemblies.Select(assembly => new ConduitAssembly(assembly)).ToList();
+        }
+
+        /// <inheritdoc/>
+        public IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType)
+        {
+            return CompilationPipeline.GetAssemblies(assembliesType);
+        }
+
+        public bool GetSourceCode(Type type, out string sourceCodeFile)
+        {
+            if (!type.IsEnum)
+            {
+                throw new ArgumentException("Type needs to be an enum");
+            }
+
+            foreach (var assembly in GetCompilationAssemblies(AssembliesType.Player))
+            {
+                if (GetSourceCodeFromAssembly(assembly, type, out sourceCodeFile))
+                {
+                    return true;
+                }
+            }
+
+            sourceCodeFile = string.Empty;
+            return false;
+        }
+
+        private bool GetSourceCodeFromAssembly(Assembly assembly, Type type, out string sourceCodeFile)
+        {
+            // TODO: Cache code files.
+            var defaultFileName = GetDefaultFileName(type);
+            
+            foreach (var sourceFile in assembly.sourceFiles)
+            {
+                if (!sourceFile.EndsWith(defaultFileName) || (!ContainsType(sourceFile, type)))
+                {
+                    continue;
+                }
+                
+                sourceCodeFile = sourceFile;
+                return true;
+            }
+
+            sourceCodeFile = string.Empty;
+            return false;
+        }
+
+        private bool ContainsType(string sourceFile, Type type)
+        {
+            if (!type.IsEnum)
+            {
+                throw new ArgumentException("Type needs to be an enum");
+            }
+
+            var pattern = $"{{enum}}\\s{type.Name}";
+            var text = File.ReadAllText(sourceFile);
+            
+            return Regex.IsMatch(text, pattern);
+        }
+
+        private string GetDefaultFileName(Type type)
+        {
+            return $"{type.Name}.cs";
         }
     }
 }

@@ -88,7 +88,8 @@ namespace Meta.Conduit.Editor
                 {
                     ID = $"{enumType.Name}",
                     Type = "Enum",
-                    Name = $"{enumType.Name}"
+                    Name = $"{enumType.Name}",
+                    Assembly = assembly.FullName
                 };
 
                 var values = new List<string>();
