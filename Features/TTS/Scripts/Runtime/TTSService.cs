@@ -15,7 +15,7 @@ using UnityEngine;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.TTS
 {

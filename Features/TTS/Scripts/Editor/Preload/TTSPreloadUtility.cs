@@ -12,7 +12,7 @@ using System.IO;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Lib;

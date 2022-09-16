@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Interfaces;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.Lib
 {

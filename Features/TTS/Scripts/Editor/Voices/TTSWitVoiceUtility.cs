@@ -16,6 +16,7 @@ using Facebook.WitAi.Lib;
 using Facebook.WitAi.TTS.Utilities;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Integrations;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.TTS.Editor.Voices
 {

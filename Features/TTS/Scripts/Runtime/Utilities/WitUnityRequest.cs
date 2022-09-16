@@ -14,10 +14,11 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.TTS.Utilities
 {
-    public class WitUnityRequest : VoiceUnityRequest
+    public class WitUnityRequest : RequestPerformer
     {
         #region TTS
         // Audio type for tts

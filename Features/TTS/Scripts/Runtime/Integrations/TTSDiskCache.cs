@@ -15,6 +15,7 @@ using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
 using Facebook.WitAi.TTS.Utilities;
 using Facebook.WitAi.Utilities;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.TTS.Integrations
 {
@@ -44,7 +45,7 @@ namespace Facebook.WitAi.TTS.Integrations
         }
 
         // All currently performing stream requests
-        private Dictionary<string, VoiceUnityRequest> _streamRequests = new Dictionary<string, VoiceUnityRequest>();
+        private Dictionary<string, RequestPerformer> _streamRequests = new Dictionary<string, RequestPerformer>();
 
         /// <summary>
         /// Builds full cache path
@@ -122,8 +123,8 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Check if file exists
-            VoiceUnityRequest request =
-                VoiceUnityRequest.CheckFileExists(cachePath, (path, success) =>
+            RequestPerformer request =
+                RequestUtility.CheckFileExists(cachePath, (path, success) =>
                 {
                     // Remove
                     if (_streamRequests.ContainsKey(clipData.clipID))
@@ -153,7 +154,7 @@ namespace Facebook.WitAi.TTS.Integrations
             string filePath = GetDiskCachePath(clipData);
 
             // Load clip async
-            _streamRequests[clipData.clipID] = VoiceUnityRequest.RequestAudioClip(filePath, (path, progress) => clipData.loadProgress = progress, (path, clip, error) =>
+            _streamRequests[clipData.clipID] = RequestUtility.RequestAudioClip(filePath, (path, progress) => clipData.loadProgress = progress, (path, clip, error) =>
             {
                 // Apply clip
                 clipData.clip = clip;
@@ -173,7 +174,7 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get request
-            VoiceUnityRequest request = _streamRequests[clipData.clipID];
+            RequestPerformer request = _streamRequests[clipData.clipID];
             _streamRequests.Remove(clipData.clipID);
 
             // Destroy immediately
