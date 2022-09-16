@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using UnityEngine;
+using Meta.WitAi;
 
 namespace Meta.Conduit.Editor
 {
@@ -80,7 +80,7 @@ namespace Meta.Conduit.Editor
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Failed to get enumeration values. {e}");
+                    VLog.W($"Failed to get enumeration values.\nEnum: {enumType}\n{e}");
                     continue;
                 }
 
@@ -198,7 +198,7 @@ namespace Meta.Conduit.Editor
                 }
                 else
                 {
-                    Debug.LogWarning($"{method} has Conduit-incompatible parameters");
+                    VLog.W($"{method} has Conduit-Incompatible Parameters");
                     IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
                     IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
                 }

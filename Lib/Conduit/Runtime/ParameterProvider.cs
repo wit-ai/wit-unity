@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-using UnityEngine;
+using Meta.WitAi;
 
 namespace Meta.Conduit
 {
@@ -71,7 +71,7 @@ namespace Meta.Conduit
             {
                 if (!this.parameterToRoleMap.ContainsKey(formalParameterName))
                 {
-                    Debug.LogError($"Parameter '{formalParameterName}' is missing");
+                    VLog.E($"Parameter '{formalParameterName}' is missing");
                     return false;
                 }
 
@@ -93,7 +93,7 @@ namespace Meta.Conduit
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
+                        VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
                         return false;
                     }
                 }
@@ -105,7 +105,7 @@ namespace Meta.Conduit
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Parameter Provider - Parameter '{parameterValue}' could not be cast\nType: {formalParameter.ParameterType.FullName}\n{e}");
+                        VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast\nType: {formalParameter.ParameterType.FullName}\n{e}");
                         return false;
                     }
 

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -23,13 +24,12 @@ namespace Meta.Conduit
         /// <returns>The loaded manifest object.</returns>
         public Manifest LoadManifest(string manifestLocalPath)
         {
-            Debug.Log($"Loaded Conduit manifest from Resources/{manifestLocalPath}");
             int extIndex = manifestLocalPath.LastIndexOf('.');
             string ignoreEnd = extIndex == -1 ? manifestLocalPath : manifestLocalPath.Substring(0, extIndex);
             TextAsset jsonFile = Resources.Load<TextAsset>(ignoreEnd);
             if (jsonFile == null)
             {
-                Debug.LogError($"Conduit Error - No Manifest found at Resources/{manifestLocalPath}");
+                VLog.E($"Conduit Error - No Manifest found at Resources/{manifestLocalPath}");
                 return null;
             }
 
@@ -37,11 +37,11 @@ namespace Meta.Conduit
             var manifest = JsonConvert.DeserializeObject<Manifest>(rawJson);
             if (manifest.ResolveActions())
             {
-                Debug.Log($"Successfully Loaded Conduit manifest");
+                VLog.D($"Successfully Loaded Conduit manifest");
             }
             else
             {
-                Debug.LogError($"Fail to resolve actions from Conduit manifest");
+                VLog.E($"Fail to resolve actions from Conduit manifest");
             }
 
             return manifest;

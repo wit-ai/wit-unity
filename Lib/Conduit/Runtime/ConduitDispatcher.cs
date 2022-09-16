@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Meta.WitAi;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -118,7 +119,7 @@ namespace Meta.Conduit
             StringBuilder log = new StringBuilder();
             if (!parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter, log)))
             {
-                Debug.LogWarning($"Conduit Dispatcher - Failed to dispatch method\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\n{log}");
+                VLog.W($"Failed to dispatch method\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\n{log}");
                 return false;
             }
             return true;
@@ -160,7 +161,7 @@ namespace Meta.Conduit
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Failed to invoke {invocationContext.MethodInfo.Name}. {e}");
+                    VLog.W($"Failed to invoke {invocationContext.MethodInfo.Name}. {e}");
                     allSucceeded = false;
                 }
             }
@@ -184,7 +185,7 @@ namespace Meta.Conduit
                 StringBuilder log = new StringBuilder();
                 if (!parameterProvider.ContainsParameter(formalParametersInfo[i], log))
                 {
-                    Debug.LogError($"Conduit Dispatcher - Failed to find method param while invoking\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\nParameter Issues\n{log}");
+                    VLog.W($"Failed to find method param while invoking\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\nParameter Issues\n{log}");
                     return false;
                 }
                 parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i]);
@@ -198,7 +199,7 @@ namespace Meta.Conduit
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Failed to invoke static method {method.Name}. {e}");
+                    VLog.W($"Failed to invoke static method {method.Name}. {e}");
                     return false;
                 }
 
@@ -215,7 +216,7 @@ namespace Meta.Conduit
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"Failed to invoke method {method.Name}. {e} on {obj}");
+                        VLog.W($"Failed to invoke method {method.Name}. {e} on {obj}");
                         allSucceeded = false;
                         continue;
                     }
