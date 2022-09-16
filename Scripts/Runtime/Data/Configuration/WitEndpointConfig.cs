@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.WitAi;
 using Facebook.WitAi.Data.Configuration;
 
 namespace Facebook.WitAi.Configuration
@@ -26,12 +27,12 @@ namespace Facebook.WitAi.Configuration
         public string message;
         public string dictation;
 
-        public string UriScheme => string.IsNullOrEmpty(uriScheme) ? WitRequest.URI_SCHEME : uriScheme;
+        public string UriScheme => string.IsNullOrEmpty(uriScheme) ? WitRequestUtility.WIT_URI_SCHEME : uriScheme;
         public string Authority =>
-            string.IsNullOrEmpty(authority) ? WitRequest.URI_AUTHORITY : authority;
-        public int Port => port <= 0 ? WitRequest.URI_DEFAULT_PORT : port;
+            string.IsNullOrEmpty(authority) ? WitRequestUtility.WIT_URI_AUTHORITY : authority;
+        public int Port => port <= 0 ? WitRequestUtility.WIT_URI_DEFAULT_PORT : port;
         public string WitApiVersion => string.IsNullOrEmpty(witApiVersion)
-            ? WitRequest.WIT_API_VERSION
+            ? WitRequestUtility.WIT_API_VERSION
             : witApiVersion;
 
         public string Speech =>

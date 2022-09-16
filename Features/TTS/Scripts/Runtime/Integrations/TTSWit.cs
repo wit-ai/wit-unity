@@ -14,7 +14,7 @@ using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
-using Facebook.WitAi.TTS.Utilities;
+using Meta.WitAi;
 using UnityEngine.Serialization;
 
 namespace Facebook.WitAi.TTS.Integrations
@@ -92,7 +92,7 @@ namespace Facebook.WitAi.TTS.Integrations
         public TTSStreamEvents WebStreamEvents { get; set; } = new TTSStreamEvents();
 
         // Requests bly clip id
-        private Dictionary<string, WitUnityRequest> _webStreams = new Dictionary<string, WitUnityRequest>();
+        private Dictionary<string, RequestPerformer> _webStreams = new Dictionary<string, RequestPerformer>();
 
         // Whether TTSService is valid
         public override string GetInvalidError()
@@ -113,7 +113,7 @@ namespace Facebook.WitAi.TTS.Integrations
             return string.Empty;
         }
         // Ensures text can be sent to wit web service
-        public string IsTextValid(string textToSpeak) => WitUnityRequest.IsTextValid(textToSpeak);
+        public string IsTextValid(string textToSpeak) => WitRequestUtility.GetTextInvalidError(textToSpeak);
 
         /// <summary>
         /// Method for performing a web load request
@@ -139,9 +139,8 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Request tts
-            _webStreams[clipData.clipID] = WitUnityRequest.RequestTTSStream(RequestSettings.configuration,
-                clipData.textToSpeak, clipData.queryParameters,
-                (progress) => clipData.loadProgress = progress,
+            _webStreams[clipData.clipID] = WitRequestUtility.RequestTTSStream(clipData.textToSpeak, clipData.queryParameters,
+                RequestSettings.configuration, (progress) => clipData.loadProgress = progress,
                 (clip, error) =>
                 {
                     _webStreams.Remove(clipData.clipID);
@@ -169,7 +168,7 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get request
-            WitUnityRequest request = _webStreams[clipData.clipID];
+            RequestPerformer request = _webStreams[clipData.clipID];
             _webStreams.Remove(clipData.clipID);
 
             // Destroy immediately
@@ -188,7 +187,7 @@ namespace Facebook.WitAi.TTS.Integrations
         public TTSDownloadEvents WebDownloadEvents { get; set; } = new TTSDownloadEvents();
 
         // Requests by clip id
-        private Dictionary<string, WitUnityRequest> _webDownloads = new Dictionary<string, WitUnityRequest>();
+        private Dictionary<string, RequestPerformer> _webDownloads = new Dictionary<string, RequestPerformer>();
 
         /// <summary>
         /// Method for performing a web load request
@@ -214,9 +213,8 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Request tts
-            _webDownloads[clipData.clipID] = WitUnityRequest.RequestTTSDownload(downloadPath,
-                RequestSettings.configuration, clipData.textToSpeak, clipData.queryParameters,
-                (progress) => clipData.loadProgress = progress,
+            _webDownloads[clipData.clipID] = WitRequestUtility.RequestTTSDownload(clipData.textToSpeak, clipData.queryParameters,
+                downloadPath, RequestSettings.configuration, (progress) => clipData.loadProgress = progress,
                 (error) =>
                 {
                     _webDownloads.Remove(clipData.clipID);
@@ -243,7 +241,7 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get request
-            WitUnityRequest request = _webDownloads[clipData.clipID];
+            RequestPerformer request = _webDownloads[clipData.clipID];
             _webDownloads.Remove(clipData.clipID);
 
             // Destroy immediately

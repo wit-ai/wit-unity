@@ -72,13 +72,6 @@ namespace Facebook.WitAi
         /// </summary>
         public const int ERROR_CODE_TIMEOUT = -7;
 
-        public const string URI_SCHEME = "https";
-        public const string URI_AUTHORITY = "api.wit.ai";
-        public const int URI_DEFAULT_PORT = 0;
-
-        public const string WIT_API_VERSION = "20220728";
-        public const string WIT_SDK_VERSION = "0.0.47";
-
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
         public const string WIT_ENDPOINT_DICTATION = "dictation";
@@ -89,7 +82,8 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_UTTERANCES = "utterances";
         public const string WIT_CLIENT_NAME = "wit-unity";
 
-        private WitConfiguration configuration;
+        private IWitRequestConfiguration configuration;
+        public bool shouldPost;
 
         private string command;
         private string path;
@@ -106,7 +100,7 @@ namespace Facebook.WitAi
 
         public byte[] postData;
         public string postContentType;
-        public string requestId = Guid.NewGuid().ToString();
+        public string requestIdOverride;
 
         private object streamLock = new object();
 
@@ -205,10 +199,10 @@ namespace Facebook.WitAi
         private bool isServerAuthRequired;
         public string StatusDescription => statusDescription;
 
-        public int Timeout => configuration ? configuration.timeoutMS : 10000;
+        private int _timeoutMs;
+        public int Timeout => _timeoutMs;
 
         private bool configurationRequired;
-        private string serverToken;
         private string callingStackTrace;
         private DateTime requestStartTime;
         private ConcurrentQueue<byte[]> writeBuffer = new ConcurrentQueue<byte[]>();
@@ -224,9 +218,12 @@ namespace Facebook.WitAi
             if (!configuration) throw new ArgumentException("Configuration is not set.");
             configurationRequired = true;
             this.configuration = configuration;
-            this.command = path.Split('/').First();
+            this._timeoutMs = configuration ? configuration.timeoutMS : 10000;
             this.path = path;
             this.queryParams = queryParams;
+            this.command = path.Split('/').First();
+            this.shouldPost = WitEndpointConfig.GetEndpointConfig(configuration).Speech == this.command ||
+                              WitEndpointConfig.GetEndpointConfig(configuration).Dictation == this.command;
         }
 
         public WitRequest(WitConfiguration configuration, string path, bool isServerAuthRequired,
@@ -236,14 +233,13 @@ namespace Facebook.WitAi
                 throw new ArgumentException("Configuration is not set.");
             configurationRequired = true;
             this.configuration = configuration;
+            this._timeoutMs = configuration ? configuration.timeoutMS : 10000;
             this.isServerAuthRequired = isServerAuthRequired;
-            this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
-            if (isServerAuthRequired)
-            {
-                serverToken = WitAuthUtility.GetAppServerToken(configuration?.application?.id);
-            }
+            this.command = path.Split('/').First();
+            this.shouldPost = WitEndpointConfig.GetEndpointConfig(configuration).Speech == this.command ||
+                              WitEndpointConfig.GetEndpointConfig(configuration).Dictation == this.command;
         }
 
         public WitRequest(string serverToken, string path, params QueryParam[] queryParams)
@@ -253,7 +249,10 @@ namespace Facebook.WitAi
             this.command = path.Split('/').First();
             this.path = path;
             this.queryParams = queryParams;
-            this.serverToken = serverToken;
+            this._timeoutMs = 10000;
+            #if UNITY_EDITOR
+            this.configuration = new WitServerRequestConfiguration(serverToken);
+            #endif
         }
 
         /// <summary>
@@ -272,40 +271,21 @@ namespace Facebook.WitAi
         {
             responseStarted = false;
 
-            UriBuilder uriBuilder = new UriBuilder();
-
-            var endpointConfig = WitEndpointConfig.GetEndpointConfig(configuration);
-
-            uriBuilder.Scheme = endpointConfig.UriScheme;
-
-            uriBuilder.Host = endpointConfig.Authority;
-
-            var api = endpointConfig.WitApiVersion;
-            if (endpointConfig.Port > 0)
+            Dictionary<string, string> requestParams = new Dictionary<string, string>();
+            foreach (var par in queryParams)
             {
-                uriBuilder.Port = endpointConfig.Port;
+                requestParams[par.key] = par.value;
             }
-
-            uriBuilder.Query = $"v={api}";
-
-            uriBuilder.Path = path;
-
-            callingStackTrace = Environment.StackTrace;
-
-            if (queryParams.Any())
-            {
-                var p = queryParams.Select(par =>
-                    $"{par.key}={Uri.EscapeDataString(par.value)}");
-                uriBuilder.Query += "&" + string.Join("&", p);
-            }
-
-            var uri = null == onCustomizeUri ? uriBuilder.Uri : onCustomizeUri(uriBuilder);
+            Func<UriBuilder, Uri> provideUri = (uriBuilder) => onCustomizeUri == null ? uriBuilder.Uri : onCustomizeUri(uriBuilder);
+            WitRequestUtility.OnProvideCustomUri += provideUri;
+            var uri = WitRequestUtility.GetWitUri(path, requestParams, configuration);
+            WitRequestUtility.OnProvideCustomUri -= provideUri;
             StartRequest(uri);
         }
 
         private void StartRequest(Uri uri)
         {
-            if (!configuration && configurationRequired)
+            if (configuration == null && configurationRequired)
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
                 Debug.LogError(statusDescription);
@@ -314,7 +294,7 @@ namespace Facebook.WitAi
                 return;
             }
 
-            if (!isServerAuthRequired && string.IsNullOrEmpty(configuration.clientAccessToken))
+            if (!isServerAuthRequired && string.IsNullOrEmpty(configuration.GetClientAccessToken()))
             {
                 statusDescription = "Client access token is not defined. Cannot start request.";
                 Debug.LogError(statusDescription);
@@ -323,12 +303,28 @@ namespace Facebook.WitAi
                 return;
             }
 
-            //allow app to intercept request and potentially modify uri or add custom headers
-            //NOTE: the callback depends on knowing the original Uri, before it is modified
-            Dictionary<string, string> customHeaders = null;
+            // Get headers
+            Dictionary<string, string> headers = WitRequestUtility.GetWitHeaders(configuration, isServerAuthRequired);
+            if (!string.IsNullOrEmpty(requestIdOverride))
+            {
+                headers[WitRequestUtility.WIT_REQUEST_ID_KEY] = requestIdOverride;
+            }
+            // Append additional headers
+            if (onProvideCustomHeaders != null)
+            {
+                Dictionary<string, string> customHeaders = onProvideCustomHeaders();
+                if (customHeaders != null)
+                {
+                    foreach (var key in customHeaders.Keys)
+                    {
+                        headers[key] = customHeaders[key];
+                    }
+                }
+            }
+            // Allow overrides
             if (onPreSendRequest != null)
             {
-                onPreSendRequest(ref uri, out customHeaders);
+                onPreSendRequest(ref uri, out headers);
             }
 
             // Create http web request
@@ -338,16 +334,6 @@ namespace Facebook.WitAi
                 _request.KeepAlive = false;
             }
 
-            if (isServerAuthRequired)
-            {
-                _request.Headers["Authorization"] =
-                    $"Bearer {serverToken}";
-            }
-            else
-            {
-                _request.Headers["Authorization"] =
-                    $"Bearer {configuration.clientAccessToken.Trim()}";
-            }
 
             if (null != postContentType)
             {
@@ -357,57 +343,36 @@ namespace Facebook.WitAi
             }
 
             // Configure additional headers
-            if (WitEndpointConfig.GetEndpointConfig(configuration).Speech == command ||
-                WitEndpointConfig.GetEndpointConfig(configuration).Dictation == command)
+            if (shouldPost)
             {
-                _request.ContentType = audioEncoding.ToString();
                 _request.Method = "POST";
+                _request.ContentType = audioEncoding.ToString();
                 _request.SendChunked = true;
             }
 
-            _request.Headers["X-Wit-Client-Request-Id"] = requestId;
-
             requestRequiresBody = RequestRequiresBody(command);
 
-            var configId = "not-yet-configured";
-#if UNITY_EDITOR
-            if (configuration)
+            // Set user agent
+            if (headers.ContainsKey(WitRequestUtility.WIT_USER_AGENT_KEY))
             {
-                if (string.IsNullOrEmpty(configuration.configId))
-                {
-                    configuration.configId = Guid.NewGuid().ToString();
-                    EditorUtility.SetDirty(configuration);
-                }
-
-                configId = configuration.configId;
+                _request.UserAgent = headers[WitRequestUtility.WIT_USER_AGENT_KEY];
+                headers.Remove(WitRequestUtility.WIT_USER_AGENT_KEY);
             }
-#endif
-
-            _request.UserAgent = GetUserAgent(configuration);
+            // Apply all wit headers
+            if (headers != null)
+            {
+                foreach (var key in headers.Keys)
+                {
+                    _request.Headers[key] = headers[key];
+                }
+            }
 
             requestStartTime = DateTime.UtcNow;
             isActive = true;
             statusCode = 0;
             statusDescription = "Starting request";
-            _request.Timeout = configuration ? configuration.timeoutMS : 10000;
+            _request.Timeout = Timeout;
             WatchMainThreadCallbacks();
-
-            if (null != onProvideCustomHeaders)
-            {
-                foreach (var header in onProvideCustomHeaders())
-                {
-                    _request.Headers[header.Key] = header.Value;
-                }
-            }
-
-            //apply any modified headers last, as this allows us to overwrite headers if need be
-            if (customHeaders != null)
-            {
-                foreach (var pair in customHeaders)
-                {
-                    _request.Headers[pair.Key] = pair.Value;
-                }
-            }
 
             if (_request.Method == "POST")
             {
@@ -421,64 +386,9 @@ namespace Facebook.WitAi
             }
         }
 
-        // Get config user agent
-        private static string _operatingSystem;
-        private static string _deviceModel;
-        private static string _appIdentifier;
-        private static string _unityVersion;
-        public static event Func<string> OnProvideCustomUserAgent;
-        public static string GetUserAgent(WitConfiguration configuration)
-        {
-            // Setup if needed
-            if (_operatingSystem == null) _operatingSystem = UnityEngine.SystemInfo.operatingSystem;
-            if (_deviceModel == null) _deviceModel = UnityEngine.SystemInfo.deviceModel;
-            if (_appIdentifier == null) _appIdentifier = Application.identifier;
-            if (_unityVersion == null) _unityVersion = Application.unityVersion;
-
-            // Use config id if found
-            string configId = configuration?.configId;
-
-#if UNITY_EDITOR
-            string userEditor = "Editor";
-            if (configuration != null && string.IsNullOrEmpty(configuration.configId))
-            {
-                configuration.configId = Guid.NewGuid().ToString();
-                UnityEditor.EditorUtility.SetDirty(configuration);
-                UnityEditor.AssetDatabase.SaveAssets();
-                configId = configuration.configId;
-            }
-#else
-            string userEditor = "Runtime";
-#endif
-
-            // If null, set not configured
-            if (string.IsNullOrEmpty(configId))
-            {
-                configId = "not-yet-configured";
-            }
-
-            // Append custom user agents
-            string customUserAgents = string.Empty;
-            if (OnProvideCustomUserAgent != null)
-            {
-                foreach (Func<string> del in OnProvideCustomUserAgent.GetInvocationList())
-                {
-                    string custom = del();
-                    if (!string.IsNullOrEmpty(custom))
-                    {
-                        customUserAgents += $",{custom}";
-                    }
-                }
-            }
-
-            // Return full string
-            return $"wit-unity-{WIT_SDK_VERSION},{_operatingSystem},{_deviceModel},{configId},{_appIdentifier},{userEditor},{_unityVersion}{customUserAgents}";
-        }
-
         private bool RequestRequiresBody(string command)
         {
-            return command == WitEndpointConfig.GetEndpointConfig(configuration).Speech ||
-                   command == WitEndpointConfig.GetEndpointConfig(configuration).Dictation;
+            return shouldPost;
         }
 
         private void StartResponse()

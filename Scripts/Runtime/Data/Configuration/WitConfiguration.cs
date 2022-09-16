@@ -12,18 +12,25 @@ using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
+using Meta.WitAi;
 using UnityEngine;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace Facebook.WitAi.Data.Configuration
 {
-    public class WitConfiguration : ScriptableObject
+    public class WitConfiguration : ScriptableObject, IWitRequestConfiguration
     {
         [HideInInspector]
         [SerializeField] public WitApplication application;
-        [HideInInspector] [SerializeField] public string configId;
+
+        /// <summary>
+        /// Configuration id
+        /// </summary>
+        [FormerlySerializedAs("configId")]
+        [HideInInspector] [SerializeField] private string _configurationId;
 
         /// <summary>
         /// Access token used in builds to make requests for data from Wit.ai
@@ -113,18 +120,11 @@ namespace Facebook.WitAi.Data.Configuration
         private void OnEnable()
         {
             #if UNITY_EDITOR
-            if (string.IsNullOrEmpty(configId))
-            {
-                configId = GUID.Generate().ToString();
-                EditorUtility.SetDirty(this);
-            }
-
             if (string.IsNullOrEmpty(manifestLocalPath))
             {
                 manifestLocalPath = $"ConduitManifest-{Guid.NewGuid()}.json";
                 EditorUtility.SetDirty(this);
             }
-
             #endif
         }
 
@@ -136,5 +136,62 @@ namespace Facebook.WitAi.Data.Configuration
             intents = null;
             traits = null;
         }
+
+        #region IWitRequestConfiguration
+        /// <summary>
+        /// Returns unique configuration guid
+        /// </summary>
+        public string GetConfigurationId()
+        {
+            #if UNITY_EDITOR
+            // Ensure configuration id is generated
+            if (string.IsNullOrEmpty(_configurationId))
+            {
+                _configurationId = Guid.NewGuid().ToString();
+                EditorUtility.SetDirty(this);
+                #if UNITY_2021_3_OR_NEWER
+                AssetDatabase.SaveAssetIfDirty(this);
+                #else
+                AssetDatabase.SaveAssets();
+                #endif
+            }
+            #endif
+            // Return configuration id
+            return _configurationId;
+        }
+        /// <summary>
+        /// Return endpoint override
+        /// </summary>
+        public WitRequestEndpointOverride GetEndpointOverrides()
+        {
+            WitRequestEndpointOverride endpoint = new WitRequestEndpointOverride();
+            if (endpointConfiguration != null)
+            {
+                endpoint.uriScheme = endpointConfiguration.uriScheme;
+                endpoint.authority = endpointConfiguration.authority;
+                endpoint.port = endpointConfiguration.port;
+                endpoint.witApiVersion = endpointConfiguration.witApiVersion;
+            }
+            return endpoint;
+        }
+        /// <summary>
+        /// Returns client access token
+        /// </summary>
+        public string GetClientAccessToken()
+        {
+            return clientAccessToken;
+        }
+        #if UNITY_EDITOR
+        /// <summary>
+        /// Returns server access token (Editor Only)
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public string GetServerAccessToken()
+        {
+            return WitAuthUtility.GetAppServerToken(application?.id);
+        }
+        #endif
+        #endregion
     }
 }

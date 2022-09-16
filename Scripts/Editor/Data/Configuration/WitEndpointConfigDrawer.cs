@@ -8,6 +8,7 @@
 
 using UnityEditor;
 using System.Reflection;
+using Meta.WitAi;
 
 namespace Facebook.WitAi.Windows
 {
@@ -32,15 +33,17 @@ namespace Facebook.WitAi.Windows
             switch (subfield.Name)
             {
                 case "uriScheme":
-                    return WitRequest.URI_SCHEME;
+                    return WitRequestUtility.WIT_URI_SCHEME;
                 case "authority":
-                    return WitRequest.URI_AUTHORITY;
+                    return WitRequestUtility.WIT_URI_AUTHORITY;
                 case "port":
-                    return WitRequest.URI_DEFAULT_PORT.ToString();
+                    return WitRequestUtility.WIT_URI_DEFAULT_PORT.ToString();
                 case "witApiVersion":
-                    return WitRequest.WIT_API_VERSION;
+                    return WitRequestUtility.WIT_API_VERSION;
                 case "speech":
                     return WitRequest.WIT_ENDPOINT_SPEECH;
+                case "dictation":
+                    return WitRequest.WIT_ENDPOINT_DICTATION;
             }
 
             // Return base
