@@ -101,6 +101,8 @@ namespace Facebook.WitAi.Data
             _micInput.OnSampleReady -= OnMicSampleReady;
 
             if (alwaysRecording) StopRecording(this);
+            
+            _instanceInit = false;
         }
 
         // Callback for mic sample ready
