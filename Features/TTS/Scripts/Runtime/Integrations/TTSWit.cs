@@ -106,7 +106,7 @@ namespace Facebook.WitAi.TTS.Integrations
             {
                 return "No WitConfiguration Set";
             }
-            if (string.IsNullOrEmpty(RequestSettings.configuration.clientAccessToken))
+            if (string.IsNullOrEmpty(RequestSettings.configuration.GetClientAccessToken()))
             {
                 return "No WitConfiguration Client Token";
             }

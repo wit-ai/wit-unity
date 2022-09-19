@@ -30,7 +30,7 @@ namespace Facebook.WitAi.TTS.Editor
         // Layout items
         public const float ACTION_BTN_INDENT = 15f;
         public virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
-        public virtual string HeaderUrl => WitTexts.GetAppURL(WitConfigurationUtility.GetAppID(null), WitTexts.WitAppEndpointType.Settings);
+        public virtual string HeaderUrl => WitTexts.GetAppURL(string.Empty, WitTexts.WitAppEndpointType.Settings);
 
         // Layout
         public override void OnInspectorGUI()

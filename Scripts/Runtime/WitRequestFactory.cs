@@ -104,7 +104,7 @@ namespace Facebook.WitAi
                 }
                 else
                 {
-                    keywordObject = keyword.AsJson;
+                    keywordObject = JsonConvert.SerializeToken(keyword).AsObject;
                     map[keyword.keyword] = keywordObject;
                     mergedArray.Add(keywordObject);
                 }

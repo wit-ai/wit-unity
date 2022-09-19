@@ -31,7 +31,7 @@ namespace Facebook.WitAi
         public static string GetAppServerToken(WitConfiguration configuration,
             string defaultValue = "")
         {
-            return GetAppServerToken(configuration?.application?.id, defaultValue);
+            return GetAppServerToken(configuration.GetApplicationId(), defaultValue);
         }
 
         public static string GetAppServerToken(string appId, string defaultServerToken = "")

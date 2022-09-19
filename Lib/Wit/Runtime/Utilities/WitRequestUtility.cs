@@ -13,6 +13,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
+using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi
 {
@@ -34,10 +35,14 @@ namespace Meta.WitAi
     public interface IWitRequestConfiguration
     {
         string GetConfigurationId();
+        string GetApplicationId();
+        WitAppInfo GetApplicationInfo();
         WitRequestEndpointOverride GetEndpointOverrides();
         string GetClientAccessToken();
         #if UNITY_EDITOR
+        void SetClientAccessToken(string newToken);
         string GetServerAccessToken();
+        void SetApplicationInfo(WitAppInfo appInfo);
         #endif
     }
 
@@ -47,14 +52,19 @@ namespace Meta.WitAi
     /// </summary>
     public class WitServerRequestConfiguration : IWitRequestConfiguration
     {
+        private string _clientToken;
         private string _serverToken;
         public WitServerRequestConfiguration(string serverToken)
         {
             _serverToken = serverToken;
         }
         public string GetConfigurationId() => null;
+        public string GetApplicationId() => null;
+        public WitAppInfo GetApplicationInfo() => new WitAppInfo();
+        public void SetApplicationInfo(WitAppInfo newInfo) {}
         public WitRequestEndpointOverride GetEndpointOverrides() => new WitRequestEndpointOverride();
-        public string GetClientAccessToken() => _serverToken;
+        public string GetClientAccessToken() => _clientToken;
+        public void SetClientAccessToken(string newToken) => _clientToken = newToken;
         public string GetServerAccessToken() => _serverToken;
     }
 #endif

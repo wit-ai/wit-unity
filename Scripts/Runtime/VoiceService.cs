@@ -181,7 +181,7 @@ namespace Facebook.WitAi
         {
             if (UseConduit)
             {
-                ConduitDispatcher.Initialize(_witConfiguration.manifestLocalPath);
+                ConduitDispatcher.Initialize(_witConfiguration.ManifestLocalPath);
             }
             VoiceEvents.OnPartialResponse.AddListener(ValidateShortResponse);
             VoiceEvents.OnResponse.AddListener(HandleResponse);

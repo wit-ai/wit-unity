@@ -42,7 +42,8 @@ namespace Meta.Conduit
 
         public static string StripWhiteSpace(string input)
         {
-            return input.Replace(" ", string.Empty)
+            return string.IsNullOrEmpty(input) ? string.Empty :
+                input.Replace(" ", string.Empty)
                 .Replace("\n", string.Empty)
                 .Replace("\r", string.Empty);
         }

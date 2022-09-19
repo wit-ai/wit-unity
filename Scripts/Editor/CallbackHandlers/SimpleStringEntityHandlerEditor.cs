@@ -33,9 +33,11 @@ namespace Facebook.WitAi.CallbackHandlers
                     null != provider.RuntimeConfiguration &&
                     provider.RuntimeConfiguration.witConfiguration)
                 {
-                    provider.RuntimeConfiguration.witConfiguration.RefreshData();
-                    intentNames = provider.RuntimeConfiguration.witConfiguration.intents.Select(i => i.name).ToArray();
-                    intentIndex = Array.IndexOf(intentNames, handler.intent);
+                    provider.RuntimeConfiguration.witConfiguration.RefreshAppInfo((error) =>
+                    {
+                        intentNames = provider.RuntimeConfiguration.witConfiguration.GetApplicationInfo().intents.Select(i => i.name).ToArray();
+                        intentIndex = Array.IndexOf(intentNames, handler.intent);
+                    });
                 }
             }
         }
@@ -59,7 +61,7 @@ namespace Facebook.WitAi.CallbackHandlers
                         null != provider.RuntimeConfiguration &&
                         provider.RuntimeConfiguration.witConfiguration)
                     {
-                        var entities = provider.RuntimeConfiguration.witConfiguration.intents[intentIndex]?.entities;
+                        var entities = provider.RuntimeConfiguration.witConfiguration.GetApplicationInfo().intents[intentIndex].entities;
                         if (null != entities)
                         {
                             entityNames = entities.Select((e) => e.name).ToArray();

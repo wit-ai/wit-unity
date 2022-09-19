@@ -27,11 +27,9 @@ namespace Facebook.WitAi.Data.Intents
 
         public WitIntentData FromIntentWitResponseNode(WitResponseNode node)
         {
-            responseNode = node;
-            id = node[WitIntent.Fields.ID];
-            name = node[WitIntent.Fields.NAME];
-            confidence = node[WitIntent.Fields.CONFIDENCE].AsFloat;
-            return this;
+            WitIntentData result = this;
+            JsonConvert.DeserializeIntoObject(ref result, node);
+            return result;
         }
     }
 }

@@ -787,6 +787,10 @@ namespace Meta.WitAi.Json
 
         public override void Add(string aKey, WitResponseNode aItem)
         {
+            if (aItem == null)
+            {
+                return;
+            }
             m_List.Add(aItem);
         }
 

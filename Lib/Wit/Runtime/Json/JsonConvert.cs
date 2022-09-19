@@ -209,6 +209,12 @@ namespace Meta.WitAi.Json
                         }
                     }
                 }
+                #if UNITY_2020_1_OR_NEWER
+                if (Enum.TryParse(toType, enumStr, out var parsedEnum))
+                {
+                    return parsedEnum;
+                }
+                #else
                 object[] parseParams = new object[] {enumStr, false, Activator.CreateInstance(toType)};
                 bool parseSuccess = (bool) typeof(Enum)
                     .GetMethod("TryParse", BindingFlags.Public | BindingFlags.Static)
@@ -218,6 +224,7 @@ namespace Meta.WitAi.Json
                 {
                     return parseParams[2];
                 }
+                #endif
                 log.AppendLine($"\nJson Deserializer Failed to cast '{jsonToken.Value}' to enum type '{toType}'");
                 return oldValue;
             }
@@ -542,6 +549,11 @@ namespace Meta.WitAi.Json
             {
                 return null;
             }
+            // Most likely error in this class
+            if (inType == null)
+            {
+                throw new ArgumentException("In Type cannot be null");
+            }
 
             // Serialize to string
             if (inType == typeof(string))
@@ -593,13 +605,28 @@ namespace Meta.WitAi.Json
             // Serialize enumerable into array
             else if (inType.GetInterfaces().Contains(typeof(IEnumerable)))
             {
+                // Get enum
                 WitResponseArray newArray = new WitResponseArray();
                 IEnumerator oldEnumerable = ((IEnumerable) inObject).GetEnumerator();
-                Type elType = inType.GetElementType();
+
+                // Array[]
+                Type elementType = inType.GetElementType();
+
+                // Try generic argument (List<>)
+                if (elementType == null)
+                {
+                    Type[] genericArguments = inType.GetGenericArguments();
+                    if (genericArguments != null && genericArguments.Length > 0)
+                    {
+                        elementType = genericArguments[0];
+                    }
+                }
+
+                // Serialize each
                 while (oldEnumerable.MoveNext())
                 {
-                    object newObj = EnsureExists(elType, oldEnumerable.Current);
-                    newArray.Add(string.Empty, SerializeToken(elType, newObj, log, customConverters));
+                    object newObj = EnsureExists(elementType, oldEnumerable.Current);
+                    newArray.Add(string.Empty, SerializeToken(elementType, newObj, log, customConverters));
                 }
                 return newArray;
             }

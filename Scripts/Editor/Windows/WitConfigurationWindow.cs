@@ -22,7 +22,7 @@ namespace Facebook.WitAi.Windows
         {
             get
             {
-                string appID = WitConfigurationUtility.GetAppID(witConfiguration);
+                string appID = witConfiguration.GetApplicationId();
                 if (!string.IsNullOrEmpty(appID))
                 {
                     return WitTexts.GetAppURL(appID, HeaderEndpointType);

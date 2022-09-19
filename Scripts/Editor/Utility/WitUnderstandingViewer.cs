@@ -224,7 +224,7 @@ namespace Facebook.WitAi.Windows
                     return;
                 }
                 // Check client access token
-                string clientAccessToken = witConfiguration.clientAccessToken;
+                string clientAccessToken = witConfiguration.GetClientAccessToken();
                 if (string.IsNullOrEmpty(clientAccessToken))
                 {
                     WitEditorUI.LayoutErrorLabel(WitTexts.Texts.UnderstandingViewerMissingClientTokenLabel);

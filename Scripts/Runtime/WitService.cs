@@ -282,7 +282,7 @@ namespace Facebook.WitAi
         public virtual bool IsConfigurationValid()
         {
             return RuntimeConfiguration.witConfiguration != null &&
-                   !string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.clientAccessToken);
+                   !string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.GetClientAccessToken());
         }
         #endregion
 

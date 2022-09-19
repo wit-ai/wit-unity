@@ -8,6 +8,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using Meta.Conduit.Editor;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
@@ -61,7 +62,7 @@ namespace Facebook.WitAi.Windows
         }
 
         public virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
-        public virtual string HeaderUrl => WitTexts.GetAppURL(WitConfigurationUtility.GetAppID(configuration), WitTexts.WitAppEndpointType.Settings);
+        public virtual string HeaderUrl => WitTexts.GetAppURL(configuration.GetApplicationId(), WitTexts.WitAppEndpointType.Settings);
         public virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
 
         public void Initialize()
@@ -74,7 +75,7 @@ namespace Facebook.WitAi.Windows
             if (CanConfigurationRefresh(configuration) && WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
                 // Get client token if needed
-                _appID = WitConfigurationUtility.GetAppID(configuration);
+                _appID = configuration.GetApplicationId();
                 if (string.IsNullOrEmpty(_appID))
                 {
                     configuration.SetServerToken(_serverToken);
@@ -122,7 +123,7 @@ namespace Facebook.WitAi.Windows
         private void LayoutConduitContent()
         {
             // Get full manifest path & ensure it exists
-            string manifestPath = configuration.ManifestEditorPath;
+            string manifestPath = configuration.GetManifestEditorPath();
             manifestAvailable = File.Exists(manifestPath);
 
             // Set conduit
@@ -136,7 +137,7 @@ namespace Facebook.WitAi.Windows
             // Auto-generate manifest
             if (configuration.useConduit && !manifestAvailable)
             {
-                GenerateManifest(configuration, configuration.openManifestOnGeneration);
+                GenerateManifest(configuration, false);
             }
 
             // Configuration buttons
@@ -147,12 +148,12 @@ namespace Facebook.WitAi.Windows
                 GUILayout.BeginHorizontal();
                 if (WitEditorUI.LayoutTextButton(manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                 {
-                    GenerateManifest(configuration, configuration.openManifestOnGeneration);
+                    GenerateManifest(configuration, true);
                 }
                 GUI.enabled = configuration.useConduit && manifestAvailable;
                 if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
                 {
-                    Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.ManifestEditorPath);
+                    Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.GetManifestEditorPath());
                 }
                 GUILayout.FlexibleSpace();
                 GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
@@ -256,12 +257,15 @@ namespace Facebook.WitAi.Windows
         private void ReloadAppData()
         {
             // Check for changes
-            string checkName = "";
             string checkID = "";
-            if (configuration != null && configuration.application != null)
+            string checkName = "";
+            if (configuration != null)
             {
-                checkName = configuration.application.name;
-                checkID = configuration.application.id;
+                checkID = configuration.GetApplicationId();
+                if (!string.IsNullOrEmpty(checkID))
+                {
+                    checkName = configuration.GetApplicationInfo().name;
+                }
             }
             // Reset
             if (!string.Equals(_appName, checkName) || !string.Equals(_appID, checkID))
@@ -294,8 +298,9 @@ namespace Facebook.WitAi.Windows
             // Reset update
             bool updated = false;
             // Client access field
-            WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationClientTokenContent, ref configuration.clientAccessToken, ref updated);
-            if (updated && string.IsNullOrEmpty(configuration.clientAccessToken))
+            string clientAccessToken = configuration.GetClientAccessToken();
+            WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationClientTokenContent, ref clientAccessToken, ref updated);
+            if (updated && string.IsNullOrEmpty(clientAccessToken))
             {
                 VLog.E("Client access token is not defined. Cannot perform requests with '" + configuration.name + "'.");
             }
@@ -304,7 +309,7 @@ namespace Facebook.WitAi.Windows
             // Updated
             if (updated)
             {
-                EditorUtility.SetDirty(configuration);
+                configuration.SetClientAccessToken(clientAccessToken);
             }
 
             // Show configuration app data
@@ -329,6 +334,9 @@ namespace Facebook.WitAi.Windows
         // Tabs
         protected virtual void LayoutConfigurationRequestTabs()
         {
+            // Application info
+            Meta.WitAi.Data.Info.WitAppInfo appInfo = configuration.GetApplicationInfo();
+
             // Indent
             EditorGUI.indentLevel++;
 
@@ -342,9 +350,9 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = _requestTab != i;
                     // If valid and clicked, begin selecting
                     string tabPropertyID = _tabIds[i];
-                    if (ShouldTabShow(configuration, tabPropertyID))
+                    if (ShouldTabShow(appInfo, tabPropertyID))
                     {
-                        if (WitEditorUI.LayoutTabButton(GetTabText(configuration, tabPropertyID, true)))
+                        if (WitEditorUI.LayoutTabButton(GetTabText(configuration, appInfo, tabPropertyID, true)))
                         {
                             _requestTab = i;
                         }
@@ -366,10 +374,10 @@ namespace Facebook.WitAi.Windows
                 if (!string.IsNullOrEmpty(propertyID) && configuration != null)
                 {
                     SerializedObject serializedObj = new SerializedObject(configuration);
-                    SerializedProperty serializedProp = serializedObj.FindProperty(propertyID);
+                    SerializedProperty serializedProp = serializedObj.FindProperty(GetPropertyName(propertyID));
                     if (serializedProp == null)
                     {
-                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
+                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, appInfo, propertyID, false));
                     }
                     else if (!serializedProp.isArray)
                     {
@@ -377,7 +385,7 @@ namespace Facebook.WitAi.Windows
                     }
                     else if (serializedProp.arraySize == 0)
                     {
-                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, propertyID, false));
+                        WitEditorUI.LayoutErrorLabel(GetTabText(configuration, appInfo, propertyID, false));
                     }
                     else
                     {
@@ -396,10 +404,9 @@ namespace Facebook.WitAi.Windows
             EditorGUI.indentLevel--;
         }
         // Determine if tab should show
-        protected virtual bool ShouldTabShow(WitConfiguration configuration, string tabID)
+        protected virtual bool ShouldTabShow(Meta.WitAi.Data.Info.WitAppInfo appInfo, string tabID)
         {
-            if(null == configuration.application ||
-                   string.IsNullOrEmpty(configuration.application.id))
+            if(string.IsNullOrEmpty(appInfo.id))
             {
                 return false;
             }
@@ -407,17 +414,36 @@ namespace Facebook.WitAi.Windows
             switch (tabID)
             {
                 case TAB_INTENTS_ID:
-                    return null != configuration.intents;
+                    return null != appInfo.intents;
                 case TAB_ENTITIES_ID:
-                    return null != configuration.entities;
+                    return null != appInfo.entities;
                 case TAB_TRAITS_ID:
-                    return null != configuration.traits;
+                    return null != appInfo.traits;
             }
 
             return true;
         }
+        // Determine if tab should show
+        protected virtual string GetPropertyName(string tabID)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("_appInfo");
+            switch (tabID)
+            {
+                case TAB_INTENTS_ID:
+                    sb.Append($".{TAB_INTENTS_ID}");
+                    break;
+                case TAB_ENTITIES_ID:
+                    sb.Append($".{TAB_ENTITIES_ID}");
+                    break;
+                case TAB_TRAITS_ID:
+                    sb.Append($".{TAB_TRAITS_ID}");
+                    break;
+            }
+            return sb.ToString();
+        }
         // Get tab text
-        protected virtual string GetTabText(WitConfiguration configuration, string tabID, bool titleLabel)
+        protected virtual string GetTabText(WitConfiguration configuration, Meta.WitAi.Data.Info.WitAppInfo appInfo, string tabID, bool titleLabel)
         {
             switch (tabID)
             {
@@ -452,9 +478,9 @@ namespace Facebook.WitAi.Windows
             {
                 configuration.SetServerToken(_serverToken);
             }
-            else if (WitConfigurationUtility.IsClientTokenValid(configuration.clientAccessToken))
+            else if (WitConfigurationUtility.IsClientTokenValid(configuration.GetClientAccessToken()))
             {
-                configuration.RefreshData();
+                configuration.RefreshAppInfo();
             }
         }
 
@@ -478,17 +504,17 @@ namespace Facebook.WitAi.Windows
         {
             // Generate
             var startGenerationTime = DateTime.UtcNow;
-            var manifest = ManifestGenerator.GenerateManifest(configuration.application.name,
-                configuration.application.id);
+            Meta.WitAi.Data.Info.WitAppInfo appInfo = configuration.GetApplicationInfo();
+            var manifest = ManifestGenerator.GenerateManifest(appInfo.name, appInfo.id);
             var endGenerationTime = DateTime.UtcNow;
 
             // Get file path
-            string fullPath = configuration.ManifestEditorPath;
+            string fullPath = configuration.GetManifestEditorPath();
             if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
             {
                 string directory = Application.dataPath + "/Oculus/Voice/Resources";
                 IOUtility.CreateDirectory(directory, true);
-                fullPath = directory + "/" + configuration.manifestLocalPath;
+                fullPath = directory + "/" + configuration.ManifestLocalPath;
             }
 
             // Write to file
@@ -545,7 +571,7 @@ namespace Facebook.WitAi.Windows
 
             // Sync
             syncInProgress = true;
-            var manifest = ManifestLoader.LoadManifest(configuration.manifestLocalPath);
+            var manifest = ManifestLoader.LoadManifest(configuration.ManifestLocalPath);
             CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
             {
                 syncInProgress = false;

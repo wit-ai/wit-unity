@@ -78,6 +78,12 @@ namespace Facebook.WitAi
             public string ConfigurationApplicationLanguageLabel;
             public string ConfigurationApplicationPrivateLabel;
             public string ConfigurationApplicationCreatedLabel;
+            [Header("Configuration Application Training Texts")]
+            public string ConfigurationApplicationTrainingStatus;
+            public string ConfigurationApplicationTrainingLast;
+            public string ConfigurationApplicationTrainingLastDuration;
+            public string ConfigurationApplicationTrainingNext;
+
 
             [Header("Configuration Intent Texts")]
             public string ConfigurationIntentsTabLabel;

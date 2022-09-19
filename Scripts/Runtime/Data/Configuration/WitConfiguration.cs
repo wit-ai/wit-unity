@@ -9,10 +9,8 @@
 using System;
 using System.IO;
 using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Data.Intents;
-using Facebook.WitAi.Data.Traits;
 using Meta.WitAi;
+using Meta.WitAi.Data.Info;
 using UnityEngine;
 using UnityEngine.Serialization;
 #if UNITY_EDITOR
@@ -23,20 +21,24 @@ namespace Facebook.WitAi.Data.Configuration
 {
     public class WitConfiguration : ScriptableObject, IWitRequestConfiguration
     {
-        [HideInInspector]
-        [SerializeField] public WitApplication application;
+        /// <summary>
+        /// Access token used in builds to make requests for data from Wit.ai
+        /// </summary>
+        [Tooltip("Access token used in builds to make requests for data from Wit.ai")]
+        [FormerlySerializedAs("clientAccessToken")]
+        [SerializeField] private string _clientAccessToken;
+
+        /// <summary>
+        /// Application info
+        /// </summary>
+        [FormerlySerializedAs("application")]
+        [SerializeField] private WitAppInfo _appInfo;
 
         /// <summary>
         /// Configuration id
         /// </summary>
         [FormerlySerializedAs("configId")]
         [HideInInspector] [SerializeField] private string _configurationId;
-
-        /// <summary>
-        /// Access token used in builds to make requests for data from Wit.ai
-        /// </summary>
-        [Tooltip("Access token used in builds to make requests for data from Wit.ai")]
-        [SerializeField] public string clientAccessToken;
 
         [Tooltip("The number of milliseconds to wait before requests to Wit.ai will timeout")]
         [SerializeField] public int timeoutMS = 10000;
@@ -47,10 +49,9 @@ namespace Facebook.WitAi.Data.Configuration
         [Tooltip("Configuration parameters to set up a custom endpoint for testing purposes and request forwarding. The default values here will work for most.")]
         [SerializeField] public WitEndpointConfig endpointConfiguration = new WitEndpointConfig();
 
-        [SerializeField] public WitEntity[] entities;
-        [SerializeField] public WitIntent[] intents;
-        [SerializeField] public WitTrait[] traits;
-
+        /// <summary>
+        /// True if this configuration should not show up in the demo list
+        /// </summary>
         [SerializeField] public bool isDemoOnly;
 
         /// <summary>
@@ -62,79 +63,51 @@ namespace Facebook.WitAi.Data.Configuration
         /// <summary>
         /// The path to the Conduit manifest.
         /// </summary>
-        [SerializeField] public string manifestLocalPath;
+        [SerializeField] private string _manifestLocalPath;
 
-        public string WitApplicationId
+        /// <summary>
+        /// Safe access of local path
+        /// </summary>
+        public string ManifestLocalPath
         {
             get
             {
-                if (String.IsNullOrEmpty(application?.id))
+                #if UNITY_EDITOR
+                if (string.IsNullOrEmpty(_manifestLocalPath))
                 {
-                    // NOTE: If a dev only provides a client token we may not have the application id.
-                    if (!string.IsNullOrEmpty(clientAccessToken))
-                    {
-                        return INVALID_APP_ID_WITH_CLIENT_TOKEN;
-                    }
-
-                    return INVALID_APP_ID_NO_CLIENT_TOKEN;
+                    _manifestLocalPath = $"ConduitManifest-{Guid.NewGuid()}.json";
+                    SaveConfiguration();
                 }
-
-                return application.id;
+                #endif
+                return _manifestLocalPath;
             }
         }
-
-
         #if UNITY_EDITOR
-        // Manifest editor path
-        public string ManifestEditorPath
+        /// <summary>
+        /// Returns manifest full editor path
+        /// </summary>
+        public string GetManifestEditorPath()
         {
-            get
+            string lookup = Path.GetFileNameWithoutExtension(_manifestLocalPath);
+            string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
+            if (guids != null && guids.Length > 0)
             {
-                if (string.IsNullOrEmpty(_manifestFullPath) || !File.Exists(_manifestFullPath))
-                {
-                    string lookup = Path.GetFileNameWithoutExtension(manifestLocalPath);
-                    string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
-                    if (guids != null && guids.Length > 0)
-                    {
-                        _manifestFullPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                    }
-                }
-                return _manifestFullPath;
+                return UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
             }
+            return string.Empty;
         }
-        private string _manifestFullPath;
         #endif
 
         /// <summary>
-        /// When true, will open Conduit manifests when they are manually generated.
+        /// Reset all data
         /// </summary>
-        [SerializeField] public bool openManifestOnGeneration = false;
-
-        public const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
-
-        public const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
-            "App Info Not Set - Has Client Token";
-
-        public WitApplication Application => application;
-
-        private void OnEnable()
-        {
-            #if UNITY_EDITOR
-            if (string.IsNullOrEmpty(manifestLocalPath))
-            {
-                manifestLocalPath = $"ConduitManifest-{Guid.NewGuid()}.json";
-                EditorUtility.SetDirty(this);
-            }
-            #endif
-        }
-
         public void ResetData()
         {
-            application = null;
-            clientAccessToken = null;
-            entities = null;
-            intents = null;
-            traits = null;
+            _configurationId = null;
+            _appInfo.intents = null;
+            _appInfo.entities = null;
+            _appInfo.traits = null;
+            endpointConfiguration = new WitEndpointConfig();
         }
 
         #region IWitRequestConfiguration
@@ -148,17 +121,19 @@ namespace Facebook.WitAi.Data.Configuration
             if (string.IsNullOrEmpty(_configurationId))
             {
                 _configurationId = Guid.NewGuid().ToString();
-                EditorUtility.SetDirty(this);
-                #if UNITY_2021_3_OR_NEWER
-                AssetDatabase.SaveAssetIfDirty(this);
-                #else
-                AssetDatabase.SaveAssets();
-                #endif
             }
             #endif
             // Return configuration id
             return _configurationId;
         }
+        /// <summary>
+        /// Returns unique application id
+        /// </summary>
+        public string GetApplicationId() => _appInfo.id;
+        /// <summary>
+        /// Returns application info
+        /// </summary>
+        public WitAppInfo GetApplicationInfo() => _appInfo;
         /// <summary>
         /// Return endpoint override
         /// </summary>
@@ -179,9 +154,17 @@ namespace Facebook.WitAi.Data.Configuration
         /// </summary>
         public string GetClientAccessToken()
         {
-            return clientAccessToken;
+            return _clientAccessToken;
         }
         #if UNITY_EDITOR
+        /// <summary>
+        /// Editor only setter
+        /// </summary>
+        public void SetClientAccessToken(string newToken)
+        {
+            _clientAccessToken = newToken;
+            SaveConfiguration();
+        }
         /// <summary>
         /// Returns server access token (Editor Only)
         /// </summary>
@@ -189,7 +172,25 @@ namespace Facebook.WitAi.Data.Configuration
         /// <exception cref="NotImplementedException"></exception>
         public string GetServerAccessToken()
         {
-            return WitAuthUtility.GetAppServerToken(application?.id);
+            return WitAuthUtility.GetAppServerToken(GetApplicationId());
+        }
+        /// <summary>
+        /// Set application info
+        /// </summary>
+        public void SetApplicationInfo(WitAppInfo newInfo)
+        {
+            _appInfo = newInfo;
+            SaveConfiguration();
+        }
+        // Save this configuration asset
+        private void SaveConfiguration()
+        {
+            EditorUtility.SetDirty(this);
+            #if UNITY_2021_3_OR_NEWER
+            AssetDatabase.SaveAssetIfDirty(this);
+            #else
+            AssetDatabase.SaveAssets();
+            #endif
         }
         #endif
         #endregion

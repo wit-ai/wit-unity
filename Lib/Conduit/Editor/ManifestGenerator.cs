@@ -66,8 +66,6 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         private string GenerateManifest(IEnumerable<IConduitAssembly> assemblies, string domain, string id)
         {
-            Debug.Log($"Generating manifest.");
-
             var entities = new List<ManifestEntity>();
             var actions = new List<ManifestAction>();
             _assemblyMiner.Initialize();
