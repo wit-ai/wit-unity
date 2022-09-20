@@ -7,13 +7,11 @@
  */
 
 using UnityEditor;
+using Meta.WitAi.Data.Info;
 using Facebook.WitAi.Data;
 using Facebook.WitAi.Inspectors;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Data.Intents;
-using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Data.Traits;
 using Facebook.WitAi.CallbackHandlers;
 
 namespace Facebook.WitAi.Windows
@@ -80,22 +78,22 @@ namespace Facebook.WitAi.Windows
         {
 
         }
-        [CustomPropertyDrawer(typeof(WitApplication))]
+        [CustomPropertyDrawer(typeof(WitAppInfo))]
         public class WitCustomApplicationPropertyDrawer : WitApplicationPropertyDrawer
         {
 
         }
-        [CustomPropertyDrawer(typeof(WitIntent))]
+        [CustomPropertyDrawer(typeof(WitIntentInfo))]
         public class WitCustomIntentPropertyDrawer : WitIntentPropertyDrawer
         {
 
         }
-        [CustomPropertyDrawer(typeof(WitEntity))]
+        [CustomPropertyDrawer(typeof(WitEntityInfo))]
         public class WitCustomEntityPropertyDrawer : WitEntityPropertyDrawer
         {
 
         }
-        [CustomPropertyDrawer(typeof(WitTrait))]
+        [CustomPropertyDrawer(typeof(WitTraitInfo))]
         public class WitCustomTraitPropertyDrawer : WitTraitPropertyDrawer
         {
 
