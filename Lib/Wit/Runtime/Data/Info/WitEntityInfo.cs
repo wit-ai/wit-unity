@@ -25,6 +25,9 @@ namespace Meta.WitAi.Data.Info
         /// <summary>
         /// Various lookup options for this entity
         /// </summary>
+        #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
+        [NonReorderable]
+        #endif
         [SerializeField] public string[] lookups;
         /// <summary>
         /// Various roles in which this

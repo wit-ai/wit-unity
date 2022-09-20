@@ -32,6 +32,8 @@ namespace Facebook.WitAi.Windows
                         return WitTexts.Texts.ConfigurationEntitiesLookupsLabel;
                     case "roles":
                         return WitTexts.Texts.ConfigurationEntitiesRolesLabel;
+                    case "keywords":
+                        return WitTexts.Texts.ConfigurationEntitiesKeywordsLabel;
             }
 
             // Default to base
@@ -43,7 +45,6 @@ namespace Facebook.WitAi.Windows
             switch (subfield.Name)
             {
                 case "name":
-                case "keywords":
                     return false;
             }
             return base.ShouldLayoutField(property, subfield);

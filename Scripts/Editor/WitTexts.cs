@@ -96,6 +96,7 @@ namespace Facebook.WitAi
             public string ConfigurationEntitiesIdLabel;
             public string ConfigurationEntitiesLookupsLabel;
             public string ConfigurationEntitiesRolesLabel;
+            public string ConfigurationEntitiesKeywordsLabel;
             [Header("Configuration Trait Texts")]
             public string ConfigurationTraitsTabLabel;
             public string ConfigurationTraitsMissingLabel;

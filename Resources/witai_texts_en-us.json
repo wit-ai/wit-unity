@@ -62,6 +62,7 @@
   "ConfigurationEntitiesIdLabel": "Entity ID",
   "ConfigurationEntitiesLookupsLabel": "Lookups",
   "ConfigurationEntitiesRolesLabel": "Roles",
+  "ConfigurationEntitiesKeywordsLabel": "Keywords",
   "ConfigurationTraitsTabLabel": "Traits",
   "ConfigurationTraitsMissingLabel": "No traits found.",
   "ConfigurationTraitsIdLabel": "Trait ID",
