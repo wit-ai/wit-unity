@@ -110,6 +110,27 @@ namespace Facebook.WitAi.Data.Configuration
             endpointConfiguration = new WitEndpointConfig();
         }
 
+        // Logger invalid warnings
+        public const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
+        public const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
+            "App Info Not Set - Has Client Token";
+        public string GetLoggerAppId()
+        {
+            // Get application id
+            string applicationId = GetApplicationId();
+            if (String.IsNullOrEmpty(applicationId))
+            {
+                // NOTE: If a dev only provides a client token we may not have the application id.
+                string clientAccessToken = GetClientAccessToken();
+                if (!string.IsNullOrEmpty(clientAccessToken))
+                {
+                    return INVALID_APP_ID_WITH_CLIENT_TOKEN;
+                }
+                return INVALID_APP_ID_NO_CLIENT_TOKEN;
+            }
+            return applicationId;
+        }
+
         #region IWitRequestConfiguration
         /// <summary>
         /// Returns unique configuration guid
