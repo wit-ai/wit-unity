@@ -22,6 +22,11 @@ namespace Facebook.WitAi.Windows
         {
             get
             {
+                if (witConfiguration == null)
+                {
+                    return "";
+                }
+
                 string appID = witConfiguration.GetApplicationId();
                 if (!string.IsNullOrEmpty(appID))
                 {

@@ -193,15 +193,22 @@ namespace Facebook.WitAi
             VoiceEvents.OnResponse.RemoveListener(HandleResponse);
         }
 
+        private VoiceSession GetVoiceSession(WitResponseNode response)
+        {
+            return new VoiceSession
+            {
+                service = this,
+                response = response,
+                validResponse = false
+            };
+        }
+
         protected virtual void ValidateShortResponse(WitResponseNode response)
         {
             if (VoiceEvents.OnValidatePartialResponse != null)
             {
                 // Create short response data
-                VoiceSession validationData = new VoiceSession();
-                validationData.service = this;
-                validationData.response = response;
-                validationData.validResponse = false;
+                VoiceSession validationData = GetVoiceSession(response);
 
                 // Call short response
                 VoiceEvents.OnValidatePartialResponse.Invoke(validationData);
@@ -272,6 +279,12 @@ namespace Facebook.WitAi
                 parameters.Add(parameterName, parameterValue);
             }
             parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
+
+            if (!parameters.ContainsKey(WitConduitParameterProvider.VoiceSessionReservedName))
+            {
+                parameters.Add(WitConduitParameterProvider.VoiceSessionReservedName, GetVoiceSession(response));
+            }
+
             return parameters;
         }
 
