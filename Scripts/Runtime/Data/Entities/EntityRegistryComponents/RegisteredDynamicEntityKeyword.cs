@@ -32,7 +32,8 @@ namespace Facebook.WitAi.Data.Entities
             }
             else
             {
-                Debug.LogWarning($"No dynamic entity registry in the scene. Cannot register {name}.");
+                Debug.LogWarning($"Cannot register {name}: No dynamic entity registry present in the scene." +
+                                 $"Please add one and try again.");
             }
         }
 
