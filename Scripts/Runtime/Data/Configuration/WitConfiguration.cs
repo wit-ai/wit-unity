@@ -88,6 +88,8 @@ namespace Facebook.WitAi.Data.Configuration
         /// </summary>
         public string GetManifestEditorPath()
         {
+            if (string.IsNullOrEmpty(_manifestLocalPath)) return string.Empty;
+
             string lookup = Path.GetFileNameWithoutExtension(_manifestLocalPath);
             string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
             if (guids != null && guids.Length > 0)
