@@ -53,15 +53,19 @@ namespace Meta.WitAi.Lib.Editor
             uriParameters[ENDPOINT_APPS_OFFSET] = 1.ToString();
             return WitRequestUtility.GetRequest<WitResponseNode>(ENDPOINT_APPS, uriParameters, configuration, true, onProgress, (root, error) =>
             {
-                if (string.IsNullOrEmpty(error))
+                if (string.IsNullOrEmpty(error) && root != null)
                 {
-                    foreach (WitResponseNode node in root.AsArray)
+                    WitResponseArray nodes = root.AsArray;
+                    if (nodes != null)
                     {
-                        WitResponseClass child = node.AsObject;
-                        if (child.HasChild(ENDPOINT_APP_FOR_TOKEN) && child[ENDPOINT_APP_FOR_TOKEN].AsBool && child.HasChild(ENDPOINT_APP_ID))
+                        foreach (WitResponseNode node in nodes)
                         {
-                            onComplete?.Invoke(child[ENDPOINT_APP_ID], null);
-                            return;
+                            WitResponseClass child = node.AsObject;
+                            if (child.HasChild(ENDPOINT_APP_FOR_TOKEN) && child[ENDPOINT_APP_FOR_TOKEN].AsBool && child.HasChild(ENDPOINT_APP_ID))
+                            {
+                                onComplete?.Invoke(child[ENDPOINT_APP_ID], null);
+                                return;
+                            }
                         }
                     }
                     error = "No app id found for token";

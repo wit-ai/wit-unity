@@ -75,11 +75,28 @@ namespace Meta.WitAi.Json
         }
 
         /// <summary>
+        /// Generate a default instance, deserialize and return async
+        /// </summary>
+        public static void DeserializeObjectAsync<IN_TYPE>(string jsonString, Action<IN_TYPE, bool> onComplete, JsonConverter[] customConverters = null)
+        {
+            IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
+            ThreadUtility.PerformInBackground(
+                () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonString, customConverters),
+                (success) => onComplete?.Invoke(instance, success));
+        }
+        /// <summary>
+        /// Generate a default instance, deserialize and return async
+        /// </summary>
+        public static void DeserializeObjectAsync<IN_TYPE>(WitResponseNode jsonToken, Action<IN_TYPE, bool> onComplete, JsonConverter[] customConverters = null)
+        {
+            IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
+            ThreadUtility.PerformInBackground(
+                () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonToken, customConverters),
+                (success) => onComplete?.Invoke(instance, success));
+        }
+        /// <summary>
         /// Generate a default instance, deserialize and return
         /// </summary>
-        /// <param name="jsonString"></param>
-        /// <typeparam name="IN_TYPE"></typeparam>
-        /// <returns></returns>
         public static IN_TYPE DeserializeObject<IN_TYPE>(string jsonString, JsonConverter[] customConverters = null)
         {
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
@@ -89,9 +106,6 @@ namespace Meta.WitAi.Json
         /// <summary>
         /// Generate a default instance, deserialize and return
         /// </summary>
-        /// <param name="jsonToken"></param>
-        /// <typeparam name="IN_TYPE"></typeparam>
-        /// <returns></returns>
         public static IN_TYPE DeserializeObject<IN_TYPE>(WitResponseNode jsonToken, JsonConverter[] customConverters = null)
         {
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
@@ -102,10 +116,6 @@ namespace Meta.WitAi.Json
         /// <summary>
         /// Deserialize json string into an existing instance
         /// </summary>
-        /// <param name="instance"></param>
-        /// <param name="jsonString"></param>
-        /// <typeparam name="IN_TYPE"></typeparam>
-        /// <returns></returns>
         public static bool DeserializeIntoObject<IN_TYPE>(ref IN_TYPE instance, string jsonString, JsonConverter[] customConverters = null)
         {
             // Parse json
@@ -115,10 +125,6 @@ namespace Meta.WitAi.Json
         /// <summary>
         /// Deserialize json string into an existing instance
         /// </summary>
-        /// <param name="instance"></param>
-        /// <param name="jsonToken"></param>
-        /// <typeparam name="IN_TYPE"></typeparam>
-        /// <returns></returns>
         public static bool DeserializeIntoObject<IN_TYPE>(ref IN_TYPE instance, WitResponseNode jsonToken, JsonConverter[] customConverters = null)
         {
             // Could not parse

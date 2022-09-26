@@ -356,18 +356,19 @@ namespace Meta.WitAi
         // Deserialize Text Request
         private static void DeserializeTextRequest<DATA_TYPE>(string uri, string text, Action<DATA_TYPE, string> onComplete)
         {
-            // TODO: Async Parse
-            WitResponseNode jsonResults = JsonConvert.DeserializeToken(text);
-            if (jsonResults == null)
+            JsonConvert.DeserializeObjectAsync<DATA_TYPE>(text, (result, success) =>
             {
-                VLog.W($"Decode Failed\nUri: {uri}\n\n{text}");
-                onComplete?.Invoke(default(DATA_TYPE), "Decode failed");
-                return;
-            }
-
-            // TODO: Async Deserialize
-            DATA_TYPE jsonData = JsonConvert.DeserializeObject<DATA_TYPE>(jsonResults);
-            onComplete?.Invoke(jsonData, null);
+                // Failed
+                if (!success)
+                {
+                    onComplete?.Invoke(result, $"Failed to parse json\n{text}");
+                }
+                // Success
+                else
+                {
+                    onComplete?.Invoke(result, string.Empty);
+                }
+            });
         }
 
         /// <summary>
