@@ -67,8 +67,8 @@ namespace Meta.WitAi.Lib.Editor
             {
                 if (!string.IsNullOrEmpty(error))
                 {
-                    warnings.AppendLine($"Application id could not be found\n{error}");
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                    warnings.AppendLine(error);
+                    UpdateComplete(configuration, configuration.GetApplicationInfo(), warnings, onUpdateComplete);
                     return;
                 }
 
@@ -310,17 +310,17 @@ namespace Meta.WitAi.Lib.Editor
             Action<WitAppInfo, string> onUpdateComplete)
         {
             // Get app name
-            string appName = string.IsNullOrEmpty(appInfo.name) ? "???" : appInfo.name;
+            string appNameLog = string.IsNullOrEmpty(appInfo.name) ? string.Empty : $"\nWit App: {appInfo.name}";
 
             // Success
             if (warnings.Length == 0)
             {
-                VLog.D($"App Info Update Success\nWit App: {appName}");
+                VLog.D($"App Info Update Success{appNameLog}");
             }
             // Warnings
             else
             {
-                VLog.W($"App Info Update Warnings\nWit App: {appName}\n{warnings}");
+                VLog.W($"App Info Update Warnings{appNameLog}\n{warnings}");
             }
 
             // Callback

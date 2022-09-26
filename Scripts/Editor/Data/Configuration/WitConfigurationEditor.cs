@@ -270,9 +270,16 @@ namespace Facebook.WitAi.Windows
             // Reset
             if (!string.Equals(_appName, checkName) || !string.Equals(_appID, checkID))
             {
+                // Refresh app data
                 _appName = checkName;
                 _appID = checkID;
-                _serverToken = WitAuthUtility.GetAppServerToken(configuration);
+
+                // Do not clear token if failed to set
+                string newToken = WitAuthUtility.GetAppServerToken(configuration);
+                if (!string.IsNullOrEmpty(newToken))
+                {
+                    _serverToken = newToken;
+                }
             }
         }
         // Apply server token
