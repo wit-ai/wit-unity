@@ -98,6 +98,14 @@ namespace Meta.WitAi
         /// User agent customization delegate
         /// </summary>
         public static event Action<StringBuilder> OnProvideCustomUserAgent;
+#if UNITY_EDITOR
+        /// <summary>
+        /// Performs a custom handling of the request instead of performing the request itself
+        /// Editor only & useful for test injection
+        /// </summary>
+        public static event Func<UnityWebRequest, string> onCustomWitTextResponse;
+#endif
+
 
         #region SHARED
         /// <summary>
@@ -319,7 +327,20 @@ namespace Meta.WitAi
             IWitRequestConfiguration configuration, bool useServerToken,
             Action<float> onProgress, Action<DATA_TYPE, string> onComplete)
         {
+            // Add header
             unityRequest.SetRequestHeader("Content-Type", "application/json");
+
+            #if UNITY_EDITOR
+            // Custom text override
+            string customResponse = onCustomWitTextResponse?.Invoke(unityRequest);
+            if (!string.IsNullOrEmpty(customResponse))
+            {
+                DeserializeTextRequest<DATA_TYPE>(unityRequest.uri.ToString(), customResponse, onComplete);
+                return null;
+            }
+            #endif
+
+            // Perform request
             return Request(unityRequest, configuration, useServerToken, onProgress, (request, error) =>
             {
                 // Error
@@ -328,21 +349,25 @@ namespace Meta.WitAi
                     onComplete?.Invoke(default(DATA_TYPE), error);
                     return;
                 }
-
-                // TODO: Async Parse
-                string jsonString = request.downloadHandler.text;
-                WitResponseNode jsonResults = JsonConvert.DeserializeToken(jsonString);
-                if (jsonResults == null)
-                {
-                    VLog.W($"Decode Failed\nUri: {unityRequest.uri}\nError: {request.error}\n\n{jsonString}");
-                    onComplete?.Invoke(default(DATA_TYPE), request.error);
-                    return;
-                }
-
-                // TODO: Async Deserialize
-                DATA_TYPE jsonData = JsonConvert.DeserializeObject<DATA_TYPE>(jsonResults);
-                onComplete?.Invoke(jsonData, null);
+                // Deserialize
+                DeserializeTextRequest<DATA_TYPE>(unityRequest.uri.ToString(), request.downloadHandler.text, onComplete);
             });
+        }
+        // Deserialize Text Request
+        private static void DeserializeTextRequest<DATA_TYPE>(string uri, string text, Action<DATA_TYPE, string> onComplete)
+        {
+            // TODO: Async Parse
+            WitResponseNode jsonResults = JsonConvert.DeserializeToken(text);
+            if (jsonResults == null)
+            {
+                VLog.W($"Decode Failed\nUri: {uri}\n\n{text}");
+                onComplete?.Invoke(default(DATA_TYPE), "Decode failed");
+                return;
+            }
+
+            // TODO: Async Deserialize
+            DATA_TYPE jsonData = JsonConvert.DeserializeObject<DATA_TYPE>(jsonResults);
+            onComplete?.Invoke(jsonData, null);
         }
 
         /// <summary>

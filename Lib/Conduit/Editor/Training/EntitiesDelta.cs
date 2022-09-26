@@ -7,12 +7,13 @@
  */
 
 using System.Collections.Generic;
+using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit.Editor
 {
     public class EntitiesDelta
     {
-        public List<string> InWitOnly;
+        public List<WitEntityKeywordInfo> InWitOnly;
         public List<string> InLocalOnly;
 
         public bool IsEmpty => InLocalOnly.Count == 0 && InWitOnly.Count == 0;

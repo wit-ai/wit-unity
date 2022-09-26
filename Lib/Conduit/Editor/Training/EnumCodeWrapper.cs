@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.CSharp;
+using UnityEngine;
 
 namespace Meta.Conduit.Editor
 {
@@ -21,93 +22,81 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class EnumCodeWrapper
     {
+        public const string DEFAULT_PATH = @"Assets\Generated\";
+        public const string DEFAULT_NAMESPACE = "Conduit.Generated";
+
         private readonly string _sourceFilePath;
+        private readonly string _namespace;
         private readonly IFileIo _fileIo;
         private readonly CodeCompileUnit _compileUnit;
-        private readonly HashSet<string> _enumValues = new HashSet<string>();
+        private readonly CodeTypeDeclaration _typeDeclaration;
+        private readonly List<string> _enumValues = new List<string>();
         private readonly CodeDomProvider _provider = new CSharpCodeProvider();
-        private readonly CodeTypeDeclaration _typeDeclaration = new CodeTypeDeclaration();
         private readonly Dictionary<string, CodeNamespace> _namespaces = new Dictionary<string, CodeNamespace>();
-        private readonly string _enumNamespace;
+        private readonly Action<CodeNamespace> _namespaceSetup;
+        private readonly Action<CodeMemberField> _memberSetup;
 
-        public EnumCodeWrapper(IFileIo fileIo, Type enumType, string sourceCodeFile = "")
+        // Setup with existing enum
+        public EnumCodeWrapper(IFileIo fileIo, Type enumType, string sourceCodeFile = null) : this(fileIo, enumType.Name, enumType.GetEnumNames(), enumType.Namespace, sourceCodeFile)
         {
             if (!enumType.IsEnum)
             {
                 throw new ArgumentException("Type must be an enumeration.", nameof(enumType));
             }
-
-            _enumNamespace = enumType.Namespace;
-
-            this._compileUnit = new CodeCompileUnit();
-            this._sourceFilePath = sourceCodeFile == string.Empty ? GetEnumFileName(enumType.Name) : sourceCodeFile;
-            this._fileIo = fileIo;
-
-            var nameSpace = GetNameSpace();
-
-            _typeDeclaration = new CodeTypeDeclaration(enumType.Name)
-            {
-                IsEnum = true
-            };
-
-            foreach (var enumName in enumType.GetEnumNames())
-            {
-                _enumValues.Add(enumName);
-                _typeDeclaration.Members.Add(new CodeMemberField(enumType.Name, enumName));
-            }
-
-            nameSpace.Types.Add(_typeDeclaration);
         }
-
-        /// <summary>
-        /// Constructs an empty enum wrapper.
-        /// This constructor should be used when generating a new file from scratch.
-        /// </summary>
-        /// <param name="fileIo"></param>
-        /// <param name="enumName"></param>
-        /// <param name="enumValues"></param>
-        /// <param name="sourceCodeFile"></param>
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, List<string> enumValues, string sourceCodeDirectory)
+        // Setup with new enum name & values
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, IList<string> enumValues = null, string sourceCodeFile = null) : this(fileIo, enumName, enumValues, null, sourceCodeFile){}
+        // Setup
+        private EnumCodeWrapper(IFileIo fileIo, string enumName, IList<string> enumValues, string enumNamespace, string sourceCodeFile)
         {
-            this._compileUnit = new CodeCompileUnit();
+            // Initial setup
+            _compileUnit = new CodeCompileUnit();
+            _namespace = string.IsNullOrEmpty(enumNamespace) ? DEFAULT_NAMESPACE : enumNamespace;
+            _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GetEnumFilePath(enumName, _namespace) : sourceCodeFile;
+            _fileIo = fileIo;
 
-            string cleanName = ConduitUtilities.SanitizeName(enumName);
-            this._sourceFilePath = $"{sourceCodeDirectory}\\{cleanName}.cs";
-            this._fileIo = fileIo;
-
-            const string defaultNameSpace = "Conduit.Generated";
-            var nameSpace = new CodeNamespace(defaultNameSpace);
+            // Setup namespace
+            var nameSpace = new CodeNamespace(_namespace);
             _compileUnit.Namespaces.Add(nameSpace);
-            _namespaces.Add(defaultNameSpace, nameSpace);
+            _namespaces.Add(_namespace, nameSpace);
 
-            _typeDeclaration = new CodeTypeDeclaration(cleanName)
+            // Setup type declaration
+            _typeDeclaration = new CodeTypeDeclaration(enumName)
             {
                 IsEnum = true
             };
-
-            foreach (var value in enumValues)
-            {
-                string cleanValue = ConduitUtilities.SanitizeString(value);
-                if (!_enumValues.Contains(cleanValue))
-                {
-                    _enumValues.Add(cleanValue);
-                    _typeDeclaration.Members.Add(new CodeMemberField(cleanName, cleanValue));
-                }
-            }
-
             nameSpace.Types.Add(_typeDeclaration);
+
+            // Add all enum values
+            AddValues(enumValues);
         }
 
-        private CodeNamespace GetNameSpace()
+        // Ger safe enum file path
+        private string GetEnumFilePath(string enumName, string enumNamespace)
         {
-            if (!_namespaces.ContainsKey(_enumNamespace))
-            {
-                var newNamespace = new CodeNamespace(_enumNamespace);
-                _compileUnit.Namespaces.Add(newNamespace);
-                _namespaces.Add(_enumNamespace, newNamespace);
-            }
+            return Path.Combine(DEFAULT_PATH, enumNamespace.Replace('.', '\\'), $"{enumName}.cs");
+        }
 
-            return _namespaces[_enumNamespace];
+        // Add namespace import
+        public void AddNamespaceImport(Type forType)
+        {
+            if (forType == null)
+            {
+                return;
+            }
+            string attributeNamespaceName = forType.Namespace;
+            var importNameSpace = new CodeNamespaceImport(attributeNamespaceName);
+            _namespaces[_namespace].Imports.Add(importNameSpace);
+        }
+
+        // Add enum attribute
+        public void AddEnumAttribute(CodeAttributeDeclaration attribute)
+        {
+            if (attribute == null)
+            {
+                return;
+            }
+            _typeDeclaration.CustomAttributes.Add(attribute);
         }
 
         /// <summary>
@@ -116,15 +105,39 @@ namespace Meta.Conduit.Editor
         /// <param name="values">The values to add.</param>
         public void AddValues(IList<string> values)
         {
+            if (values == null)
+            {
+                return;
+            }
             foreach (var value in values)
             {
-                if (this._enumValues.Contains(value))
-                {
-                    continue;
-                }
-
-                this._typeDeclaration.Members.Add(new CodeMemberField(_typeDeclaration.Name, value));
+                AddValue(value);
             }
+        }
+        // Add a single value
+        public void AddValue(string value, CodeAttributeDeclaration attribute = null)
+        {
+            // Get clean value
+            string cleanValue = ConduitUtilities.SanitizeString(value);
+
+            // Ignore if added
+            if (_enumValues.Contains(cleanValue))
+            {
+                return;
+            }
+
+            // Get field
+            CodeMemberField field = new CodeMemberField(_typeDeclaration.Name, cleanValue);
+
+            // Add attribute
+            if (attribute != null)
+            {
+                field.CustomAttributes.Add(attribute);
+            }
+
+            // Add to enum & members list
+            _enumValues.Add(cleanValue);
+            _typeDeclaration.Members.Add(field);
         }
 
         /// <summary>
@@ -133,13 +146,34 @@ namespace Meta.Conduit.Editor
         /// <param name="values">The values to remove.</param>
         public void RemoveValues(IList<string> values)
         {
-            for (var i = this._typeDeclaration.Members.Count - 1; i >= 0; --i)
+            if (values == null)
             {
-                if (values.Contains(this._typeDeclaration.Members[i].Name))
-                {
-                    this._typeDeclaration.Members.RemoveAt(i);
-                }
+                return;
             }
+            foreach (var value in values)
+            {
+                RemoveValue(value);
+            }
+        }
+
+        /// <summary>
+        /// Returns a single value
+        /// </summary>
+        public void RemoveValue(string value)
+        {
+            // Check enum names
+            string cleanName = ConduitUtilities.SanitizeString(value);
+            int enumIndex = _enumValues.IndexOf(cleanName);
+
+            // Not found
+            if (enumIndex == -1)
+            {
+                return;
+            }
+
+            // Remove enum
+            _enumValues.RemoveAt(enumIndex);
+            _typeDeclaration.Members.RemoveAt(enumIndex);
         }
 
         public void WriteToFile()
@@ -170,15 +204,5 @@ namespace Meta.Conduit.Editor
 
             return sb.ToString();
         }
-
-        private string GetEnumFileName(string enumName)
-        {
-            // TODO: Handle the case where the enum already exists.
-            const string prefix = @"Assets\Generated\";
-            var nameSegments = _enumNamespace.Replace('.', '\\');
-
-            return Path.Combine(prefix, nameSegments, $"{enumName}.cs");
-        }
-
     }
 }

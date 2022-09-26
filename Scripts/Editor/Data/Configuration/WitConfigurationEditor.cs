@@ -566,7 +566,7 @@ namespace Facebook.WitAi.Windows
             // Generate
             if (_enumSynchronizer == null)
             {
-                _enumSynchronizer = new EnumSynchronizer(AssemblyWalker, new FileIo(), new WitHttp(_serverToken, 60));
+                _enumSynchronizer = new EnumSynchronizer(configuration, AssemblyWalker, new FileIo());
             }
 
             // Sync

@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Meta.WitAi.Lib",
-        "Facebook.Wit.Conduit"
+        "Facebook.Wit.Conduit",
+        "Meta.WitAI.Lib.Editor"
     ],
     "includePlatforms": [
         "Editor"

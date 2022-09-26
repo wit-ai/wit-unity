@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using Meta.WitAi.Json;
 using Meta.WitAi.Data.Info;
@@ -29,6 +30,10 @@ namespace Meta.WitAi.Lib.Editor
         private const string ENDPOINT_ENTITIES = "entities";
         private const string ENDPOINT_TRAITS = "traits";
 
+        // Sync endpoints
+        private const string ENDPOINT_ENTITY_KEYWORDS = "keywords";
+
+        #region APP INFO
         // Gets all app data
         public static RequestPerformer GetAppsRequest(IWitRequestConfiguration configuration, int limit, int offset,
             Action<float> onProgress, Action<WitAppInfo[], string> onComplete)
@@ -143,5 +148,44 @@ namespace Meta.WitAi.Lib.Editor
             return WitRequestUtility.GetRequest<WitTraitInfo>($"{ENDPOINT_TRAITS}/{traitId}", null,
                 configuration, true, onProgress, onComplete);
         }
+        #endregion
+
+        #region ENTITY SYNC
+        // Add a new keyword to an entity
+        public static RequestPerformer AddEntityKeyword(IWitRequestConfiguration configuration, string entityId, string keyword, string[] synonyms,
+            Action<float> onProgress, Action<string> onComplete)
+        {
+            // Ensure entity & keywords exist
+            if (string.IsNullOrEmpty(entityId))
+            {
+                onComplete?.Invoke("No entity id provided");
+                return null;
+            }
+            if (string.IsNullOrEmpty(keyword))
+            {
+                onComplete?.Invoke("No keyword provided");
+                return null;
+            }
+
+            // Get data
+            string endpoint = $"{ENDPOINT_ENTITIES}/{entityId}/{ENDPOINT_ENTITY_KEYWORDS}";
+            StringBuilder synonymBuilder = new StringBuilder();
+            if (synonyms != null && synonyms.Length > 0)
+            {
+                foreach (var synonym in synonyms)
+                {
+                    if (synonymBuilder.Length > 0)
+                    {
+                        synonymBuilder.Append(',');
+                    }
+                    synonymBuilder.Append(synonym);
+                }
+            }
+            string payload = "\"keyword\": \"" + keyword + "\", \"synonyms\":[" + synonymBuilder + "]}";
+
+            // Post text
+            return WitRequestUtility.PostTextRequest<WitResponseNode>(endpoint, null, payload, configuration, true, onProgress, (response, error) => onComplete(error));
+        }
+        #endregion
     }
 }

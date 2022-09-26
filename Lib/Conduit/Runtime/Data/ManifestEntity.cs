@@ -17,10 +17,16 @@ namespace Meta.Conduit
     internal class ManifestEntity
     {
         /// <summary>
+        /// Called via JSON reflection, need preserver or it will be stripped on compile
+        /// </summary>
+        [UnityEngine.Scripting.Preserve]
+        public ManifestEntity() { }
+
+        /// <summary>
         /// The is the internal name of the entity/parameter in the codebase.
         /// </summary>
         public string ID { get; set; }
-        
+
         /// <summary>
         /// The namespace that contains the entity/enum in the code.
         /// </summary>
@@ -40,7 +46,7 @@ namespace Meta.Conduit
         /// List of values this entity could  assume. For an enum, these would be the enum values.
         /// </summary>
         public List<string> Values { get; set; } = new List<string>();
-        
+
         /// <summary>
         /// The fully qualified name of the assembly containing the code for the entity.
         /// </summary>

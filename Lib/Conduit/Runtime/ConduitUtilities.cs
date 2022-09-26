@@ -105,7 +105,7 @@ namespace Meta.Conduit
             // Starts with number, append N
             if (Regex.IsMatch(result[0].ToString(), @"^\d$"))
             {
-                result = $"n{result}";
+                result = $"N{result}";
             }
             // Sanitized string
             return result;

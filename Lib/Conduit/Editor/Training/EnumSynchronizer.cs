@@ -7,11 +7,15 @@
  */
 
 using System;
+using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Net;
-using Meta.WitAi.Json;
+using Castle.Core.Internal;
+using Meta.WitAi;
+using Meta.WitAi.Data.Info;
+using Meta.WitAi.Lib.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,16 +26,15 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class EnumSynchronizer
     {
-        private const string GeneratedAssetsPath = @"Assets\Generated";
+        private readonly IWitRequestConfiguration _config;
         private readonly IAssemblyWalker _assemblyWalker;
         private readonly IFileIo _fileIo;
-        private readonly IWitHttp _witHttp;
 
-        public EnumSynchronizer(IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitHttp witHttp)
+        public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo)
         {
+            _config = configuration;
             _fileIo = fileIo;
             _assemblyWalker = assemblyWalker;
-            _witHttp = witHttp;
         }
 
         /// <summary>
@@ -40,110 +43,170 @@ namespace Meta.Conduit.Editor
         /// </summary>
         public IEnumerator SyncWitEntities(Manifest manifest, StepResult completionCallback)
         {
-            // Get all wit entity names
-            // For entities not available locally, add them
-            // For all other entities, sync them with manifest
-
-            List<string> witEntityNames = null;
-            yield return this.GetAllWitEntityNames(list =>
+            // Invalid app info
+            WitAppInfo appInfo = _config.GetApplicationInfo();
+            if (appInfo.entities == null)
             {
-                witEntityNames = list;
-            });
-
-            // Error handling for service failure
-            if (witEntityNames == null)
-            {
-                completionCallback?.Invoke(false, "Failed to obtain entities from service");
+                completionCallback?.Invoke(false, "No application info entities provided");
                 yield break;
             }
 
-            var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToHashSet();
+            // Get all external wit entities
+            WitEntityInfo[] externalEntities = appInfo.entities;
 
-            foreach (var entityName in witEntityNames)
+            // Get all local entities
+            List<ManifestEntity> localEntities = manifest.Entities;
+            List<string> localEntityIDs = localEntities.Select(entity => entity.ID).ToList();
+
+            // Create any missing entities
+            bool allSuccessful = true;
+            foreach (var externalEntityInfo in externalEntities)
             {
-                var onWitOnly = !localEnumNames.Contains(entityName);
+                // Get entity final name
+                string entityName = ConduitUtilities.GetEntityEnumName(externalEntityInfo.name);
 
-                if (onWitOnly)
+                // Create new
+                int localIndex = localEntityIDs.IndexOf(entityName);
+                if (localIndex == -1)
                 {
-                    yield return CreateEnumFromWitEntity(entityName);
+                    CreateEnumFromWitEntity(externalEntityInfo);
+                    yield return null;
+                }
+                // Update existing
+                else
+                {
+                    ManifestEntity localEntityInfo = manifest.Entities[localIndex];
+                    yield return Sync(externalEntityInfo, localEntityInfo, (success, data) =>
+                    {
+                        if (!success)
+                        {
+                            allSuccessful = false;
+                        }
+                    });
                 }
             }
 
             // Import newly generated entities
             AssetDatabase.Refresh();
 
-            bool allEntitiesSynced = true;
-            foreach (var manifestEntity in manifest.Entities)
-            {
-                yield return Sync(manifestEntity, (success, data) =>
-                {
-                    if (!success)
-                    {
-                        allEntitiesSynced = false;
-                    }
-                });
-            }
+            // Complete
+            completionCallback(allSuccessful, null);
+        }
 
-            completionCallback(allEntitiesSynced, null);
+        // Creates enum file for wit entity
+        private void CreateEnumFromWitEntity(WitEntityInfo entityInfo)
+        {
+            // Generate wrapper
+            var wrapper = new EnumCodeWrapper(_fileIo, ConduitUtilities.GetEntityEnumName(entityInfo.name));
+
+            // Update wrapper
+            UpdateEnumWrapper(wrapper, entityInfo.name, entityInfo.id, entityInfo.keywords);
+
+            // Write to file
+            wrapper.WriteToFile();
         }
 
         /// <summary>
         /// Synchronizes an enum with its corresponding Wit.Ai entity.
         /// </summary>
-        /// <param name="manifestEntity">The Conduit generated entity based on the local code.</param>
         /// <param name="completionCallback">The callback to call when the sync operation is complete.</param>
-        public IEnumerator Sync(ManifestEntity manifestEntity, StepResult completionCallback)
+        private IEnumerator Sync(WitEntityInfo externalEntityInfo, ManifestEntity localEntityInfo, StepResult completionCallback)
         {
-            WitIncomingEntity witIncomingEntity = null;
-            yield return this.GetWitEntity(manifestEntity.Name, incomingEntity => witIncomingEntity = incomingEntity);
+            // Get delta
+            var delta = GetDelta(externalEntityInfo, localEntityInfo);
 
-            var delta = GetDelta(manifestEntity, witIncomingEntity);
-
+            // Add missing values to wit
             var result = false;
-            yield return AddValuesToWit(manifestEntity.Name, delta,
+            yield return AddValuesToWit(externalEntityInfo, delta,
                 delegate(bool success, string data) { result = success; });
 
+            // Failed to add to wit
             if (!result)
             {
                 completionCallback(false, "Failed to add values to Wit.Ai");
                 yield break;
             }
 
-            if (AddValuesToLocalEnum(manifestEntity, delta))
-            {
-                completionCallback(true, "");
-            }
-            else
+            // Add to local
+            if (!AddValuesToLocalEnum(externalEntityInfo, localEntityInfo, delta))
             {
                 completionCallback(false, "Failed to add entity to local enum");
-            }
-        }
-
-        private IEnumerator CreateEnumFromWitEntity(string entityName)
-        {
-            // Obtain wit entity
-            WitIncomingEntity witIncomingEntity = null;
-            yield return this.GetWitEntity(entityName, incomingEntity => witIncomingEntity = incomingEntity);
-
-            // Wit entity not found
-            if (witIncomingEntity == null)
-            {
-                Debug.LogError($"Enum Synchronizer - Failed to find {entityName} entity on Wit.AI");
                 yield break;
             }
 
-            // Get enum name & values
-            var entityEnumName = ConduitUtilities.GetEntityEnumName(entityName);
-            var entityEnumValues = witIncomingEntity.keywords.Select(keyword => ConduitUtilities.GetEntityEnumValue(keyword.keyword)).ToList();
-
-            // Generate wrapper
-            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumValues, $"{GeneratedAssetsPath}");
-
-            // Write to file
-            wrapper.WriteToFile();
+            // Successful sync
+            completionCallback(true, "");
         }
 
-        private bool AddValuesToLocalEnum(ManifestEntity manifestEntity,
+        /// <summary>
+        /// Returns the entries that are in one or the other.
+        /// </summary>
+        private EntitiesDelta GetDelta(WitEntityInfo externalEntityInfo, ManifestEntity localEntityInfo)
+        {
+            var delta = new EntitiesDelta();
+
+            var manifestEntityValues = new HashSet<string>();
+            foreach (var value in localEntityInfo.Values)
+            {
+                manifestEntityValues.Add(value);
+            }
+
+            if (externalEntityInfo.keywords == null || externalEntityInfo.keywords.Length == 0)
+            {
+                delta.InLocalOnly = manifestEntityValues.ToList();
+                delta.InWitOnly = new List<WitEntityKeywordInfo>();
+
+                return delta;
+            }
+
+            var witEntityValues = new HashSet<string>();
+
+            foreach (var keyword in externalEntityInfo.keywords)
+            {
+                witEntityValues.Add(keyword.keyword);
+            }
+
+            var originalWitValues = witEntityValues.ToList();
+            witEntityValues.ExceptWith(manifestEntityValues);
+            manifestEntityValues.ExceptWith(originalWitValues);
+
+            delta.InLocalOnly = manifestEntityValues.ToList();
+            delta.InWitOnly = externalEntityInfo.keywords.FindAll(keyword => witEntityValues.Contains(keyword.keyword)).ToList();
+
+            return delta;
+        }
+
+        /// <summary>
+        /// Perform request to add all local only keywords
+        /// </summary>
+        private IEnumerator AddValuesToWit(WitEntityInfo entityInfo,
+            EntitiesDelta delta, StepResult completionCallback)
+        {
+            var allSuccessful = true;
+            foreach (var keyword in delta.InLocalOnly)
+            {
+                bool running = true;
+                WitEditorRequestUtility.AddEntityKeyword(_config, entityInfo.id, keyword, null, null, (error) =>
+                {
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        allSuccessful = false;
+                        VLog.W($"Entity keyword addition failed\nEntity: {entityInfo.id}\nKeyword: {keyword}\n\n{error}");
+                    }
+                    running = false;
+                });
+                yield return new WaitWhile(() => running);
+            }
+            completionCallback(allSuccessful, "");
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="manifestEntity"></param>
+        /// <param name="delta"></param>
+        /// <returns></returns>
+        private bool AddValuesToLocalEnum(WitEntityInfo entityInfo, ManifestEntity manifestEntity,
             EntitiesDelta delta)
         {
             if (delta.InWitOnly.Count == 0)
@@ -151,22 +214,15 @@ namespace Meta.Conduit.Editor
                 return true;
             }
 
-            // TODO: Handle case when the enum does not exist at all.
-
             var enumWrapper = GetEnumWrapper(manifestEntity);
             if (enumWrapper == null)
             {
                 return false;
             }
+            // Add namespace
+            UpdateEnumWrapper(enumWrapper, entityInfo.name, entityInfo.id, delta.InWitOnly.ToArray());
 
-            var newValues = new List<string>();
-
-            foreach (var keyword in delta.InWitOnly)
-            {
-                newValues.Add(keyword);
-            }
-
-            enumWrapper.AddValues(newValues);
+            // Write to file
             enumWrapper.WriteToFile();
             return true;
         }
@@ -189,138 +245,94 @@ namespace Meta.Conduit.Editor
 
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile);
 
-            return new EnumCodeWrapper(_fileIo, enumType, sourceFile);
-        }
+            EnumCodeWrapper wrapper = new EnumCodeWrapper(_fileIo, manifestEntity.ID, null, sourceFile);
 
-        /// <summary>
-        /// Returns the entries that are in one or the other.
-        /// </summary>
-        private EntitiesDelta GetDelta(ManifestEntity manifestEntity, WitIncomingEntity witEntity)
-        {
-            var delta = new EntitiesDelta();
-
-            var manifestEntityValues = new HashSet<string>();
-            foreach (var value in manifestEntity.Values)
+            // Get enum values
+            Type valueAttribute = typeof(ConduitValueAttribute);
+            CodeTypeReference entityKeywordAttributeType = new CodeTypeReference(valueAttribute.Name);
+            foreach (var enumName in enumType.GetEnumNames())
             {
-                manifestEntityValues.Add(value);
-            }
+                // Synonyms
+                string keyword = enumName;
+                List<string> synonyms = new List<string>();
 
-            if (witEntity == null)
-            {
-                delta.InLocalOnly = manifestEntityValues.ToList();
-                delta.InWitOnly = new List<string>();
-
-                return delta;
-            }
-
-            var witEntityValues = new HashSet<string>();
-
-            foreach (var keyword in witEntity.keywords)
-            {
-                witEntityValues.Add(keyword.keyword);
-            }
-
-            var originalWitValues = witEntityValues.ToList();
-            witEntityValues.ExceptWith(manifestEntityValues);
-            manifestEntityValues.ExceptWith(originalWitValues);
-
-            delta.InLocalOnly = manifestEntityValues.ToList();
-            delta.InWitOnly = witEntityValues.ToList();
-
-            return delta;
-        }
-
-        private IEnumerator AddValuesToWit(string entityName,
-            EntitiesDelta delta, StepResult completionCallback)
-        {
-            var allSuccessful = true;
-            foreach (var entry in delta.InLocalOnly)
-            {
-                var payload = "{\"keyword\": \"" + entry + "\", \"synonyms\":[]}";
-
-                yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords",
-                    WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
+                // Get member
+                var memberInfo = enumType.GetMember(enumName);
+                var enumValueMemberInfo = memberInfo.FirstOrDefault(m => m.DeclaringType == enumType);
+                if (enumValueMemberInfo != null)
+                {
+                    foreach (var enumAttribute in (ConduitValueAttribute[])enumValueMemberInfo.GetCustomAttributes(valueAttribute, false))
                     {
-                        if (!success)
+                        if (enumAttribute.Aliases != null)
                         {
-                            allSuccessful = false;
+                            synonyms.AddRange(enumAttribute.Aliases);
                         }
-                    });
+                    }
+                    if (synonyms.Count > 0)
+                    {
+                        keyword = synonyms[0];
+                    }
+                }
+
+                // Add existing
+                AddEnumValueAttribute(wrapper, entityKeywordAttributeType, keyword, synonyms);
             }
 
-            completionCallback(allSuccessful, "");
+            // Return wrapper
+            return wrapper;
         }
 
-        private IEnumerator GetAllWitEntityNames(Action<List<string>> callBack)
+        // Update enum wrapper
+        private void UpdateEnumWrapper(EnumCodeWrapper wrapper, string entityName, string entityId, WitEntityKeywordInfo[] entityKeywords)
         {
-            var response = "";
-            var result = false;
-            yield return _witHttp.MakeUnityWebRequest($"/entities", WebRequestMethods.Http.Get,
-                (success, data) =>
+            // Add namespace
+            wrapper.AddNamespaceImport(typeof(ConduitEntityAttribute));
+
+            // Add entity enum attribute
+            CodeTypeReference entityAttributeType = new CodeTypeReference(typeof(ConduitEntityAttribute).Name);
+            CodeAttributeArgument[] entityAttributeArgs = new CodeAttributeArgument[]
+            {
+                new CodeAttributeArgument(new CodePrimitiveExpression(entityName)),
+                new CodeAttributeArgument(new CodePrimitiveExpression(entityId))
+            };
+            wrapper.AddEnumAttribute(new CodeAttributeDeclaration(entityAttributeType, entityAttributeArgs));
+
+            // Add entity keywords & their enum attributes
+            if (entityKeywords != null)
+            {
+                CodeTypeReference entityKeywordAttributeType = new CodeTypeReference(typeof(ConduitValueAttribute).Name);
+                foreach (var keyword in entityKeywords)
                 {
-                    response = data;
-                    result = success;
-                });
-
-            if (!result)
-            {
-                Debug.LogError($"Wit Entities Load Failed\nError: {response}");
-                callBack(null);
-                yield break;
+                    AddEnumValueAttribute(wrapper, entityKeywordAttributeType, keyword.keyword, keyword.synonyms);
+                }
             }
-
-            var entityNames = JsonConvert.DeserializeObject<List<EntityRecord>>(response);
-            if (entityNames == null)
-            {
-                Debug.LogError($"Wit Entities Decode Failed\nJSON:\n{response}");
-                callBack(null);
-                yield break;
-            }
-
-            callBack(entityNames.Select(entity => entity.name).ToList());
         }
-
-        private IEnumerator GetWitEntity(string manifestEntityName, Action<WitIncomingEntity> callBack)
+        // Add enum value
+        private void AddEnumValueAttribute(EnumCodeWrapper wrapper, CodeTypeReference entityKeywordAttributeType, string keyword, IList<string> synonyms)
         {
-            var response = "";
-            var result = false;
-            yield return _witHttp.MakeUnityWebRequest($"/entities/{manifestEntityName}", WebRequestMethods.Http.Get,
-                (success, data) =>
+            // Get clean keyword
+            string cleanKeyword = ConduitUtilities.GetEntityEnumValue(keyword);
+
+            // Add unique synonyms
+            List<string> synonymList = new List<string>();
+            synonymList.Add(keyword);
+            if (synonyms != null)
+            {
+                foreach (var synonym in synonyms)
                 {
-                    response = data;
-                    result = success;
-                });
-
-            if (!result)
-            {
-                Debug.LogError($"Wit {manifestEntityName} Entity Load Failed\nError: {response}");
-                callBack(null);
-                yield break;
+                    if (!synonymList.Contains(synonym))
+                    {
+                        synonymList.Add(synonym);
+                    }
+                }
             }
 
-            var entity = JsonConvert.DeserializeObject<WitIncomingEntity>(response);
-            if (entity.keywords == null && entity.roles == null && entity.name == null)
-            {
-                Debug.LogError($"Wit {manifestEntityName} Entity Decode Failed\nKeywords: {(entity.keywords == null)}\nRoles: {(entity.roles == null)}\nName: {(entity.name == null)}\nJSON:\n{response}");
-                callBack(null);
-                yield break;
-            }
+            // Convert to arguments
+            CodeAttributeArgument[] entityKeywordAttributeArgs = synonymList.ConvertAll((synonym) =>
+                new CodeAttributeArgument(new CodePrimitiveExpression(synonym))).ToArray();
 
-            callBack(entity);
-        }
-
-        private bool EntitiesEquivalent(ManifestEntity manifestEntity, WitIncomingEntity witEntity)
-        {
-            var delta = GetDelta(manifestEntity, witEntity);
-            return delta.IsEmpty;
-        }
-
-        /// <summary>
-        /// Private class used for deserializing entity records from Wit.Ai.
-        /// </summary>
-        private struct EntityRecord
-        {
-            public string name;
+            // Add value
+            wrapper.AddValue(cleanKeyword, new CodeAttributeDeclaration(entityKeywordAttributeType, entityKeywordAttributeArgs));
         }
     }
 }

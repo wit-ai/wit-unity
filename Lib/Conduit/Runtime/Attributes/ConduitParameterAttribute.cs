@@ -15,19 +15,23 @@ namespace Meta.Conduit
     /// <summary>
     /// Marks a parameter as a Conduit parameter to be supplied when the callback method is called.
     /// This is not required, but allows the addition of more information about parameters to improve the quality of
-    /// intent recognition and entity resolution. 
+    /// intent recognition and entity resolution.
     /// </summary>
     [AttributeUsage(System.AttributeTargets.Parameter)]
     public class ConduitParameterAttribute : Attribute
     {
-        public ConduitParameterAttribute(params string[] aliases)
-        {
-            this.Aliases = aliases.ToList();
-        }
-
         /// <summary>
         /// The names that refer to this parameter.
         /// </summary>
         public List<string> Aliases { get; }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="aliases"></param>
+        public ConduitParameterAttribute(params string[] aliases)
+        {
+            this.Aliases = aliases.ToList();
+        }
     }
 }
