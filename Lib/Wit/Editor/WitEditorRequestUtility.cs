@@ -40,7 +40,7 @@ namespace Meta.WitAi.Lib.Editor
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
             uriParameters[ENDPOINT_APPS_LIMIT] = Mathf.Max(limit, 1).ToString();
-            uriParameters[ENDPOINT_APPS_OFFSET] = Mathf.Max(offset, 1).ToString();
+            uriParameters[ENDPOINT_APPS_OFFSET] = Mathf.Max(offset, 0).ToString();
             return WitRequestUtility.GetRequest<WitAppInfo[]>(ENDPOINT_APPS, uriParameters, configuration, true, onProgress, onComplete);
         }
 
@@ -50,7 +50,7 @@ namespace Meta.WitAi.Lib.Editor
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
             uriParameters[ENDPOINT_APPS_LIMIT] = 10000.ToString();
-            uriParameters[ENDPOINT_APPS_OFFSET] = 1.ToString();
+            uriParameters[ENDPOINT_APPS_OFFSET] = 0.ToString();
             return WitRequestUtility.GetRequest<WitResponseNode>(ENDPOINT_APPS, uriParameters, configuration, true, onProgress, (root, error) =>
             {
                 if (string.IsNullOrEmpty(error) && root != null)
