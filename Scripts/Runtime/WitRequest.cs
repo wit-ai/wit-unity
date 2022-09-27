@@ -75,11 +75,6 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
         public const string WIT_ENDPOINT_DICTATION = "dictation";
-        public const string WIT_ENDPOINT_ENTITIES = "entities";
-        public const string WIT_ENDPOINT_INTENTS = "intents";
-        public const string WIT_ENDPOINT_TRAITS = "traits";
-        public const string WIT_ENDPOINT_APPS = "apps";
-        public const string WIT_ENDPOINT_UTTERANCES = "utterances";
         public const string WIT_CLIENT_NAME = "wit-unity";
 
         private IWitRequestConfiguration configuration;
