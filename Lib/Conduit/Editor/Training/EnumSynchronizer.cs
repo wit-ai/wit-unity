@@ -50,7 +50,7 @@ namespace Meta.Conduit.Editor
             // For all other entities, sync them with manifest
 
             List<string> witEntityNames = null;
-            yield return this.GetAllWitEntityNames(list =>
+            yield return this.GetEnumWitEntityNames(list =>
             {
                 witEntityNames = list;
             });
@@ -94,18 +94,16 @@ namespace Meta.Conduit.Editor
         
         private IEnumerator CreateEntityOnWit(string entityName, StepResult completionCallback)
         {
-            var outgoingEntity = new WitEntityInfo()
+            var entity = new WitIncomingEntity()
             {
                 name = entityName
             };
 
-            bool running = true;
-            WitEditorRequestUtility.AddEntity(_configuration, outgoingEntity, null,
-                (info, s) => { completionCallback(true, String.Empty);
-                    running = false;
-                });
-            
-            yield return new WaitWhile(() => running);
+            var outgoingEntity = new WitOutgoingEntity(entity);
+            var payload = JsonConvert.SerializeObject(outgoingEntity);
+
+            yield return _witHttp.MakeUnityWebRequest($"/entities",
+                WebRequestMethods.Http.Post, payload, completionCallback);
         }
 
         /// <summary>
@@ -113,14 +111,27 @@ namespace Meta.Conduit.Editor
         /// </summary>
         /// <param name="manifestEntity">The Conduit generated entity based on the local code.</param>
         /// <param name="completionCallback">The callback to call when the sync operation is complete.</param>
-        public IEnumerator Sync(ManifestEntity manifestEntity, StepResult completionCallback)
+        internal IEnumerator Sync(ManifestEntity manifestEntity, StepResult completionCallback)
         {
             WitIncomingEntity witIncomingEntity = null;
             yield return this.GetWitEntity(manifestEntity.Name, incomingEntity => witIncomingEntity = incomingEntity);
 
+            var result = false;
+            if (witIncomingEntity == null)
+            {
+                yield return this.CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data) 
+                    { result = success; });
+
+                if (!result)
+                {
+                    completionCallback(false, $"Failed to create new entity {manifestEntity.Name} on Wit.Ai");
+                    yield break;
+                }
+            }
+            
             var delta = GetDelta(manifestEntity, witIncomingEntity);
 
-            var result = false;
+            result = false;
             yield return AddValuesToWit(manifestEntity.Name, delta,
                 delegate(bool success, string data) { result = success; });
 
@@ -158,7 +169,8 @@ namespace Meta.Conduit.Editor
             var entityEnumValues = witIncomingEntity.keywords.Select(keyword => ConduitUtilities.GetEntityEnumValue(keyword.keyword)).ToList();
 
             // Generate wrapper
-            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumValues, $"{GeneratedAssetsPath}");
+            // TODO: For existing enums, wrap the existing source code file.
+            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumValues, $"{GeneratedAssetsPath}\\{entityName}.cs");
 
             // Write to file
             wrapper.WriteToFile();
@@ -266,8 +278,13 @@ namespace Meta.Conduit.Editor
             var allSuccessful = true;
             foreach (var entry in delta.InLocalOnly)
             {
-                var payload = "{\"keyword\": \"" + entry + "\", \"synonyms\":[]}";
-
+                var keyword = new WitKeyword()
+                {
+                    keyword = entry,
+                    synonyms = new List<string>()
+                };
+                var payload = JsonConvert.SerializeObject(keyword);
+                
                 yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords",
                     WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
                     {
@@ -281,7 +298,7 @@ namespace Meta.Conduit.Editor
             completionCallback(allSuccessful, "");
         }
 
-        private IEnumerator GetAllWitEntityNames(Action<List<string>> callBack)
+        private IEnumerator GetEnumWitEntityNames(Action<List<string>> callBack)
         {
             var response = "";
             var result = false;
@@ -307,7 +324,7 @@ namespace Meta.Conduit.Editor
                 yield break;
             }
 
-            callBack(entityNames.Select(entity => entity.name).ToList());
+            callBack(entityNames.Where(entity => !entity.name.Contains('$')).Select(entity => entity.name).ToList());
         }
 
         private IEnumerator GetWitEntity(string manifestEntityName, Action<WitIncomingEntity> callBack)
@@ -323,7 +340,7 @@ namespace Meta.Conduit.Editor
 
             if (!result)
             {
-                Debug.LogError($"Wit {manifestEntityName} Entity Load Failed\nError: {response}");
+                VLog.D($"Wit {manifestEntityName} Entity not found on Wit\nError: {response}");
                 callBack(null);
                 yield break;
             }
@@ -331,7 +348,7 @@ namespace Meta.Conduit.Editor
             var entity = JsonConvert.DeserializeObject<WitIncomingEntity>(response);
             if (entity.keywords == null && entity.roles == null && entity.name == null)
             {
-                Debug.LogError($"Wit {manifestEntityName} Entity Decode Failed\nKeywords: {(entity.keywords == null)}\nRoles: {(entity.roles == null)}\nName: {(entity.name == null)}\nJSON:\n{response}");
+                VLog.E($"Wit {manifestEntityName} Entity Decode Failed\nKeywords: {(entity.keywords == null)}\nRoles: {(entity.roles == null)}\nName: {(entity.name == null)}\nJSON:\n{response}");
                 callBack(null);
                 yield break;
             }
