@@ -55,7 +55,7 @@ namespace Meta.Conduit
         /// <returns>Entity class name for specified role</returns>
         public static string GetEntityEnumName(string entityRole)
         {
-            return $"Entity{SanitizeName(entityRole)}";
+            return SanitizeName(entityRole);
         }
 
         /// <summary>
