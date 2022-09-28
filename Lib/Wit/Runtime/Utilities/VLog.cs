@@ -150,18 +150,19 @@ namespace Meta.WitAi
         /// <returns>Assembly name</returns>
         private static string GetCallingCategory()
         {
-            StackTrace stackTrace = new StackTrace();
-            string path = stackTrace.GetFrame(3).GetMethod().DeclaringType.ToString();
-            int index = path.LastIndexOf('.');
-            if (index != -1)
+            // Get stack trace method
+            string path = new StackTrace()?.GetFrame(3)?.GetMethod().DeclaringType.Name;
+            if (string.IsNullOrEmpty(path))
             {
-                path = path.Substring(index + 1);
+                return "VLog";
             }
-            index = path.IndexOf("+<");
+            // Remove additional data
+            int index = path.IndexOf("+<");
             if (index != -1)
             {
                 path = path.Substring(0, index);
             }
+            // Return path
             return path;
         }
 
