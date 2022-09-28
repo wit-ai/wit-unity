@@ -155,6 +155,24 @@ namespace Meta.WitAi.Lib.Editor
         #endregion
 
         #region ENTITY SYNC
+        // Add a new entity to wit
+        public static RequestPerformer AddEntity(IWitRequestConfiguration configuration, WitEntityInfo newEntity,
+            Action<float> onProgress, Action<WitEntityInfo, string> onComplete)
+        {
+            // Ensure entity exist
+            if (string.IsNullOrEmpty(newEntity.name))
+            {
+                onComplete?.Invoke(new WitEntityInfo(), "No entity provided");
+                return null;
+            }
+
+            // Get data
+            string payload = JsonConvert.SerializeObject(newEntity);
+
+            // Post text
+            return WitRequestUtility.PostTextRequest<WitEntityInfo>(ENDPOINT_ENTITIES, null, payload, configuration, true, onProgress, (entity, error) => onComplete(entity, error));
+        }
+
         // Add a new keyword to an entity
         public static RequestPerformer AddEntityKeyword(IWitRequestConfiguration configuration, string entityId, string keyword, string[] synonyms,
             Action<float> onProgress, Action<string> onComplete)
@@ -182,10 +200,10 @@ namespace Meta.WitAi.Lib.Editor
                     {
                         synonymBuilder.Append(',');
                     }
-                    synonymBuilder.Append(synonym);
+                    synonymBuilder.Append($"\"{synonym}\"");
                 }
             }
-            string payload = "\"keyword\": \"" + keyword + "\", \"synonyms\":[" + synonymBuilder + "]}";
+            string payload = "{\"keyword\":\"" + keyword + "\",\"synonyms\":[" + synonymBuilder + "]}";
 
             // Post text
             return WitRequestUtility.PostTextRequest<WitResponseNode>(endpoint, null, payload, configuration, true, onProgress, (response, error) => onComplete(error));
