@@ -45,7 +45,7 @@ namespace Meta.Conduit.Editor
 
         public bool GetSourceCode(Type type, out string sourceCodeFile)
         {
-            if (!type.IsEnum)
+            if (type == null || !type.IsEnum)
             {
                 throw new ArgumentException("Type needs to be an enum");
             }

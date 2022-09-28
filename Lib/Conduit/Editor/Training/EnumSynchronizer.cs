@@ -10,9 +10,7 @@ using System;
 using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Castle.Core.Internal;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Lib.Editor;
@@ -44,53 +42,58 @@ namespace Meta.Conduit.Editor
         public IEnumerator SyncWitEntities(Manifest manifest, StepResult completionCallback)
         {
             // Invalid app info
-            WitAppInfo appInfo = _config.GetApplicationInfo();
-            if (appInfo.entities == null)
+            if (_config == null)
             {
-                completionCallback?.Invoke(false, "No application info entities provided");
+                completionCallback?.Invoke(false, "No configuration provided");
                 yield break;
             }
 
             // Get all external wit entities
+            WitAppInfo appInfo = _config.GetApplicationInfo();
             WitEntityInfo[] externalEntities = appInfo.entities;
-
-            // Get all local entities
-            List<ManifestEntity> localEntities = manifest.Entities;
-            List<string> localEntityIDs = localEntities.Select(entity => entity.ID).ToList();
-
-            // Create any missing entities
-            bool allSuccessful = true;
-            foreach (var externalEntityInfo in externalEntities)
+            if (externalEntities == null)
             {
-                // Get entity final name
-                string entityName = ConduitUtilities.GetEntityEnumName(externalEntityInfo.name);
+                externalEntities = new WitEntityInfo[0];
+            }
 
-                // Create new
-                int localIndex = localEntityIDs.IndexOf(entityName);
-                if (localIndex == -1)
+            // Create all missing local entities
+            var localEntityNames = manifest.Entities.Select(localEntity => localEntity.ID).ToHashSet();
+            foreach (var externalEntity in externalEntities)
+            {
+                string entityName = ConduitUtilities.GetEntityEnumName(externalEntity.name);
+                if (!localEntityNames.Contains(entityName))
                 {
-                    CreateEnumFromWitEntity(externalEntityInfo);
+                    CreateEnumFromWitEntity(externalEntity);
                     yield return null;
-                }
-                // Update existing
-                else
-                {
-                    ManifestEntity localEntityInfo = manifest.Entities[localIndex];
-                    yield return Sync(externalEntityInfo, localEntityInfo, (success, data) =>
-                    {
-                        if (!success)
-                        {
-                            allSuccessful = false;
-                        }
-                    });
                 }
             }
 
             // Import newly generated entities
             AssetDatabase.Refresh();
 
+            // Sync all local entities
+            bool allEntitiesSynced = true;
+            var externalEntityNames = externalEntities.Select(externalEntity => ConduitUtilities.GetEntityEnumName(externalEntity.name)).ToList();
+            foreach (var localEntity in manifest.Entities)
+            {
+                // Get entity final name
+                int externalIndex = externalEntityNames.IndexOf(localEntity.ID);
+
+                // Sync
+                yield return Sync(externalIndex != -1 ? externalEntities[externalIndex] : new WitEntityInfo(), localEntity, (success, data) =>
+                {
+                    if (!success)
+                    {
+                        allEntitiesSynced = false;
+                    }
+                });
+            }
+
+            // Import newly generated entities
+            AssetDatabase.Refresh();
+
             // Complete
-            completionCallback(allSuccessful, null);
+            completionCallback(allEntitiesSynced, null);
         }
 
         // Creates enum file for wit entity
@@ -112,13 +115,32 @@ namespace Meta.Conduit.Editor
         /// <param name="completionCallback">The callback to call when the sync operation is complete.</param>
         private IEnumerator Sync(WitEntityInfo externalEntityInfo, ManifestEntity localEntityInfo, StepResult completionCallback)
         {
+            // Add missing
+            var result = false;
+            if (string.IsNullOrEmpty(externalEntityInfo.id))
+            {
+                // Create entity on wit
+                yield return CreateEntityOnWit(localEntityInfo,
+                    (newEntity, success, data) =>
+                    {
+                        externalEntityInfo = newEntity;
+                        result = success;
+                    });
+
+                // Return if failed
+                if (!result)
+                {
+                    completionCallback(false, $"Failed to create new entity {localEntityInfo.ID} on Wit.Ai");
+                    yield break;
+                }
+            }
+
             // Get delta
             var delta = GetDelta(externalEntityInfo, localEntityInfo);
 
             // Add missing values to wit
-            var result = false;
             yield return AddValuesToWit(externalEntityInfo, delta,
-                delegate(bool success, string data) { result = success; });
+                (success, data) => result = success);
 
             // Failed to add to wit
             if (!result)
@@ -171,9 +193,49 @@ namespace Meta.Conduit.Editor
             manifestEntityValues.ExceptWith(originalWitValues);
 
             delta.InLocalOnly = manifestEntityValues.ToList();
-            delta.InWitOnly = externalEntityInfo.keywords.FindAll(keyword => witEntityValues.Contains(keyword.keyword)).ToList();
+            delta.InWitOnly = externalEntityInfo.keywords.ToList().FindAll(keyword => witEntityValues.Contains(keyword.keyword));
 
             return delta;
+        }
+
+        /// <summary>
+        /// Perform web request to add a wit entity
+        /// </summary>
+        private IEnumerator CreateEntityOnWit(ManifestEntity localEntity, Action<WitEntityInfo, bool, string> completionCallback)
+        {
+            // Get outgoing entity
+            WitEntityInfo outgoingEntity = new WitEntityInfo()
+            {
+                name = localEntity.ID
+            };
+            List<WitEntityKeywordInfo> keywords = new List<WitEntityKeywordInfo>();
+            foreach (var value in localEntity.Values)
+            {
+                keywords.Add(new WitEntityKeywordInfo()
+                {
+                    keyword = value,
+                    synonyms = new List<string>(new[]{value})
+                });
+            }
+            outgoingEntity.keywords = keywords.ToArray();
+
+            // Create entity
+            VLog.D($"Create entity on Wit.ai\nEntity: {outgoingEntity.name}");
+
+            // Get new external entity
+            WitEntityInfo incomingEntity = new WitEntityInfo();
+            bool running = true;
+            WitEditorRequestUtility.AddEntity(_config, outgoingEntity, null, (newEntity, error) =>
+            {
+                if (!string.IsNullOrEmpty(error))
+                {
+                    VLog.W($"Entity generation failed\nEntity: {outgoingEntity.name}\n\n{error}");
+                }
+                incomingEntity = newEntity;
+                running = false;
+            });
+            yield return new WaitWhile(() => running);
+            completionCallback(incomingEntity, !string.IsNullOrEmpty(incomingEntity.id), "");
         }
 
         /// <summary>
@@ -186,7 +248,8 @@ namespace Meta.Conduit.Editor
             foreach (var keyword in delta.InLocalOnly)
             {
                 bool running = true;
-                WitEditorRequestUtility.AddEntityKeyword(_config, entityInfo.id, keyword, null, null, (error) =>
+                VLog.D($"Add entity keyword on Wit.ai\nEntity: {entityInfo.name}\nKeyword: {keyword}");
+                WitEditorRequestUtility.AddEntityKeyword(_config, entityInfo.id, keyword, new [] {keyword}, null, (error) =>
                 {
                     if (!string.IsNullOrEmpty(error))
                     {
