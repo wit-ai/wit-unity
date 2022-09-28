@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 //#define USE_SharpZipLib
 #if !UNITY_WEBPLAYER
 #define USE_FileIO
@@ -826,7 +834,7 @@ namespace Meta.WitAi.Json
 
         public override string ToString()
         {
-            string result = "[ ";
+            string result = "[";
             foreach (WitResponseNode N in m_List)
             {
                 if (result.Length > 2)
@@ -834,13 +842,13 @@ namespace Meta.WitAi.Json
                 result += N.ToString();
             }
 
-            result += " ]";
+            result += "]";
             return result;
         }
 
         public override string ToString(string aPrefix)
         {
-            string result = "[ ";
+            string result = "[";
             foreach (WitResponseNode N in m_List)
             {
                 if (result.Length > 3)
@@ -992,7 +1000,7 @@ namespace Meta.WitAi.Json
             {
                 if (result.Length > 2)
                     result += ", ";
-                result += "\"" + Escape(N.Key) + "\":" + N.Value.ToString();
+                result += "\"" + Escape(N.Key) + "\": " + N.Value.ToString();
             }
 
             result += "}";
@@ -1007,7 +1015,7 @@ namespace Meta.WitAi.Json
                 if (result.Length > 3)
                     result += ", ";
                 result += "\n" + aPrefix + "   ";
-                result += "\"" + Escape(N.Key) + "\" : " + N.Value.ToString(aPrefix + "   ");
+                result += "\"" + Escape(N.Key) + "\": " + N.Value.ToString(aPrefix + "   ");
             }
 
             result += "\n" + aPrefix + "}";

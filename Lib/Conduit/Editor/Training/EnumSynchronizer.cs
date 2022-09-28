@@ -13,6 +13,8 @@ using System.Linq;
 using System.Net;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.WitAi.Data.Info;
+using Meta.WitAi.Lib.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -88,6 +90,22 @@ namespace Meta.Conduit.Editor
             }
 
             completionCallback(allEntitiesSynced, null);
+        }
+        
+        private IEnumerator CreateEntityOnWit(string entityName, StepResult completionCallback)
+        {
+            var outgoingEntity = new WitEntityInfo()
+            {
+                name = entityName
+            };
+
+            bool running = true;
+            WitEditorRequestUtility.AddEntity(_configuration, outgoingEntity, null,
+                (info, s) => { completionCallback(true, String.Empty);
+                    running = false;
+                });
+            
+            yield return new WaitWhile(() => running);
         }
 
         /// <summary>
@@ -189,7 +207,13 @@ namespace Meta.Conduit.Editor
             var assembly = assemblies.First();
 
             var enumType = assembly.GetType(qualifiedName);
+            
+            return GetEnumWrapper(enumType);
+        }
+        
 
+        private EnumCodeWrapper GetEnumWrapper(Type enumType)
+        {
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile);
 
             return new EnumCodeWrapper(_fileIo, enumType, sourceFile);

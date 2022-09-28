@@ -90,16 +90,6 @@ namespace Meta.Conduit.Editor
         }
 
         /// <summary>
-        /// Returns a list of all assemblies that should be processed.
-        /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
-        /// </summary>
-        /// <returns>The list of assemblies.</returns>
-        private IEnumerable<Assembly> GetTargetAssemblies()
-        {
-            return AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)));
-        }
-
-        /// <summary>
         /// Removes unnecessary entities from the manifest to keep it restricted to what is required.
         /// </summary>
         /// <param name="entities">List of all entities. This list will be changed as a result.</param>

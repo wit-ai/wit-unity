@@ -52,7 +52,7 @@ namespace Meta.Conduit
                 var lastPeriod = QualifiedTypeName.LastIndexOf('.');
                 if (lastPeriod < 0)
                 {
-                    return string.Empty;
+                    return QualifiedTypeName;
                 }
                 var entityName = QualifiedTypeName.Substring(lastPeriod + 1);
 
