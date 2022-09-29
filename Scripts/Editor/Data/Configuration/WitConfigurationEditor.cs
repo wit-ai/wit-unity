@@ -7,7 +7,9 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Meta.Conduit.Editor;
 using Facebook.WitAi.Configuration;
@@ -17,6 +19,7 @@ using Meta.Conduit;
 using Meta.WitAi;
 using UnityEditor;
 using UnityEngine;
+using Facebook.WitAi.Windows.Conponents;
 
 namespace Facebook.WitAi.Windows
 {
@@ -154,6 +157,11 @@ namespace Facebook.WitAi.Windows
                 if (WitEditorUI.LayoutTextButton("Select Manifest") && manifestAvailable)
                 {
                     Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(configuration.GetManifestEditorPath());
+                }
+                GUI.enabled = configuration.useConduit;
+                if (WitEditorUI.LayoutTextButton("Specify Assemblies"))
+                {
+                    PresentAssemblySelectionDialog();
                 }
                 GUILayout.FlexibleSpace();
                 GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
@@ -560,6 +568,16 @@ namespace Facebook.WitAi.Windows
             {
                 UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(fullPath, 1);
             }
+        }
+
+        // Show dialog to disable/enable assemblies
+        private void PresentAssemblySelectionDialog()
+        {
+            List<string> assembliesNames = AssemblyWalker.GetAllAssemblies().Select(a => a.FullName).ToList();
+            var disabledAssembliesNames = AssemblyWalker.AssembliesToIgnore;
+            WitMultiSelectionPopup.Show(assembliesNames, disabledAssembliesNames, (disabledAssemblies) => {
+                AssemblyWalker.AssembliesToIgnore = new HashSet<string>(disabledAssemblies);
+            });
         }
 
         // Sync entities

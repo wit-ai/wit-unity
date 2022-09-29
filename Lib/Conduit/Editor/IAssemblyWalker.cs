@@ -15,6 +15,17 @@ namespace Meta.Conduit.Editor
     internal interface IAssemblyWalker
     {
         /// <summary>
+        /// Filter out assemblies with specified names from GetTargetAssemblies() output.
+        /// </summary>
+        HashSet<string> AssembliesToIgnore { get; set; }
+
+        /// <summary>
+        /// Returns a list of all assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
+        /// </summary>
+        /// <returns>The list of assemblies.</returns>
+        IEnumerable<IConduitAssembly> GetAllAssemblies();
+
+        /// <summary>
         /// Returns a list of all assemblies that should be processed.
         /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
         /// </summary>

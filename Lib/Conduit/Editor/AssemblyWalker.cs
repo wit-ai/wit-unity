@@ -27,17 +27,26 @@ namespace Meta.Conduit.Editor
         /// </summary>
         public const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
 
-        /// <summary>
-        /// Returns a list of all assemblies that should be processed.
-        /// This currently selects assemblies that are marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
-        /// </summary>
-        /// <returns>The list of assemblies.</returns>
-        public IEnumerable<IConduitAssembly> GetTargetAssemblies()
+        /// <inheritdoc/>
+        public HashSet<string> AssembliesToIgnore { get; set; } = new HashSet<string>();
+
+        /// <inheritdoc/>
+        public IEnumerable<IConduitAssembly> GetAllAssemblies()
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)) || string.Equals(DEFAULT_ASSEMBLY_NAME, assembly.GetName().Name));
             return assemblies.Select(assembly => new ConduitAssembly(assembly)).ToList();
         }
 
+        /// <inheritdoc/>
+        public IEnumerable<IConduitAssembly> GetTargetAssemblies()
+        {
+            if (AssembliesToIgnore != null && AssembliesToIgnore.Count() > 0) {
+                return GetAllAssemblies().Where(assembly => !AssembliesToIgnore.Contains(assembly.FullName));
+            }
+            return GetAllAssemblies();
+        }
+
+        /// <inheritdoc/>
         public IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType)
         {
             return CompilationPipeline.GetAssemblies(assembliesType);
