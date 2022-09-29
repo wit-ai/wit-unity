@@ -26,6 +26,11 @@ namespace Meta.Conduit.Editor
         private readonly IParameterValidator _parameterValidator;
 
         /// <summary>
+        /// Filters out parameters of specific types.
+        /// </summary>
+        private readonly IParameterFilter _parameterFilter;
+
+        /// <summary>
         /// Set to true once the miner is initialized. No interactions with the class should be allowed before then.
         /// </summary>
         private bool _initialized = false;
@@ -40,9 +45,11 @@ namespace Meta.Conduit.Editor
         /// Initializes the class with a target assembly.
         /// </summary>
         /// <param name="parameterValidator">The parameter validator.</param>
-        public AssemblyMiner(IParameterValidator parameterValidator)
+        /// <param name="parameterFilter">The parameter filter.</param>
+        public AssemblyMiner(IParameterValidator parameterValidator, IParameterFilter parameterFilter)
         {
             this._parameterValidator = parameterValidator;
+            this._parameterFilter = parameterFilter;
         }
 
         /// <inheritdoc/>
@@ -62,7 +69,6 @@ namespace Meta.Conduit.Editor
             }
 
             var entities = new List<ManifestEntity>();
-
             var enums = assembly.GetEnumTypes();
             foreach (var enumType in enums)
             {
@@ -154,10 +160,14 @@ namespace Meta.Conduit.Editor
                 foreach (var parameter in method.GetParameters())
                 {
                     var supported = _parameterValidator.IsSupportedParameterType(parameter.ParameterType);
-
                     if (!supported)
                     {
                         compatibleParameters = false;
+                        continue;
+                    }
+
+                    var shouldBeFilteredOut = _parameterFilter.ShouldFilterOut(parameter.ParameterType);
+                    if (shouldBeFilteredOut) {
                         continue;
                     }
 
@@ -180,7 +190,7 @@ namespace Meta.Conduit.Editor
 
                     var manifestParameter = new ManifestParameter
                     {
-                        Name = parameter.Name,
+                        Name = ConduitUtilities.SanitizeName(parameter.Name),
                         InternalName = parameter.Name,
                         QualifiedTypeName = parameter.ParameterType.FullName,
                         TypeAssembly = parameter.ParameterType.Assembly.FullName,

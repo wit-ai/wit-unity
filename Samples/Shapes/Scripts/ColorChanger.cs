@@ -13,7 +13,28 @@ namespace Facebook.WitAi.Samples.Shapes
 {
     public class ColorChanger : MonoBehaviour
     {
-        private void SetColor(Transform transform, Color color)
+        public enum Shape {
+            Cube,
+            Sphere,
+            Capsule,
+            Cylinder
+        }
+
+        public enum Color {
+            Black,
+            White,
+            Red,
+            Green,
+            Yellow,
+            Blue,
+            Pink,
+            Gray,
+            Brown,
+            Orange,
+            Purple
+        }
+
+        private void SetColor(Transform transform, UnityEngine.Color color)
         {
             transform.GetComponent<Renderer>().material.color = color;
         }
@@ -82,14 +103,29 @@ namespace Facebook.WitAi.Samples.Shapes
         }
 
         [MatchIntent("change_color")]
-        public void OnHandleColorIntentWithConduit(string color, string shape)
+        public void OnHandleColorIntentWithConduit(Color color, Shape shape)
         {
-            if (color == "red")
-            {
-                Debug.Log("Red string supplied!");
-            }
+            Debug.Log($"OnHandleColorIntent was triggered via Conduit with color {color} {color.ToString()} and shape {shape} {shape.ToString()}");
 
-            Debug.Log($"OnHandleColorIntent was triggered via Conduit with color {color} and shape {shape}");
+            var shapeTransform = transform.Find(shape.ToString());
+            if (shapeTransform)
+            {
+                if (ColorUtility.TryParseHtmlString(color.ToString(), out var unityColor)) {
+                    SetColor(shapeTransform, unityColor);
+                }
+            }
+        }
+
+        [MatchIntent("change_size")]
+        public void OnHandleSizeIntentWithConduit(int size, Shape shape)
+        {
+            Debug.Log($"OnHandleSizeIntent was triggered via Conduit with size {size} and shape {shape} {shape.ToString()}");
+
+            var shapeTransform = transform.Find(shape.ToString());
+            if (shapeTransform)
+            {
+                shapeTransform.localScale = Vector3.one * 10 / ((float) size);
+            }
         }
 
         [MatchIntent("change_size")]

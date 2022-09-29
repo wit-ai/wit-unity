@@ -8,10 +8,14 @@
 
 using System.Text;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Interfaces;
+using Facebook.WitAi.Lib;
 using Meta.WitAi.Json;
 
 namespace Facebook.WitAi
@@ -195,5 +199,66 @@ namespace Facebook.WitAi
 
             return request;
         }
+
+        #region IDE Only Requests
+        #if UNITY_EDITOR
+
+        /// <summary>
+        /// Add a specific intent to the app
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="intentName">The name of the intent</param>
+        /// <returns></returns>
+        public static WitRequest PostIntentRequest(this WitConfiguration config, string intentName)
+        {
+            var postString = "{\"name\":\"" + intentName + "\"}";
+            var postData = Encoding.UTF8.GetBytes(postString);
+            var request = new WitRequest(config, WitRequest.WIT_ENDPOINT_INTENTS, true)
+            {
+                postContentType = "application/json",
+                postData = postData
+            };
+
+            return request;
+        }
+
+        /// <summary>
+        /// Import app data from generated manifest JSON
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="appName">The name of the app as it is defined in wit.ai</param>
+        /// <param name="dataFullPath">Absolute path to target manifest JSON file</param>
+        /// <returns>Built request object</returns>
+        public static WitRequest ImportData(this WitConfiguration config, string appName, string dataFullPath) {
+            string importData = "";
+            using (StreamReader sr = new StreamReader(dataFullPath))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    importData += sr.ReadLine();
+                }
+            }
+            string encodedImportData = HttpUtility.JavaScriptStringEncode(importData);
+            string jsonData = "{\"text\":\"" + encodedImportData + "\",\"config_type\":1,\"config_value\":\"\"}";
+
+            var postData = Encoding.UTF8.GetBytes(jsonData);
+            var request = new WitRequest(
+                config,
+                WitRequest.WIT_ENDPOINT_IMPORT,
+                true,
+                QueryParam("name", appName),
+                QueryParam("private", "true"),
+                QueryParam("action_graph", "true"))
+            {
+                postContentType = "application/json",
+                postData = postData,
+                forcedHttpMethodType = "PUT"
+            };
+
+            return request;
+        }
+
+        #endif
+        #endregion
     }
 }

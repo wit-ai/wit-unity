@@ -12,12 +12,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Lib.Editor;
 using UnityEditor;
 using UnityEngine;
+using Meta.Conduit;
+using Meta.Conduit.Editor;
 
 namespace Facebook.WitAi.Data.Configuration
 {
@@ -166,7 +169,7 @@ namespace Facebook.WitAi.Data.Configuration
             string unityPath = savePath.Replace("\\", "/");
             if (!unityPath.StartsWith(Application.dataPath))
             {
-                Debug.LogError($"Configuration Utility - Cannot Create Configuration Outside of Assets Directory\nPath: {unityPath}");
+                VLog.E($"Configuration Utility - Cannot Create Configuration Outside of Assets Directory\nPath: {unityPath}");
                 return -1;
             }
 
@@ -268,6 +271,70 @@ namespace Facebook.WitAi.Data.Configuration
         }
         #endregion
 
+        #region APP DATA IMPORT
+
+        /// <summary>
+        /// Note: this method could be quite slow as it uses multi-request approach.
+        ///
+        /// Use this method to import data via multiple requests:
+        /// - First batch of requests to prepare Intents
+        /// - Last request to actually import the manifest itself
+        /// </summary>
+        public static void ImportData(this WitConfiguration configuration, string dataFullPath, List<string> intents) {
+            int intentRequestsLeft = intents.Count;
+
+            Action proceedWithDataImport = () => {
+                VLog.D("Calling POST /import");
+                var req = WitRequestFactory.ImportData(configuration, GetAppName(configuration), dataFullPath);
+                PerformRequest(req, (error) =>
+                {
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. File: {dataFullPath}");
+                    }
+                    else
+                    {
+                        VLog.D("Successfully imported generated manifest JSON into WIT.ai. File: " + dataFullPath);
+                        EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
+                    }
+                });
+            };
+            Action reqHandler = () => {
+                if (intentRequestsLeft <= 0) {
+                    proceedWithDataImport();
+                }
+            };
+
+            foreach (string intentName in intents) {
+                var req = WitRequestFactory.PostIntentRequest(configuration, intentName);
+                PerformRequest(req, (error) => {
+                    Interlocked.Decrement(ref intentRequestsLeft);
+                    reqHandler();
+                });
+            }
+        }
+
+        /// <summary>
+        /// Use this method to import data via one /import request.
+        /// Make sure API endpoint supports this.
+        /// </summary>
+        public static void ImportData(this WitConfiguration configuration, string dataFullPath) {
+            var request = WitRequestFactory.ImportData(configuration, GetAppName(configuration), dataFullPath);
+            PerformRequest(request, (error) =>
+            {
+                if (!string.IsNullOrEmpty(error))
+                {
+                    VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. File: {dataFullPath}");
+                }
+                else
+                {
+                    VLog.D("Successfully imported generated manifest JSON into WIT.ai. File: " + dataFullPath);
+                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
+                }
+            });
+        }
+        #endregion
+
         #region REFRESH
         // Refresh if possible & return true if still refreshing
         private static List<string> refreshAppIDs = new List<string>();
@@ -301,6 +368,41 @@ namespace Facebook.WitAi.Data.Configuration
                 // Complete
                 onRefreshComplete?.Invoke(s);
             });
+        }
+
+        // Get application name
+        private static string GetAppName(WitConfiguration configuration)
+        {
+            if (configuration != null)
+            {
+                return configuration.GetApplicationInfo().name;
+            }
+            return string.Empty;
+        }
+
+        private static void PerformRequest(WitRequest request, Action<string> onComplete)
+        {
+            // Add response delegate
+            request.onResponse += (response) =>
+            {
+                // Get status
+                int status = response.StatusCode;
+                // HTTP failed
+                if (status != 200)
+                {
+                    onComplete($"Request Failed [{status}]: {response.StatusDescription}\nPath: {request}");
+                }
+                // Success
+                else
+                {
+                    VLog.D($"Request Success\nType: {request}");
+                    onComplete?.Invoke("");
+                }
+            };
+
+            // Perform
+            VLog.D($"Request Begin\nType: {request}");
+            request.Request();
         }
         #endregion
     }

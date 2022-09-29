@@ -75,6 +75,8 @@ namespace Facebook.WitAi
         public const string WIT_ENDPOINT_SPEECH = "speech";
         public const string WIT_ENDPOINT_MESSAGE = "message";
         public const string WIT_ENDPOINT_DICTATION = "dictation";
+        public const string WIT_ENDPOINT_INTENTS = "intents";
+        public const string WIT_ENDPOINT_IMPORT = "import";
         public const string WIT_CLIENT_NAME = "wit-unity";
 
         private IWitRequestConfiguration configuration;
@@ -96,6 +98,7 @@ namespace Facebook.WitAi
         public byte[] postData;
         public string postContentType;
         public string requestIdOverride;
+        public string forcedHttpMethodType = null;
 
         private object streamLock = new object();
 
@@ -324,6 +327,11 @@ namespace Facebook.WitAi
 
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
+
+            if (forcedHttpMethodType != null) {
+                _request.Method = forcedHttpMethodType;
+            }
+
             if (Application.isBatchMode)
             {
                 _request.KeepAlive = false;
@@ -332,7 +340,9 @@ namespace Facebook.WitAi
 
             if (null != postContentType)
             {
-                _request.Method = "POST";
+                if (forcedHttpMethodType == null) {
+                    _request.Method = "POST";
+                }
                 _request.ContentType = postContentType;
                 _request.ContentLength = postData.Length;
             }
@@ -340,7 +350,7 @@ namespace Facebook.WitAi
             // Configure additional headers
             if (shouldPost)
             {
-                _request.Method = "POST";
+                _request.Method = forcedHttpMethodType == null ? "POST" : forcedHttpMethodType;
                 _request.ContentType = audioEncoding.ToString();
                 _request.SendChunked = true;
             }
@@ -369,7 +379,7 @@ namespace Facebook.WitAi
             _request.Timeout = Timeout;
             WatchMainThreadCallbacks();
 
-            if (_request.Method == "POST")
+            if (_request.Method == "POST" || _request.Method == "PUT")
             {
                 var getRequestTask = _request.BeginGetRequestStream(HandleRequestStream, _request);
                 ThreadPool.RegisterWaitForSingleObject(getRequestTask.AsyncWaitHandle,

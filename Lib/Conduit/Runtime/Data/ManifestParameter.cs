@@ -28,7 +28,7 @@ namespace Meta.Conduit
         public string Name
         {
             get => name;
-            set => name = ConduitUtilities.DelimitWithUnderscores(value).ToLower();
+            set => name = ConduitUtilities.DelimitWithUnderscores(value);
         }
         private string name;
 

@@ -34,7 +34,7 @@ namespace Facebook.WitAi.Windows
         private bool syncInProgress = false;
 
         private static ConduitStatistics _statistics;
-        private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
+        private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator(), new WitParameterFilter());
         private static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
         private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
@@ -160,6 +160,11 @@ namespace Facebook.WitAi.Windows
                 if (WitEditorUI.LayoutTextButton("Sync Entities"))
                 {
                     SyncEntities();
+                }
+                GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
+                if (WitEditorUI.LayoutTextButton("Auto train") && manifestAvailable)
+                {
+                    AutoTrainOnWitAi(configuration);
                 }
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
@@ -519,9 +524,7 @@ namespace Facebook.WitAi.Windows
             string fullPath = configuration.GetManifestEditorPath();
             if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
             {
-                string directory = Application.dataPath + "/Oculus/Voice/Resources";
-                IOUtility.CreateDirectory(directory, true);
-                fullPath = directory + "/" + configuration.ManifestLocalPath;
+                fullPath = getManifestPullPath(configuration, true);
             }
 
             // Write to file
@@ -591,6 +594,29 @@ namespace Facebook.WitAi.Windows
                     VLog.D("Conduit Sync Success");
                 }
             }));
+        }
+
+        private static void AutoTrainOnWitAi(WitConfiguration configuration)
+        {
+            string manifestFile = getManifestPullPath(configuration);
+
+            // TODO: Replace this call with:
+            //   configuration.ImportData(manifestFile)
+            // when full spec /import API is implemented.
+            var intents = ManifestGenerator.ExtractManifestData();
+
+            VLog.D($"Auto Train on WIT.ai: {intents.Count} intents. Manifest file: {manifestFile}");
+            configuration.ImportData(manifestFile, intents);
+        }
+
+        private static string getManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)
+        {
+            string directory = Application.dataPath + "/Oculus/Voice/Resources";
+            if (shouldCreateDirectoryIfNotExist)
+            {
+                IOUtility.CreateDirectory(directory, true);
+            }
+            return directory + "/" + configuration.ManifestLocalPath;
         }
     }
 }
