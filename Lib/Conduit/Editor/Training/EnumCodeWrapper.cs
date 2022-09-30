@@ -22,7 +22,7 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class EnumCodeWrapper
     {
-        public const string DEFAULT_PATH = @"Assets\Generated\";
+        public const string DEFAULT_PATH = @"Assets\";
         public const string DEFAULT_NAMESPACE = "Conduit.Generated";
 
         private readonly string _sourceFilePath;
@@ -37,17 +37,28 @@ namespace Meta.Conduit.Editor
         private readonly Action<CodeMemberField> _memberSetup;
 
         // Setup with existing enum
-        public EnumCodeWrapper(IFileIo fileIo, Type enumType, string sourceCodeFile = null) : this(fileIo, enumType.Name, enumType.GetEnumNames(), enumType.Namespace, sourceCodeFile)
+        public EnumCodeWrapper(IFileIo fileIo, Type enumType, string entityName, string sourceCodeFile) : this(fileIo, enumType.Name, entityName, null, enumType.Namespace, sourceCodeFile)
         {
             if (!enumType.IsEnum)
             {
                 throw new ArgumentException("Type must be an enumeration.", nameof(enumType));
             }
+
+            var enumValues = new List<WitKeyword>();
+            foreach (var enumName in enumType.GetEnumNames())
+            {
+                // TODO: Read existing synonyms from attributes here.
+                enumValues.Add(new WitKeyword()
+                {
+                    keyword = enumName
+                });
+            }
+            
+            AddValues(enumValues);
         }
-        // Setup with new enum name & values
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, IList<string> enumValues = null, string sourceCodeFile = null) : this(fileIo, enumName, enumValues, null, sourceCodeFile){}
+        
         // Setup
-        private EnumCodeWrapper(IFileIo fileIo, string enumName, IList<string> enumValues, string enumNamespace, string sourceCodeFile)
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace = "", string sourceCodeFile = "")
         {
             // Initial setup
             _compileUnit = new CodeCompileUnit();
@@ -66,6 +77,16 @@ namespace Meta.Conduit.Editor
                 IsEnum = true
             };
             nameSpace.Types.Add(_typeDeclaration);
+
+            if (!entityName.Equals(enumName))
+            {
+                var entityAttributeType = new CodeTypeReference(typeof(ConduitEntityAttribute).Name);
+                var entityAttributeArgs = new CodeAttributeArgument[]
+                {
+                    new CodeAttributeArgument(new CodePrimitiveExpression(entityName))
+                };
+                this.AddEnumAttribute(new CodeAttributeDeclaration(entityAttributeType, entityAttributeArgs));
+            }
 
             // Add all enum values
             AddValues(enumValues);
@@ -103,17 +124,42 @@ namespace Meta.Conduit.Editor
         /// Adds the supplied values to the enum construct. Values that already exist are ignored.
         /// </summary>
         /// <param name="values">The values to add.</param>
-        public void AddValues(IList<string> values)
+        public void AddValues(IList<WitKeyword> values)
         {
             if (values == null)
             {
                 return;
             }
+            var attributeName = nameof(ConduitValueAttribute);
+            var suffix = "Attribute";
+            if (attributeName.EndsWith(suffix))
+            {
+                attributeName = attributeName.Remove(attributeName.Length - suffix.Length);
+            }
+            
             foreach (var value in values)
             {
-                AddValue(value);
+                var entityKeywordAttributeType =
+                    new CodeTypeReference(attributeName);
+
+                var arguments = new List<CodeAttributeArgument>
+                    { new CodeAttributeArgument(new CodePrimitiveExpression(value.keyword)) };
+
+                if (value.synonyms != null)
+                {
+                    foreach (var synonym in value.synonyms)
+                    {
+                        if (synonym != value.keyword)
+                        {
+                            arguments.Add(new CodeAttributeArgument(new CodePrimitiveExpression(synonym)));
+                        }
+                    }
+                }
+
+                AddValue(value.keyword, (arguments.Count >1)?new CodeAttributeDeclaration(entityKeywordAttributeType, arguments.ToArray()):null);
             }
         }
+        
         // Add a single value
         public void AddValue(string value, CodeAttributeDeclaration attribute = null)
         {

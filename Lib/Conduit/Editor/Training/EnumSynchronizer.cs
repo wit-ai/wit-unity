@@ -13,8 +13,6 @@ using System.Linq;
 using System.Net;
 using Meta.WitAi;
 using Meta.WitAi.Json;
-using Meta.WitAi.Data.Info;
-using Meta.WitAi.Lib.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,7 +23,6 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class EnumSynchronizer
     {
-        private const string GeneratedAssetsPath = @"Assets\Generated";
         private readonly IWitRequestConfiguration _configuration;
         private readonly IAssemblyWalker _assemblyWalker;
         private readonly IFileIo _fileIo;
@@ -166,11 +163,10 @@ namespace Meta.Conduit.Editor
 
             // Get enum name & values
             var entityEnumName = ConduitUtilities.GetEntityEnumName(entityName);
-            var entityEnumValues = witIncomingEntity.keywords.Select(keyword => ConduitUtilities.GetEntityEnumValue(keyword.keyword)).ToList();
 
             // Generate wrapper
             // TODO: For existing enums, wrap the existing source code file.
-            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumValues, $"{GeneratedAssetsPath}\\{entityName}.cs");
+            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, witIncomingEntity.keywords);
 
             // Write to file
             wrapper.WriteToFile();
@@ -192,11 +188,14 @@ namespace Meta.Conduit.Editor
                 return false;
             }
 
-            var newValues = new List<string>();
+            var newValues = new List<WitKeyword>();
 
             foreach (var keyword in delta.InWitOnly)
             {
-                newValues.Add(keyword.keyword);
+                newValues.Add(new WitKeyword()
+                {
+                    keyword = keyword.keyword 
+                });
             }
 
             enumWrapper.AddValues(newValues);
@@ -220,15 +219,15 @@ namespace Meta.Conduit.Editor
 
             var enumType = assembly.GetType(qualifiedName);
             
-            return GetEnumWrapper(enumType);
+            return GetEnumWrapper(enumType, manifestEntity.ID);
         }
         
 
-        private EnumCodeWrapper GetEnumWrapper(Type enumType)
+        private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
         {
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile);
 
-            return new EnumCodeWrapper(_fileIo, enumType, sourceFile);
+            return new EnumCodeWrapper(_fileIo, enumType, entityName, sourceFile);
         }
 
         /// <summary>
