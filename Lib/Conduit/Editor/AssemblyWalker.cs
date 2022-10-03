@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using Meta.WitAi;
 using UnityEditor.Compilation;
 using Assembly = UnityEditor.Compilation.Assembly;
 
@@ -25,22 +26,60 @@ namespace Meta.Conduit.Editor
         /// <summary>
         /// The assembly that code not within an assembly is added to
         /// </summary>
-        public const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
+        private const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
+        
+        // All Conduit assemblies.
+        private Dictionary<string, IConduitAssembly> _assemblies = new Dictionary<string, IConduitAssembly>();
+
+        private IEnumerable<Assembly> _compilationAssemblies;
 
         /// <inheritdoc/>
         public HashSet<string> AssembliesToIgnore { get; set; } = new HashSet<string>();
 
+        private IEnumerable<IConduitAssembly> ConduitAssemblies => _assemblies.Values;
+
+        public AssemblyWalker(IList<IConduitAssembly> assemblies = null, IEnumerable<Assembly> compilationAssemblies = null)
+        {
+            IList<IConduitAssembly> conduitAssemblies;
+            if (assemblies != null)
+            {
+                conduitAssemblies = assemblies;
+            }
+            else
+            {
+                conduitAssemblies = new List<IConduitAssembly>();
+                var currentDomainConduitAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(assembly =>
+                        assembly.IsDefined(typeof(ConduitAssemblyAttribute)) ||
+                        string.Equals(DEFAULT_ASSEMBLY_NAME, assembly.GetName().Name));
+
+                foreach (var conduitAssembly in currentDomainConduitAssemblies)
+                {
+                    conduitAssemblies.Add(new ConduitAssembly(conduitAssembly));
+                }
+            }
+
+            foreach (var conduitAssembly in conduitAssemblies) 
+            {
+                _assemblies.Add(conduitAssembly.FullName.Split(',').First(), conduitAssembly);
+            }
+
+            if (compilationAssemblies != null)
+            {
+                _compilationAssemblies = compilationAssemblies;
+            }
+        }
+
         /// <inheritdoc/>
         public IEnumerable<IConduitAssembly> GetAllAssemblies()
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.IsDefined(typeof(ConduitAssemblyAttribute)) || string.Equals(DEFAULT_ASSEMBLY_NAME, assembly.GetName().Name));
-            return assemblies.Select(assembly => new ConduitAssembly(assembly)).ToList();
+            return ConduitAssemblies;
         }
 
         /// <inheritdoc/>
         public IEnumerable<IConduitAssembly> GetTargetAssemblies()
         {
-            if (AssembliesToIgnore != null && AssembliesToIgnore.Count() > 0) {
+            if (AssembliesToIgnore != null && AssembliesToIgnore.Any()) {
                 return GetAllAssemblies().Where(assembly => !AssembliesToIgnore.Contains(assembly.FullName));
             }
             return GetAllAssemblies();
@@ -49,7 +88,7 @@ namespace Meta.Conduit.Editor
         /// <inheritdoc/>
         public IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType)
         {
-            return CompilationPipeline.GetAssemblies(assembliesType);
+            return _compilationAssemblies ??= CompilationPipeline.GetAssemblies(assembliesType);
         }
 
         public bool GetSourceCode(Type type, out string sourceCodeFile)
@@ -61,12 +100,18 @@ namespace Meta.Conduit.Editor
 
             foreach (var assembly in GetCompilationAssemblies(AssembliesType.Player))
             {
+                if (!_assemblies.ContainsKey(assembly.name))
+                {
+                    continue;
+                }
+                
                 if (GetSourceCodeFromAssembly(assembly, type, out sourceCodeFile))
                 {
                     return true;
                 }
             }
 
+            VLog.W($"Failed to find source code for enum {type}");
             sourceCodeFile = string.Empty;
             return false;
         }
@@ -98,7 +143,7 @@ namespace Meta.Conduit.Editor
                 throw new ArgumentException("Type needs to be an enum");
             }
 
-            var pattern = $"{{enum}}\\s{type.Name}";
+            var pattern = $"enum\\s{type.Name}";
             var text = File.ReadAllText(sourceFile);
 
             return Regex.IsMatch(text, pattern);

@@ -92,9 +92,10 @@ namespace Meta.Conduit.Editor
 
                 var entity = new ManifestEntity
                 {
-                    ID = $"{enumType.Name}",
+                    ID = enumType.Name,
                     Type = "Enum",
-                    Name = $"{enumType.Name}",
+                    Namespace = enumType.Namespace,
+                    Name = enumType.Name,
                     Assembly = assembly.FullName
                 };
 

@@ -23,6 +23,8 @@ namespace Meta.Conduit.Editor
     /// </summary>
     internal class EnumSynchronizer
     {
+        private const string DEFAULT_NAMESPACE = "Conduit.Generated";
+
         private readonly IWitRequestConfiguration _configuration;
         private readonly IAssemblyWalker _assemblyWalker;
         private readonly IFileIo _fileIo;
@@ -166,7 +168,7 @@ namespace Meta.Conduit.Editor
 
             // Generate wrapper
             // TODO: For existing enums, wrap the existing source code file.
-            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, witIncomingEntity.keywords);
+            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, witIncomingEntity.keywords, DEFAULT_NAMESPACE);
 
             // Write to file
             wrapper.WriteToFile();
@@ -205,7 +207,9 @@ namespace Meta.Conduit.Editor
 
         private EnumCodeWrapper GetEnumWrapper(ManifestEntity manifestEntity)
         {
-            var qualifiedName = $"{manifestEntity.Namespace}.{manifestEntity.ID}";
+            var qualifiedName = string.IsNullOrEmpty(manifestEntity.Namespace)
+                ? $"{manifestEntity.ID}"
+                : $"{manifestEntity.Namespace}.{manifestEntity.ID}";
             var assemblies = _assemblyWalker.GetTargetAssemblies()
                 .Where(assembly => assembly.FullName == manifestEntity.Assembly).ToList();
 
@@ -222,7 +226,6 @@ namespace Meta.Conduit.Editor
             return GetEnumWrapper(enumType, manifestEntity.ID);
         }
         
-
         private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
         {
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile);

@@ -23,7 +23,6 @@ namespace Meta.Conduit.Editor
     internal class EnumCodeWrapper
     {
         public const string DEFAULT_PATH = @"Assets\";
-        public const string DEFAULT_NAMESPACE = "Conduit.Generated";
 
         private readonly string _sourceFilePath;
         private readonly string _namespace;
@@ -58,20 +57,30 @@ namespace Meta.Conduit.Editor
         }
         
         // Setup
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace = "", string sourceCodeFile = "")
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace, string sourceCodeFile = "")
         {
             // Initial setup
             _compileUnit = new CodeCompileUnit();
-            _namespace = string.IsNullOrEmpty(enumNamespace) ? DEFAULT_NAMESPACE : enumNamespace;
+            _namespace = enumNamespace;
             _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GetEnumFilePath(enumName, _namespace) : sourceCodeFile;
             _fileIo = fileIo;
 
             // Setup namespace
-            var nameSpace = new CodeNamespace(_namespace);
-            _compileUnit.Namespaces.Add(nameSpace);
-            _namespaces.Add(_namespace, nameSpace);
+            CodeNamespace nameSpace;
+            if (string.IsNullOrEmpty(enumNamespace))
+            {
+                 nameSpace = new CodeNamespace();
+            }
+            else
+            {
+                nameSpace = new CodeNamespace(_namespace);
+                _namespaces.Add(_namespace, nameSpace);
+            }
 
-            // Setup type declaration
+            _compileUnit.Namespaces.Add(nameSpace);
+            
+
+                // Setup type declaration
             _typeDeclaration = new CodeTypeDeclaration(enumName)
             {
                 IsEnum = true
