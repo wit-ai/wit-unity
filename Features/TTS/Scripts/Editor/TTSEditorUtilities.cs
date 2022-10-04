@@ -11,6 +11,7 @@ using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Editor.Voices;
 using Facebook.WitAi.TTS.Integrations;
 using Facebook.WitAi.TTS.Utilities;
+using Meta.WitAi.Data.Info;
 using UnityEditor;
 using UnityEngine;
 
@@ -149,18 +150,18 @@ namespace Facebook.WitAi.TTS.Editor
                     Debug.LogWarning($"TTS Service - Cannot refresh voices\nPlease try again manually");
                     if (ttsWit.PresetVoiceSettings == null || ttsWit.PresetVoiceSettings.Length == 0)
                     {
-                        TTSWitVoiceData voice = new TTSWitVoiceData()
+                        TTSWitVoiceInfo voiceInfo = new TTSWitVoiceInfo()
                         {
                             name = TTSWitVoiceSettings.DEFAULT_VOICE,
                         };
-                        TTSWitVoiceSettings placeholder = GetDefaultVoiceSetting(voice);
+                        TTSWitVoiceSettings placeholder = GetDefaultVoiceSetting(voiceInfo);
                         ttsWit.SetVoiceSettings(new TTSWitVoiceSettings[] { placeholder });
                     }
                 }
                 // Reset list of voices
                 else
                 {
-                    TTSWitVoiceData[] voices = TTSWitVoiceUtility.Voices;
+                    TTSWitVoiceInfo[] voices = TTSWitVoiceUtility.Voices;
                     TTSWitVoiceSettings[] newSettings = new TTSWitVoiceSettings[voices.Length];
                     for (int i = 0; i < voices.Length; i++)
                     {
@@ -189,7 +190,7 @@ namespace Facebook.WitAi.TTS.Editor
         }
 
         // Get default voice settings
-        private static TTSWitVoiceSettings GetDefaultVoiceSetting(TTSWitVoiceData voiceData)
+        private static TTSWitVoiceSettings GetDefaultVoiceSetting(TTSWitVoiceInfo voiceData)
         {
             TTSWitVoiceSettings result = new TTSWitVoiceSettings()
             {

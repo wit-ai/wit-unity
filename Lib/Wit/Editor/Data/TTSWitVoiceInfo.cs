@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Facebook.WitAi.TTS.Editor.Voices
+namespace Meta.WitAi.Data.Info
 {
-    public struct TTSWitVoiceData
+    public struct TTSWitVoiceInfo
     {
         public string name;
         public string locale;

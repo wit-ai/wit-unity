@@ -9,11 +9,11 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using UnityEngine;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.WitAi.Data.Info;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Integrations;
 using Meta.WitAi.Lib.Editor;
@@ -23,7 +23,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
     public static class TTSWitVoiceUtility
     {
         // Wit voice data
-        public static TTSWitVoiceData[] Voices
+        public static TTSWitVoiceInfo[] Voices
         {
             get
             {
@@ -34,7 +34,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 return _voices;
             }
         }
-        private static TTSWitVoiceData[] _voices = null;
+        private static TTSWitVoiceInfo[] _voices = null;
 
         // Wit voice ids
         public static List<string> VoiceNames
@@ -108,93 +108,8 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 return;
             }
 
-            // Parse if possible
-            ParseVoices(json, onComplete);
-        }
-        // Parse voices
-        private static void ParseVoices(string json, Action<bool> onComplete)
-        {
-            // Parse
-            Dictionary<string, TTSWitVoiceData[]> voicesByLocale = JsonConvert.DeserializeObject<Dictionary<string, TTSWitVoiceData[]>>(json);
-            if (voicesByLocale == null)
-            {
-                VLog.E($"Parse Failure\nCould not parse voices");
-                _loading = false;
-                onComplete?.Invoke(false);
-                return;
-            }
-
             // Deserialize
-            DeserializeVoices(voicesByLocale, onComplete);
-        }
-        // Deserialize voices
-        private static void DeserializeVoices(Dictionary<string, TTSWitVoiceData[]> voicesByLocale, Action<bool> onComplete)
-        {
-            // Deserialize
-            if (voicesByLocale == null)
-            {
-                VLog.E($"Deserialize Failure\nCould not deserialize voices");
-                _loading = false;
-                onComplete?.Invoke(false);
-                return;
-            }
-
-            // Add all voices
-            List<TTSWitVoiceData> voiceList = new List<TTSWitVoiceData>();
-            foreach (var locale in voicesByLocale.Keys)
-            {
-                voiceList.AddRange(voicesByLocale[locale]);
-            }
-
-            // Finish
-            OnDecodeComplete(voiceList.ToArray(), onComplete);
-        }
-        // Cast to voice data
-        public static TTSWitVoiceData AsTTSWitVoiceData(this WitResponseNode responseNode)
-        {
-            // Get result
-            object result = new TTSWitVoiceData();
-            Type voiceType = typeof(TTSWitVoiceData);
-
-            // Get root & field names
-            WitResponseClass voiceRoot = responseNode.AsObject;
-            string[] voiceFieldNames = voiceRoot.ChildNodeNames;
-            foreach (var voiceFieldName in voiceFieldNames)
-            {
-                FieldInfo field = voiceType.GetField(voiceFieldName);
-                if (field != null && field.IsPublic && !field.IsStatic)
-                {
-                    // Get value
-                    object val = null;
-                    // String
-                    if (field.FieldType == typeof(string))
-                    {
-                        val = voiceRoot[voiceFieldName].Value;
-                    }
-                    // String[]
-                    else if (field.FieldType == typeof(string[]))
-                    {
-                        val = voiceRoot[voiceFieldName].AsStringArray;
-                    }
-                    // Set value
-                    if (val != null)
-                    {
-                        field.SetValue(result, val);
-                    }
-                }
-                else
-                {
-                    VLog.W($"Decode Warning\nUnknown field: {voiceFieldName}");
-                }
-            }
-
-            // Return result
-            return (TTSWitVoiceData)result;
-        }
-        // On decode complete
-        private static void OnDecodeComplete(TTSWitVoiceData[] newVoices, Action<bool> onComplete)
-        {
-            // Decode failed
+            TTSWitVoiceInfo[] newVoices = JsonConvert.DeserializeObject<TTSWitVoiceInfo[]>(json);
             if (newVoices == null || newVoices.Length == 0)
             {
                 VLog.E($"Decode Failure\nNo voices found");
@@ -203,7 +118,16 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 return;
             }
 
-            // Apply voices & names
+            // Complete
+            SetVoices("Load", newVoices);
+
+            // Complete
+            _loading = false;
+            onComplete?.Invoke(true);
+        }
+        // On decode complete
+        private static void SetVoices(string logId, TTSWitVoiceInfo[] newVoices)
+        {
             _voices = newVoices;
             _voiceNames = new List<string>();
             StringBuilder voiceLog = new StringBuilder();
@@ -227,13 +151,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                     voiceLog.AppendLine($"\tStyles: {styleLog}");
                 }
             }
-
-            // Success
-            VLog.D($"Decode Success\n{voiceLog}");
-
-            // Complete
-            _loading = false;
-            onComplete?.Invoke(true);
+            VLog.D($"{logId} Success\n{voiceLog}");
         }
         #endregion
 
@@ -259,13 +177,9 @@ namespace Facebook.WitAi.TTS.Editor.Voices
 
             // Download
             VLog.D("Voice Update Begin");
-            WitEditorRequestUtility.RequestTTSVoices<TTSWitVoiceData>(configuration, null, (result, error) =>
+            WitEditorRequestUtility.RequestTTSVoices(configuration, null, (voicesByLocale, error) =>
             {
                 // Failed
-                if (result == null)
-                {
-                    error = "Parse Failed";
-                }
                 if (!string.IsNullOrEmpty(error))
                 {
                     VLog.E($"Voice Update Failed\n{error}");
@@ -273,29 +187,34 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                     return;
                 }
 
-                // Success
-                VLog.D($"Voice Update Success");
-
-                // Decode if possible
-                DeserializeVoices(result, (success) =>
+                // Set voices
+                List<TTSWitVoiceInfo> voiceList = new List<TTSWitVoiceInfo>();
+                foreach (var localeVoices in voicesByLocale.Values)
                 {
-                    // Decoded successfully, then save
-                    if (success)
+                    foreach (var voice in localeVoices)
                     {
-                        string backupPath = GetVoiceFilePath();
-                        try
-                        {
-                            File.WriteAllText(backupPath, result.ToString());
-                        }
-                        catch (Exception e)
-                        {
-                            VLog.E($"Voice Update Save Failed\nPath: {backupPath}\n{e}");
-                        }
+                        voiceList.Add(voice);
                     }
+                }
+                SetVoices("Update", voiceList.ToArray());
 
-                    // Complete
-                    OnUpdateComplete(success, onComplete);
-                });
+                // Save
+                string backupPath = GetVoiceFilePath();
+                try
+                {
+                    string json = JsonConvert.SerializeObject(_voices);
+                    File.WriteAllText(backupPath, json);
+                }
+                catch (Exception e)
+                {
+                    // Save failed
+                    VLog.E($"Voice Update Save Failed\nPath: {backupPath}\n{e}");
+                    OnUpdateComplete(false, onComplete);
+                    return;
+                }
+
+                // Success
+                OnUpdateComplete(true, onComplete);
             });
         }
         // Voices decoded
@@ -305,9 +224,9 @@ namespace Facebook.WitAi.TTS.Editor.Voices
             _updating = false;
 
             // Failed & no voices, try loading
-            if (!success && _voices == null)
+            if (!success && (_voices == null || _voices.Length == 0))
             {
-                LoadVoices((loadSuccess) => onComplete?.Invoke(success));
+                LoadVoices((loadSuccess) => onComplete?.Invoke(loadSuccess));
                 return;
             }
 

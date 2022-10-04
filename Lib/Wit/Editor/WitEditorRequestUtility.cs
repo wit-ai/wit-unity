@@ -196,8 +196,8 @@ namespace Meta.WitAi.Lib.Editor
 
         #region TTS VOICES
         // Request TTS voices
-        public static RequestPerformer RequestTTSVoices<VOICE_DATA>(IWitRequestConfiguration configuration,
-            Action<float> onProgress, Action<Dictionary<string, VOICE_DATA[]>, string> onComplete)
+        public static RequestPerformer RequestTTSVoices(IWitRequestConfiguration configuration,
+            Action<float> onProgress, Action<Dictionary<string, TTSWitVoiceInfo[]>, string> onComplete)
         {
             return WitRequestUtility.GetRequest(WitEditorConstants.ENDPOINT_TTS_VOICES, null, configuration, true, onProgress, onComplete);
         }

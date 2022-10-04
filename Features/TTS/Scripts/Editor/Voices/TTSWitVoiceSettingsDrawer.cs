@@ -11,6 +11,7 @@ using System.Reflection;
 using UnityEditor;
 using Facebook.WitAi.TTS.Integrations;
 using Facebook.WitAi.Windows;
+using Meta.WitAi.Data.Info;
 using UnityEngine;
 
 namespace Facebook.WitAi.TTS.Editor.Voices
@@ -91,35 +92,35 @@ namespace Facebook.WitAi.TTS.Editor.Voices
                 if (string.Equals(subfield.Name, VAR_STYLE) && voiceIndex >= 0 && voiceIndex < TTSWitVoiceUtility.Voices.Length)
                 {
                     // Get voice data
-                    TTSWitVoiceData voiceData = TTSWitVoiceUtility.Voices[voiceIndex];
+                    TTSWitVoiceInfo voiceInfo = TTSWitVoiceUtility.Voices[voiceIndex];
                     EditorGUI.indentLevel++;
 
                     // Locale layout
-                    EditorGUI.LabelField(subfieldRect, "Locale", voiceData.locale);
+                    EditorGUI.LabelField(subfieldRect, "Locale", voiceInfo.locale);
                     y += VAR_HEIGHT + VAR_MARGIN;
 
                     // Gender layout
                     subfieldRect = new Rect(position.x, y, position.width, VAR_HEIGHT);
-                    EditorGUI.LabelField(subfieldRect, "Gender", voiceData.gender);
+                    EditorGUI.LabelField(subfieldRect, "Gender", voiceInfo.gender);
                     y += VAR_HEIGHT + VAR_MARGIN;
 
                     // Style layout/select
                     subfieldRect = new Rect(position.x, y, position.width, VAR_HEIGHT);
-                    if (voiceData.styles != null && voiceData.styles.Length > 0)
+                    if (voiceInfo.styles != null && voiceInfo.styles.Length > 0)
                     {
                         // Get style index
                         string style = subfieldProperty.stringValue;
-                        int styleIndex = new List<string>(voiceData.styles).IndexOf(style);
+                        int styleIndex = new List<string>(voiceInfo.styles).IndexOf(style);
 
                         // Show style select
                         int newStyleIndex = EditorGUI.Popup(subfieldRect, subfieldProperty.displayName, styleIndex,
-                            voiceData.styles);
-                        newStyleIndex = Mathf.Clamp(newStyleIndex, 0, voiceData.styles.Length);
+                            voiceInfo.styles);
+                        newStyleIndex = Mathf.Clamp(newStyleIndex, 0, voiceInfo.styles.Length);
                         if (styleIndex != newStyleIndex)
                         {
                             // Apply style
                             styleIndex = newStyleIndex;
-                            subfieldProperty.stringValue = voiceData.styles[styleIndex];
+                            subfieldProperty.stringValue = voiceInfo.styles[styleIndex];
                             GUI.FocusControl(null);
                         }
 
