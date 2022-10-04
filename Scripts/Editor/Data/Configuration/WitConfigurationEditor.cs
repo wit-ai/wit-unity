@@ -528,7 +528,7 @@ namespace Facebook.WitAi.Windows
             string fullPath = configuration.GetManifestEditorPath();
             if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
             {
-                fullPath = getManifestPullPath(configuration, true);
+                fullPath = GetManifestPullPath(configuration, true);
             }
 
             // Write to file
@@ -613,7 +613,7 @@ namespace Facebook.WitAi.Windows
 
         private static void AutoTrainOnWitAi(WitConfiguration configuration)
         {
-            string manifestFile = getManifestPullPath(configuration);
+            string manifestFile = GetManifestPullPath(configuration);
 
             // TODO: Replace this call with:
             //   configuration.ImportData(manifestFile)
@@ -624,7 +624,7 @@ namespace Facebook.WitAi.Windows
             configuration.ImportData(manifestFile, intents);
         }
 
-        private static string getManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)
+        private static string GetManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)
         {
             string directory = Application.dataPath + "/Oculus/Voice/Resources";
             if (shouldCreateDirectoryIfNotExist)

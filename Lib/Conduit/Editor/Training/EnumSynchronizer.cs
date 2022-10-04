@@ -185,8 +185,6 @@ namespace Meta.Conduit.Editor
                 return true;
             }
 
-            // TODO: Handle case when the enum does not exist at all.
-
             var enumWrapper = GetEnumWrapper(manifestEntity);
             if (enumWrapper == null)
             {
@@ -357,12 +355,6 @@ namespace Meta.Conduit.Editor
             }
 
             callBack(entity);
-        }
-
-        private bool EntitiesEquivalent(ManifestEntity manifestEntity, WitIncomingEntity witEntity)
-        {
-            var delta = GetDelta(manifestEntity, witEntity);
-            return delta.IsEmpty;
         }
 
         /// <summary>

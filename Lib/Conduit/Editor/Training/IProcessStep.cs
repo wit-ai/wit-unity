@@ -25,11 +25,14 @@ namespace Meta.Conduit
         /// <summary>
         /// Runs the step.
         /// </summary>
-        /// <param name="updateProgress"></param>
+        /// <param name="updateProgress">Callback to update progress with status. The progress goes from 0 to 1.0</param>
         /// <param name="completionCallback">Called when the step concludes. First parameter is true on success. The second parameter is the error value if it failed.</param>
-        /// <returns></returns>
+        /// <returns>An enumerator.</returns>
         IEnumerator Run(Action<String, float> updateProgress, StepResult completionCallback);
 
+        /// <summary>
+        /// The payload of the step which can contain data or errors.
+        /// </summary>
         Payload Payload { get; }
     }
 }

@@ -11,6 +11,7 @@ using System.Collections;
 using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices;
+using Meta.WitAi;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -18,9 +19,6 @@ namespace Meta.Conduit.Editor
 {
     internal class WitHttp : IWitHttp
     {
-        private const string BaseUri = "https://api.wit.ai";
-        private const string WitApiVersion = "20220728";
-        private const string WitSdkVersion = "0.0.46";
         private readonly string _serverAccessToken;
 
         /// <summary>
@@ -62,7 +60,7 @@ namespace Meta.Conduit.Editor
 
         public HttpWebRequest CreateWebRequest(string uriSection, string method)
         {
-            var targetUrl = $"{BaseUri}{uriSection}?v={WitApiVersion}";
+            var targetUrl = $"{WitConstants.URI_SCHEME}://{WitConstants.URI_AUTHORITY}{uriSection}?v={WitConstants.API_VERSION}";
             HttpWebRequest httpWebRequest = (HttpWebRequest) WebRequest.Create(targetUrl);
             httpWebRequest.AutomaticDecompression = DecompressionMethods.GZip;
             httpWebRequest.Method = method;
@@ -134,7 +132,7 @@ namespace Meta.Conduit.Editor
 
         public UnityWebRequest CreateUnityWebRequest(string uriSection, string method)
         {
-            var targetUrl = $"{BaseUri}{uriSection}?v={WitApiVersion}";
+            var targetUrl = $"{WitConstants.URI_SCHEME}://{WitConstants.URI_AUTHORITY}{uriSection}?v={WitConstants.API_VERSION}";
             var webRequest = new UnityWebRequest(targetUrl, method);
             webRequest.SetRequestHeader("User-Agent", GetUserAgent());
             webRequest.SetRequestHeader("Authorization", $"Bearer {_serverAccessToken}");
@@ -158,7 +156,7 @@ namespace Meta.Conduit.Editor
             if (_unityVersion == null) _unityVersion = Application.unityVersion;
 
             // Return full string
-            return $"wit-unity-{WitSdkVersion},{_operatingSystem},{_deviceModel},not-yet-configured,{_appIdentifier},Editor,{_unityVersion}";
+            return $"{WitConstants.HEADER_USERAGENT_PREFIX}wit-unity-{WitConstants.SDK_VERSION},{_operatingSystem},{_deviceModel},not-yet-configured,{_appIdentifier},Editor,{_unityVersion}";
         }
         private static string GetRequestId()
         {
@@ -183,12 +181,12 @@ namespace Meta.Conduit.Editor
         }
 
         /// <summary>
-        ///
+        /// Makes a Unity Web Request.
         /// </summary>
-        /// <param name="uriSection"></param>
-        /// <param name="method"></param>
+        /// <param name="uriSection">The URI section (after the base URI).</param>
+        /// <param name="method">The HTTP method (E.g GET).</param>
         /// <param name="completionCallback">First parameter is success or failure and second is response text</param>
-        /// <returns></returns>
+        /// <returns>An enumerator.</returns>
         public IEnumerator MakeUnityWebRequest(string uriSection, string method, StepResult completionCallback)
         {
             yield return MakeUnityWebRequest(uriSection, method, null, completionCallback);
