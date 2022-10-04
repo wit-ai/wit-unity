@@ -82,5 +82,14 @@ namespace Meta.WitAi.Data.Info
         [NonReorderable]
         #endif
         public WitTraitInfo[] traits;
+
+        [Header("TTS Info")]
+        /// <summary>
+        /// TTS Voices available for this app on Wit.ai
+        /// </summary>
+        #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
+        [NonReorderable]
+        #endif
+        public WitVoiceInfo[] voices;
     }
 }

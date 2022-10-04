@@ -104,6 +104,9 @@ namespace Facebook.WitAi
             public string ConfigurationTraitsMissingLabel;
             public string ConfigurationTraitsIdLabel;
             public string ConfigurationTraitsValuesLabel;
+            [Header("Configuration Voice Texts")]
+            public string ConfigurationVoicesTabLabel;
+            public string ConfigurationVoicesMissingLabel;
         }
 
         // Wit

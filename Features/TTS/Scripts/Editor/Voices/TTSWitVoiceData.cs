@@ -10,6 +10,6 @@ using System;
 
 namespace Oculus.Interaction.Deprecated
 {
-    [Obsolete("Replaced by Meta.WitAi.Data.Lib.TTSWitVoiceInfo")]
+    [Obsolete("Replaced by Meta.WitAi.Data.Lib.WitVoiceInfo")]
     public class TTSWitVoiceData { }
 }

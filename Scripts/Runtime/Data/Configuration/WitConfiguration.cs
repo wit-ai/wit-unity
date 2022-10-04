@@ -106,9 +106,7 @@ namespace Facebook.WitAi.Data.Configuration
         public void ResetData()
         {
             _configurationId = null;
-            _appInfo.intents = null;
-            _appInfo.entities = null;
-            _appInfo.traits = null;
+            _appInfo = new WitAppInfo();
             endpointConfiguration = new WitEndpointConfig();
         }
 

@@ -42,6 +42,8 @@
   "ConfigurationEndpointPortLabel": "Port",
   "ConfigurationEndpointApiLabel": "Wit API Version",
   "ConfigurationEndpointSpeechLabel": "Speech",
+  "ConfigurationEndpointMessageLabel": "Message",
+  "ConfigurationEndpointDictationLabel": "Dictation",
   "ConfigurationApplicationTabLabel": "Application",
   "ConfigurationApplicationMissingLabel": "Loading Application Data",
   "ConfigurationApplicationNameLabel": "Name",
@@ -66,5 +68,7 @@
   "ConfigurationTraitsTabLabel": "Traits",
   "ConfigurationTraitsMissingLabel": "No traits found.",
   "ConfigurationTraitsIdLabel": "Trait ID",
-  "ConfigurationTraitsValuesLabel": "Values"
+  "ConfigurationTraitsValuesLabel": "Values",
+  "ConfigurationVoicesTabLabel": "TTS Voices",
+  "ConfigurationVoicesMissingLabel": "No TTS voices found."
 }

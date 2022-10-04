@@ -56,6 +56,7 @@ namespace Facebook.WitAi.Windows
                 case "intents":
                 case "entities":
                 case "traits":
+                case "voices":
                     return false;
             }
             return base.ShouldLayoutField(property, subfield);

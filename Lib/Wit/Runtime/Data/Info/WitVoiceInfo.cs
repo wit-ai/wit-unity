@@ -6,9 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
+
 namespace Meta.WitAi.Data.Info
 {
-    public struct TTSWitVoiceInfo
+    [Serializable]
+    public struct WitVoiceInfo
     {
         public string name;
         public string locale;

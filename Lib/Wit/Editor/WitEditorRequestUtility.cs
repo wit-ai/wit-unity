@@ -136,6 +136,14 @@ namespace Meta.WitAi.Lib.Editor
             return WitRequestUtility.GetRequest<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}", null,
                 configuration, true, onProgress, onComplete);
         }
+
+        // Request TTS voices
+        public static RequestPerformer GetVoiceList(IWitRequestConfiguration configuration,
+            Action<float> onProgress, Action<Dictionary<string, WitVoiceInfo[]>, string> onComplete)
+        {
+            return WitRequestUtility.GetRequest(WitEditorConstants.ENDPOINT_TTS_VOICES, null,
+                configuration, true, onProgress, onComplete);
+        }
         #endregion
 
         #region ENTITY SYNC
@@ -191,15 +199,6 @@ namespace Meta.WitAi.Lib.Editor
 
             // Post text
             return WitRequestUtility.PostTextRequest<WitResponseNode>(endpoint, null, payload, configuration, true, onProgress, (response, error) => onComplete(error));
-        }
-        #endregion
-
-        #region TTS VOICES
-        // Request TTS voices
-        public static RequestPerformer RequestTTSVoices(IWitRequestConfiguration configuration,
-            Action<float> onProgress, Action<Dictionary<string, TTSWitVoiceInfo[]>, string> onComplete)
-        {
-            return WitRequestUtility.GetRequest(WitEditorConstants.ENDPOINT_TTS_VOICES, null, configuration, true, onProgress, onComplete);
         }
         #endregion
     }

@@ -23,9 +23,6 @@ namespace Facebook.WitAi.TTS.Editor
         // Maximum text for abbreviated
         private const int MAX_DISPLAY_TEXT = 20;
 
-        // Custom GUI when needed
-        public static event Action<TTSService> onAdditionalGUI;
-
         // GUI
         public override void OnInspectorGUI()
         {
@@ -37,8 +34,6 @@ namespace Facebook.WitAi.TTS.Editor
             {
                 _service = target as TTSService;
             }
-            // Add additional gui
-            onAdditionalGUI?.Invoke(_service);
 
             // Ignore if in editor
             if (!Application.isPlaying)

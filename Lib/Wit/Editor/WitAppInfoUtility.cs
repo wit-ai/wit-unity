@@ -8,6 +8,7 @@
 
 using System;
 using System.Text;
+using System.Collections.Generic;
 using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi.Lib.Editor
@@ -247,7 +248,7 @@ namespace Meta.WitAi.Lib.Editor
             });
         }
 
-        // Update intents
+        // Update traits
         private static void UpdateTraits(IWitRequestConfiguration configuration,
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
@@ -258,7 +259,6 @@ namespace Meta.WitAi.Lib.Editor
                 if (!string.IsNullOrEmpty(error))
                 {
                     warnings.AppendLine($"Trait list update failed ({error})");
-
                 }
                 // Successfully updated trait list
                 else
@@ -278,7 +278,7 @@ namespace Meta.WitAi.Lib.Editor
             // Done
             if (index >= appInfo.traits.Length)
             {
-                UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                UpdateVoices(configuration, appInfo, warnings, onUpdateComplete);
                 return;
             }
 
@@ -302,6 +302,36 @@ namespace Meta.WitAi.Lib.Editor
                 // Next
                 UpdateTrait(index + 1, configuration, appInfo, warnings, onUpdateComplete);
             });
+        }
+
+        // Update tts voices
+        private static void UpdateVoices(IWitRequestConfiguration configuration,
+            WitAppInfo appInfo, StringBuilder warnings,
+            Action<WitAppInfo, string> onUpdateComplete)
+        {
+            WitEditorRequestUtility.GetVoiceList(configuration, null,
+                (voicesByLocale, error) =>
+                {
+                    // Failed
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        warnings.AppendLine($"Voice list update failed ({error})");
+                    }
+                    // Success
+                    else
+                    {
+                        List<WitVoiceInfo> voiceList = new List<WitVoiceInfo>();
+                        foreach (var voices in voicesByLocale.Values)
+                        {
+                            voiceList.AddRange(voices);
+                        }
+
+                        appInfo.voices = voiceList.ToArray();
+                    }
+
+                    // Complete
+                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                });
         }
 
         // Completion

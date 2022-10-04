@@ -49,7 +49,8 @@ namespace Facebook.WitAi.Windows
         protected const string TAB_INTENTS_ID = "intents";
         protected const string TAB_ENTITIES_ID = "entities";
         protected const string TAB_TRAITS_ID = "traits";
-        private string[] _tabIds = new string[] { TAB_APPLICATION_ID, TAB_INTENTS_ID, TAB_ENTITIES_ID, TAB_TRAITS_ID };
+        protected const string TAB_VOICES_ID = "voices";
+        private string[] _tabIds = new string[] { TAB_APPLICATION_ID, TAB_INTENTS_ID, TAB_ENTITIES_ID, TAB_TRAITS_ID, TAB_VOICES_ID };
 
         // Generate
         private static ConduitStatistics Statistics
@@ -206,7 +207,6 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = isValid;
                     if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
-                        configuration.ResetData();
                         ApplyServerToken(_serverToken);
                     }
                 }
@@ -216,7 +216,7 @@ namespace Facebook.WitAi.Windows
                     GUI.enabled = !isRefreshing;
                     if (WitEditorUI.LayoutTextButton(isRefreshing ? WitTexts.Texts.ConfigurationRefreshingButtonLabel : WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
-                        SafeRefresh(true);
+                        SafeRefresh();
                     }
                 }
             }
@@ -235,7 +235,6 @@ namespace Facebook.WitAi.Windows
                 WitEditorUI.LayoutPasswordField(WitTexts.ConfigurationServerTokenContent, ref _serverToken, ref updated);
                 if (updated && WitConfigurationUtility.IsServerTokenValid(_serverToken))
                 {
-                    configuration.ResetData();
                     ApplyServerToken(_serverToken);
                 }
 
@@ -439,6 +438,8 @@ namespace Facebook.WitAi.Windows
                     return null != appInfo.entities;
                 case TAB_TRAITS_ID:
                     return null != appInfo.traits;
+                case TAB_VOICES_ID:
+                    return null != appInfo.voices;
             }
 
             return true;
@@ -459,6 +460,9 @@ namespace Facebook.WitAi.Windows
                 case TAB_TRAITS_ID:
                     sb.Append($".{TAB_TRAITS_ID}");
                     break;
+                case TAB_VOICES_ID:
+                    sb.Append($".{TAB_VOICES_ID}");
+                    break;
             }
             return sb.ToString();
         }
@@ -475,24 +479,16 @@ namespace Facebook.WitAi.Windows
                     return titleLabel ? WitTexts.Texts.ConfigurationEntitiesTabLabel : WitTexts.Texts.ConfigurationEntitiesMissingLabel;
                 case TAB_TRAITS_ID:
                     return titleLabel ? WitTexts.Texts.ConfigurationTraitsTabLabel : WitTexts.Texts.ConfigurationTraitsMissingLabel;
+                case TAB_VOICES_ID:
+                    return titleLabel ? WitTexts.Texts.ConfigurationVoicesTabLabel : WitTexts.Texts.ConfigurationVoicesMissingLabel;
             }
             return string.Empty;
         }
 
+        // Safe refresh
         protected virtual void SafeRefresh()
         {
-            SafeRefresh(false);
-        }
-
-        // Safe refresh
-        private void SafeRefresh(bool resetData)
-        {
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-
-            if (resetData)
-            {
-                configuration.ResetData();
-            }
 
             if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
