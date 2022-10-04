@@ -573,6 +573,7 @@ namespace Facebook.WitAi.Windows
             var disabledAssembliesNames = AssemblyWalker.AssembliesToIgnore;
             WitMultiSelectionPopup.Show(assembliesNames, disabledAssembliesNames, (disabledAssemblies) => {
                 AssemblyWalker.AssembliesToIgnore = new HashSet<string>(disabledAssemblies);
+                GenerateManifest(configuration, false);
             });
         }
 
