@@ -15,6 +15,7 @@ using Facebook.WitAi.TTS.Data;
 using Facebook.WitAi.TTS.Events;
 using Facebook.WitAi.TTS.Interfaces;
 using Meta.WitAi;
+using Meta.WitAi.Requests;
 using UnityEngine.Serialization;
 
 namespace Facebook.WitAi.TTS.Integrations
@@ -92,7 +93,7 @@ namespace Facebook.WitAi.TTS.Integrations
         public TTSStreamEvents WebStreamEvents { get; set; } = new TTSStreamEvents();
 
         // Requests bly clip id
-        private Dictionary<string, RequestPerformer> _webStreams = new Dictionary<string, RequestPerformer>();
+        private Dictionary<string, VRequest> _webStreams = new Dictionary<string, VRequest>();
 
         // Whether TTSService is valid
         public override string GetInvalidError()
@@ -113,7 +114,7 @@ namespace Facebook.WitAi.TTS.Integrations
             return string.Empty;
         }
         // Ensures text can be sent to wit web service
-        public string IsTextValid(string textToSpeak) => WitRequestUtility.GetTextInvalidError(textToSpeak);
+        public string IsTextValid(string textToSpeak) => string.IsNullOrEmpty(textToSpeak) ? WitConstants.ENDPOINT_TTS_NO_TEXT : string.Empty;
 
         /// <summary>
         /// Method for performing a web load request
@@ -139,8 +140,8 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Request tts
-            _webStreams[clipData.clipID] = WitRequestUtility.RequestTTSStream(clipData.textToSpeak, clipData.queryParameters,
-                RequestSettings.configuration, (progress) => clipData.loadProgress = progress,
+            WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
+            request.RequestStream(clipData.textToSpeak, clipData.queryParameters,
                 (clip, error) =>
                 {
                     _webStreams.Remove(clipData.clipID);
@@ -153,7 +154,9 @@ namespace Facebook.WitAi.TTS.Integrations
                     {
                         WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
                     }
-                });
+                },
+                (progress) => clipData.loadProgress = progress);
+            _webStreams[clipData.clipID] = request;
         }
         /// <summary>
         /// Cancel web stream
@@ -168,11 +171,12 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get request
-            RequestPerformer request = _webStreams[clipData.clipID];
+            VRequest request = _webStreams[clipData.clipID];
             _webStreams.Remove(clipData.clipID);
 
             // Destroy immediately
-            request?.Unload();
+            request?.Cancel();
+            request = null;
 
             // Call delegate
             WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
@@ -187,7 +191,7 @@ namespace Facebook.WitAi.TTS.Integrations
         public TTSDownloadEvents WebDownloadEvents { get; set; } = new TTSDownloadEvents();
 
         // Requests by clip id
-        private Dictionary<string, RequestPerformer> _webDownloads = new Dictionary<string, RequestPerformer>();
+        private Dictionary<string, WitVRequest> _webDownloads = new Dictionary<string, WitVRequest>();
 
         /// <summary>
         /// Method for performing a web load request
@@ -213,9 +217,9 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Request tts
-            _webDownloads[clipData.clipID] = WitRequestUtility.RequestTTSDownload(clipData.textToSpeak, clipData.queryParameters,
-                downloadPath, RequestSettings.configuration, (progress) => clipData.loadProgress = progress,
-                (error) =>
+            WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
+            request.RequestDownload(downloadPath, clipData.textToSpeak, clipData.queryParameters,
+                (success, error) =>
                 {
                     _webDownloads.Remove(clipData.clipID);
                     if (string.IsNullOrEmpty(error))
@@ -226,7 +230,9 @@ namespace Facebook.WitAi.TTS.Integrations
                     {
                         WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
                     }
-                });
+                },
+                (progress) => clipData.loadProgress = progress);
+            _webDownloads[clipData.clipID] = request;
         }
         /// <summary>
         /// Method for cancelling a running load request
@@ -241,11 +247,12 @@ namespace Facebook.WitAi.TTS.Integrations
             }
 
             // Get request
-            RequestPerformer request = _webDownloads[clipData.clipID];
+            WitVRequest request = _webDownloads[clipData.clipID];
             _webDownloads.Remove(clipData.clipID);
 
             // Destroy immediately
-            request?.Unload();
+            request?.Cancel();
+            request = null;
 
             // Download cancelled
             WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);

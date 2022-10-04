@@ -10,11 +10,16 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using Meta.WitAi.Data.Info;
+using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.Lib.Editor
 {
     public static class WitAppInfoUtility
     {
+        // Returns a vrequest
+        private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration) =>
+            new WitInfoVRequest(configuration);
+
         /// <summary>
         /// Get application info using server access token
         /// </summary>
@@ -64,7 +69,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetAppIdRequest(configuration, null, (appId, error) =>
+            GetRequest(configuration).RequestAppId((appId, error) =>
             {
                 if (!string.IsNullOrEmpty(error))
                 {
@@ -86,7 +91,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetAppInfoRequest(configuration, appInfo.id, null, (info, error) =>
+            GetRequest(configuration).RequestAppInfo(appInfo.id, (info, error) =>
             {
                 // Failed to update application info
                 if (!string.IsNullOrEmpty(error))
@@ -116,7 +121,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetClientAppToken(configuration, appInfo.id, null, (token, error) =>
+            GetRequest(configuration).RequestClientAppToken(appInfo.id, (token, error) =>
             {
                 // Failed to update client token
                 if (!string.IsNullOrEmpty(error))
@@ -139,7 +144,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetIntentList(configuration, null, (intents, error) =>
+            GetRequest(configuration).RequestIntentList((intents, error) =>
             {
                 // Failed to update intent list
                 if (!string.IsNullOrEmpty(error))
@@ -173,7 +178,7 @@ namespace Meta.WitAi.Lib.Editor
             WitIntentInfo intent = appInfo.intents[index];
 
             // Perform update
-            WitEditorRequestUtility.GetIntentInfo(configuration, intent.id, null, (result, error) =>
+            GetRequest(configuration).RequestIntentInfo(intent.id, (result, error) =>
             {
                 // Failed to update intent
                 if (!string.IsNullOrEmpty(error))
@@ -196,7 +201,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetEntityList(configuration, null, (entities, error) =>
+            GetRequest(configuration).RequestEntityList((entities, error) =>
             {
                 // Failed to update entity list
                 if (!string.IsNullOrEmpty(error))
@@ -230,7 +235,7 @@ namespace Meta.WitAi.Lib.Editor
             WitEntityInfo entity = appInfo.entities[index];
 
             // Perform update
-            WitEditorRequestUtility.GetEntityInfo(configuration, entity.id, null, (result, error) =>
+            GetRequest(configuration).RequestEntityInfo(entity.id, (result, error) =>
             {
                 // Failed to update entity
                 if (!string.IsNullOrEmpty(error))
@@ -253,7 +258,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetTraitList(configuration, null, (traits, error) =>
+            GetRequest(configuration).RequestTraitList((traits, error) =>
             {
                 // Failed to update trait list
                 if (!string.IsNullOrEmpty(error))
@@ -286,7 +291,7 @@ namespace Meta.WitAi.Lib.Editor
             WitTraitInfo trait = appInfo.traits[index];
 
             // Perform update
-            WitEditorRequestUtility.GetTraitInfo(configuration, trait.id, null, (result, error) =>
+            GetRequest(configuration).RequestTraitInfo(trait.id, (result, error) =>
             {
                 // Failed to update trait
                 if (!string.IsNullOrEmpty(error))
@@ -309,8 +314,7 @@ namespace Meta.WitAi.Lib.Editor
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            WitEditorRequestUtility.GetVoiceList(configuration, null,
-                (voicesByLocale, error) =>
+            GetRequest(configuration).RequestVoiceList((voicesByLocale, error) =>
                 {
                     // Failed
                     if (!string.IsNullOrEmpty(error))

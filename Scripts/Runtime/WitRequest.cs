@@ -19,6 +19,7 @@ using Facebook.WitAi.Data;
 using Facebook.WitAi.Data.Configuration;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -268,9 +269,9 @@ namespace Facebook.WitAi
                 requestParams[par.key] = par.value;
             }
             Func<UriBuilder, Uri> provideUri = (uriBuilder) => onCustomizeUri == null ? uriBuilder.Uri : onCustomizeUri(uriBuilder);
-            WitRequestUtility.OnProvideCustomUri += provideUri;
-            var uri = WitRequestUtility.GetWitUri(path, requestParams, configuration);
-            WitRequestUtility.OnProvideCustomUri -= provideUri;
+            WitVRequest.OnProvideCustomUri += provideUri;
+            var uri = WitVRequest.GetWitUri(configuration, path, requestParams);
+            WitVRequest.OnProvideCustomUri -= provideUri;
             StartRequest(uri);
         }
 
@@ -295,7 +296,7 @@ namespace Facebook.WitAi
             }
 
             // Get headers
-            Dictionary<string, string> headers = WitRequestUtility.GetWitHeaders(configuration, isServerAuthRequired);
+            Dictionary<string, string> headers = WitVRequest.GetWitHeaders(configuration, isServerAuthRequired);
             if (!string.IsNullOrEmpty(requestIdOverride))
             {
                 headers[WitConstants.HEADER_REQUEST_ID] = requestIdOverride;
