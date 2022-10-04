@@ -61,7 +61,11 @@ namespace Meta.Conduit.Editor
                 yield break;
             }
 
+            #if UNITY_2020_1_OR_NEWER
             var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToHashSet();
+            #else
+            var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToList();
+            #endif
 
             foreach (var entityName in witEntityNames)
             {
@@ -219,10 +223,8 @@ namespace Meta.Conduit.Editor
                 throw new InvalidOperationException();
             }
 
-            var assembly = assemblies.First();
+            var enumType = assemblies.First().GetType(qualifiedName);
 
-            var enumType = assembly.GetType(qualifiedName);
-            
             return GetEnumWrapper(enumType, manifestEntity.ID);
         }
         

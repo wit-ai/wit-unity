@@ -39,6 +39,6 @@ namespace Meta.Conduit.Editor
         /// </summary>
         /// <param name="name">The type name.</param>
         /// <returns>The type.</returns>
-        public Type GetType(string name);
+        Type GetType(string name);
     }
 }

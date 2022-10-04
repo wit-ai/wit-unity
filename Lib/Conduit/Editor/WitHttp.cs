@@ -52,8 +52,10 @@ namespace Meta.Conduit.Editor
             httpWebRequest.ContentType = "application/json";
             httpWebRequest.ContentLength = body.Length;
 
-            using var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream());
-            streamWriter.Write(body);
+            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            {
+                streamWriter.Write(body);
+            }
 
             return httpWebRequest;
         }
@@ -84,9 +86,11 @@ namespace Meta.Conduit.Editor
                     return false;
                 }
 
-                using var streamReader = new StreamReader(httpResponse.GetResponseStream());
-                response = streamReader.ReadToEnd();
-                Debug.Log(response);
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    response = streamReader.ReadToEnd();
+                    Debug.Log(response);
+                }
                 return true;
             }
             catch (WebException webException)
@@ -106,9 +110,11 @@ namespace Meta.Conduit.Editor
                 }
                 try
                 {
-                    using var reader = new StreamReader(webException.Response.GetResponseStream());
-                    var output = reader.ReadToEnd();
-                    Debug.Log(output);
+                    using (var reader = new StreamReader(webException.Response.GetResponseStream()))
+                    {
+                        var output = reader.ReadToEnd();
+                        Debug.Log(output);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -205,7 +211,11 @@ namespace Meta.Conduit.Editor
             yield return new WaitWhile(() => !webRequest.isDone);
 
             // Failed
+            #if UNITY_2020_1_OR_NEWER
             if (webRequest.result != UnityWebRequest.Result.Success)
+            #else
+            if (!string.IsNullOrEmpty(webRequest.error))
+            #endif
             {
                 var error = webRequest.error;
                 if (string.IsNullOrEmpty(error))

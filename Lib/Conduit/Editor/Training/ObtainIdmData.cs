@@ -159,20 +159,25 @@ namespace Meta.Conduit.Editor
             httpWebRequest.AutomaticDecompression = DecompressionMethods.GZip;
             httpWebRequest.Method = WebRequestMethods.Http.Get;
 
-            using var webRequest = WitHttp.CreateUnityWebRequest(url, WebRequestMethods.Http.Get);
-            yield return webRequest.SendWebRequest();
-            if (webRequest.result != UnityWebRequest.Result.Success)
+            using (var webRequest = WitHttp.CreateUnityWebRequest(url, WebRequestMethods.Http.Get))
             {
-                completionCallback(false, $"Failed to get IDM data. Error: {webRequest.error}");
-                yield break;
+                yield return webRequest.SendWebRequest();
+                #if UNITY_2020_1_OR_NEWER
+                if (webRequest.result != UnityWebRequest.Result.Success)
+                #else
+                if (!string.IsNullOrEmpty(webRequest.error))
+                #endif
+                {
+                    completionCallback(false, $"Failed to get IDM data. Error: {webRequest.error}");
+                    yield break;
+                }
+
+                var response = webRequest.downloadHandler.text;
+                var output = CleanupIdmResponse(response);
+
+                Debug.Log($"IDM Data: {output}");
+                completionCallback(true, output);
             }
-
-            var response = webRequest.downloadHandler.text;
-
-            var output = CleanupIdmResponse(response);
-
-            Debug.Log($"IDM Data: {output}");
-            completionCallback(true, output);
         }
 
         // TODO: Once IDM service returns data in the correct form, remove this.

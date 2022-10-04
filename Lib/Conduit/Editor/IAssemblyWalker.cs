@@ -38,6 +38,6 @@ namespace Meta.Conduit.Editor
         /// <returns>The list of assemblies in the compilation pipeline.</returns>
         IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType);
 
-        public bool GetSourceCode(Type type, out string sourceCodeFile);
+        bool GetSourceCode(Type type, out string sourceCodeFile);
     }
 }

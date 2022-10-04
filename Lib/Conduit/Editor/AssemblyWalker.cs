@@ -27,7 +27,7 @@ namespace Meta.Conduit.Editor
         /// The assembly that code not within an assembly is added to
         /// </summary>
         private const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
-        
+
         // All Conduit assemblies.
         private Dictionary<string, IConduitAssembly> _assemblies = new Dictionary<string, IConduitAssembly>();
 
@@ -59,7 +59,7 @@ namespace Meta.Conduit.Editor
                 }
             }
 
-            foreach (var conduitAssembly in conduitAssemblies) 
+            foreach (var conduitAssembly in conduitAssemblies)
             {
                 _assemblies.Add(conduitAssembly.FullName.Split(',').First(), conduitAssembly);
             }
@@ -88,7 +88,11 @@ namespace Meta.Conduit.Editor
         /// <inheritdoc/>
         public IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType)
         {
-            return _compilationAssemblies ??= CompilationPipeline.GetAssemblies(assembliesType);
+            if (_compilationAssemblies == null)
+            {
+                _compilationAssemblies = CompilationPipeline.GetAssemblies(assembliesType);
+            }
+            return _compilationAssemblies;
         }
 
         public bool GetSourceCode(Type type, out string sourceCodeFile)
@@ -104,7 +108,7 @@ namespace Meta.Conduit.Editor
                 {
                     continue;
                 }
-                
+
                 if (GetSourceCodeFromAssembly(assembly, type, out sourceCodeFile))
                 {
                     return true;
