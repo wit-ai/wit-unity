@@ -23,7 +23,7 @@ namespace Meta.Conduit.Editor
     internal class EnumCodeWrapper
     {
         public const string DEFAULT_PATH = @"Assets\";
-
+        
         private readonly string _sourceFilePath;
         private readonly string _namespace;
         private readonly IFileIo _fileIo;
@@ -34,6 +34,7 @@ namespace Meta.Conduit.Editor
         private readonly Dictionary<string, CodeNamespace> _namespaces = new Dictionary<string, CodeNamespace>();
         private readonly Action<CodeNamespace> _namespaceSetup;
         private readonly Action<CodeMemberField> _memberSetup;
+        private readonly string _conduitAttributeName;
 
         // Setup with existing enum
         public EnumCodeWrapper(IFileIo fileIo, Type enumType, string entityName, string sourceCodeFile) : this(fileIo, enumType.Name, entityName, null, enumType.Namespace, sourceCodeFile)
@@ -55,10 +56,12 @@ namespace Meta.Conduit.Editor
             
             AddValues(enumValues);
         }
-        
+
         // Setup
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace, string sourceCodeFile = "")
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace = null, string sourceCodeFile = null)
         {
+            _conduitAttributeName = GetShortAttributeName(nameof(ConduitValueAttribute));
+            
             // Initial setup
             _compileUnit = new CodeCompileUnit();
             _namespace = enumNamespace;
@@ -69,7 +72,7 @@ namespace Meta.Conduit.Editor
             CodeNamespace nameSpace;
             if (string.IsNullOrEmpty(enumNamespace))
             {
-                 nameSpace = new CodeNamespace();
+                nameSpace = new CodeNamespace();
             }
             else
             {
@@ -78,9 +81,8 @@ namespace Meta.Conduit.Editor
             }
 
             _compileUnit.Namespaces.Add(nameSpace);
-            
 
-                // Setup type declaration
+            // Setup type declaration
             _typeDeclaration = new CodeTypeDeclaration(enumName)
             {
                 IsEnum = true
@@ -89,7 +91,7 @@ namespace Meta.Conduit.Editor
 
             if (!entityName.Equals(enumName))
             {
-                var entityAttributeType = new CodeTypeReference(typeof(ConduitEntityAttribute).Name);
+                var entityAttributeType = new CodeTypeReference(GetShortAttributeName(nameof(ConduitEntityAttribute)));
                 var entityAttributeArgs = new CodeAttributeArgument[]
                 {
                     new CodeAttributeArgument(new CodePrimitiveExpression(entityName))
@@ -100,35 +102,7 @@ namespace Meta.Conduit.Editor
             // Add all enum values
             AddValues(enumValues);
         }
-
-        // Ger safe enum file path
-        private string GetEnumFilePath(string enumName, string enumNamespace)
-        {
-            return Path.Combine(DEFAULT_PATH, enumNamespace.Replace('.', '\\'), $"{enumName}.cs");
-        }
-
-        // Add namespace import
-        public void AddNamespaceImport(Type forType)
-        {
-            if (forType == null)
-            {
-                return;
-            }
-            string attributeNamespaceName = forType.Namespace;
-            var importNameSpace = new CodeNamespaceImport(attributeNamespaceName);
-            _namespaces[_namespace].Imports.Add(importNameSpace);
-        }
-
-        // Add enum attribute
-        public void AddEnumAttribute(CodeAttributeDeclaration attribute)
-        {
-            if (attribute == null)
-            {
-                return;
-            }
-            _typeDeclaration.CustomAttributes.Add(attribute);
-        }
-
+        
         /// <summary>
         /// Adds the supplied values to the enum construct. Values that already exist are ignored.
         /// </summary>
@@ -139,17 +113,13 @@ namespace Meta.Conduit.Editor
             {
                 return;
             }
-            var attributeName = nameof(ConduitValueAttribute);
-            var suffix = "Attribute";
-            if (attributeName.EndsWith(suffix))
-            {
-                attributeName = attributeName.Remove(attributeName.Length - suffix.Length);
-            }
-            
+
+            var valueAttributeUsed = false;
+
             foreach (var value in values)
             {
                 var entityKeywordAttributeType =
-                    new CodeTypeReference(attributeName);
+                    new CodeTypeReference(_conduitAttributeName);
 
                 var arguments = new List<CodeAttributeArgument>
                     { new CodeAttributeArgument(new CodePrimitiveExpression(value.keyword)) };
@@ -165,15 +135,65 @@ namespace Meta.Conduit.Editor
                     }
                 }
 
-                AddValue(value.keyword, (arguments.Count >1)?new CodeAttributeDeclaration(entityKeywordAttributeType, arguments.ToArray()):null);
+                CodeAttributeDeclaration codeAttribute = null;
+                if (arguments.Count > 1)
+                {
+                    codeAttribute = new CodeAttributeDeclaration(entityKeywordAttributeType, arguments.ToArray());
+                    valueAttributeUsed = true;
+                }
+                AddValue(value.keyword, codeAttribute);
+            }
+
+            if (valueAttributeUsed)
+            {
+                AddNamespaceImport(typeof(ConduitValueAttribute));
             }
         }
+
+        private string GetShortAttributeName(string attributeName)
+        {
+            var suffix = "Attribute";
+            if (attributeName.EndsWith(suffix))
+            {
+                attributeName = attributeName.Remove(attributeName.Length - suffix.Length);
+            }
+
+            return attributeName;
+        }
         
-        // Add a single value
-        public void AddValue(string value, CodeAttributeDeclaration attribute = null)
+        // Get safe enum file path
+        private string GetEnumFilePath(string enumName, string enumNamespace)
+        {
+            return Path.Combine(DEFAULT_PATH, enumNamespace.Replace('.', '\\'), $"{enumName}.cs");
+        }
+
+        // Add namespace import
+        private void AddNamespaceImport(Type forType)
+        {
+            if (forType == null)
+            {
+                return;
+            }
+            var attributeNamespaceName = forType.Namespace;
+            var importNameSpace = new CodeNamespaceImport(attributeNamespaceName);
+            _namespaces[_namespace].Imports.Add(importNameSpace);
+        }
+
+        // Add enum attribute
+        private void AddEnumAttribute(CodeAttributeDeclaration attribute)
+        {
+            if (attribute == null)
+            {
+                return;
+            }
+            _typeDeclaration.CustomAttributes.Add(attribute);
+        }
+
+        // Add a single value.
+        private void AddValue(string value, CodeAttributeDeclaration attribute = null)
         {
             // Get clean value
-            string cleanValue = ConduitUtilities.SanitizeString(value);
+            var cleanValue = ConduitUtilities.SanitizeString(value);
 
             // Ignore if added
             if (_enumValues.Contains(cleanValue))
@@ -182,7 +202,7 @@ namespace Meta.Conduit.Editor
             }
 
             // Get field
-            CodeMemberField field = new CodeMemberField(_typeDeclaration.Name, cleanValue);
+            var field = new CodeMemberField(_typeDeclaration.Name, cleanValue);
 
             // Add attribute
             if (attribute != null)
@@ -199,7 +219,7 @@ namespace Meta.Conduit.Editor
         /// Removes the supplied values to the enum construct. Values that do not exist in the enum are ignored.
         /// </summary>
         /// <param name="values">The values to remove.</param>
-        public void RemoveValues(IList<string> values)
+        internal void RemoveValues(IList<string> values)
         {
             if (values == null)
             {
@@ -214,7 +234,7 @@ namespace Meta.Conduit.Editor
         /// <summary>
         /// Returns a single value
         /// </summary>
-        public void RemoveValue(string value)
+        private void RemoveValue(string value)
         {
             // Check enum names
             string cleanName = ConduitUtilities.SanitizeString(value);
@@ -242,7 +262,7 @@ namespace Meta.Conduit.Editor
             var sb = new StringBuilder();
             using (var sw = new StringWriter(sb))
             {
-                IndentedTextWriter tw = new IndentedTextWriter(sw, "    ");
+                var tw = new IndentedTextWriter(sw, "    ");
 
                 // Generate source code using the code provider.
                 _provider.GenerateCodeFromCompileUnit(this._compileUnit, tw,

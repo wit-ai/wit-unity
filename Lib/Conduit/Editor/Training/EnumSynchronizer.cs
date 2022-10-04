@@ -171,7 +171,6 @@ namespace Meta.Conduit.Editor
             var entityEnumName = ConduitUtilities.GetEntityEnumName(entityName);
 
             // Generate wrapper
-            // TODO: For existing enums, wrap the existing source code file.
             var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, witIncomingEntity.keywords, DEFAULT_NAMESPACE);
 
             // Write to file
