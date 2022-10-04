@@ -71,21 +71,6 @@ namespace Meta.WitAi
 
     public static class WitRequestUtility
     {
-        // Wit service endpoint info
-        public const string WIT_URI_SCHEME = "https";
-        public const string WIT_URI_AUTHORITY = "api.wit.ai";
-        public const int WIT_URI_DEFAULT_PORT = -1;
-        // Headers
-        public const string WIT_REQUEST_ID_KEY = "X-Wit-Client-Request-Id";
-        public const string WIT_USER_AGENT_KEY = "User-Agent";
-
-        // Wit service version info
-        public const string WIT_API_VERSION = "20220728";
-        public const string WIT_SDK_VERSION = "0.0.49";
-
-        // Wit audio clip name
-        public const string WIT_CLIP_NAME = "WIT_AUDIO_CLIP";
-
         /// <summary>
         /// Uri customization delegate
         /// </summary>
@@ -118,10 +103,10 @@ namespace Meta.WitAi
 
             // Append endpoint data
             WitRequestEndpointOverride endpoint = configuration.GetEndpointOverrides();
-            uriBuilder.Scheme = string.IsNullOrEmpty(endpoint.uriScheme) ? WIT_URI_SCHEME : endpoint.uriScheme;
-            uriBuilder.Host = string.IsNullOrEmpty(endpoint.authority) ? WIT_URI_AUTHORITY : endpoint.authority;
-            uriBuilder.Port = endpoint.port <= 0 ?  WIT_URI_DEFAULT_PORT : endpoint.port;
-            string apiVersion = string.IsNullOrEmpty(endpoint.witApiVersion) ? WIT_API_VERSION : endpoint.witApiVersion;
+            uriBuilder.Scheme = string.IsNullOrEmpty(endpoint.uriScheme) ? WitConstants.URI_SCHEME : endpoint.uriScheme;
+            uriBuilder.Host = string.IsNullOrEmpty(endpoint.authority) ? WitConstants.URI_AUTHORITY : endpoint.authority;
+            uriBuilder.Port = endpoint.port <= 0 ?  WitConstants.URI_DEFAULT_PORT : endpoint.port;
+            string apiVersion = string.IsNullOrEmpty(endpoint.witApiVersion) ? WitConstants.API_VERSION : endpoint.witApiVersion;
 
             // Set path
             uriBuilder.Path = path;
@@ -154,11 +139,11 @@ namespace Meta.WitAi
             Dictionary<string, string> headers = new Dictionary<string, string>();
 
             // Set request id
-            headers[WIT_REQUEST_ID_KEY] = Guid.NewGuid().ToString();
+            headers[WitConstants.HEADER_REQUEST_ID] = Guid.NewGuid().ToString();
             // Set User-Agent
-            headers[WIT_USER_AGENT_KEY] = GetUserAgentHeader(configuration);
+            headers[WitConstants.HEADER_USERAGENT] = GetUserAgentHeader(configuration);
             // Set authorization
-            headers["Authorization"] = GetAuthorizationHeader(configuration, useServerToken);
+            headers[WitConstants.HEADER_AUTH] = GetAuthorizationHeader(configuration, useServerToken);
             // Allow overrides
             if (OnProvideCustomHeaders != null)
             {
@@ -213,8 +198,11 @@ namespace Meta.WitAi
             // Generate user agent
             StringBuilder userAgent = new StringBuilder();
 
+            // Append prefix if applicable
+            userAgent.Append(WitConstants.HEADER_USERAGENT_PREFIX);
+
             // Append wit sdk version
-            userAgent.Append($"wit-unity-{WIT_SDK_VERSION}");
+            userAgent.Append($"{WitConstants.CLIENT_NAME}-{WitConstants.SDK_VERSION}");
 
             // Append operating system
             if (_operatingSystem == null) _operatingSystem = UnityEngine.SystemInfo.operatingSystem;
@@ -227,7 +215,7 @@ namespace Meta.WitAi
             string logId = configuration.GetConfigurationId();
             if (string.IsNullOrEmpty(logId))
             {
-                logId = "not-yet-configured";
+                logId = WitConstants.HEADER_USERAGENT_CONFID_MISSING;
             }
             userAgent.Append($",{logId}");
 
@@ -328,7 +316,7 @@ namespace Meta.WitAi
             Action<float> onProgress, Action<DATA_TYPE, string> onComplete)
         {
             // Add header
-            unityRequest.SetRequestHeader("Content-Type", "application/json");
+            unityRequest.SetRequestHeader(WitConstants.HEADER_POST_CONTENT, "application/json");
 
             #if UNITY_EDITOR
             // Custom text override
@@ -562,7 +550,7 @@ namespace Meta.WitAi
                     // Success
                     else
                     {
-                        clip.name = WIT_CLIP_NAME;
+                        clip.name = WitConstants.ENDPOINT_TTS_CLIP;
                         onComplete?.Invoke(clip, string.Empty);
                     }
                 }
@@ -571,10 +559,6 @@ namespace Meta.WitAi
         #endregion
 
         #region MESSAGE
-        // Endpoint
-        public const string WIT_ENDPOINT_MESSAGE = "message";
-        public const string WIT_ENDPOINT_MESSAGE_PARAM = "q";
-
         /// <summary>
         /// Voice message request
         /// </summary>
@@ -589,23 +573,14 @@ namespace Meta.WitAi
             Action<float> onProgress, Action<WitResponseNode, string> onComplete)
         {
             Dictionary<string, string> uriParams = new Dictionary<string, string>();
-            uriParams[WIT_ENDPOINT_MESSAGE_PARAM] = transcription;
-            return GetRequest(WIT_ENDPOINT_MESSAGE, uriParams, configuration, useServerToken, onProgress, onComplete);
+            uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = transcription;
+            return GetRequest(WitConstants.ENDPOINT_MESSAGE, uriParams, configuration, useServerToken, onProgress, onComplete);
         }
         #endregion
 
         #region TTS
         // Audio type for tts
         public static AudioType TTSAudioType = AudioType.WAV;
-        // TTS End point
-        public const string WIT_ENDPOINT_TTS = "synthesize";
-        // TTS Text to speak parameter
-        public const string WIT_ENDPOINT_TTS_PARAM = "q";
-        // TTS Text to speak parameter
-        public const int TTS_MAX_SIZE = 140;
-
-        // TTS End point
-        public const string WIT_ENDPOINT_TTS_VOICES = "voices";
 
         // Return error with text to speak if any are found
         public static string GetTextInvalidError(string textToSpeak)
@@ -632,17 +607,17 @@ namespace Meta.WitAi
             }
 
             // Get uri
-            Uri ttsUri = GetWitUri(WIT_ENDPOINT_TTS, null, configuration);
+            Uri ttsUri = GetWitUri(WitConstants.ENDPOINT_TTS, null, configuration);
 
             // Serialize into json
-            ttsData[WIT_ENDPOINT_TTS_PARAM] = textToSpeak;
+            ttsData[WitConstants.ENDPOINT_TTS_PARAM] = textToSpeak;
             string jsonString = JsonConvert.SerializeObject(ttsData);
             byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonString);
 
             // Generate post
             UnityWebRequest request = new UnityWebRequest(ttsUri, UnityWebRequest.kHttpVerbPOST);
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.SetRequestHeader("Accept", $"audio/{TTSAudioType.ToString().ToLower()}");
+            request.SetRequestHeader(WitConstants.HEADER_POST_CONTENT, "application/json");
+            request.SetRequestHeader(WitConstants.HEADER_GET_CONTENT, $"audio/{TTSAudioType.ToString().ToLower()}");
             request.uploadHandler = new UploadHandlerRaw(jsonBytes);
             return request;
         }
@@ -682,13 +657,6 @@ namespace Meta.WitAi
 
             // Perform download request
             return AudioStreamRequest(ttsRequest, configuration, false, onProgress, onClipReady);
-        }
-
-        // Request TTS voices
-        public static RequestPerformer RequestTTSVoices<VOICE_DATA>(IWitRequestConfiguration configuration,
-            Action<float> onProgress, Action<Dictionary<string, VOICE_DATA[]>, string> onComplete)
-        {
-            return GetRequest(WIT_ENDPOINT_TTS_VOICES, null, configuration, true, onProgress, onComplete);
         }
         #endregion
     }

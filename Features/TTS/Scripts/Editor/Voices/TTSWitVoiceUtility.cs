@@ -16,6 +16,7 @@ using Meta.WitAi;
 using Meta.WitAi.Json;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Integrations;
+using Meta.WitAi.Lib.Editor;
 
 namespace Facebook.WitAi.TTS.Editor.Voices
 {
@@ -258,7 +259,7 @@ namespace Facebook.WitAi.TTS.Editor.Voices
 
             // Download
             VLog.D("Voice Update Begin");
-            WitRequestUtility.RequestTTSVoices<TTSWitVoiceData>(configuration, null, (result, error) =>
+            WitEditorRequestUtility.RequestTTSVoices<TTSWitVoiceData>(configuration, null, (result, error) =>
             {
                 // Failed
                 if (result == null)

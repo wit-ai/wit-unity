@@ -16,6 +16,7 @@ using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Interfaces;
 using Facebook.WitAi.Lib;
+using Meta.WitAi;
 using Meta.WitAi.Json;
 
 namespace Facebook.WitAi
@@ -213,7 +214,7 @@ namespace Facebook.WitAi
         {
             var postString = "{\"name\":\"" + intentName + "\"}";
             var postData = Encoding.UTF8.GetBytes(postString);
-            var request = new WitRequest(config, WitRequest.WIT_ENDPOINT_INTENTS, true)
+            var request = new WitRequest(config, WitConstants.ENDPOINT_INTENTS, true)
             {
                 postContentType = "application/json",
                 postData = postData
@@ -244,7 +245,7 @@ namespace Facebook.WitAi
             var postData = Encoding.UTF8.GetBytes(jsonData);
             var request = new WitRequest(
                 config,
-                WitRequest.WIT_ENDPOINT_IMPORT,
+                WitConstants.ENDPOINT_IMPORT,
                 true,
                 QueryParam("name", appName),
                 QueryParam("private", "true"),

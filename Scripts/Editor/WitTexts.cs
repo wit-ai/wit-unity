@@ -70,6 +70,8 @@ namespace Facebook.WitAi
             public string ConfigurationEndpointPortLabel;
             public string ConfigurationEndpointApiLabel;
             public string ConfigurationEndpointSpeechLabel;
+            public string ConfigurationEndpointMessageLabel;
+            public string ConfigurationEndpointDictationLabel;
             [Header("Configuration Application Texts")]
             public string ConfigurationApplicationTabLabel;
             public string ConfigurationApplicationMissingLabel;

@@ -16,16 +16,6 @@ namespace Facebook.WitAi.Windows
     {
         // Allow edit with lock
         protected override WitPropertyEditType EditType => WitPropertyEditType.LockEdit;
-        // Determine if should layout field
-        protected override bool ShouldLayoutField(SerializedProperty property, FieldInfo subfield)
-        {
-            switch (subfield.Name)
-            {
-                case "message":
-                    return false;
-            }
-            return base.ShouldLayoutField(property, subfield);
-        }
         // Get default fields
         protected override string GetDefaultFieldValue(SerializedProperty property, FieldInfo subfield)
         {
@@ -33,17 +23,19 @@ namespace Facebook.WitAi.Windows
             switch (subfield.Name)
             {
                 case "uriScheme":
-                    return WitRequestUtility.WIT_URI_SCHEME;
+                    return WitConstants.URI_SCHEME;
                 case "authority":
-                    return WitRequestUtility.WIT_URI_AUTHORITY;
+                    return WitConstants.URI_AUTHORITY;
                 case "port":
-                    return WitRequestUtility.WIT_URI_DEFAULT_PORT.ToString();
+                    return WitConstants.URI_DEFAULT_PORT.ToString();
                 case "witApiVersion":
-                    return WitRequestUtility.WIT_API_VERSION;
+                    return WitConstants.API_VERSION;
                 case "speech":
-                    return WitRequest.WIT_ENDPOINT_SPEECH;
+                    return WitConstants.ENDPOINT_SPEECH;
+                case "message":
+                    return WitConstants.ENDPOINT_MESSAGE;
                 case "dictation":
-                    return WitRequest.WIT_ENDPOINT_DICTATION;
+                    return WitConstants.ENDPOINT_DICTATION;
             }
 
             // Return base
@@ -67,6 +59,10 @@ namespace Facebook.WitAi.Windows
                     return WitTexts.Texts.ConfigurationEndpointApiLabel;
                 case "speech":
                     return WitTexts.Texts.ConfigurationEndpointSpeechLabel;
+                case "message":
+                    return WitTexts.Texts.ConfigurationEndpointMessageLabel;
+                case "dictation":
+                    return WitTexts.Texts.ConfigurationEndpointDictationLabel;
             }
             // Default to base
             return base.GetLocalizedText(property, key);

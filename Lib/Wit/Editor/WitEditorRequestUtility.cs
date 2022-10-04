@@ -17,31 +17,15 @@ namespace Meta.WitAi.Lib.Editor
 {
     public static class WitEditorRequestUtility
     {
-        // Editor only endpoints
-        private const string ENDPOINT_APPS = "apps";
-        private const string ENDPOINT_APPS_LIMIT = "limit";
-        private const string ENDPOINT_APPS_OFFSET = "offset";
-        private const string ENDPOINT_APP_FOR_TOKEN = "is_app_for_token";
-        private const string ENDPOINT_APP_ID = "id";
-        private const string ENDPOINT_APP_CLIENT_TOKEN = "client_token";
-
-        // Additional info endpoints
-        private const string ENDPOINT_INTENTS = "intents";
-        private const string ENDPOINT_ENTITIES = "entities";
-        private const string ENDPOINT_TRAITS = "traits";
-
-        // Sync endpoints
-        private const string ENDPOINT_ENTITY_KEYWORDS = "keywords";
-
         #region APP INFO
         // Gets all app data
         public static RequestPerformer GetAppsRequest(IWitRequestConfiguration configuration, int limit, int offset,
             Action<float> onProgress, Action<WitAppInfo[], string> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
-            uriParameters[ENDPOINT_APPS_LIMIT] = Mathf.Max(limit, 1).ToString();
-            uriParameters[ENDPOINT_APPS_OFFSET] = Mathf.Max(offset, 0).ToString();
-            return WitRequestUtility.GetRequest<WitAppInfo[]>(ENDPOINT_APPS, uriParameters, configuration, true, onProgress, onComplete);
+            uriParameters[WitEditorConstants.ENDPOINT_APPS_LIMIT] = Mathf.Max(limit, 1).ToString();
+            uriParameters[WitEditorConstants.ENDPOINT_APPS_OFFSET] = Mathf.Max(offset, 0).ToString();
+            return WitRequestUtility.GetRequest<WitAppInfo[]>(WitEditorConstants.ENDPOINT_APPS, uriParameters, configuration, true, onProgress, onComplete);
         }
 
         // Get all apps & return the current app info
@@ -49,9 +33,9 @@ namespace Meta.WitAi.Lib.Editor
             Action<float> onProgress, Action<string, string> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
-            uriParameters[ENDPOINT_APPS_LIMIT] = 10000.ToString();
-            uriParameters[ENDPOINT_APPS_OFFSET] = 0.ToString();
-            return WitRequestUtility.GetRequest<WitResponseNode>(ENDPOINT_APPS, uriParameters, configuration, true, onProgress, (root, error) =>
+            uriParameters[WitEditorConstants.ENDPOINT_APPS_LIMIT] = 10000.ToString();
+            uriParameters[WitEditorConstants.ENDPOINT_APPS_OFFSET] = 0.ToString();
+            return WitRequestUtility.GetRequest<WitResponseNode>(WitEditorConstants.ENDPOINT_APPS, uriParameters, configuration, true, onProgress, (root, error) =>
             {
                 if (string.IsNullOrEmpty(error) && root != null)
                 {
@@ -61,9 +45,9 @@ namespace Meta.WitAi.Lib.Editor
                         foreach (WitResponseNode node in nodes)
                         {
                             WitResponseClass child = node.AsObject;
-                            if (child.HasChild(ENDPOINT_APP_FOR_TOKEN) && child[ENDPOINT_APP_FOR_TOKEN].AsBool && child.HasChild(ENDPOINT_APP_ID))
+                            if (child.HasChild(WitEditorConstants.ENDPOINT_APP_FOR_TOKEN) && child[WitEditorConstants.ENDPOINT_APP_FOR_TOKEN].AsBool && child.HasChild(WitEditorConstants.ENDPOINT_APP_ID))
                             {
-                                onComplete?.Invoke(child[ENDPOINT_APP_ID], null);
+                                onComplete?.Invoke(child[WitEditorConstants.ENDPOINT_APP_ID], null);
                                 return;
                             }
                         }
@@ -78,7 +62,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetAppInfoRequest(IWitRequestConfiguration configuration, string applicationId,
             Action<float> onProgress, Action<WitAppInfo, string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitAppInfo>($"{ENDPOINT_APPS}/{applicationId}", null,
+            return WitRequestUtility.GetRequest<WitAppInfo>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}", null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -86,15 +70,15 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetClientAppToken(IWitRequestConfiguration configuration, string applicationId,
             Action<float> onProgress, Action<string, string> onComplete)
         {
-            return WitRequestUtility.PostTextRequest<WitResponseNode>($"{ENDPOINT_APPS}/{applicationId}/client_tokens", null, "{\"refresh\":false}",
+            return WitRequestUtility.PostTextRequest<WitResponseNode>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_CLIENTTOKENS}", null, "{\"refresh\":false}",
                 configuration, true, onProgress, (node, error) =>
                 {
                     if (string.IsNullOrEmpty(error))
                     {
                         WitResponseClass child = node.AsObject;
-                        if (child.HasChild(ENDPOINT_APP_CLIENT_TOKEN))
+                        if (child.HasChild(WitEditorConstants.ENDPOINT_CLIENTTOKENS_VAL))
                         {
-                            onComplete?.Invoke(child[ENDPOINT_APP_CLIENT_TOKEN].Value, error);
+                            onComplete?.Invoke(child[WitEditorConstants.ENDPOINT_CLIENTTOKENS_VAL].Value, error);
                             return;
                         }
 
@@ -109,7 +93,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetIntentList(IWitRequestConfiguration configuration,
             Action<float> onProgress, Action<WitIntentInfo[], string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitIntentInfo[]>(ENDPOINT_INTENTS, null,
+            return WitRequestUtility.GetRequest<WitIntentInfo[]>(WitEditorConstants.ENDPOINT_INTENTS, null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -117,7 +101,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetIntentInfo(IWitRequestConfiguration configuration, string intentId,
             Action<float> onProgress, Action<WitIntentInfo, string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitIntentInfo>($"{ENDPOINT_INTENTS}/{intentId}", null,
+            return WitRequestUtility.GetRequest<WitIntentInfo>($"{WitEditorConstants.ENDPOINT_INTENTS}/{intentId}", null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -125,7 +109,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetEntityList(IWitRequestConfiguration configuration,
             Action<float> onProgress, Action<WitEntityInfo[], string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitEntityInfo[]>(ENDPOINT_ENTITIES, null,
+            return WitRequestUtility.GetRequest<WitEntityInfo[]>(WitEditorConstants.ENDPOINT_ENTITIES, null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -133,7 +117,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetEntityInfo(IWitRequestConfiguration configuration, string entityId,
             Action<float> onProgress, Action<WitEntityInfo, string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitEntityInfo>($"{ENDPOINT_ENTITIES}/{entityId}", null,
+            return WitRequestUtility.GetRequest<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}", null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -141,7 +125,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetTraitList(IWitRequestConfiguration configuration,
             Action<float> onProgress, Action<WitTraitInfo[], string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitTraitInfo[]>(ENDPOINT_TRAITS, null,
+            return WitRequestUtility.GetRequest<WitTraitInfo[]>(WitEditorConstants.ENDPOINT_TRAITS, null,
                 configuration, true, onProgress, onComplete);
         }
 
@@ -149,7 +133,7 @@ namespace Meta.WitAi.Lib.Editor
         public static RequestPerformer GetTraitInfo(IWitRequestConfiguration configuration, string traitId,
             Action<float> onProgress, Action<WitTraitInfo, string> onComplete)
         {
-            return WitRequestUtility.GetRequest<WitTraitInfo>($"{ENDPOINT_TRAITS}/{traitId}", null,
+            return WitRequestUtility.GetRequest<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}", null,
                 configuration, true, onProgress, onComplete);
         }
         #endregion
@@ -170,7 +154,7 @@ namespace Meta.WitAi.Lib.Editor
             string payload = JsonConvert.SerializeObject(newEntity);
 
             // Post text
-            return WitRequestUtility.PostTextRequest<WitEntityInfo>(ENDPOINT_ENTITIES, null, payload, configuration, true, onProgress, (entity, error) => onComplete(entity, error));
+            return WitRequestUtility.PostTextRequest<WitEntityInfo>(WitEditorConstants.ENDPOINT_ENTITIES, null, payload, configuration, true, onProgress, (entity, error) => onComplete(entity, error));
         }
 
         // Add a new keyword to an entity
@@ -190,7 +174,7 @@ namespace Meta.WitAi.Lib.Editor
             }
 
             // Get data
-            string endpoint = $"{ENDPOINT_ENTITIES}/{entityId}/{ENDPOINT_ENTITY_KEYWORDS}";
+            string endpoint = $"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}/{WitEditorConstants.ENDPOINT_ENTITY_KEYWORDS}";
             StringBuilder synonymBuilder = new StringBuilder();
             if (synonyms != null && synonyms.Length > 0)
             {
@@ -207,6 +191,15 @@ namespace Meta.WitAi.Lib.Editor
 
             // Post text
             return WitRequestUtility.PostTextRequest<WitResponseNode>(endpoint, null, payload, configuration, true, onProgress, (response, error) => onComplete(error));
+        }
+        #endregion
+
+        #region TTS VOICES
+        // Request TTS voices
+        public static RequestPerformer RequestTTSVoices<VOICE_DATA>(IWitRequestConfiguration configuration,
+            Action<float> onProgress, Action<Dictionary<string, VOICE_DATA[]>, string> onComplete)
+        {
+            return WitRequestUtility.GetRequest(WitEditorConstants.ENDPOINT_TTS_VOICES, null, configuration, true, onProgress, onComplete);
         }
         #endregion
     }

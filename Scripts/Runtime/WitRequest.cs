@@ -72,13 +72,6 @@ namespace Facebook.WitAi
         /// </summary>
         public const int ERROR_CODE_TIMEOUT = -7;
 
-        public const string WIT_ENDPOINT_SPEECH = "speech";
-        public const string WIT_ENDPOINT_MESSAGE = "message";
-        public const string WIT_ENDPOINT_DICTATION = "dictation";
-        public const string WIT_ENDPOINT_INTENTS = "intents";
-        public const string WIT_ENDPOINT_IMPORT = "import";
-        public const string WIT_CLIENT_NAME = "wit-unity";
-
         private IWitRequestConfiguration configuration;
         public bool shouldPost;
 
@@ -305,7 +298,7 @@ namespace Facebook.WitAi
             Dictionary<string, string> headers = WitRequestUtility.GetWitHeaders(configuration, isServerAuthRequired);
             if (!string.IsNullOrEmpty(requestIdOverride))
             {
-                headers[WitRequestUtility.WIT_REQUEST_ID_KEY] = requestIdOverride;
+                headers[WitConstants.HEADER_REQUEST_ID] = requestIdOverride;
             }
             // Append additional headers
             if (onProvideCustomHeaders != null)
@@ -358,10 +351,10 @@ namespace Facebook.WitAi
             requestRequiresBody = RequestRequiresBody(command);
 
             // Set user agent
-            if (headers.ContainsKey(WitRequestUtility.WIT_USER_AGENT_KEY))
+            if (headers.ContainsKey(WitConstants.HEADER_USERAGENT))
             {
-                _request.UserAgent = headers[WitRequestUtility.WIT_USER_AGENT_KEY];
-                headers.Remove(WitRequestUtility.WIT_USER_AGENT_KEY);
+                _request.UserAgent = headers[WitConstants.HEADER_USERAGENT];
+                headers.Remove(WitConstants.HEADER_USERAGENT);
             }
             // Apply all wit headers
             if (headers != null)
