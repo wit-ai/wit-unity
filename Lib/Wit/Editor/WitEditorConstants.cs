@@ -23,11 +23,13 @@ namespace Meta.WitAi
         public const string ENDPOINT_INTENTS = "intents";
         public const string ENDPOINT_ENTITIES = "entities";
         public const string ENDPOINT_TRAITS = "traits";
-
-        // Sync endpoints
-        public const string ENDPOINT_ENTITY_KEYWORDS = "keywords";
-
-        // TTS endpoints
         public const string ENDPOINT_TTS_VOICES = "voices";
+
+        // Add endpoints
+        public const string ENDPOINT_ADD_INTENT = "intents";
+        public const string ENDPOINT_ADD_ENTITY = "entities";
+        public const string ENDPOINT_ADD_ENTITY_KEYWORD = "keywords";
+        public const string ENDPOINT_ADD_TRAIT = "traits";
+        public const string ENDPOINT_ADD_TRAIT_VALUE = "values";
     }
 }
