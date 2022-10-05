@@ -27,7 +27,12 @@ namespace Facebook.WitAi.Windows
         /// <returns>True if the parameter type should be filtered out. False otherwise.</returns>
         public bool ShouldFilterOut(Type type)
         {
-            return type == typeof(WitResponseNode);
+            return type == typeof(WitResponseNode) || type == typeof(VoiceSession);
+        }
+
+        public bool ShouldFilterOut(string typeName)
+        {
+            return typeName == nameof(WitResponseNode) || typeName == nameof(VoiceSession);
         }
     }
 }

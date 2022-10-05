@@ -37,7 +37,7 @@ namespace Facebook.WitAi.Windows
         private bool syncInProgress = false;
 
         private static ConduitStatistics _statistics;
-        private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator(), new WitParameterFilter());
+        private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
         private static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
         private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
@@ -573,7 +573,6 @@ namespace Facebook.WitAi.Windows
             var disabledAssembliesNames = AssemblyWalker.AssembliesToIgnore;
             WitMultiSelectionPopup.Show(assembliesNames, disabledAssembliesNames, (disabledAssemblies) => {
                 AssemblyWalker.AssembliesToIgnore = new HashSet<string>(disabledAssemblies);
-                GenerateManifest(configuration, false);
             });
         }
 
@@ -613,15 +612,15 @@ namespace Facebook.WitAi.Windows
 
         private static void AutoTrainOnWitAi(WitConfiguration configuration)
         {
-            string manifestFile = GetManifestPullPath(configuration);
+            var manifest = ManifestLoader.LoadManifest(configuration.ManifestLocalPath);
 
             // TODO: Replace this call with:
             //   configuration.ImportData(manifestFile)
             // when full spec /import API is implemented.
             var intents = ManifestGenerator.ExtractManifestData();
 
-            VLog.D($"Auto Train on WIT.ai: {intents.Count} intents. Manifest file: {manifestFile}");
-            configuration.ImportData(manifestFile, intents);
+            VLog.D($"Auto training on WIT.ai: {intents.Count} intents.");
+            configuration.ImportData(manifest);
         }
 
         private static string GetManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)

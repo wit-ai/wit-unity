@@ -24,12 +24,7 @@ namespace Meta.Conduit.Editor
         /// Validates that parameters are compatible.
         /// </summary>
         private readonly IParameterValidator _parameterValidator;
-
-        /// <summary>
-        /// Filters out parameters of specific types.
-        /// </summary>
-        private readonly IParameterFilter _parameterFilter;
-
+        
         /// <summary>
         /// Set to true once the miner is initialized. No interactions with the class should be allowed before then.
         /// </summary>
@@ -46,10 +41,9 @@ namespace Meta.Conduit.Editor
         /// </summary>
         /// <param name="parameterValidator">The parameter validator.</param>
         /// <param name="parameterFilter">The parameter filter.</param>
-        public AssemblyMiner(IParameterValidator parameterValidator, IParameterFilter parameterFilter)
+        public AssemblyMiner(IParameterValidator parameterValidator)
         {
             this._parameterValidator = parameterValidator;
-            this._parameterFilter = parameterFilter;
         }
 
         /// <inheritdoc/>
@@ -166,12 +160,7 @@ namespace Meta.Conduit.Editor
                         compatibleParameters = false;
                         continue;
                     }
-
-                    var shouldBeFilteredOut = _parameterFilter.ShouldFilterOut(parameter.ParameterType);
-                    if (shouldBeFilteredOut) {
-                        continue;
-                    }
-
+                    
                     List<string> aliases;
 
                     if (parameter.GetCustomAttributes(typeof(ConduitParameterAttribute), false).Length > 0)

@@ -95,12 +95,10 @@ namespace Meta.Conduit
                     types[i] = Type.GetType(fullTypeName);
                 }
 
-                var targetMethod = targetType.GetMethod(method,
-                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any,
-                    types, null);
+                var targetMethod = GetBestMethodMatch(targetType, method, types);
                 if (targetMethod == null)
                 {
-                    VLog.E($"Failed to resolve method {method}.");
+                    VLog.E($"Failed to resolve method {typeName}.{method}.");
                     resolvedAll = false;
                     continue;
                 }
@@ -140,6 +138,15 @@ namespace Meta.Conduit
             }
 
             return resolvedAll;
+        }
+
+        private MethodInfo GetBestMethodMatch(Type targetType, string method, Type[] parameterTypes)
+        {
+            var exactMatch = targetType.GetMethod(method,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any,
+                parameterTypes, null);
+
+            return exactMatch;
         }
 
         /// <summary>

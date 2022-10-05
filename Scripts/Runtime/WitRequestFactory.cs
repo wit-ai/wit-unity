@@ -16,6 +16,7 @@ using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Interfaces;
 using Facebook.WitAi.Lib;
+using Meta.Conduit;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -228,18 +229,11 @@ namespace Facebook.WitAi
         /// </summary>
         /// <param name="config"></param>
         /// <param name="appName">The name of the app as it is defined in wit.ai</param>
-        /// <param name="dataFullPath">Absolute path to target manifest JSON file</param>
+        /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public static WitRequest ImportData(this WitConfiguration config, string appName, string dataFullPath) {
-            string importData = "";
-            using (StreamReader sr = new StreamReader(dataFullPath))
-            {
-                while (sr.Peek() >= 0)
-                {
-                    importData += sr.ReadLine();
-                }
-            }
-            string encodedImportData = HttpUtility.JavaScriptStringEncode(importData);
+        public static WitRequest ImportData(this WitConfiguration config, string appName, string manifestData) {
+            
+            string encodedImportData = HttpUtility.JavaScriptStringEncode(manifestData);
             string jsonData = "{\"text\":\"" + encodedImportData + "\",\"config_type\":1,\"config_value\":\"\"}";
 
             var postData = Encoding.UTF8.GetBytes(jsonData);
