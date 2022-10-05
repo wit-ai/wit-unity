@@ -48,7 +48,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_COMPOSER_SPEECH = "converse";
         public const string ENDPOINT_COMPOSER_MESSAGE = "event";
         public const string ENDPOINT_COMPOSER_PARAM_SESSION = "session_id";
-        public const string ENDPOINT_COMPOSER_PARAM_CONTEXT_MAP = "session_id";
+        public const string ENDPOINT_COMPOSER_PARAM_CONTEXT_MAP = "context_map";
 
         // Runtime Sync Endpoints
         public const string ENDPOINT_IMPORT = "import";
