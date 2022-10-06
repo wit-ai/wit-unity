@@ -12,7 +12,6 @@ using System.Text;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Json
@@ -215,24 +214,8 @@ namespace Meta.WitAi.Json
                         }
                     }
                 }
-                #if UNITY_2020_1_OR_NEWER
-                if (Enum.TryParse(toType, enumStr, out var parsedEnum))
-                {
-                    return parsedEnum;
-                }
-                #else
-                object[] parseParams = new object[] {enumStr, false, Activator.CreateInstance(toType)};
-                bool parseSuccess = (bool) typeof(Enum)
-                    .GetMethod("TryParse", BindingFlags.Public | BindingFlags.Static)
-                    .MakeGenericMethod(new Type[] { toType })
-                    .Invoke(null, parseParams);
-                if (parseSuccess)
-                {
-                    return parseParams[2];
-                }
-                #endif
-                log.AppendLine($"\nJson Deserializer Failed to cast '{jsonToken.Value}' to enum type '{toType}'");
-                return oldValue;
+                // Call try parse
+                return DeserializeEnum(toType, EnsureExists(toType, oldValue), enumStr, log);
             }
             // Deserialize dictionary
             if (toType.GetInterfaces().Contains(typeof(IDictionary)))
@@ -298,6 +281,34 @@ namespace Meta.WitAi.Json
                 log.AppendLine($"\nJson Deserializer failed to cast '{jsonToken.Value}' to type '{toType}'\n{e}");
                 return oldValue;
             }
+        }
+
+        // Deserialize enum
+        private static MethodInfo _enumParseMethod;
+        private static object DeserializeEnum(Type toType, object oldValue, string enumString, StringBuilder log)
+        {
+            // Find enum parse method
+            if (_enumParseMethod == null)
+            {
+                _enumParseMethod = typeof(Enum).GetMethods().ToList().Find(method =>
+                    method.IsGenericMethod && method.GetParameters().Length == 3 &&
+                    string.Equals(method.Name, "TryParse"));
+            }
+
+            // Attempt to parse (Enum.TryParse<TEnum>(enumString, false, out oldValue))
+            var parseMethod = _enumParseMethod.MakeGenericMethod(new[] {toType});
+            object[] parseParams = new object[] {enumString, false, Activator.CreateInstance(toType)};
+
+            // Invoke
+            if ((bool)parseMethod.Invoke(null, parseParams))
+            {
+                // Return the parsed enum
+                return parseParams[2];
+            }
+
+            // Failed
+            log.AppendLine($"\nJson Deserializer Failed to cast '{enumString}' to enum type '{toType}'");
+            return oldValue;
         }
 
         /// <summary>
