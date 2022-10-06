@@ -61,12 +61,8 @@ namespace Meta.Conduit.Editor
                 yield break;
             }
 
-            #if UNITY_2020_1_OR_NEWER
-            var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToHashSet();
-            #else
+            // Use list
             var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToList();
-            #endif
-
             foreach (var entityName in witEntityNames)
             {
                 var onWitOnly = !localEnumNames.Contains(entityName);
@@ -94,7 +90,7 @@ namespace Meta.Conduit.Editor
 
             completionCallback(allEntitiesSynced, null);
         }
-        
+
         private IEnumerator CreateEntityOnWit(string entityName, StepResult completionCallback)
         {
             var entity = new WitIncomingEntity()
@@ -122,7 +118,7 @@ namespace Meta.Conduit.Editor
             var result = false;
             if (witIncomingEntity == null)
             {
-                yield return this.CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data) 
+                yield return this.CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data)
                     { result = success; });
 
                 if (!result)
@@ -131,7 +127,7 @@ namespace Meta.Conduit.Editor
                     yield break;
                 }
             }
-            
+
             var delta = GetDelta(manifestEntity, witIncomingEntity);
 
             result = false;
@@ -197,7 +193,7 @@ namespace Meta.Conduit.Editor
             {
                 newValues.Add(new WitKeyword()
                 {
-                    keyword = keyword.keyword 
+                    keyword = keyword.keyword
                 });
             }
 
@@ -224,7 +220,7 @@ namespace Meta.Conduit.Editor
 
             return GetEnumWrapper(enumType, manifestEntity.ID);
         }
-        
+
         private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
         {
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile);
@@ -285,7 +281,7 @@ namespace Meta.Conduit.Editor
                     synonyms = new List<string>()
                 };
                 var payload = JsonConvert.SerializeObject(keyword);
-                
+
                 yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords",
                     WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
                     {
