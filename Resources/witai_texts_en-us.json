@@ -55,6 +55,7 @@
   "ConfigurationApplicationTrainingLastDuration": "Last Train Duration",
   "ConfigurationApplicationTrainingLast": "Last Trained At",
   "ConfigurationApplicationTrainingNext": "Next Train At",
+  "ConfigurationConduitMissingTokenLabel": "Please supply a valid server token",
   "ConfigurationIntentsTabLabel": "Intents",
   "ConfigurationIntentsMissingLabel": "No intents found.",
   "ConfigurationIntentsIdLabel": "Intent ID",

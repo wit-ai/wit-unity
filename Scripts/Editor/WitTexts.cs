@@ -86,6 +86,8 @@ namespace Facebook.WitAi
             public string ConfigurationApplicationTrainingLastDuration;
             public string ConfigurationApplicationTrainingNext;
 
+            [Header("Configuration Conduit Texts")]
+            public string ConfigurationConduitMissingTokenLabel;
 
             [Header("Configuration Intent Texts")]
             public string ConfigurationIntentsTabLabel;
@@ -153,6 +155,7 @@ namespace Facebook.WitAi
             ConfigurationClientTokenContent = new GUIContent(WitTexts.Texts.ConfigurationClientTokenLabel);
             ConfigurationRequestTimeoutContent = new GUIContent(WitTexts.Texts.ConfigurationRequestTimeoutLabel);
         }
+
         // Get urls
         public static string GetAppURL(string appId, WitAppEndpointType endpointType)
         {

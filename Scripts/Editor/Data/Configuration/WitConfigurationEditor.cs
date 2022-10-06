@@ -124,11 +124,28 @@ namespace Facebook.WitAi.Windows
             }
         }
 
-        private void LayoutConduitContent()
+        private void GenerateManifestIfNeeded()
         {
             // Get full manifest path & ensure it exists
             string manifestPath = configuration.GetManifestEditorPath();
             manifestAvailable = File.Exists(manifestPath);
+
+            // Auto-generate manifest
+            if (configuration.useConduit && !manifestAvailable)
+            {
+                GenerateManifest(configuration, false);
+            }
+        }
+
+        private void LayoutConduitContent()
+        {
+
+
+            if (!WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            {
+                GUILayout.TextArea(WitTexts.Texts.ConfigurationConduitMissingTokenLabel, WitStyles.LabelError);
+                return;
+            }
 
             // Set conduit
             var useConduit = (GUILayout.Toggle(configuration.useConduit, "Use Conduit (Beta)"));
@@ -138,11 +155,7 @@ namespace Facebook.WitAi.Windows
                 EditorUtility.SetDirty(configuration);
             }
 
-            // Auto-generate manifest
-            if (configuration.useConduit && !manifestAvailable)
-            {
-                GenerateManifest(configuration, false);
-            }
+            GenerateManifestIfNeeded();
 
             // Configuration buttons
             EditorGUI.indentLevel++;
@@ -305,6 +318,8 @@ namespace Facebook.WitAi.Windows
 
             WitAuthUtility.ServerToken = _serverToken;
             configuration.SetServerToken(_serverToken);
+
+            GenerateManifestIfNeeded();
         }
         // Whether or not to allow a configuration to refresh
         protected virtual bool CanConfigurationRefresh(WitConfiguration configuration)
