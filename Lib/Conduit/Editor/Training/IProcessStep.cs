@@ -16,9 +16,9 @@ namespace Meta.Conduit
     /// </summary>
     /// <param name="success">True if the step succeeded. False otherwise (with error in data field)</param>
     /// <param name="data">The optional data returned in success or the error data on failure.</param>
-    public delegate void StepResult(bool success, string data);
+    internal delegate void StepResult(bool success, string data);
 
-    public interface IProcessStep
+    internal interface IProcessStep
     {
         string StepName { get; }
 

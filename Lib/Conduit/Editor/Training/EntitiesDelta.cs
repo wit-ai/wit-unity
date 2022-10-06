@@ -11,7 +11,7 @@ using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit.Editor
 {
-    public class EntitiesDelta
+    internal class EntitiesDelta
     {
         public List<WitEntityKeywordInfo> InWitOnly;
         public List<string> InLocalOnly;

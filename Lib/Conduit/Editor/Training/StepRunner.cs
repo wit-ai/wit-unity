@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Meta.Conduit.Editor
 {
-    public class StepRunner
+    internal class StepRunner
     {
         public IEnumerator ExecuteTrainingSteps(List<IProcessStep> trainingSteps, Action<String, float> updateProgress, StepResult completionCallback)
         {

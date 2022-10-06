@@ -17,7 +17,7 @@ namespace Facebook.WitAi.Windows
     /// <summary>
     /// Validates whether a data type if supported by Wit.
     /// </summary>
-    public class WitParameterValidator : IParameterValidator
+    internal class WitParameterValidator : IParameterValidator
     {
         /// <summary>
         /// These are the types that we natively support.

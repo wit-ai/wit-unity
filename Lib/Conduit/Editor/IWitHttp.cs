@@ -13,7 +13,7 @@ using UnityEngine.Networking;
 
 namespace Meta.Conduit.Editor
 {
-    public interface IWitHttp
+    internal interface IWitHttp
     {
         HttpWebRequest CreateWebRequest(string uriSection, string method, string body);
         HttpWebRequest CreateWebRequest(string uriSection, string method);

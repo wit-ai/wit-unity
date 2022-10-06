@@ -18,7 +18,7 @@ namespace Facebook.WitAi.Windows
     /// <summary>
     /// Filters out parameters of specific types.
     /// </summary>
-    public class WitParameterFilter : IParameterFilter
+    internal class WitParameterFilter : IParameterFilter
     {
         /// <summary>
         /// Tests if a parameter type should be filtered out.

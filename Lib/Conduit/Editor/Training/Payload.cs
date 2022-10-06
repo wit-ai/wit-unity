@@ -11,7 +11,7 @@ namespace Meta.Conduit
     /// <summary>
     /// Used to transfer data between steps.
     /// </summary>
-    public class Payload
+    internal class Payload
     {
         public string Data { get; set; } = "";
         public string Error { get; set; } = "";
