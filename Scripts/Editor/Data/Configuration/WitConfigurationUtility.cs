@@ -272,46 +272,25 @@ namespace Meta.WitAi.Data.Configuration
         #region APP DATA IMPORT
 
         /// <summary>
-        /// Note: this method could be quite slow as it uses multi-request approach.
-        ///
-        /// Use this method to import data via multiple requests:
-        /// - First batch of requests to prepare Intents
-        /// - Last request to actually import the manifest itself
+        /// Import supplied Manifest into WIT.ai.
         /// </summary>
-        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, List<string> intents) {
+        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, Action<bool> onComplete = null)
+        {
             var manifestData = GetSanitizedManifestString(manifest);
-            
-            int intentRequestsLeft = intents.Count;
-
-            Action proceedWithDataImport = () => {
-                VLog.D("Calling POST /import");
-                var req = WitRequestFactory.ImportData(configuration, GetAppName(configuration), manifestData);
-                PerformRequest(req, (error) =>
+            var request = configuration.ImportDataRequest(GetAppName(configuration), manifestData);
+            PerformRequest(request, (error) =>
+            {
+                if (!string.IsNullOrEmpty(error))
                 {
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}.");
-                    }
-                    else
-                    {
-                        VLog.D("Successfully imported generated manifest JSON into WIT.ai.");
-                        EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
-                    }
-                });
-            };
-            Action reqHandler = () => {
-                if (intentRequestsLeft <= 0) {
-                    proceedWithDataImport();
+                    VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifestData}");
+                    onComplete?.Invoke(false);
                 }
-            };
-
-            foreach (string intentName in intents) {
-                var req = WitRequestFactory.PostIntentRequest(configuration, intentName);
-                PerformRequest(req, (error) => {
-                    Interlocked.Decrement(ref intentRequestsLeft);
-                    reqHandler();
-                });
-            }
+                else
+                {
+                    VLog.D("Successfully imported generated manifest JSON into WIT.ai.");
+                    onComplete?.Invoke(true);
+                }
+            });
         }
 
         /// <summary>
@@ -329,28 +308,6 @@ namespace Meta.WitAi.Data.Configuration
             return JsonConvert.SerializeObject(manifest);
         }
 
-        /// <summary>
-        /// Use this method to import data via one /import request.
-        /// Make sure API endpoint supports this.
-        /// </summary>
-        internal static void ImportData(this WitConfiguration configuration, Manifest manifest)
-        {
-            var manifestData = GetSanitizedManifestString(manifest);
-            
-            var request = configuration.ImportData(GetAppName(configuration), manifestData);
-            PerformRequest(request, (error) =>
-            {
-                if (!string.IsNullOrEmpty(error))
-                {
-                    VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifestData}");
-                }
-                else
-                {
-                    VLog.D("Successfully imported generated manifest JSON into WIT.ai.");
-                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
-                }
-            });
-        }
         #endregion
 
         #region REFRESH

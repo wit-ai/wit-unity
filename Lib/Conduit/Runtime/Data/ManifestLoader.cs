@@ -17,11 +17,7 @@ namespace Meta.Conduit
     /// </summary>
     class ManifestLoader : IManifestLoader
     {
-        /// <summary>
-        /// Loads the manifest from file and into a <see cref="Manifest"/> structure.
-        /// </summary>
-        /// <param name="filePath">The path to the manifest file.</param>
-        /// <returns>The loaded manifest object.</returns>
+        /// <inheritdoc/>
         public Manifest LoadManifest(string manifestLocalPath)
         {
             int extIndex = manifestLocalPath.LastIndexOf('.');
@@ -34,7 +30,13 @@ namespace Meta.Conduit
             }
 
             string rawJson = jsonFile.text;
-            var manifest = JsonConvert.DeserializeObject<Manifest>(rawJson);
+            return LoadManifestFromString(rawJson);
+        }
+
+        /// <inheritdoc/>
+        public Manifest LoadManifestFromString(string manifestText)
+        {
+            var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText);
             if (manifest.ResolveActions())
             {
                 VLog.D($"Successfully Loaded Conduit manifest");

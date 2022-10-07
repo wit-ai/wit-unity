@@ -231,8 +231,8 @@ namespace Meta.WitAi
         /// <param name="appName">The name of the app as it is defined in wit.ai</param>
         /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public static WitRequest ImportData(this WitConfiguration config, string appName, string manifestData) {
-            
+        public static WitRequest ImportDataRequest(this WitConfiguration config, string appName, string manifestData) {
+
             string encodedImportData = HttpUtility.JavaScriptStringEncode(manifestData);
             string jsonData = "{\"text\":\"" + encodedImportData + "\",\"config_type\":1,\"config_value\":\"\"}";
 

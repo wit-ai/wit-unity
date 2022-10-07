@@ -60,6 +60,17 @@ namespace Meta.Conduit.Editor
         }
 
         /// <summary>
+        /// Generate a manifest with empty entities and actions lists.
+        /// </summary>
+        /// <param name="domain">A friendly name to use for this app.</param>
+        /// <param name="id">The App ID.</param>
+        /// <returns>A JSON representation of the empty manifest.</returns>
+        public string GenerateEmptyManifest(string domain, string id)
+        {
+            return GenerateManifest(new List<IConduitAssembly>(), domain, id);
+        }
+
+        /// <summary>
         /// Extract entities and actions from assemblies marked with the <see cref="ConduitAssemblyAttribute"/> attribute.
         /// </summary>
         /// <returns>Extracted Intents list</returns>

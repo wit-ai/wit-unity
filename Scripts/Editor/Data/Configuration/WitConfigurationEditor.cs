@@ -35,6 +35,8 @@ namespace Meta.WitAi.Windows
         private int _requestTab = 0;
         private bool manifestAvailable = false;
         private bool syncInProgress = false;
+        private bool _didCheckAutoTrainAvailability = false;
+        private bool _isAutoTrainAvailable = false;
 
         private static ConduitStatistics _statistics;
         private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
@@ -183,10 +185,12 @@ namespace Meta.WitAi.Windows
                 {
                     SyncEntities();
                 }
-                GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
-                if (WitEditorUI.LayoutTextButton("Auto train") && manifestAvailable)
-                {
-                    AutoTrainOnWitAi(configuration);
+                if (_isAutoTrainAvailable) {
+                    GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
+                    if (WitEditorUI.LayoutTextButton("Auto train") && manifestAvailable)
+                    {
+                        AutoTrainOnWitAi(configuration);
+                    }
                 }
                 GUI.enabled = true;
                 GUILayout.EndHorizontal();
@@ -513,6 +517,20 @@ namespace Meta.WitAi.Windows
             {
                 configuration.RefreshAppInfo();
             }
+
+            CheckAutoTrainAvailabilityIfNeeded();
+        }
+
+        private void CheckAutoTrainAvailabilityIfNeeded()
+        {
+            if (_didCheckAutoTrainAvailability || !WitConfigurationUtility.IsServerTokenValid(_serverToken)) {
+                return;
+            }
+
+            _didCheckAutoTrainAvailability = true;
+            CheckAutoTrainIsAvailable(configuration, (isAvailable) => {
+                _isAutoTrainAvailable = isAvailable;
+            });
         }
 
         [UnityEditor.Callbacks.DidReloadScripts]
@@ -628,14 +646,24 @@ namespace Meta.WitAi.Windows
         private static void AutoTrainOnWitAi(WitConfiguration configuration)
         {
             var manifest = ManifestLoader.LoadManifest(configuration.ManifestLocalPath);
-
-            // TODO: Replace this call with:
-            //   configuration.ImportData(manifestFile)
-            // when full spec /import API is implemented.
             var intents = ManifestGenerator.ExtractManifestData();
-
             VLog.D($"Auto training on WIT.ai: {intents.Count} intents.");
-            configuration.ImportData(manifest);
+
+            configuration.ImportData(manifest, (isSuccess) => {
+                if (isSuccess) {
+                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
+                } else {
+                    EditorUtility.DisplayDialog("Auto Train", "Failed to start auto train process on WIT.ai.", "OK");
+                }
+            });
+        }
+
+        private static void CheckAutoTrainIsAvailable(WitConfiguration configuration, Action<bool> onComplete)
+        {
+            Meta.WitAi.Data.Info.WitAppInfo appInfo = configuration.GetApplicationInfo();
+            string manifestText = ManifestGenerator.GenerateEmptyManifest(appInfo.name, appInfo.id);
+            var manifest = ManifestLoader.LoadManifestFromString(manifestText);
+            configuration.ImportData(manifest, onComplete);
         }
 
         private static string GetManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)
