@@ -9,7 +9,7 @@
 using UnityEngine;
 using Meta.WitAi.Data.Info;
 
-namespace Facebook.WitAi.Data.Entities
+namespace Meta.WitAi.Data.Entities
 {
     /// <summary>
     /// A configured dynamic entity meant to be placed on dynamic objects.

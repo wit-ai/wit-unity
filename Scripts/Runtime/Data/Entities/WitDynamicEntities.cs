@@ -9,12 +9,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Facebook.WitAi.Interfaces;
+using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
 
-namespace Facebook.WitAi.Data.Entities
+namespace Meta.WitAi.Data.Entities
 {
     [Serializable]
     public class WitDynamicEntities : IDynamicEntitiesProvider, IEnumerable<WitDynamicEntity>

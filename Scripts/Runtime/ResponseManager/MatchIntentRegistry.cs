@@ -9,10 +9,10 @@
 using System;
 using System.Reflection;
 using System.Threading;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi.Utilities;
 using UnityEngine;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     internal class RegisteredMatchIntent
     {

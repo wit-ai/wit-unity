@@ -8,7 +8,7 @@
 
 using System;
 using System.IO;
-using Facebook.WitAi.Configuration;
+using Meta.WitAi.Configuration;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
@@ -17,7 +17,7 @@ using UnityEngine.Serialization;
 using UnityEditor;
 #endif
 
-namespace Facebook.WitAi.Data.Configuration
+namespace Meta.WitAi.Data.Configuration
 {
     public class WitConfiguration : ScriptableObject, IWitRequestConfiguration
     {

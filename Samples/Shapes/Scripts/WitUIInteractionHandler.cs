@@ -10,7 +10,7 @@ using Meta.WitAi.Json;
 using TMPro;
 using UnityEngine;
 
-namespace Facebook.WitAi.Samples.Shapes
+namespace Meta.WitAi.Samples.Shapes
 {
     public class WitUIInteractionHandler : MonoBehaviour
     {

@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Facebook.WitAi.TTS.Data
+namespace Meta.WitAi.TTS.Data
 {
     // Various request load states
     public enum TTSClipLoadState

@@ -7,9 +7,9 @@
  */
 
 using System;
-using Facebook.WitAi.Data;
+using Meta.WitAi.Data;
 
-namespace Facebook.WitAi.Interfaces
+namespace Meta.WitAi.Interfaces
 {
     public interface IAudioInputSource
     {

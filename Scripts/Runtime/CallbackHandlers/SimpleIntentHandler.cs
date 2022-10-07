@@ -10,7 +10,7 @@ using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     [AddComponentMenu("Wit.ai/Response Matchers/Simple Intent Handler")]
     public class SimpleIntentHandler : WitResponseHandler

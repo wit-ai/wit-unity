@@ -9,7 +9,7 @@
 using Meta.WitAi.Json;
 using UnityEngine;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     public abstract class WitResponseHandler : MonoBehaviour
     {

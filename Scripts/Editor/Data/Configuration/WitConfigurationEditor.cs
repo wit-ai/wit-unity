@@ -12,16 +12,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Meta.Conduit.Editor;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Utilities;
 using Meta.Conduit;
 using Meta.WitAi;
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.Windows.Conponents;
+using Meta.WitAi.Windows.Conponents;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     public class WitConfigurationEditor : Editor
     {

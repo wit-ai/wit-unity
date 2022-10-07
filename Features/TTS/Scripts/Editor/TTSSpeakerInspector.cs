@@ -9,10 +9,10 @@
 using System;
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.TTS.Utilities;
-using Facebook.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Utilities;
+using Meta.WitAi.TTS.Data;
 
-namespace Facebook.WitAi.TTS.Editor
+namespace Meta.WitAi.TTS.Editor
 {
     [CustomEditor(typeof(TTSSpeaker), true)]
     public class TTSSpeakerInspector : UnityEditor.Editor

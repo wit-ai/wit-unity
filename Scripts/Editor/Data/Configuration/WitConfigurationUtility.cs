@@ -13,17 +13,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Facebook.WitAi.Windows;
-using Meta.WitAi;
+using Meta.Conduit;
 using Meta.WitAi.Json;
-using Meta.WitAi.Data.Info;
-using Meta.WitAi.Lib.Editor;
 using UnityEditor;
 using UnityEngine;
-using Meta.Conduit;
-using Meta.Conduit.Editor;
+using Meta.WitAi.Lib;
+using Meta.WitAi.Windows;
 
-namespace Facebook.WitAi.Data.Configuration
+namespace Meta.WitAi.Data.Configuration
 {
     public static class WitConfigurationUtility
     {

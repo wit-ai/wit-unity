@@ -8,9 +8,9 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using Facebook.WitAi.TTS.Utilities;
+using Meta.WitAi.TTS.Utilities;
 
-namespace Facebook.WitAi.TTS.Samples
+namespace Meta.WitAi.TTS.Samples
 {
     public class TTSSpeakerInput : MonoBehaviour
     {

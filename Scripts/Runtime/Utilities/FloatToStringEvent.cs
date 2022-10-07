@@ -10,7 +10,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Facebook.WitAi.Utilities
+namespace Meta.WitAi.Utilities
 {
     public class FloatToStringEvent : MonoBehaviour
     {

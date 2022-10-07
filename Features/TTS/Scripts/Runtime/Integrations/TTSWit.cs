@@ -10,15 +10,15 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Events;
-using Facebook.WitAi.TTS.Interfaces;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Events;
+using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi;
 using Meta.WitAi.Requests;
 using UnityEngine.Serialization;
 
-namespace Facebook.WitAi.TTS.Integrations
+namespace Meta.WitAi.TTS.Integrations
 {
     [Serializable]
     public class TTSWitVoiceSettings : TTSVoiceSettings

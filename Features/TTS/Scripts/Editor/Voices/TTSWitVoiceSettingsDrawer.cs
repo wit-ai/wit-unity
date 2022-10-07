@@ -10,13 +10,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using Facebook.WitAi.TTS.Integrations;
-using Facebook.WitAi.Windows;
+using Meta.WitAi.TTS.Integrations;
+using Meta.WitAi.Windows;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
 
-namespace Facebook.WitAi.TTS.Editor.Voices
+namespace Meta.WitAi.TTS.Editor.Voices
 {
     [CustomPropertyDrawer(typeof( TTSWitVoiceSettings))]
     public class TTSWitVoiceSettingsDrawer : PropertyDrawer

@@ -8,9 +8,9 @@
 
 using System;
 using Meta.WitAi;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi.Configuration
+namespace Meta.WitAi.Configuration
 {
     [Serializable]
     public class WitEndpointConfig

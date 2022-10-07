@@ -12,9 +12,9 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi.Windows.Conponents
+namespace Meta.WitAi.Windows.Conponents
 {
   public class WitMultiSelectionPopupContent: PopupWindowContent
   {

@@ -8,11 +8,11 @@
 
 using System;
 using System.Collections;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Interfaces;
+using Meta.WitAi.Data;
+using Meta.WitAi.Interfaces;
 using UnityEngine;
 
-namespace Facebook.WitAi.Lib
+namespace Meta.WitAi.Lib
 {
     // Voice SDK abstract class for handling mic elsewhere
     public abstract class MicBase : MonoBehaviour, IAudioInputSource

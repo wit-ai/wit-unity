@@ -6,11 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Data.Intents;
+using Meta.WitAi.Data.Entities;
+using Meta.WitAi.Data.Intents;
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public static class WitResultUtilities
     {

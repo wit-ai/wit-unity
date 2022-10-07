@@ -8,13 +8,13 @@
 
 using UnityEditor;
 using Meta.WitAi.Data.Info;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Inspectors;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.CallbackHandlers;
+using Meta.WitAi.Data;
+using Meta.WitAi.Inspectors;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.CallbackHandlers;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     public static class WitEditorMenu
     {

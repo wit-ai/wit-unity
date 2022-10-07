@@ -8,7 +8,7 @@
 
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi.Data
+namespace Meta.WitAi.Data
 {
     public class WitIntValue : WitValue
     {

@@ -7,11 +7,11 @@
  */
 
 using System.Reflection;
-using Facebook.WitAi.Data;
+using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using Meta.Conduit;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     internal class WitConduitParameterProvider : ParameterProvider
     {

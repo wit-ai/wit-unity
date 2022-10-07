@@ -8,7 +8,7 @@
 
 using UnityEngine;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public static class WitTexts
     {

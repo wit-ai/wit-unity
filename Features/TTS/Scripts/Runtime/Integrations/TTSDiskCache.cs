@@ -10,15 +10,15 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
-using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Events;
-using Facebook.WitAi.TTS.Interfaces;
-using Facebook.WitAi.TTS.Utilities;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Events;
+using Meta.WitAi.TTS.Interfaces;
+using Meta.WitAi.TTS.Utilities;
+using Meta.WitAi.Utilities;
 using Meta.WitAi;
 using Meta.WitAi.Requests;
 
-namespace Facebook.WitAi.TTS.Integrations
+namespace Meta.WitAi.TTS.Integrations
 {
     public class TTSDiskCache : MonoBehaviour, ITTSDiskCacheHandler
     {

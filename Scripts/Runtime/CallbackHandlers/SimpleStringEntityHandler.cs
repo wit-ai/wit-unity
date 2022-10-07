@@ -11,7 +11,7 @@ using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     [AddComponentMenu("Wit.ai/Response Matchers/Simple String Entity Handler")]
     public class SimpleStringEntityHandler : WitResponseHandler

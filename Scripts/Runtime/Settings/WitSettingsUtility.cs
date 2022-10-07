@@ -12,7 +12,7 @@ using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public static class WitSettingsUtility
     {

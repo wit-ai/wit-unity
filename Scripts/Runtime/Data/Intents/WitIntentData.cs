@@ -8,7 +8,7 @@
 
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi.Data.Intents
+namespace Meta.WitAi.Data.Intents
 {
     public class WitIntentData
     {

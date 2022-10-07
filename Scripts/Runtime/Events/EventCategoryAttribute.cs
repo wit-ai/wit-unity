@@ -9,7 +9,7 @@
 using System;
 using UnityEngine;
 
-namespace Facebook.WitAi.Events
+namespace Meta.WitAi.Events
 {
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
     public class EventCategoryAttribute : PropertyAttribute

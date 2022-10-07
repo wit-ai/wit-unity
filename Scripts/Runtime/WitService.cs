@@ -12,13 +12,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Events;
-using Facebook.WitAi.Interfaces;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data;
+using Meta.WitAi.Events;
+using Meta.WitAi.Interfaces;
 using UnityEngine.Events;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public class WitService : MonoBehaviour, IWitRuntimeConfigProvider, IVoiceEventProvider
     {

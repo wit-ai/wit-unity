@@ -9,7 +9,7 @@
 using System;
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi.Data
+namespace Meta.WitAi.Data
 {
     [Serializable]
     public class VoiceSession

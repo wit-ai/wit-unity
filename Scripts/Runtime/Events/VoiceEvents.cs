@@ -7,12 +7,12 @@
  */
 
 using System;
-using Facebook.WitAi.Interfaces;
+using Meta.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
-namespace Facebook.WitAi.Events
+namespace Meta.WitAi.Events
 {
     [Serializable]
     public class VoiceEvents : EventRegistry, ITranscriptionEvent, IAudioInputEvents

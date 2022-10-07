@@ -7,11 +7,11 @@
  */
 
 using System;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using UnityEngine;
 
-namespace Facebook.WitAi.Configuration
+namespace Meta.WitAi.Configuration
 {
     [Serializable]
     public abstract class WitConfigurationData

@@ -10,7 +10,7 @@ using System;
 using Meta.WitAi.Json;
 using UnityEngine;
 
-namespace Facebook.WitAi.Data
+namespace Meta.WitAi.Data
 {
     public class WitFloatValue : WitValue
     {

@@ -8,12 +8,12 @@
 
 using System;
 using System.Linq;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     [CustomEditor(typeof(SimpleStringEntityHandler))]
     public class SimpleStringEntityHandlerEditor : Editor

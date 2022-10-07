@@ -14,9 +14,9 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data;
+using Meta.WitAi.Data.Configuration;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
@@ -26,7 +26,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     /// <summary>
     /// Manages a single request lifecycle when sending/receiving data from Wit.ai.

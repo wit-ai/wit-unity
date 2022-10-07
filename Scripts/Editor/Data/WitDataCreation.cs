@@ -8,13 +8,13 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data.Configuration;
 using UnityEditor;
 using UnityEngine;
 
 
-namespace Facebook.WitAi.Data
+namespace Meta.WitAi.Data
 {
     public class WitDataCreation
     {

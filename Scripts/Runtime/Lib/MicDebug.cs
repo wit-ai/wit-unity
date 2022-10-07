@@ -8,11 +8,11 @@
 
 using System;
 using System.IO;
-using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Utilities;
+using Meta.WitAi.Interfaces;
+using Meta.WitAi.Utilities;
 using UnityEngine;
 
-namespace Facebook.WitAi.Lib
+namespace Meta.WitAi.Lib
 {
     public class MicDebug : MonoBehaviour
     {

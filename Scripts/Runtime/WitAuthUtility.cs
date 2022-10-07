@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 #if UNITY_EDITOR
 
 #endif
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public class WitAuthUtility
     {

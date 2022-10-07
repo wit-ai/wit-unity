@@ -11,7 +11,7 @@ using Meta.WitAi.Json;
 using TMPro;
 using UnityEngine;
 
-namespace Facebook.WitAi.Samples.ResponseDebugger
+namespace Meta.WitAi.Samples.ResponseDebugger
 {
     public class WitUIInteractionHandler : MonoBehaviour
     {

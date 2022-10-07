@@ -8,9 +8,9 @@
 
 using System;
 using UnityEngine;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     public abstract class WitConfigurationWindow : BaseWitWindow
     {

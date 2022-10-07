@@ -7,10 +7,10 @@
  */
 
 using System;
-using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Events;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Events;
 
-namespace Facebook.WitAi.TTS.Interfaces
+namespace Meta.WitAi.TTS.Interfaces
 {
     public interface ITTSDiskCacheHandler
     {

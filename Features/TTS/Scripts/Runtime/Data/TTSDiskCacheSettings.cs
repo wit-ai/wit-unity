@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Facebook.WitAi.TTS.Data
+namespace Meta.WitAi.TTS.Data
 {
     // TTS Cache disk location
     public enum TTSDiskCacheLocation

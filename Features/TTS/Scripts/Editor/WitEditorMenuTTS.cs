@@ -6,10 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Facebook.WitAi.TTS.Editor.Preload;
+using Meta.WitAi.TTS.Editor.Preload;
 using UnityEditor;
 
-namespace Facebook.WitAi.TTS.Editor.Windows
+namespace Meta.WitAi.TTS.Editor.Windows
 {
     public static class WitEditorMenu
     {

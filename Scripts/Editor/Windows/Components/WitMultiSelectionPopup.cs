@@ -11,9 +11,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi.Windows.Conponents
+namespace Meta.WitAi.Windows.Conponents
 {
   public static class WitMultiSelectionPopup
   {

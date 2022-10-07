@@ -10,7 +10,7 @@ using UnityEngine;
 using UnityEditor;
 using Meta.WitAi.Data.Info;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     [CustomPropertyDrawer(typeof(WitVoiceInfo))]
     public class WitVoiceInfoPropertyDrawer : WitPropertyDrawer

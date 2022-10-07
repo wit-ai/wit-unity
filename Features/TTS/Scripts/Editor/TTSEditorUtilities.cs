@@ -6,17 +6,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Editor.Voices;
-using Facebook.WitAi.TTS.Integrations;
-using Facebook.WitAi.TTS.Utilities;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Editor.Voices;
+using Meta.WitAi.TTS.Integrations;
+using Meta.WitAi.TTS.Utilities;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using UnityEditor;
 using UnityEngine;
 
-namespace Facebook.WitAi.TTS.Editor
+namespace Meta.WitAi.TTS.Editor
 {
     public static class TTSEditorUtilities
     {

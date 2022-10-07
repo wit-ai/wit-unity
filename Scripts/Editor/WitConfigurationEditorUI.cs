@@ -8,9 +8,9 @@
 
 using UnityEditor;
 using UnityEngine;
-using Facebook.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Configuration;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public static class WitConfigurationEditorUI
     {

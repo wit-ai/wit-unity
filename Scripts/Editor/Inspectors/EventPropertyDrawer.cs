@@ -12,7 +12,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor;
 
-namespace Facebook.WitAi.Events.Editor
+namespace Meta.WitAi.Events.Editor
 {
     public abstract class EventPropertyDrawer<T> : PropertyDrawer
     {

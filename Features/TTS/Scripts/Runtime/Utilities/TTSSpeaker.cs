@@ -10,11 +10,11 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using Facebook.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Data;
 using UnityEngine.Serialization;
 using Meta.WitAi;
 
-namespace Facebook.WitAi.TTS.Utilities
+namespace Meta.WitAi.TTS.Utilities
 {
     [Serializable]
     public class TTSSpeakerEvent : UnityEvent<TTSSpeaker, string>

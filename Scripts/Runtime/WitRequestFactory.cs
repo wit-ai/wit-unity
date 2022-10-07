@@ -11,16 +11,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web;
-using Facebook.WitAi.Configuration;
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Data.Entities;
-using Facebook.WitAi.Interfaces;
-using Facebook.WitAi.Lib;
 using Meta.Conduit;
+using Meta.WitAi.Configuration;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Data.Entities;
+using Meta.WitAi.Interfaces;
+using Meta.WitAi.Lib;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi
+namespace Meta.WitAi
 {
     public static class WitRequestFactory
     {

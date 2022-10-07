@@ -11,7 +11,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     // Edit Type
     public enum WitPropertyEditType

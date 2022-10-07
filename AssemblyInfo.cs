@@ -9,4 +9,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("witai.tests")]
-[assembly: InternalsVisibleTo("Facebook.WitAi.Tests.Editor")]
+[assembly: InternalsVisibleTo("Meta.WitAi.Tests.Editor")]

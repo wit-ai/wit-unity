@@ -9,13 +9,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Facebook.WitAi.Data;
+using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     [AddComponentMenu("Wit.ai/Response Matchers/Response Matcher")]
     public class WitResponseMatcher : WitResponseHandler

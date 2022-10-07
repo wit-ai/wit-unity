@@ -8,9 +8,9 @@
 
 using UnityEngine;
 using Meta.WitAi.Data.Info;
-using Facebook.WitAi.Interfaces;
+using Meta.WitAi.Interfaces;
 
-namespace Facebook.WitAi.Data.Entities
+namespace Meta.WitAi.Data.Entities
 {
     /// <summary>
     /// Singleton registry for tracking any objects owned defined in entities in

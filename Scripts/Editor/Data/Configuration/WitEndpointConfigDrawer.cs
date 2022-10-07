@@ -10,7 +10,7 @@ using UnityEditor;
 using System.Reflection;
 using Meta.WitAi;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     public class WitEndpointConfigDrawer : WitPropertyDrawer
     {

@@ -8,7 +8,7 @@
 
 using UnityEditor;
 
-namespace Facebook.WitAi.Lib
+namespace Meta.WitAi.Lib
 {
     [CustomEditor(typeof(Mic))]
     public class MicEditor : Editor

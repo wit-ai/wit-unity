@@ -8,11 +8,11 @@
 
 using System;
 using System.Collections.Generic;
-using Facebook.WitAi.Data;
+using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using Meta.Conduit.Editor;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     /// <summary>
     /// Validates whether a data type if supported by Wit.

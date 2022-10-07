@@ -12,12 +12,12 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using UnityEngine;
-using Facebook.WitAi.TTS.Data;
-using Facebook.WitAi.TTS.Events;
-using Facebook.WitAi.TTS.Interfaces;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Events;
+using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi;
 
-namespace Facebook.WitAi.TTS
+namespace Meta.WitAi.TTS
 {
     public abstract class TTSService : MonoBehaviour
     {

@@ -8,12 +8,12 @@
 
 using System;
 using System.Collections.Generic;
-using Facebook.WitAi.Data;
-using Facebook.WitAi.Lib;
+using Meta.WitAi.Data;
+using Meta.WitAi.Lib;
 using Meta.Conduit.Editor;
 using Meta.WitAi.Json;
 
-namespace Facebook.WitAi.Windows
+namespace Meta.WitAi.Windows
 {
     /// <summary>
     /// Filters out parameters of specific types.

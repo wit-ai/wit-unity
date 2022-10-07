@@ -9,12 +9,12 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using Facebook.WitAi.Data.Configuration;
-using Facebook.WitAi.Windows;
+using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Windows;
 using UnityEditor;
 using UnityEngine;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     [CustomEditor(typeof(SimpleIntentHandler))]
     public class SimpleIntentHandlerEditor : Editor

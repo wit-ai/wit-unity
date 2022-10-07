@@ -9,7 +9,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Facebook.WitAi.TTS.Samples
+namespace Meta.WitAi.TTS.Samples
 {
     public class TTSErrorText : MonoBehaviour
     {

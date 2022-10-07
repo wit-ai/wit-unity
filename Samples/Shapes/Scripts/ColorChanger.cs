@@ -9,7 +9,7 @@
 using Meta.WitAi.Json;
 using UnityEngine;
 
-namespace Facebook.WitAi.Samples.Shapes
+namespace Meta.WitAi.Samples.Shapes
 {
     public class ColorChanger : MonoBehaviour
     {

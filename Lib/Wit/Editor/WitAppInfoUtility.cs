@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
 
-namespace Meta.WitAi.Lib.Editor
+namespace Meta.WitAi.Lib
 {
     public static class WitAppInfoUtility
     {

@@ -10,7 +10,7 @@ using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Scripting;
 
-namespace Facebook.WitAi.Data.Entities
+namespace Meta.WitAi.Data.Entities
 {
     public abstract class WitEntityDataBase<T>
     {

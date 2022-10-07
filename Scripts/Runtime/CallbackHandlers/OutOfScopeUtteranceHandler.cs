@@ -10,7 +10,7 @@ using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Facebook.WitAi.CallbackHandlers
+namespace Meta.WitAi.CallbackHandlers
 {
     /// <summary>
     /// Triggers an event when no intents were recognized in an utterance.
