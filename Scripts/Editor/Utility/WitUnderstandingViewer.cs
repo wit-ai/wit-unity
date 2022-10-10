@@ -342,7 +342,7 @@ namespace Meta.WitAi.Windows
                 _status = WitTexts.Texts.UnderstandingViewerLoadingLabel;
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
-                _request = witConfiguration.MessageRequest(_utterance, new WitRequestOptions());
+                _request = witConfiguration.CreateMessageRequest(_utterance, new WitRequestOptions());
                 _request.onResponse += (r) => OnResponse(r?.ResponseData);
                 _request.Request();
             }

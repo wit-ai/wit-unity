@@ -277,7 +277,7 @@ namespace Meta.WitAi.Data.Configuration
         internal static void ImportData(this WitConfiguration configuration, Manifest manifest, Action<bool> onComplete = null)
         {
             var manifestData = GetSanitizedManifestString(manifest);
-            var request = configuration.ImportDataRequest(GetAppName(configuration), manifestData);
+            var request = configuration.CreateImportDataRequest(GetAppName(configuration), manifestData);
             PerformRequest(request, (error) =>
             {
                 if (!string.IsNullOrEmpty(error))

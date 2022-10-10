@@ -123,7 +123,7 @@ namespace Meta.WitAi
         /// <param name="config"></param>
         /// <param name="query">Text string to process with the NLU</param>
         /// <returns></returns>
-        public static WitRequest MessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalDynamicEntities = null)
+        public static WitRequest CreateMessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalDynamicEntities = null)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>
             {
@@ -159,7 +159,7 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static WitRequest SpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalEntityProviders = null)
+        public static WitRequest CreateSpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
 
@@ -188,7 +188,7 @@ namespace Meta.WitAi
         ///<param name="config"></param>
         /// <param name="requestOptions"></param>
         /// <returns>WitRequest</returns>
-        public static WitRequest DictationRequest(this WitConfiguration config, WitRequestOptions requestOptions)
+        public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions)
         {
             List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
             var path = WitEndpointConfig.GetEndpointConfig(config).Dictation;
@@ -231,7 +231,7 @@ namespace Meta.WitAi
         /// <param name="appName">The name of the app as it is defined in wit.ai</param>
         /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public static WitRequest ImportDataRequest(this WitConfiguration config, string appName, string manifestData) {
+        public static WitRequest CreateImportDataRequest(this WitConfiguration config, string appName, string manifestData) {
 
             string encodedImportData = HttpUtility.JavaScriptStringEncode(manifestData);
             string jsonData = "{\"text\":\"" + encodedImportData + "\",\"config_type\":1,\"config_value\":\"\"}";
