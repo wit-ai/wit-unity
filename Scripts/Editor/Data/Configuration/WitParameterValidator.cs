@@ -22,7 +22,7 @@ namespace Meta.WitAi.Windows
         /// <summary>
         /// These are the types that we natively support.
         /// </summary>
-        private readonly HashSet<Type> builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
+        private readonly HashSet<Type> _builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
 
         /// <summary>
         /// Tests if a parameter type can be supplied directly to a callback method from.
@@ -31,7 +31,7 @@ namespace Meta.WitAi.Windows
         /// <returns>True if the parameter type is supported. False otherwise.</returns>
         public bool IsSupportedParameterType(Type type)
         {
-            return type.IsEnum || this.builtInTypes.Contains(type) || type == typeof(WitResponseNode) || type == typeof(VoiceSession);
+            return type.IsEnum || _builtInTypes.Contains(type) || type == typeof(WitResponseNode) || type == typeof(VoiceSession);
         }
     }
 }

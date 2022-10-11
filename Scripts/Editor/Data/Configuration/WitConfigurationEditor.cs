@@ -141,8 +141,6 @@ namespace Meta.WitAi.Windows
 
         private void LayoutConduitContent()
         {
-
-
             if (!WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
                 GUILayout.TextArea(WitTexts.Texts.ConfigurationConduitMissingTokenLabel, WitStyles.LabelError);
@@ -189,7 +187,10 @@ namespace Meta.WitAi.Windows
                     GUI.enabled = configuration.useConduit && manifestAvailable && !syncInProgress;
                     if (WitEditorUI.LayoutTextButton("Auto train") && manifestAvailable)
                     {
-                        AutoTrainOnWitAi(configuration);
+                        SyncEntities(() =>
+                        {
+                            AutoTrainOnWitAi(configuration);
+                        });
                     }
                 }
                 GUI.enabled = true;
@@ -610,7 +611,7 @@ namespace Meta.WitAi.Windows
         }
 
         // Sync entities
-        private void SyncEntities()
+        private void SyncEntities(Action successCallback = null)
         {
             // Fail without server token
             bool validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
@@ -634,11 +635,12 @@ namespace Meta.WitAi.Windows
                 syncInProgress = false;
                 if (!success)
                 {
-                    VLog.E($"Conduit Sync Failed\nError: {data}");
+                    VLog.E($"Conduit failed to synchronize entities\nError: {data}");
                 }
                 else
                 {
-                    VLog.D("Conduit Sync Success");
+                    VLog.D("Conduit entities successfully synchronized");
+                    successCallback?.Invoke();
                 }
             }));
         }

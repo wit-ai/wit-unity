@@ -158,6 +158,7 @@ namespace Meta.Conduit.Editor
                     if (!supported)
                     {
                         compatibleParameters = false;
+                        VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
                         continue;
                     }
                     

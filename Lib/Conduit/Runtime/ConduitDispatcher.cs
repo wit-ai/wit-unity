@@ -24,33 +24,33 @@ namespace Meta.Conduit
         /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
         /// </summary>
-        private Manifest manifest;
+        private Manifest _manifest;
 
         /// <summary>
         /// The manifest loader.
         /// </summary>
-        private readonly IManifestLoader manifestLoader;
+        private readonly IManifestLoader _manifestLoader;
 
         /// <summary>
         /// Resolves instances (objects) based on their type.
         /// </summary>
-        private readonly IInstanceResolver instanceResolver;
+        private readonly IInstanceResolver _instanceResolver;
 
         /// <summary>
         /// Resolves the actual parameters for method invocations.
         /// </summary>
-        private readonly IParameterProvider parameterProvider;
+        private readonly IParameterProvider _parameterProvider;
 
         /// <summary>
         /// Maps internal parameter names to fully qualified parameter names (roles/slots).
         /// </summary>
-        private readonly Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _parameterToRoleMap = new Dictionary<string, string>();
 
         public ConduitDispatcher(IManifestLoader manifestLoader, IInstanceResolver instanceResolver, IParameterProvider parameterProvider)
         {
-            this.manifestLoader = manifestLoader;
-            this.instanceResolver = instanceResolver;
-            this.parameterProvider = parameterProvider;
+            _manifestLoader = manifestLoader;
+            _instanceResolver = instanceResolver;
+            _parameterProvider = parameterProvider;
         }
 
         /// <summary>
@@ -59,25 +59,25 @@ namespace Meta.Conduit
         /// <param name="manifestFilePath">The path to the manifest file.</param>
         public void Initialize(string manifestFilePath)
         {
-            if (this.manifest != null)
+            if (_manifest != null)
             {
                 return;
             }
 
-            manifest = this.manifestLoader.LoadManifest(manifestFilePath);
-            if (manifest == null)
+            _manifest = _manifestLoader.LoadManifest(manifestFilePath);
+            if (_manifest == null)
             {
                 return;
             }
 
             // Map fully qualified role names to internal parameters.
-            foreach (var action in manifest.Actions)
+            foreach (var action in _manifest.Actions)
             {
                 foreach (var parameter in action.Parameters)
                 {
-                    if (!parameterToRoleMap.ContainsKey(parameter.InternalName))
+                    if (!_parameterToRoleMap.ContainsKey(parameter.InternalName))
                     {
-                        parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);
+                        _parameterToRoleMap.Add(parameter.InternalName, parameter.QualifiedName);
                     }
                 }
             }
@@ -91,10 +91,10 @@ namespace Meta.Conduit
         /// <returns></returns>
         private List<InvocationContext> ResolveInvocationContexts(string actionId, float confidence, bool partial)
         {
-            var invocationContexts = manifest.GetInvocationContexts(actionId);
+            var invocationContexts = _manifest.GetInvocationContexts(actionId);
 
             // We may have multiple overloads, find the correct match.
-            return invocationContexts.Where(context => this.CompatibleInvocationContext(context, confidence, partial)).ToList();
+            return invocationContexts.Where(context => CompatibleInvocationContext(context, confidence, partial)).ToList();
         }
 
         /// <summary>
@@ -116,8 +116,8 @@ namespace Meta.Conduit
                 return false;
             }
 
-            StringBuilder log = new StringBuilder();
-            if (!parameters.All(parameter => this.parameterProvider.ContainsParameter(parameter, log)))
+            var log = new StringBuilder();
+            if (!parameters.All(parameter => _parameterProvider.ContainsParameter(parameter, log)))
             {
                 VLog.W($"Failed to dispatch method\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\n{log}");
                 return false;
@@ -136,14 +136,14 @@ namespace Meta.Conduit
         /// <returns>True if all invocations succeeded. False if at least one failed or no callbacks were found.</returns>
         public bool InvokeAction(string actionId, Dictionary<string, object> parameters, float confidence = 1f, bool partial = false)
         {
-            if (!manifest.ContainsAction(actionId))
+            if (!_manifest.ContainsAction(actionId))
             {
                 return false;
             }
 
-            this.parameterProvider.Populate(parameters, this.parameterToRoleMap);
+            _parameterProvider.Populate(parameters, _parameterToRoleMap);
 
-            var invocationContexts = this.ResolveInvocationContexts(actionId, confidence, partial);
+            var invocationContexts = ResolveInvocationContexts(actionId, confidence, partial);
             if (invocationContexts.Count < 1)
             {
                 return false;
@@ -182,13 +182,13 @@ namespace Meta.Conduit
             var parameterObjects = new object[formalParametersInfo.Length];
             for (var i = 0; i < formalParametersInfo.Length; i++)
             {
-                StringBuilder log = new StringBuilder();
-                if (!parameterProvider.ContainsParameter(formalParametersInfo[i], log))
+                var log = new StringBuilder();
+                if (!_parameterProvider.ContainsParameter(formalParametersInfo[i], log))
                 {
                     VLog.W($"Failed to find method param while invoking\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\nParameter Issues\n{log}");
                     return false;
                 }
-                parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i]);
+                parameterObjects[i] = _parameterProvider.GetParameterValue(formalParametersInfo[i]);
             }
 
             if (method.IsStatic)
@@ -208,7 +208,7 @@ namespace Meta.Conduit
             else
             {
                 var allSucceeded = true;
-                foreach (var obj in this.instanceResolver.GetObjectsOfType(invocationContext.Type))
+                foreach (var obj in this._instanceResolver.GetObjectsOfType(invocationContext.Type))
                 {
                     try
                     {
