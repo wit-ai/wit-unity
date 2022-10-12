@@ -29,12 +29,13 @@ namespace Meta.Conduit.Editor
         private const string DEFAULT_ASSEMBLY_NAME = "Assembly-CSharp";
 
         // All Conduit assemblies.
-        private Dictionary<string, IConduitAssembly> _assemblies = new Dictionary<string, IConduitAssembly>();
+        private readonly Dictionary<string, IConduitAssembly> _assemblies = new Dictionary<string, IConduitAssembly>();
 
         private IEnumerable<Assembly> _compilationAssemblies;
-
-        /// <inheritdoc/>
         public HashSet<string> AssembliesToIgnore { get; set; } = new HashSet<string>();
+
+        // The simple names of the assemblies to use in matching against compilation assemblies.
+        private HashSet<string> _shortAssemblyNamesToIgnore = new HashSet<string>();
 
         private IEnumerable<IConduitAssembly> ConduitAssemblies => _assemblies.Values;
 
@@ -88,11 +89,13 @@ namespace Meta.Conduit.Editor
         /// <inheritdoc/>
         public IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType)
         {
+            GenerateExcludedAssembliesShortNames();
+            
             if (_compilationAssemblies == null)
             {
                 _compilationAssemblies = CompilationPipeline.GetAssemblies(assembliesType);
             }
-            return _compilationAssemblies;
+            return _compilationAssemblies.Where(assembly => !_shortAssemblyNamesToIgnore.Contains(assembly.name));
         }
 
         public bool GetSourceCode(Type type, out string sourceCodeFile)
@@ -118,6 +121,22 @@ namespace Meta.Conduit.Editor
             VLog.W($"Failed to find source code for enum {type}");
             sourceCodeFile = string.Empty;
             return false;
+        }
+        
+        private void GenerateExcludedAssembliesShortNames()
+        {
+            _shortAssemblyNamesToIgnore.Clear();
+            foreach (var assemblyName in AssembliesToIgnore)
+            {
+                if (string.IsNullOrEmpty(assemblyName))
+                {
+                    VLog.W("Attempting to exclude invalid assembly name.");
+                    continue;
+                }
+
+                var simpleName = assemblyName.Split(',').First();
+                _shortAssemblyNamesToIgnore.Add(simpleName);
+            }
         }
 
         private bool GetSourceCodeFromAssembly(Assembly assembly, Type type, out string sourceCodeFile)

@@ -554,12 +554,12 @@ namespace Meta.WitAi.Windows
         {
             // Generate
             var startGenerationTime = DateTime.UtcNow;
-            Meta.WitAi.Data.Info.WitAppInfo appInfo = configuration.GetApplicationInfo();
+            var appInfo = configuration.GetApplicationInfo();
             var manifest = ManifestGenerator.GenerateManifest(appInfo.name, appInfo.id);
             var endGenerationTime = DateTime.UtcNow;
 
             // Get file path
-            string fullPath = configuration.GetManifestEditorPath();
+            var fullPath = configuration.GetManifestEditorPath();
             if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
             {
                 fullPath = GetManifestPullPath(configuration, true);
@@ -582,13 +582,13 @@ namespace Meta.WitAi.Windows
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);
             Statistics.AddIncompatibleFrequencies(AssemblyMiner.IncompatibleSignatureFrequency);
             var generationTime = endGenerationTime - startGenerationTime;
-            string unityPath = fullPath.Replace(Application.dataPath, "Assets");
+            var unityPath = fullPath.Replace(Application.dataPath, "Assets");
             AssetDatabase.ImportAsset(unityPath);
 
-            string configName = configuration.name;
-            string manifestName = Path.GetFileNameWithoutExtension(unityPath);
+            var configName = configuration.name;
+            var manifestName = Path.GetFileNameWithoutExtension(unityPath);
             #if UNITY_2021_2_OR_NEWER
-            string configPath = AssetDatabase.GetAssetPath(configuration);
+            var configPath = AssetDatabase.GetAssetPath(configuration);
             configName = $"<a href=\"{configPath}\">{configName}</a>";
             manifestName = $"<a href=\"{unityPath}\">{manifestName}</a>";
             #endif
@@ -603,10 +603,11 @@ namespace Meta.WitAi.Windows
         // Show dialog to disable/enable assemblies
         private void PresentAssemblySelectionDialog()
         {
-            List<string> assembliesNames = AssemblyWalker.GetAllAssemblies().Select(a => a.FullName).ToList();
-            var disabledAssembliesNames = AssemblyWalker.AssembliesToIgnore;
-            WitMultiSelectionPopup.Show(assembliesNames, disabledAssembliesNames, (disabledAssemblies) => {
+            var assemblyNames = AssemblyWalker.GetAllAssemblies().Select(a => a.FullName).ToList();
+            AssemblyWalker.AssembliesToIgnore = new HashSet<string>(configuration.excludedAssemblies);
+            WitMultiSelectionPopup.Show(assemblyNames, AssemblyWalker.AssembliesToIgnore, (disabledAssemblies) => {
                 AssemblyWalker.AssembliesToIgnore = new HashSet<string>(disabledAssemblies);
+                configuration.excludedAssemblies = new List<string>(AssemblyWalker.AssembliesToIgnore);
             });
         }
 
@@ -614,7 +615,7 @@ namespace Meta.WitAi.Windows
         private void SyncEntities(Action successCallback = null)
         {
             // Fail without server token
-            bool validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
+            var validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
             if (!validServerToken)
             {
                 VLog.E($"Conduit Sync Failed\nError: Invalid server token");

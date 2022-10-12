@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Meta.WitAi.Configuration;
 using Meta.WitAi;
@@ -66,6 +67,11 @@ namespace Meta.WitAi.Data.Configuration
         [SerializeField] private string _manifestLocalPath;
 
         /// <summary>
+        /// The assemblies that we want to exclude from Conduit.
+        /// </summary>
+        [SerializeField] public List<string> excludedAssemblies = new List<string>();
+
+        /// <summary>
         /// Safe access of local path
         /// </summary>
         public string ManifestLocalPath
@@ -111,8 +117,8 @@ namespace Meta.WitAi.Data.Configuration
         }
 
         // Logger invalid warnings
-        public const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
-        public const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
+        private const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
+        private const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
             "App Info Not Set - Has Client Token";
         public string GetLoggerAppId()
         {
