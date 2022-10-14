@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit
 {
@@ -18,6 +19,6 @@ namespace Meta.Conduit
     {
         public List<WitRole> roles { get; set; } = new List<WitRole>();
 
-        public List<WitKeyword> keywords { get; set; } = new List<WitKeyword>();
+        public List<WitEntityKeywordInfo> keywords { get; set; } = new List<WitEntityKeywordInfo>();
     }
 }

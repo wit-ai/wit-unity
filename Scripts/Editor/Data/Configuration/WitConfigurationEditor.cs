@@ -640,7 +640,7 @@ namespace Meta.WitAi.Windows
                 }
                 else
                 {
-                    VLog.D("Conduit entities successfully synchronized");
+                    Debug.Log("Conduit entities successfully synchronized");
                     successCallback?.Invoke();
                 }
             }));

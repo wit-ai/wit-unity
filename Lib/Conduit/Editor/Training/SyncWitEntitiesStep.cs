@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Meta.Conduit.Editor.Training;
+using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace Meta.Conduit.Editor
     {
         // Maps CLR types to "some" Wit built in types. We can expand this list as needed.
         // Key is CLR type and value is Wit type.
-        private readonly Dictionary<string, string> builtInTypes = new Dictionary<string, string>()
+        private readonly Dictionary<string, string> _builtInTypes = new Dictionary<string, string>()
         {
             {"Int32", "wit$number"}
         };
@@ -42,7 +43,7 @@ namespace Meta.Conduit.Editor
             var allEntities = this.Manifest.Entities.ToList();
 
             // Add all the built in types to the manifest entities.
-            foreach (var builtInType in builtInTypes)
+            foreach (var builtInType in _builtInTypes)
             {
                 allEntities.Add(new ManifestEntity()
                 {
@@ -165,10 +166,10 @@ namespace Meta.Conduit.Editor
 
         private IEnumerator TrainEntity(ManifestEntity entity, Manifest manifest, StepResult callback)
         {
-            var keywords = new List<WitKeyword>();
+            var keywords = new List<WitEntityKeywordInfo>();
             foreach (var keyword in entity.Values)
             {
-                keywords.Add(new WitKeyword()
+                keywords.Add(new WitEntityKeywordInfo()
                 {
                     keyword = keyword,
                     synonyms = new List<string>()
@@ -182,7 +183,7 @@ namespace Meta.Conduit.Editor
             {
                 name = entity.Name,
                 keywords = keywords,
-                roles = this.GetRolesForEntityType(entity.ID).ToList()
+                roles = GetRolesForEntityType(entity.ID).ToList()
             };
 
             var witOutgoingEntity = new WitOutgoingEntity(witIncomingEntity);

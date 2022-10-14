@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Meta.WitAi;
+using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
@@ -187,11 +188,11 @@ namespace Meta.Conduit.Editor
                 return false;
             }
 
-            var newValues = new List<WitKeyword>();
+            var newValues = new List<WitEntityKeywordInfo>();
 
             foreach (var keyword in delta.InWitOnly)
             {
-                newValues.Add(new WitKeyword()
+                newValues.Add(new WitEntityKeywordInfo()
                 {
                     keyword = keyword.keyword
                 });
@@ -204,7 +205,7 @@ namespace Meta.Conduit.Editor
 
         private EnumCodeWrapper GetEnumWrapper(ManifestEntity manifestEntity)
         {
-            var qualifiedName = string.IsNullOrEmpty(manifestEntity.Namespace)
+            var qualifiedTypeName = string.IsNullOrEmpty(manifestEntity.Namespace)
                 ? $"{manifestEntity.ID}"
                 : $"{manifestEntity.Namespace}.{manifestEntity.ID}";
             var assemblies = _assemblyWalker.GetTargetAssemblies()
@@ -212,13 +213,21 @@ namespace Meta.Conduit.Editor
 
             if (assemblies.Count() != 1)
             {
-                Debug.LogError($"Expected one assembly for type {qualifiedName} but found {assemblies.Count()}");
+                Debug.LogError($"Expected one assembly for type {qualifiedTypeName} but found {assemblies.Count()}");
                 throw new InvalidOperationException();
             }
 
-            var enumType = assemblies.First().GetType(qualifiedName);
+            var enumType = assemblies.First().GetType(qualifiedTypeName);
 
-            return GetEnumWrapper(enumType, manifestEntity.ID);
+            try
+            {
+                return GetEnumWrapper(enumType, manifestEntity.ID);
+            }
+            catch (Exception e)
+            {
+                VLog.E($"Failed to get wrapper for {qualifiedTypeName} resolved as type {enumType.FullName}");
+                throw;
+            }
         }
 
         private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
@@ -261,7 +270,7 @@ namespace Meta.Conduit.Editor
             manifestEntityValues.ExceptWith(originalWitValues);
 
             delta.InLocalOnly = manifestEntityValues.ToList();
-            delta.InWitOnly = witEntityValues.ToList().Select(keyword => new Meta.WitAi.Data.Info.WitEntityKeywordInfo
+            delta.InWitOnly = witEntityValues.ToList().Select(keyword => new WitEntityKeywordInfo
             {
                 keyword = keyword
             }).ToList();
@@ -275,7 +284,7 @@ namespace Meta.Conduit.Editor
             var allSuccessful = true;
             foreach (var entry in delta.InLocalOnly)
             {
-                var keyword = new WitKeyword()
+                var keyword = new WitEntityKeywordInfo()
                 {
                     keyword = entry,
                     synonyms = new List<string>()
@@ -313,7 +322,7 @@ namespace Meta.Conduit.Editor
                 yield break;
             }
 
-            var entityNames = JsonConvert.DeserializeObject<List<EntityRecord>>(response);
+            var entityNames = JsonConvert.DeserializeObject<List<WitEntityInfo>>(response);
             if (entityNames == null)
             {
                 Debug.LogError($"Wit Entities Decode Failed\nJSON:\n{response}");
@@ -351,14 +360,6 @@ namespace Meta.Conduit.Editor
             }
 
             callBack(entity);
-        }
-
-        /// <summary>
-        /// Private class used for deserializing entity records from Wit.Ai.
-        /// </summary>
-        private struct EntityRecord
-        {
-            public string name;
         }
     }
 }
