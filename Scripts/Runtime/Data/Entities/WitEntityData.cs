@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -90,7 +91,7 @@ namespace Meta.WitAi.Data.Entities
         public static implicit operator bool(WitEntityFloatData data) =>
             null != data && data.hasData;
 
-        public bool Approximately(float v) => Mathf.Approximately(value, v);
+        public bool Approximately(float v, float tolerance = .001f) => Math.Abs(v - value) < tolerance;
         public static bool operator ==(WitEntityFloatData data, float value) => data?.value == value;
         public static bool operator !=(WitEntityFloatData data, float value) => !(data == value);
         public static bool operator ==(WitEntityFloatData data, int value) => data?.value == value;
