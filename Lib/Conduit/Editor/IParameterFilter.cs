@@ -27,7 +27,7 @@ namespace Meta.Conduit.Editor
         /// </summary>
         /// <param name="typeName">The name of the data type.</param>
         /// <returns>True if the parameter type should be filtered out. False otherwise.</returns>
-        public bool ShouldFilterOut(string typeName);
+        bool ShouldFilterOut(string typeName);
 
     }
 }
