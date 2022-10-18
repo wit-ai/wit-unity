@@ -153,17 +153,55 @@ namespace Meta.WitAi
                 TranscriptionProvider = RuntimeConfiguration.customTranscriptionProvider;
             }
 
-            AudioBuffer.Instance.Events.OnMicLevelChanged.AddListener(OnMicLevelChanged);
-            AudioBuffer.Instance.Events.OnByteDataReady.AddListener(OnByteDataReady);
-            AudioBuffer.Instance.Events.OnSampleReady += OnMicSampleReady;
+            SetMicDelegates(true);
 
             _dynamicEntityProviders = GetComponents<IDynamicEntitiesProvider>();
         }
-
+        // Remove mic delegates
         protected void OnDisable()
         {
             AudioBufferEvents e = AudioBuffer.Instance?.Events;
-            if (e != null)
+            SetMicDelegates(false);
+        }
+        // On scene refresh
+        protected virtual void OnLevelWasLoaded(int level)
+        {
+            SetMicDelegates(true);
+        }
+        // Toggle audio events
+        private AudioBuffer _buffer;
+        private bool _bufferDelegates = false;
+        protected void SetMicDelegates(bool add)
+        {
+            // Obtain buffer
+            if (_buffer == null)
+            {
+                _buffer = AudioBuffer.Instance;
+                _bufferDelegates = false;
+            }
+            // Get events if possible
+            AudioBufferEvents e = _buffer?.Events;
+            if (e == null)
+            {
+                return;
+            }
+            // Already set
+            if (_bufferDelegates == add)
+            {
+                return;
+            }
+            // Set delegates
+            _bufferDelegates = add;
+
+            // Add delegates
+            if (add)
+            {
+                e.OnMicLevelChanged.AddListener(OnMicLevelChanged);
+                e.OnByteDataReady.AddListener(OnByteDataReady);
+                e.OnSampleReady += OnMicSampleReady;
+            }
+            // Remove delegates
+            else
             {
                 e.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
                 e.OnByteDataReady.RemoveListener(OnByteDataReady);
