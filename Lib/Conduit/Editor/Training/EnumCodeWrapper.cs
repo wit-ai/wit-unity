@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using Microsoft.CSharp;
 
@@ -46,24 +47,28 @@ namespace Meta.Conduit.Editor
                 throw new ArgumentException("Type must be an enumeration.", nameof(enumType));
             }
 
-            var enumValues = new List<WitEntityKeywordInfo>();
+            var enumValues = new List<WitKeyword>();
             foreach (var enumValueName in enumType.GetEnumNames())
             {
                 var aliases = GetAliases(enumType, enumValueName);
-                // TODO: Read existing synonyms from attributes here.
-                enumValues.Add(new WitEntityKeywordInfo
-                {
-                    keyword = aliases[0],
-                    synonyms = aliases.GetRange(1, aliases.Count-1)
-                });
+                enumValues.Add(new WitKeyword(aliases[0], aliases.GetRange(1, aliases.Count - 1)));
             }
             
             AddValues(enumValues);
         }
 
         // Setup
-        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitEntityKeywordInfo> enumValues, string enumNamespace = null, string sourceCodeFile = null)
+        public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace = null, string sourceCodeFile = null)
         {
+            if (string.IsNullOrEmpty(enumName))
+            {
+                throw new ArgumentException(nameof(enumName));
+            }
+            if (string.IsNullOrEmpty(entityName))
+            {
+                throw new ArgumentException(nameof(entityName));
+            }
+            
             _conduitAttributeName = GetShortAttributeName(nameof(ConduitValueAttribute));
             
             // Initial setup
@@ -99,7 +104,7 @@ namespace Meta.Conduit.Editor
                 {
                     new CodeAttributeArgument(new CodePrimitiveExpression(entityName))
                 };
-                this.AddEnumAttribute(new CodeAttributeDeclaration(entityAttributeType, entityAttributeArgs));
+                AddEnumAttribute(new CodeAttributeDeclaration(entityAttributeType, entityAttributeArgs));
             }
 
             // Add all enum values
@@ -110,7 +115,7 @@ namespace Meta.Conduit.Editor
         /// Adds the supplied values to the enum construct. Values that already exist are ignored.
         /// </summary>
         /// <param name="values">The values to add.</param>
-        public void AddValues(IList<WitEntityKeywordInfo> values)
+        public void AddValues(IList<WitKeyword> values)
         {
             if (values == null)
             {
@@ -119,30 +124,35 @@ namespace Meta.Conduit.Editor
 
             foreach (var value in values)
             {
-                var entityKeywordAttributeType =
-                    new CodeTypeReference(_conduitAttributeName);
+                AddValue(value);
+            }
+        }
+        
+        public void AddValue(WitKeyword keyword)
+        {
+            var arguments = new List<CodeAttributeArgument>
+                { new CodeAttributeArgument(new CodePrimitiveExpression(keyword.keyword)) };
 
-                var arguments = new List<CodeAttributeArgument>
-                    { new CodeAttributeArgument(new CodePrimitiveExpression(value.keyword)) };
-
-                if (value.synonyms != null)
+            if (keyword.synonyms != null)
+            {
+                foreach (var synonym in keyword.synonyms)
                 {
-                    foreach (var synonym in value.synonyms)
+                    if (synonym.ToLower() != keyword.keyword.ToLower())
                     {
-                        if (synonym != value.keyword)
-                        {
-                            arguments.Add(new CodeAttributeArgument(new CodePrimitiveExpression(synonym)));
-                        }
+                        arguments.Add(new CodeAttributeArgument(new CodePrimitiveExpression(synonym)));
                     }
                 }
-
-                CodeAttributeDeclaration codeAttribute = null;
-                if (arguments.Count > 1)
-                {
-                    codeAttribute = new CodeAttributeDeclaration(entityKeywordAttributeType, arguments.ToArray());
-                }
-                AddValue(value.keyword, codeAttribute);
             }
+            
+            CodeAttributeDeclaration codeAttribute = null;
+            if (arguments.Count > 1)
+            {
+                var entityKeywordAttributeType =
+                    new CodeTypeReference(_conduitAttributeName);
+                codeAttribute = new CodeAttributeDeclaration(entityKeywordAttributeType, arguments.ToArray());
+            }
+            
+            AddValue(keyword.keyword, codeAttribute);
         }
 
         private List<string> GetAliases(Type enumType, string enumValueName)
@@ -165,8 +175,6 @@ namespace Meta.Conduit.Editor
         
         private void ImportConduitNamespaceIfNeeded()
         {
-            _namespace.Imports.Clear();
-
             foreach (var customAttribute in _typeDeclaration.CustomAttributes)
             {
                 if (customAttribute is CodeAttributeDeclaration attribute && attribute.Name.Equals(GetShortAttributeName(nameof(ConduitEntityAttribute))))
@@ -215,7 +223,14 @@ namespace Meta.Conduit.Editor
             }
             var attributeNamespaceName = forType.Namespace;
             var importNameSpace = new CodeNamespaceImport(attributeNamespaceName);
-            _namespaces[_namespaceName].Imports.Add(importNameSpace);
+            
+            if (_namespace == null)
+            {
+                VLog.E("Namespace was null");
+                return;
+            }
+            
+            _namespace.Imports.Add(importNameSpace);
         }
 
         // Add enum attribute
@@ -228,17 +243,11 @@ namespace Meta.Conduit.Editor
             _typeDeclaration.CustomAttributes.Add(attribute);
         }
 
-        // Add a single value.
+        // Add a single value. Replace attribute if value already exists.
         private void AddValue(string value, CodeAttributeDeclaration attribute = null)
         {
             // Get clean value
             var cleanValue = ConduitUtilities.SanitizeString(value);
-
-            // Ignore if added
-            if (_enumValues.Contains(cleanValue))
-            {
-                return;
-            }
 
             // Get field
             var field = new CodeMemberField(_typeDeclaration.Name, cleanValue);
@@ -247,6 +256,15 @@ namespace Meta.Conduit.Editor
             if (attribute != null)
             {
                 field.CustomAttributes.Add(attribute);
+            }
+            
+            // Replace attribute if value already exists
+            if (_enumValues.Contains(cleanValue))
+            {
+                int enumIndex = _enumValues.IndexOf(cleanValue);
+                
+                _typeDeclaration.Members[enumIndex] = field;
+                return;
             }
 
             // Add to enum & members list

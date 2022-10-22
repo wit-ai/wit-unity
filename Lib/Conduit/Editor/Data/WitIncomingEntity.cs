@@ -19,6 +19,6 @@ namespace Meta.Conduit
     {
         public List<WitRole> roles { get; set; } = new List<WitRole>();
 
-        public List<WitEntityKeywordInfo> keywords { get; set; } = new List<WitEntityKeywordInfo>();
+        public List<WitKeyword> keywords { get; set; } = new List<WitKeyword>();
     }
 }

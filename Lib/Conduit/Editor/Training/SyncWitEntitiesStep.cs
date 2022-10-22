@@ -166,23 +166,10 @@ namespace Meta.Conduit.Editor
 
         private IEnumerator TrainEntity(ManifestEntity entity, Manifest manifest, StepResult callback)
         {
-            var keywords = new List<WitEntityKeywordInfo>();
-            foreach (var keyword in entity.Values)
-            {
-                keywords.Add(new WitEntityKeywordInfo()
-                {
-                    keyword = keyword,
-                    synonyms = new List<string>()
-                    {
-                        keyword
-                    }
-                });
-            }
-
             var witIncomingEntity = new WitIncomingEntity()
             {
                 name = entity.Name,
-                keywords = keywords,
+                keywords = entity.Values,
                 roles = GetRolesForEntityType(entity.ID).ToList()
             };
 

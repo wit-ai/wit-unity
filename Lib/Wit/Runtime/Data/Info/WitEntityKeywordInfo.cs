@@ -8,13 +8,18 @@
 
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Meta.WitAi.Data.Info
 {
     [Serializable]
     public struct WitEntityKeywordInfo
     {
+        public WitEntityKeywordInfo(string keyword, List<string> synonyms = null)
+        {
+            this.keyword = keyword;
+            this.synonyms = synonyms??new List<string>();
+        }
+
         /// <summary>
         /// Unique keyword identifier
         /// </summary>

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
@@ -6,14 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
-
-namespace Meta.Conduit
+namespace Meta.WitAi.Samples.Shapes
 {
-    public class WitKeyword
+    
+    public enum Shape
     {
-        public string keyword { get; set; }
-
-        public List<string> synonyms { get; set; }
+        Cube,
+        Sphere,
+        Capsule,
+        Cylinder,
     }
 }

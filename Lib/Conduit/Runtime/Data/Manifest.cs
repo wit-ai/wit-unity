@@ -93,6 +93,10 @@ namespace Meta.Conduit
                     var manifestParameter = action.Parameters[i];
                     var fullTypeName = $"{manifestParameter.QualifiedTypeName},{manifestParameter.TypeAssembly}";
                     types[i] = Type.GetType(fullTypeName);
+                    if (types[i] == null)
+                    {
+                        VLog.E($"Failed to resolve type: {fullTypeName}");
+                    }
                 }
 
                 var targetMethod = GetBestMethodMatch(targetType, method, types);

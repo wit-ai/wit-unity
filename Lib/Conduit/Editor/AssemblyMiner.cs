@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Meta.WitAi;
+using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit.Editor
 {
@@ -93,12 +94,11 @@ namespace Meta.Conduit.Editor
                     Assembly = assembly.FullName
                 };
 
-                var values = new List<string>();
+                var values = new List<WitKeyword>();
 
                 foreach (var enumValue in enumValues)
                 {
-                    object underlyingValue = Convert.ChangeType(enumValue, enumUnderlyingType);
-                    values.Add(enumValue.ToString() ?? string.Empty);
+                    values.Add(new WitKeyword(enumValue.ToString() ?? string.Empty));
                 }
 
                 entity.Values = values;

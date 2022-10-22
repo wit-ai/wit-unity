@@ -128,12 +128,17 @@ namespace Meta.WitAi.Windows
 
         private void GenerateManifestIfNeeded()
         {
+            if (!configuration.useConduit || configuration == null)
+            {
+                return;
+            }
+
             // Get full manifest path & ensure it exists
             string manifestPath = configuration.GetManifestEditorPath();
             manifestAvailable = File.Exists(manifestPath);
 
             // Auto-generate manifest
-            if (configuration.useConduit && !manifestAvailable)
+            if (!manifestAvailable)
             {
                 GenerateManifest(configuration, false);
             }
@@ -552,6 +557,8 @@ namespace Meta.WitAi.Windows
         /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
         private static void GenerateManifest(WitConfiguration configuration, bool openManifest)
         {
+            AssemblyWalker.AssembliesToIgnore = new HashSet<string>(configuration.excludedAssemblies);
+
             // Generate
             var startGenerationTime = DateTime.UtcNow;
             var appInfo = configuration.GetApplicationInfo();
@@ -608,6 +615,7 @@ namespace Meta.WitAi.Windows
             WitMultiSelectionPopup.Show(assemblyNames, AssemblyWalker.AssembliesToIgnore, (disabledAssemblies) => {
                 AssemblyWalker.AssembliesToIgnore = new HashSet<string>(disabledAssemblies);
                 configuration.excludedAssemblies = new List<string>(AssemblyWalker.AssembliesToIgnore);
+                GenerateManifestIfNeeded();
             });
         }
 
@@ -630,6 +638,7 @@ namespace Meta.WitAi.Windows
 
             // Sync
             syncInProgress = true;
+            GenerateManifest(configuration, false);
             var manifest = ManifestLoader.LoadManifest(configuration.ManifestLocalPath);
             CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
             {

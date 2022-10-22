@@ -43,9 +43,9 @@ namespace Meta.Conduit
         public string Name { get; set; }
 
         /// <summary>
-        /// List of values this entity could  assume. For an enum, these would be the enum values.
+        /// List of values this entity could assume. For an enum, these would be the enum values.
         /// </summary>
-        public List<string> Values { get; set; } = new List<string>();
+        public List<WitKeyword> Values { get; set; } = new List<WitKeyword>();
 
         /// <summary>
         /// The fully qualified name of the assembly containing the code for the entity.

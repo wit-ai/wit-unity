@@ -13,27 +13,6 @@ namespace Meta.WitAi.Samples.Shapes
 {
     public class ColorChanger : MonoBehaviour
     {
-        public enum Shape {
-            Cube,
-            Sphere,
-            Capsule,
-            Cylinder
-        }
-
-        public enum Color {
-            Black,
-            White,
-            Red,
-            Green,
-            Yellow,
-            Blue,
-            Pink,
-            Gray,
-            Brown,
-            Orange,
-            Purple
-        }
-
         private void SetColor(Transform transform, UnityEngine.Color color)
         {
             transform.GetComponent<Renderer>().material.color = color;
@@ -144,11 +123,6 @@ namespace Meta.WitAi.Samples.Shapes
                     shapeTransform.localScale = Vector3.one * 10 / ((float) size);
                 }
             }
-        }
-
-        private void FindShape(string shape)
-        {
-
         }
     }
 }

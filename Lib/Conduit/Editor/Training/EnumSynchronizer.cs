@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
@@ -85,6 +86,7 @@ namespace Meta.Conduit.Editor
                     if (!success)
                     {
                         allEntitiesSynced = false;
+                        VLog.W($"Failed to sync entity {manifestEntity.Name}.\n{data}");
                     }
                 });
             }
@@ -114,17 +116,21 @@ namespace Meta.Conduit.Editor
         internal IEnumerator Sync(ManifestEntity manifestEntity, StepResult completionCallback)
         {
             WitIncomingEntity witIncomingEntity = null;
-            yield return this.GetWitEntity(manifestEntity.Name, incomingEntity => witIncomingEntity = incomingEntity);
+            yield return GetWitEntity(manifestEntity.Name, incomingEntity => witIncomingEntity = incomingEntity);
 
             var result = false;
+            string witData = "";
             if (witIncomingEntity == null)
             {
-                yield return this.CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data)
-                    { result = success; });
+                yield return CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data)
+                {
+                    result = success;
+                    witData = data;
+                });
 
                 if (!result)
                 {
-                    completionCallback(false, $"Failed to create new entity {manifestEntity.Name} on Wit.Ai");
+                    completionCallback(false, $"Failed to create new entity {manifestEntity.Name} on Wit.Ai.\n{witData}");
                     yield break;
                 }
             }
@@ -133,11 +139,15 @@ namespace Meta.Conduit.Editor
 
             result = false;
             yield return AddValuesToWit(manifestEntity.Name, delta,
-                delegate(bool success, string data) { result = success; });
-
+                delegate(bool success, string data)
+                {
+                    result = success; 
+                    witData = data;
+                });
+            
             if (!result)
             {
-                completionCallback(false, "Failed to add values to Wit.Ai");
+                completionCallback(false, $"Failed to add values to Wit.Ai\n{witData}");
                 yield break;
             }
 
@@ -177,7 +187,7 @@ namespace Meta.Conduit.Editor
         private bool AddValuesToLocalEnum(ManifestEntity manifestEntity,
             EntitiesDelta delta)
         {
-            if (delta.InWitOnly.Count == 0)
+            if (delta.WitOnly.Count == 0 && delta.Changed.Count == 0)
             {
                 return true;
             }
@@ -188,16 +198,19 @@ namespace Meta.Conduit.Editor
                 return false;
             }
 
-            var newValues = new List<WitEntityKeywordInfo>();
+            var newValues = new List<WitKeyword>();
 
-            foreach (var keyword in delta.InWitOnly)
+            foreach (var keyword in delta.WitOnly)
             {
-                newValues.Add(new WitEntityKeywordInfo()
-                {
-                    keyword = keyword.keyword
-                });
+                newValues.Add(keyword);
             }
-
+            
+            foreach (var changedValue in delta.Changed)
+            {
+                var keyword = new WitKeyword(changedValue.Keyword, changedValue.AllSynonyms.ToList());
+                newValues.Add(keyword);
+            }
+            
             enumWrapper.AddValues(newValues);
             enumWrapper.WriteToFile();
             return true;
@@ -223,7 +236,7 @@ namespace Meta.Conduit.Editor
             {
                 return GetEnumWrapper(enumType, manifestEntity.ID);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 VLog.E($"Failed to get wrapper for {qualifiedTypeName} resolved as type {enumType.FullName}");
                 throw;
@@ -238,42 +251,104 @@ namespace Meta.Conduit.Editor
         }
 
         /// <summary>
-        /// Returns the entries that are in one or the other.
+        /// Returns the entries that are different between Wit.Ai and Conduit.
         /// </summary>
         private EntitiesDelta GetDelta(ManifestEntity manifestEntity, WitIncomingEntity witEntity)
         {
             var delta = new EntitiesDelta();
 
-            var manifestEntityValues = new HashSet<string>();
+            var manifestEntityKeywords = new Dictionary<string, WitKeyword>();
             foreach (var value in manifestEntity.Values)
             {
-                manifestEntityValues.Add(value);
+                manifestEntityKeywords.Add(value.keyword, value);
             }
 
             if (witEntity == null)
             {
-                delta.InLocalOnly = manifestEntityValues.ToList();
-                delta.InWitOnly = new List<Meta.WitAi.Data.Info.WitEntityKeywordInfo>();
-
+                delta.LocalOnly = manifestEntity.Values.ToHashSet();
+                delta.WitOnly = new HashSet<WitKeyword>();
                 return delta;
             }
 
-            var witEntityValues = new HashSet<string>();
+            delta.LocalOnly = new HashSet<WitKeyword>();
+            delta.WitOnly = new HashSet<WitKeyword>();
+            
+            var witEntityKeywords = new Dictionary<string, WitKeyword>();
 
             foreach (var keyword in witEntity.keywords)
             {
-                witEntityValues.Add(keyword.keyword);
+                witEntityKeywords.Add(keyword.keyword, keyword);
             }
 
-            var originalWitValues = witEntityValues.ToList();
-            witEntityValues.ExceptWith(manifestEntityValues);
-            manifestEntityValues.ExceptWith(originalWitValues);
+            var commonKeywords = new HashSet<string>();
 
-            delta.InLocalOnly = manifestEntityValues.ToList();
-            delta.InWitOnly = witEntityValues.ToList().Select(keyword => new WitEntityKeywordInfo
+            foreach (var witEntityKeyword in witEntityKeywords)
             {
-                keyword = keyword
-            }).ToList();
+                if (manifestEntityKeywords.ContainsKey(witEntityKeyword.Key))
+                {
+                    commonKeywords.Add(witEntityKeyword.Key);
+                }
+                else
+                {
+                    delta.WitOnly.Add(witEntityKeyword.Value);
+                }
+            }
+
+            foreach (var manifestEntityKeyword in manifestEntityKeywords)
+            {
+                if (!witEntityKeywords.ContainsKey(manifestEntityKeyword.Key))
+                {
+                    delta.LocalOnly.Add(manifestEntityKeyword.Value);
+                }
+            }
+
+            delta.Changed = new List<KeywordsDelta>();
+            foreach (var commonKeyword in commonKeywords)
+            {
+                var synonymsDelta = GetKeywordsDelta(manifestEntityKeywords[commonKeyword],
+                    witEntityKeywords[commonKeyword]);
+                
+                if(!synonymsDelta.IsEmpty)
+                {
+                    delta.Changed.Add(synonymsDelta);
+                }
+            }
+           
+            return delta;
+        }
+
+        private KeywordsDelta GetKeywordsDelta(WitKeyword localEntityKeyword, WitKeyword witEntityKeyword)
+        {
+            if (localEntityKeyword.keyword != witEntityKeyword.keyword)
+            {
+                throw new InvalidOperationException("Mismatching keywords when checking for synonyms delta");
+            }
+            
+            var delta = new KeywordsDelta()
+            {
+                Keyword = localEntityKeyword.keyword,
+                LocalOnlySynonyms = new HashSet<string>(),
+                WitOnlySynonyms = new HashSet<string>(),
+                AllSynonyms = new HashSet<string>()
+            };
+            
+            foreach (var witSynonym in witEntityKeyword.synonyms)
+            {
+                delta.AllSynonyms.Add(witSynonym);
+                if (!localEntityKeyword.synonyms.Contains(witSynonym) && !localEntityKeyword.keyword.Equals(witSynonym))
+                {
+                    delta.WitOnlySynonyms.Add(witSynonym);
+                }
+            }
+
+            foreach (var localSynonym in localEntityKeyword.synonyms)
+            {
+                delta.AllSynonyms.Add(localSynonym);
+                if (!witEntityKeyword.synonyms.Contains(localSynonym) && !witEntityKeyword.keyword.Equals(localSynonym))
+                {
+                    delta.LocalOnlySynonyms.Add(localSynonym);
+                }
+            }
 
             return delta;
         }
@@ -281,14 +356,10 @@ namespace Meta.Conduit.Editor
         private IEnumerator AddValuesToWit(string entityName,
             EntitiesDelta delta, StepResult completionCallback)
         {
+            var errorBuilder = new StringBuilder();
             var allSuccessful = true;
-            foreach (var entry in delta.InLocalOnly)
+            foreach (var keyword in delta.LocalOnly)
             {
-                var keyword = new WitEntityKeywordInfo()
-                {
-                    keyword = entry,
-                    synonyms = new List<string>()
-                };
                 var payload = JsonConvert.SerializeObject(keyword);
 
                 yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords",
@@ -297,11 +368,30 @@ namespace Meta.Conduit.Editor
                         if (!success)
                         {
                             allSuccessful = false;
+                            errorBuilder.AppendLine($"Failed to add keyword ({keyword.keyword}) to Wit.Ai");
                         }
                     });
             }
 
-            completionCallback(allSuccessful, "");
+            foreach (var changedKeyword in delta.Changed)
+            {
+                foreach (var synonym in changedKeyword.LocalOnlySynonyms)
+                {
+                    var payload = $"{{\"synonym\": \"{synonym}\"}}";
+
+                    yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords/{changedKeyword.Keyword}/synonyms",
+                        WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
+                        {
+                            if (!success)
+                            {
+                                allSuccessful = false;
+                                errorBuilder.AppendLine($"Failed to add synonym ({synonym}) to Wit.Ai");
+                            }
+                        });
+                }
+            }
+
+            completionCallback(allSuccessful, errorBuilder.ToString());
         }
 
         private IEnumerator GetEnumWitEntityNames(Action<List<string>> callBack)

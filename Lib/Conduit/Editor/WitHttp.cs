@@ -139,6 +139,8 @@ namespace Meta.Conduit.Editor
             webRequest.SetRequestHeader("X-Wit-Client-Request-Id", GetRequestId());
             webRequest.timeout = RequestTimeOut;
             webRequest.downloadHandler = new DownloadHandlerBuffer();
+            webRequest.disposeDownloadHandlerOnDispose = true;
+            webRequest.disposeUploadHandlerOnDispose = true;
             return webRequest;
         }
 
@@ -195,6 +197,7 @@ namespace Meta.Conduit.Editor
         {
             // Generate request
             UnityWebRequest webRequest;
+            
             if (string.IsNullOrEmpty(body))
             {
                 webRequest = CreateUnityWebRequest(uriSection, method);
@@ -220,6 +223,8 @@ namespace Meta.Conduit.Editor
                 {
                     error = "Miscellaneous";
                 }
+                
+                webRequest.Dispose();
                 completionCallback(false, $"Failed web request. Error: {error}");
                 yield break;
             }
@@ -227,12 +232,14 @@ namespace Meta.Conduit.Editor
             // Success with no response
             if (webRequest.downloadHandler == null)
             {
+                webRequest.Dispose();
                 completionCallback(true, "");
                 yield break;
             }
 
             // Success with response
             string response = webRequest.downloadHandler.text;
+            webRequest.Dispose();
             completionCallback(true, response);
         }
     }

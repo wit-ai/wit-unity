@@ -23,7 +23,7 @@ namespace Meta.WitAi.Json
     {
         // Default converters
         public static JsonConverter[] DefaultConverters => _defaultConverters;
-        private static JsonConverter[] _defaultConverters = new JsonConverter[] { new ColorConverter(), new DateTimeConverter() };
+        private static JsonConverter[] _defaultConverters = new JsonConverter[] { new ColorConverter(), new DateTimeConverter(), new HashSetConverter<string>() };
         // Binding flags to be used for encoding/decoding
         private const BindingFlags BIND_FLAGS = BindingFlags.Public | BindingFlags.Instance;
 

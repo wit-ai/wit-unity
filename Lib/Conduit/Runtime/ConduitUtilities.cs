@@ -6,6 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !UNITY_2021_1_OR_NEWER
+using System.Collections.Generic;
+#endif
 using System.Text.RegularExpressions;
 
 namespace Meta.Conduit
@@ -111,4 +114,20 @@ namespace Meta.Conduit
             return result;
         }
     }
+    
+    #if !UNITY_2021_1_OR_NEWER
+    internal static class ListExtensions
+    {
+        public static HashSet<T> ToHashSet<T> (this List<T> source)
+        {
+            var output = new HashSet<T>();
+            foreach (var element in source)
+            {
+                output.Add(element);
+            }
+
+            return output;
+        }
+    }
+    #endif
 }
