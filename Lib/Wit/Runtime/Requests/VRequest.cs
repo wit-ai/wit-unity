@@ -49,7 +49,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// If request is currently being performed
         /// </summary>
-        public bool IsPerforming => _performing;
+        public bool IsPerforming => _performing && _request != null;
         private bool _performing = false;
 
         /// <summary>
