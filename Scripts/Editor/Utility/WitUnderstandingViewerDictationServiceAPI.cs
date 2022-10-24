@@ -6,17 +6,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.WitAi;
+using Meta.WitAi.Dictation;
 using Meta.WitAi.Events;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Facebook.WitAi.Windows
 {
-    public class WitUnderstandingViewerVoiceServiceAPI : WitUnderstandingViewerServiceAPI
+    public class WitUnderstandingViewerDictationServiceAPI : WitUnderstandingViewerServiceAPI
     {
-        private VoiceService _service;
+        private DictationService _service;
 
-        public WitUnderstandingViewerVoiceServiceAPI(VoiceService service) : base(service)
+        public WitUnderstandingViewerDictationServiceAPI(DictationService service) : base(service)
         {
             _service = service;
 
@@ -46,7 +47,7 @@ namespace Facebook.WitAi.Windows
 
         public override void Activate(string text)
         {
-            _service.Activate(text);
+            Debug.LogWarning("Activate(text) not supported for this API");
         }
 
         public override void Deactivate()
@@ -56,37 +57,37 @@ namespace Facebook.WitAi.Windows
 
         public override void DeactivateAndAbortRequest()
         {
-            _service.DeactivateAndAbortRequest();
+            Debug.LogWarning("DeactivateAndAbortRequest() not supported for this API");
         }
 
         public override WitRequestCreatedEvent OnRequestCreated
         {
-            get => _service.VoiceEvents.OnRequestCreated;
+            get => null;
         }
 
         public override WitErrorEvent OnError
         {
-            get => _service.VoiceEvents.OnError;
+            get => _service.DictationEvents.onError;
         }
 
         public override WitResponseEvent OnResponse
         {
-            get => _service.VoiceEvents.OnResponse;
+            get => _service.DictationEvents.onResponse;
         }
 
         public override WitTranscriptionEvent OnFullTranscription
         {
-            get => _service.VoiceEvents.onFullTranscription;
+            get => _service.DictationEvents.onFullTranscription;
         }
 
         public override WitTranscriptionEvent OnPartialTranscription
         {
-            get => _service.VoiceEvents.OnPartialTranscription;
+            get => _service.DictationEvents.OnPartialTranscription;
         }
 
         public override UnityEvent OnStoppedListening
         {
-            get => _service.VoiceEvents.OnStoppedListening;
+            get => null;
         }
     }
 }

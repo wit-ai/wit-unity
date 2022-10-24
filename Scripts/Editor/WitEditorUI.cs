@@ -313,7 +313,7 @@ namespace Meta.WitAi
         }
         #endregion
 
-        #region MISCELANEOUS
+        #region MISCELLANEOUS
         public static void LayoutToggle(GUIContent key, ref bool toggleValue, ref bool isUpdated)
         {
             // Simple layout

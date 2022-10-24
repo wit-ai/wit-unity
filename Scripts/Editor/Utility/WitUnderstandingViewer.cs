@@ -9,6 +9,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Facebook.WitAi.Windows;
+using Meta.WitAi.Dictation;
 using Meta.WitAi.CallbackHandlers;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
@@ -28,10 +30,13 @@ namespace Meta.WitAi.Windows
         private Dictionary<string, bool> _foldouts;
 
         // Current service
-        private VoiceService[] _services;
+        private WitUnderstandingViewerServiceAPI[] _services;
         private string[] _serviceNames;
         private int _currentService = -1;
-        public VoiceService service => _services != null && _currentService >= 0 && _currentService < _services.Length ? _services[_currentService] : null;
+        public WitUnderstandingViewerServiceAPI service =>
+            _services != null
+            && _currentService >= 0
+            && _currentService < _services.Length ? _services[_currentService] : null;
         public bool HasWit => service != null;
 
         private DateTime _submitStart;
@@ -41,7 +46,7 @@ namespace Meta.WitAi.Windows
         private WitRequest _request;
         private int _savePopup;
         private GUIStyle _hamburgerButton;
-
+        private Vector2 _utteranceScrollPosition;
 
         class Content
         {
@@ -69,7 +74,8 @@ namespace Meta.WitAi.Windows
         {
             base.OnEnable();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            RefreshVoiceServices();
+            RefreshServices();
+
             if (!string.IsNullOrEmpty(_responseText))
             {
                 _response = WitResponseNode.Parse(_responseText);
@@ -86,7 +92,7 @@ namespace Meta.WitAi.Windows
         {
             if (state == PlayModeStateChange.EnteredPlayMode && !HasWit)
             {
-                RefreshVoiceServices();
+                RefreshServices();
             }
         }
 
@@ -94,7 +100,7 @@ namespace Meta.WitAi.Windows
         {
             if (Selection.activeGameObject)
             {
-                SetVoiceService(Selection.activeGameObject.GetComponent<VoiceService>());
+                SetService(Selection.activeGameObject);
             }
         }
 
@@ -165,7 +171,7 @@ namespace Meta.WitAi.Windows
         protected override void LayoutContent()
         {
             // Get service
-            VoiceService voiceService = null;
+            WitUnderstandingViewerServiceAPI voiceService = null;
 
             // Runtime Mode
             if (Application.isPlaying)
@@ -173,7 +179,7 @@ namespace Meta.WitAi.Windows
                 // Refresh services
                 if (_services == null)
                 {
-                    RefreshVoiceServices();
+                    RefreshServices();
                 }
                 // Services missing
                 if (_services == null || _serviceNames == null || _services.Length == 0)
@@ -192,21 +198,32 @@ namespace Meta.WitAi.Windows
                     serviceUpdate = true;
                 }
                 // Layout
+                GUILayout.Space(3);
+
                 WitEditorUI.LayoutPopup(WitTexts.Texts.UnderstandingViewerServicesLabel, _serviceNames, ref newService, ref serviceUpdate);
                 // Update
                 if (serviceUpdate)
                 {
-                    SetVoiceService(newService);
+                    SetService(newService);
                 }
+
                 // Select
-                if (_currentService >= 0 && _currentService < _services.Length && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSelectLabel))
+                bool selectPressed = GUILayout.Button("", GUI.skin.GetStyle("IN ObjectField"), GUILayout.Width(15), GUILayout.Height(20), GUILayout.ExpandWidth(false));
+
+                if (_currentService >= 0 && _currentService < _services.Length && selectPressed)
                 {
-                    Selection.activeObject = _services[_currentService];
+                    if (_services != null && _services.Length > 0 && _services[0].ServiceComponent == null)
+                    {
+                        RefreshServices();
+                    }
+
+                    Selection.activeObject = _services[_currentService].ServiceComponent.gameObject;
                 }
+
                 // Refresh
-                if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationRefreshButtonLabel))
+                if (WitEditorUI.LayoutIconButton(EditorGUIUtility.IconContent("d_Refresh")))
                 {
-                    RefreshVoiceServices();
+                    RefreshServices();
                 }
                 GUILayout.EndHorizontal();
                 // Ensure service exists
@@ -243,31 +260,46 @@ namespace Meta.WitAi.Windows
             bool allowInput = !Application.isPlaying || (service != null && !service.Active);
             GUI.enabled = allowInput;
 
-            // Utterance field
-            bool updated = false;
-            WitEditorUI.LayoutTextField(new GUIContent(WitTexts.Texts.UnderstandingViewerUtteranceLabel), ref _utterance, ref updated);
+            // Utterance field - if selected service is a Voice Service then the field is enabled for input.
+            if (_currentService != -1 && _services[_currentService] is WitUnderstandingViewerVoiceServiceAPI)
+            {
+                bool updated = false;
+                WitEditorUI.LayoutTextField(new GUIContent(WitTexts.Texts.UnderstandingViewerUtteranceLabel), ref _utterance, ref updated);
+            }
+            else
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(WitTexts.Texts.UnderstandingViewerUtteranceLabel, WitStyles.Label, GUILayout.Width(140));
+                _utteranceScrollPosition = EditorGUILayout.BeginScrollView(_utteranceScrollPosition, GUILayout.Height(EditorGUIUtility.singleLineHeight * 2));
+                WitEditorUI.LayoutWrapLabel(_utterance);
+                EditorGUILayout.EndScrollView();
+                EditorGUILayout.EndHorizontal();
+            }
 
             // Begin Buttons
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
 
-            // Submit utterance
-            if (allowInput && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSubmitButtonLabel))
+            // Submit utterance (Voice Service only)
+            if (_currentService != -1 && _services[_currentService] is WitUnderstandingViewerVoiceServiceAPI)
             {
-                _responseText = "";
-                if (!string.IsNullOrEmpty(_utterance))
+                if (allowInput && WitEditorUI.LayoutTextButton(WitTexts.Texts.UnderstandingViewerSubmitButtonLabel))
                 {
-                    SubmitUtterance();
-                }
-                else
-                {
-                    _response = null;
+                    _responseText = "";
+                    if (!string.IsNullOrEmpty(_utterance))
+                    {
+                        SubmitUtterance();
+                    }
+                    else
+                    {
+                        _response = null;
+                    }
                 }
             }
 
             // Service buttons
             GUI.enabled = true;
-            if (EditorApplication.isPlaying && voiceService)
+            if (EditorApplication.isPlaying && voiceService != null)
             {
                 if (!voiceService.Active)
                 {
@@ -299,11 +331,11 @@ namespace Meta.WitAi.Windows
             {
                 DrawResponse();
             }
-            else if (voiceService && voiceService.MicActive)
+            else if (voiceService != null && voiceService.MicActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerListeningLabel);
             }
-            else if (voiceService && voiceService.IsRequestActive)
+            else if (voiceService != null && voiceService.IsRequestActive)
             {
                 WitEditorUI.LayoutWrapLabel(WitTexts.Texts.UnderstandingViewerLoadingLabel);
             }
@@ -326,7 +358,7 @@ namespace Meta.WitAi.Windows
 
             if (Application.isPlaying)
             {
-                if (service)
+                if (service != null)
                 {
                     _status = WitTexts.Texts.UnderstandingViewerListeningLabel;
                     _responseText = _status;
@@ -350,7 +382,7 @@ namespace Meta.WitAi.Windows
 
         private void WatchForWitResponse()
         {
-            if (service && !service.Active)
+            if (service != null && !service.Active)
             {
                 Repaint();
                 EditorApplication.update -= WatchForWitResponse;
@@ -561,61 +593,61 @@ namespace Meta.WitAi.Windows
         }
 
         #region SERVICES
-        // Refresh voice services
-        protected void RefreshVoiceServices()
+
+        protected void RefreshServices()
         {
             // Remove previous service
-            VoiceService previous = service;
-            SetVoiceService(-1);
+            WitUnderstandingViewerServiceAPI previous = service;
+            SetService(-1);
 
-            // Get all services
-            VoiceService[] services = Resources.FindObjectsOfTypeAll<VoiceService>();
+            List<WitUnderstandingViewerServiceAPI> services = new List<WitUnderstandingViewerServiceAPI>();
+            List<string> serviceNames = new List<string>();
+
+            // Get all supported services
+            List<VoiceService> voiceServiceComponents = new List<VoiceService>(FindObjectsOfType<VoiceService>());
+            List<DictationService> dictationServiceComponents = new List<DictationService>(FindObjectsOfType<DictationService>());
+
+            HashSet<GameObject> uniqueGameObjects = new HashSet<GameObject>();
 
             // Get unique services
-            List<GameObject> serviceGOs = new List<GameObject>();
-            List<VoiceService> serviceList = new List<VoiceService>();
-            foreach (var s in services)
+            foreach (var voiceServiceComponent in voiceServiceComponents)
             {
-                // Add unique gameobjects
-                GameObject serviceGO = s.gameObject;
-                if (serviceGO.scene.rootCount > 0 && !serviceGOs.Contains(serviceGO))
+                if (uniqueGameObjects.Add(voiceServiceComponent.gameObject))
                 {
-                    serviceGOs.Add(serviceGO);
-                    serviceList.Add(serviceGO.GetComponent<VoiceService>());
+                    services.Add(new WitUnderstandingViewerVoiceServiceAPI(voiceServiceComponent));
                 }
             }
 
-            // Get service gameobject names
-            _services = serviceList.ToArray();
-            _serviceNames = new string[_services.Length];
-            for (int i = 0; i < _services.Length; i++)
+            foreach (var dictationServiceComponent in dictationServiceComponents)
             {
-                _serviceNames[i] = GetVoiceServiceName(_services[i]);
+                if (uniqueGameObjects.Add(dictationServiceComponent.gameObject))
+                {
+                    services.Add(new WitUnderstandingViewerDictationServiceAPI(dictationServiceComponent));
+                }
             }
+
+            foreach (var service in services)
+            {
+                serviceNames.Add(service.ServiceName);
+            }
+
+            _services = services.ToArray();
+            _serviceNames = serviceNames.ToArray();
 
             // Set as first found
             if (previous == null)
             {
-                SetVoiceService(0);
+                SetService(0);
             }
-            // Set as previous
             else
             {
-                SetVoiceService(previous);
+                // Set as previous
+                SetService(previous);
             }
         }
-        // Get voice service name
-        private string GetVoiceServiceName(VoiceService service)
-        {
-            IWitRuntimeConfigProvider configProvider = service.GetComponent<IWitRuntimeConfigProvider>();
-            if (configProvider != null)
-            {
-                return $"{configProvider.RuntimeConfiguration.witConfiguration.name} [{service.gameObject.name}]";
-            }
-            return service.gameObject.name;
-        }
+
         // Set voice service
-        protected void SetVoiceService(VoiceService newService)
+        protected void SetService(WitUnderstandingViewerServiceAPI newService)
         {
             // Cannot set without services
             if (_services == null)
@@ -623,14 +655,44 @@ namespace Meta.WitAi.Windows
                 return;
             }
 
+            // Check for lost references - if the UnderstandingViewer is docked for some reason
+            // the GameObjects can get decoupled from the service APIs
+            if (_services.Length != 0 && _services[0].ServiceComponent == null)
+            {
+                RefreshServices();
+            }
+
             // Find & apply
-            int newServiceIndex = Array.FindIndex(_services, (s) => s == newService);
+            int newServiceIndex = Array.FindIndex(_services, (s) => s.ServiceName == newService.ServiceName);
 
             // Apply
-            SetVoiceService(newServiceIndex);
+            SetService(newServiceIndex);
         }
+
+        protected void SetService(GameObject newService)
+        {
+            // Cannot set without services
+            if (_services == null)
+            {
+                return;
+            }
+
+            // Check for lost references - if the UnderstandingViewer is docked for some reason
+            // the GameObjects can get decoupled from the service APIs
+            if (_services.Length != 0 && _services[0].ServiceComponent == null)
+            {
+                RefreshServices();
+            }
+
+            // Find & apply
+            int newServiceIndex = Array.FindIndex(_services, (s) => s.ServiceComponent.gameObject == newService);
+
+            // Apply
+            SetService(newServiceIndex);
+        }
+
         // Set
-        protected void SetVoiceService(int newServiceIndex)
+        protected void SetService(int newServiceIndex)
         {
             // Cannot set without services
             if (_services == null)
@@ -639,45 +701,47 @@ namespace Meta.WitAi.Windows
             }
 
             // Remove listeners to current service
-            RemoveVoiceListeners(service);
+            RemoveListeners(service);
 
-            // Get current index
-            _currentService = newServiceIndex;
+            // Set current index.
+            _currentService = Mathf.Max(0, newServiceIndex);
 
             // Add listeners to current service
-            AddVoiceListeners(service);
+            AddListeners(service);
         }
         // Remove listeners
-        private void RemoveVoiceListeners(VoiceService v)
+        private void RemoveListeners(WitUnderstandingViewerServiceAPI serviceAPI)
         {
             // Ignore
-            if (v == null)
+            if (serviceAPI == null)
             {
                 return;
             }
+
             // Remove delegates
-            v.events.OnRequestCreated.RemoveListener(OnRequestCreated);
-            v.events.OnError.RemoveListener(OnError);
-            v.events.OnResponse.RemoveListener(OnResponse);
-            v.events.OnFullTranscription.RemoveListener(ShowTranscription);
-            v.events.OnPartialTranscription.RemoveListener(ShowTranscription);
-            v.events.OnStoppedListening.RemoveListener(ResetStartTime);
+            serviceAPI.OnRequestCreated?.RemoveListener(OnRequestCreated);
+            serviceAPI.OnError?.RemoveListener(OnError);
+            serviceAPI.OnResponse?.RemoveListener(OnResponse);
+            serviceAPI.OnFullTranscription?.RemoveListener(ShowTranscription);
+            serviceAPI.OnPartialTranscription?.RemoveListener(ShowTranscription);
+            serviceAPI.OnStoppedListening?.RemoveListener(ResetStartTime);
         }
         // Add listeners
-        private void AddVoiceListeners(VoiceService v)
+        private void AddListeners(WitUnderstandingViewerServiceAPI serviceAPI)
         {
             // Ignore
-            if (v == null)
+            if (serviceAPI == null)
             {
                 return;
             }
+
             // Add delegates
-            v.events.OnRequestCreated.AddListener(OnRequestCreated);
-            v.events.OnError.AddListener(OnError);
-            v.events.OnResponse.AddListener(OnResponse);
-            v.events.OnPartialTranscription.AddListener(ShowTranscription);
-            v.events.OnFullTranscription.AddListener(ShowTranscription);
-            v.events.OnStoppedListening.AddListener(ResetStartTime);
+            serviceAPI.OnRequestCreated?.AddListener(OnRequestCreated);
+            serviceAPI.OnError?.AddListener(OnError);
+            serviceAPI.OnResponse?.AddListener(OnResponse);
+            serviceAPI.OnPartialTranscription?.AddListener(ShowTranscription);
+            serviceAPI.OnFullTranscription?.AddListener(ShowTranscription);
+            serviceAPI.OnStoppedListening?.AddListener(ResetStartTime);
         }
         #endregion
     }
