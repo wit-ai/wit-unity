@@ -30,7 +30,7 @@ namespace Meta.Conduit
         /// </summary>
         public float MinConfidence { get; protected set; }
         // Default minimum confidence
-        protected const float DEFAULT_MIN_CONFIDENCE = 0.9f;
+        protected const float DEFAULT_MIN_CONFIDENCE = 0.51f;
 
         /// <summary>
         /// The maximum confidence value for intent matching

@@ -19,20 +19,34 @@ namespace Meta.Conduit
     /// </summary>
     internal class ParameterProvider : IParameterProvider
     {
+        /// <summary>
+        /// Maps the parameters to their supplied values.
+        /// The keys are normalized to lowercase.
+        /// </summary>
         protected Dictionary<string, object> ActualParameters = new Dictionary<string, object>();
 
         /// <summary>
-        /// Maps internal parameter names to fully qualified parameter names (roles/slots).
+        /// Maps internal parameter names (in code) to fully qualified parameter names (roles/slots).
+        /// The keys are normalized to lowercase.
         /// </summary>
-        private Dictionary<string, string> parameterToRoleMap = new Dictionary<string, string>();
+        private Dictionary<string, string> _parameterToRoleMap = new Dictionary<string, string>();
 
         /// <summary>
         /// Must be called after all parameters have been obtained and mapped but before any are extracted.
         /// </summary>
         public void Populate(Dictionary<string, object> actualParameters, Dictionary<string, string> parameterToRoleMap)
         {
-            this.ActualParameters = actualParameters;
-            this.parameterToRoleMap = parameterToRoleMap;
+            ActualParameters.Clear();
+            foreach (var actualParameter in actualParameters)
+            {
+                this.ActualParameters[actualParameter.Key.ToLower()] = actualParameter.Value;
+            }
+
+            _parameterToRoleMap.Clear();
+            foreach (var entry in parameterToRoleMap)
+            {
+                _parameterToRoleMap[entry.Key.ToLower()] = entry.Value;
+            }
         }
 
         /// <summary>
@@ -46,12 +60,12 @@ namespace Meta.Conduit
             {
                 return true;
             }
-            if (!ActualParameters.ContainsKey(parameter.Name))
+            if (!ActualParameters.ContainsKey(parameter.Name.ToLower()))
             {
                 log.AppendLine($"\tParameter '{parameter.Name}' not sent in invoke");
                 return false;
             }
-            if (!this.parameterToRoleMap.ContainsKey(parameter.Name))
+            if (!this._parameterToRoleMap.ContainsKey(parameter.Name.ToLower()))
             {
                 log.AppendLine($"\tParameter '{parameter.Name}' not found in role map");
                 return false;
@@ -67,19 +81,19 @@ namespace Meta.Conduit
         public object GetParameterValue(ParameterInfo formalParameter)
         {
             var formalParameterName = formalParameter.Name;
-            if (!this.ActualParameters.ContainsKey(formalParameterName))
+            if (!this.ActualParameters.ContainsKey(formalParameterName.ToLower()))
             {
-                if (!this.parameterToRoleMap.ContainsKey(formalParameterName))
+                if (!this._parameterToRoleMap.ContainsKey(formalParameterName.ToLower()))
                 {
                     VLog.E($"Parameter '{formalParameterName}' is missing");
                     return false;
                 }
 
-                formalParameterName = this.parameterToRoleMap[formalParameterName];
+                formalParameterName = this._parameterToRoleMap[formalParameterName.ToLower()];
             }
 
             //var parameterValue = this.ActualParameters[formalParameterName];
-            if (this.ActualParameters.TryGetValue(formalParameterName, out var parameterValue))
+            if (this.ActualParameters.TryGetValue(formalParameterName.ToLower(), out var parameterValue))
             {
                 if (formalParameter.ParameterType == typeof(string))
                 {
