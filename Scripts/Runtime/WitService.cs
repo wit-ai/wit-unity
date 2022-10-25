@@ -51,6 +51,7 @@ namespace Meta.WitAi
         private IWitByteDataReadyHandler[] _dataReadyHandlers;
         private IWitByteDataSentHandler[] _dataSentHandlers;
         private IDynamicEntitiesProvider[] _dynamicEntityProviders;
+        private float _time;
 
         #endregion
 
@@ -344,7 +345,7 @@ namespace Meta.WitAi
         // When wit is ready, start recording
         private void OnWitReadyForData()
         {
-            _lastMinVolumeLevelTime = Time.time;
+            _lastMinVolumeLevelTime = _time;
             if (!AudioBuffer.Instance.IsRecording(this))
             {
                 StartRecording();
@@ -426,14 +427,14 @@ namespace Meta.WitAi
 
                 if (_receivedTranscription)
                 {
-                    if (Time.time - _lastWordTime >
+                    if (_time - _lastWordTime >
                         RuntimeConfiguration.minTranscriptionKeepAliveTimeInSeconds)
                     {
                         Debug.Log("Deactivated due to inactivity. No new words detected.");
                         DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
                     }
                 }
-                else if (Time.time - _lastMinVolumeLevelTime >
+                else if (_time - _lastMinVolumeLevelTime >
                          RuntimeConfiguration.minKeepAliveTimeInSeconds)
                 {
                     Debug.Log("Deactivated input due to inactivity.");
@@ -448,6 +449,12 @@ namespace Meta.WitAi
                 _lastSampleMarker.Offset(RuntimeConfiguration.sampleLengthInMs * -2);
             }
         }
+
+        private void Update()
+        {
+            _time = Time.time;
+        }
+
         // Mic level change
         private void OnMicLevelChanged(float level)
         {
@@ -455,7 +462,7 @@ namespace Meta.WitAi
 
             if (level > RuntimeConfiguration.minKeepAliveVolume)
             {
-                _lastMinVolumeLevelTime = Time.time;
+                _lastMinVolumeLevelTime = _time;
                 _minKeepAliveWasHit = true;
             }
             VoiceEvents?.OnMicLevelChanged?.Invoke(level);
@@ -564,7 +571,7 @@ namespace Meta.WitAi
         {
             // Clear record data
             _receivedTranscription = true;
-            _lastWordTime = Time.time;
+            _lastWordTime = _time;
             // Delegate
             VoiceEvents?.OnPartialTranscription.Invoke(transcription);
         }
