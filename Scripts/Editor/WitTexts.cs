@@ -23,6 +23,7 @@ namespace Meta.WitAi
             public string WitAppSettingsEndpoint;
             public string WitAppUnderstandingEndpoint;
             public string WitOpenButtonLabel;
+            public string VLogLevelLabel;
             public string ConfigurationFileManagerLabel;
             public string ConfigurationFileNameLabel;
             public string ConfigurationSelectLabel;

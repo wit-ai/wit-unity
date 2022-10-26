@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Data.Configuration;
@@ -26,6 +27,7 @@ namespace Meta.WitAi.Windows
             {
                 serverToken = WitAuthUtility.ServerToken;
             }
+            RefreshLogLevel();
             SetWitEditor();
         }
 
@@ -44,11 +46,44 @@ namespace Meta.WitAi.Windows
             }
         }
 
+        private static int _logLevel = -1;
+        private static string[] _logLevelNames;
+        private static LogType[] _logLevels = new LogType[] { LogType.Log, LogType.Warning, LogType.Error };
+        private static void RefreshLogLevel()
+        {
+            if (_logLevelNames != null && _logLevelNames.Length == _logLevels.Length)
+            {
+                return;
+            }
+            List<string> logLevelOptions = new List<string>();
+            foreach (var level in _logLevels)
+            {
+                logLevelOptions.Add(level.ToString());
+            }
+            _logLevelNames = logLevelOptions.ToArray();
+            _logLevel = logLevelOptions.IndexOf(VLog.EditorLogLevel.ToString());
+        }
+        private void SetLogLevel(int newLevel)
+        {
+            _logLevel = Mathf.Max(0, newLevel);
+            VLog.EditorLogLevel = _logLevel < _logLevels.Length ? _logLevels[_logLevel] : LogType.Log;
+        }
+
         protected override void LayoutContent()
         {
+            // VLog level
+            bool updated = false;
+            RefreshLogLevel();
+            int logLevel = _logLevel;
+            WitEditorUI.LayoutPopup(WitTexts.Texts.VLogLevelLabel, _logLevelNames, ref logLevel, ref updated);
+            if (updated)
+            {
+                SetLogLevel(logLevel);
+            }
+
             // Server access token
             GUILayout.BeginHorizontal();
-            bool updated = false;
+            updated = false;
             WitEditorUI.LayoutPasswordField(WitTexts.SettingsServerTokenContent, ref serverToken, ref updated);
             if (updated)
             {
