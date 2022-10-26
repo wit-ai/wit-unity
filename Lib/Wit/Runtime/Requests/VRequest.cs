@@ -47,9 +47,14 @@ namespace Meta.WitAi.Requests
         public int Timeout { get; set; } = 5;
 
         /// <summary>
+        /// Whether or not the completion delegate has been called
+        /// </summary>
+        public bool IsComplete { get; private set; } = false;
+
+        /// <summary>
         /// If request is currently being performed
         /// </summary>
-        public bool IsPerforming => _performing && _request != null;
+        public bool IsPerforming => _performing;
         private bool _performing = false;
 
         /// <summary>
@@ -91,6 +96,7 @@ namespace Meta.WitAi.Requests
             _onProgress = onProgress;
             _onComplete = onComplete;
             _performing = false;
+            IsComplete = false;
             _progress = 0f;
 
             // Add all headers
@@ -222,9 +228,22 @@ namespace Meta.WitAi.Requests
             // Dispose
             if (_request != null)
             {
+                // Dispose handlers
+                if (_request.uploadHandler != null)
+                {
+                    _request.uploadHandler.Dispose();
+                }
+                if (_request.downloadHandler != null)
+                {
+                    _request.downloadHandler.Dispose();
+                }
+                // Dispose request
                 _request.Dispose();
                 _request = null;
             }
+
+            // Officially complete
+            IsComplete = true;
         }
         #endregion
 
