@@ -67,7 +67,6 @@ namespace Meta.Conduit.Editor
             var enums = assembly.GetEnumTypes();
             foreach (var enumType in enums)
             {
-                var enumUnderlyingType = Enum.GetUnderlyingType(enumType);
                 Array enumValues;
                 try
                 {
@@ -98,7 +97,23 @@ namespace Meta.Conduit.Editor
 
                 foreach (var enumValue in enumValues)
                 {
-                    values.Add(new WitKeyword(enumValue.ToString() ?? string.Empty));
+                    var synonyms = new List<string>();
+                    var attribute = GetAttribute<ConduitValueAttribute>(enumValue);
+                    if (attribute != null)
+                    {
+                        foreach (var alias in attribute.Aliases)
+                        {
+                            synonyms.Add(alias);
+                        }
+                    }
+
+                    if (enumValue == null)
+                    {
+                        VLog.E("Unexpected null enum value");
+                        continue;
+                    }
+                    
+                    values.Add(new WitKeyword(enumValue.ToString(), synonyms));
                 }
 
                 entity.Values = values;
@@ -106,6 +121,23 @@ namespace Meta.Conduit.Editor
             }
 
             return entities;
+        }
+        
+        private static T GetAttribute<T>(object enumValue) where T:Attribute
+        {
+            var type = enumValue.GetType();
+            var memberInfos = type.GetMember(enumValue.ToString());
+            if (memberInfos.Length == 0)
+            {
+                return null;
+            }
+            var attributes = memberInfos.First().GetCustomAttributes(typeof(ConduitValueAttribute), false);
+            if (attributes.Length == 0)
+            {
+                return null;
+            }
+
+            return attributes.First() as T;
         }
 
         /// <inheritdoc/>

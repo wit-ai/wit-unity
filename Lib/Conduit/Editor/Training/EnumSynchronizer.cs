@@ -64,8 +64,7 @@ namespace Meta.Conduit.Editor
                 completionCallback?.Invoke(false, "Failed to obtain entities from service");
                 yield break;
             }
-
-            // Use list
+            
             var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToList();
             foreach (var entityName in witEntityNames)
             {
@@ -80,7 +79,7 @@ namespace Meta.Conduit.Editor
             // Import newly generated entities
             AssetDatabase.Refresh();
 
-            bool allEntitiesSynced = true;
+            var allEntitiesSynced = true;
             foreach (var manifestEntity in manifest.Entities)
             {
                 yield return Sync(manifestEntity, (success, data) =>
@@ -401,7 +400,6 @@ namespace Meta.Conduit.Editor
                 }
                 
                 yield return new WaitUntil(()=> requestComplete || !string.IsNullOrEmpty(requestError));
-                
             }
 
             foreach (var changedKeyword in delta.Changed)
