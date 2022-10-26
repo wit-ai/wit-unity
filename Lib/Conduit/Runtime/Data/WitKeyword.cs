@@ -15,9 +15,9 @@ namespace Meta.Conduit
 {
     public class WitKeyword
     {
-        public string keyword;
+        public readonly string keyword;
 
-        public HashSet<string> synonyms;
+        public readonly HashSet<string> synonyms;
 
         public WitKeyword():this("", null)
         {
@@ -32,9 +32,18 @@ namespace Meta.Conduit
         public WitKeyword(WitEntityKeywordInfo witEntityKeywordInfo)
         {
             this.keyword = witEntityKeywordInfo.keyword;
-            this.synonyms = witEntityKeywordInfo.synonyms.ToHashSet();
+            this.synonyms = witEntityKeywordInfo.synonyms == null
+                ? new HashSet<string>()
+                : witEntityKeywordInfo.synonyms.ToHashSet();
         }
-        
+
+        public WitEntityKeywordInfo GetAsInfo() =>
+            new WitEntityKeywordInfo()
+            {
+                keyword = this.keyword,
+                synonyms = this.synonyms.ToList()
+            };
+
         public override bool Equals(object obj)
         {
             if (obj is WitKeyword other)

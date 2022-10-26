@@ -13,7 +13,7 @@ using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi.Requests
 {
-    public class WitInfoVRequest : WitVRequest
+    internal class WitInfoVRequest : WitVRequest, IWitInfoVRequest
     {
         // Constructor
         public WitInfoVRequest(IWitRequestConfiguration configuration) : base(configuration, true) {}

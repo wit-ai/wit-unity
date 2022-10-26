@@ -12,12 +12,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
-using UnityEngine;
 using UnityEditor;
 
 namespace Meta.WitAi.Requests
 {
-    public class WitSyncVRequest : WitVRequest
+    internal class WitSyncVRequest : WitVRequest, IWitSyncVRequest
     {
         // Constructor
         public WitSyncVRequest(IWitRequestConfiguration configuration) : base(configuration, true) {}

@@ -17,6 +17,7 @@ using UnityEngine.Networking;
 
 namespace Meta.Conduit.Editor
 {
+    [Obsolete("Use VRequest instead")]
     internal class WitHttp : IWitHttp
     {
         private readonly string _serverAccessToken;

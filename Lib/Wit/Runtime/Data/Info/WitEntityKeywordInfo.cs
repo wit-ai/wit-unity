@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Meta.WitAi.Data.Info
 {
@@ -31,5 +32,28 @@ namespace Meta.WitAi.Data.Info
         [NonReorderable]
         #endif
         public List<string> synonyms;
+
+        public override bool Equals(object obj)
+        {
+            if (obj is WitEntityKeywordInfo other)
+            {
+                return Equals(other);
+            }
+
+            return false;
+        }
+
+        public bool Equals(WitEntityKeywordInfo other)
+        {
+            return keyword == other.keyword && synonyms.Equivalent(other.synonyms);
+        }
+
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            hash = hash * 31 + keyword.GetHashCode();
+            hash = hash * 31 + synonyms.GetHashCode();
+            return hash;
+        }
     }
 }

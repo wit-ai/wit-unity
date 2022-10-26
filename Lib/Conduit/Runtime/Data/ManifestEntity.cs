@@ -8,6 +8,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit
 {
@@ -51,6 +52,25 @@ namespace Meta.Conduit
         /// The fully qualified name of the assembly containing the code for the entity.
         /// </summary>
         public string Assembly { get; set; }
+
+        /// <summary>
+        /// Extracts Wit.Ai entity info from this entity.
+        /// </summary>
+        /// <returns>The Wit entity info object.</returns>
+        public WitEntityInfo GetAsInfo()
+        {
+            var keywords = new WitEntityKeywordInfo [Values.Count];
+            for (var i = 0; i < Values.Count; ++i)
+            {
+                keywords[i] = Values[i].GetAsInfo();
+            }
+            
+            return new WitEntityInfo()
+            {
+                name = Name,
+                keywords = keywords
+            };
+        }
 
         public override bool Equals(object obj)
         {

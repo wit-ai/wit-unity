@@ -15,7 +15,7 @@ using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
 {
-    public class WitMessageVRequest : WitVRequest
+    internal class WitMessageVRequest : WitVRequest
     {
         // Constructor
         public WitMessageVRequest(IWitRequestConfiguration configuration) : base(configuration, false) {}

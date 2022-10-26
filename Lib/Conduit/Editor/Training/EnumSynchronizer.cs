@@ -12,9 +12,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Lib.Wit.Runtime.Requests;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
-using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,13 +31,15 @@ namespace Meta.Conduit.Editor
         private readonly IAssemblyWalker _assemblyWalker;
         private readonly IFileIo _fileIo;
         private readonly IWitHttp _witHttp;
+        private readonly IWitVRequestFactory _requestFactory;
 
-        public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitHttp witHttp)
+        public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitHttp witHttp, IWitVRequestFactory requestFactory)
         {
             _configuration = configuration;
             _fileIo = fileIo;
             _assemblyWalker = assemblyWalker;
             _witHttp = witHttp;
+            _requestFactory = requestFactory;
         }
 
         /// <summary>
@@ -94,18 +96,25 @@ namespace Meta.Conduit.Editor
             completionCallback(allEntitiesSynced, null);
         }
 
-        private IEnumerator CreateEntityOnWit(string entityName, StepResult completionCallback)
+        private IEnumerator CreateEntityOnWit(ManifestEntity manifestEntity, StepResult completionCallback)
         {
-            var entity = new WitIncomingEntity()
+            var entity = manifestEntity.GetAsInfo();
+            var request = _requestFactory.CreateWitSyncVRequest(_configuration);
+            var requestComplete = false;
+            if (!request.RequestAddEntity(entity, (result, error) =>
+                {
+                    requestComplete = true;
+                    if (string.IsNullOrEmpty(error))
+                    {
+                        completionCallback.Invoke(true, string.Empty);
+                    }
+                }))
             {
-                name = entityName
-            };
+                completionCallback.Invoke(false, $"Failed to send request to add entity {entity.name}");
+                yield break;
+            }
 
-            var outgoingEntity = new WitOutgoingEntity(entity);
-            var payload = JsonConvert.SerializeObject(outgoingEntity);
-
-            yield return _witHttp.MakeUnityWebRequest($"/entities",
-                WebRequestMethods.Http.Post, payload, completionCallback);
+            yield return new WaitUntil(()=> requestComplete);
         }
 
         /// <summary>
@@ -115,14 +124,14 @@ namespace Meta.Conduit.Editor
         /// <param name="completionCallback">The callback to call when the sync operation is complete.</param>
         internal IEnumerator Sync(ManifestEntity manifestEntity, StepResult completionCallback)
         {
-            WitIncomingEntity witIncomingEntity = null;
-            yield return GetWitEntity(manifestEntity.Name, incomingEntity => witIncomingEntity = incomingEntity);
+            WitEntityInfo? witIncomingEntity = null;
+            yield return GetWitEntity(manifestEntity.Name, witEntity => witIncomingEntity = witEntity);
 
             var result = false;
             string witData = "";
             if (witIncomingEntity == null)
             {
-                yield return CreateEntityOnWit(manifestEntity.Name, delegate(bool success, string data)
+                yield return CreateEntityOnWit(manifestEntity, delegate(bool success, string data)
                 {
                     result = success;
                     witData = data;
@@ -131,8 +140,13 @@ namespace Meta.Conduit.Editor
                 if (!result)
                 {
                     completionCallback(false, $"Failed to create new entity {manifestEntity.Name} on Wit.Ai.\n{witData}");
-                    yield break;
                 }
+                else
+                {
+                    completionCallback(true, "");
+                }
+                
+                yield break;
             }
 
             var delta = GetDelta(manifestEntity, witIncomingEntity);
@@ -164,11 +178,11 @@ namespace Meta.Conduit.Editor
         private IEnumerator CreateEnumFromWitEntity(string entityName)
         {
             // Obtain wit entity
-            WitIncomingEntity witIncomingEntity = null;
-            yield return this.GetWitEntity(entityName, incomingEntity => witIncomingEntity = incomingEntity);
+            WitEntityInfo? witIncomingEntity = null;
+            yield return GetWitEntity(entityName, incomingEntity => witIncomingEntity = incomingEntity);
 
             // Wit entity not found
-            if (witIncomingEntity == null)
+            if (!witIncomingEntity.HasValue)
             {
                 Debug.LogError($"Enum Synchronizer - Failed to find {entityName} entity on Wit.AI");
                 yield break;
@@ -177,8 +191,10 @@ namespace Meta.Conduit.Editor
             // Get enum name & values
             var entityEnumName = ConduitUtilities.GetEntityEnumName(entityName);
 
+            var keywords = witIncomingEntity.Value.keywords.Select(keyword => new WitKeyword(keyword)).ToList();
+            
             // Generate wrapper
-            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, witIncomingEntity.keywords, DEFAULT_NAMESPACE);
+            var wrapper = new EnumCodeWrapper(_fileIo, entityEnumName, entityEnumName, keywords, DEFAULT_NAMESPACE);
 
             // Write to file
             wrapper.WriteToFile();
@@ -253,9 +269,13 @@ namespace Meta.Conduit.Editor
         /// <summary>
         /// Returns the entries that are different between Wit.Ai and Conduit.
         /// </summary>
-        private EntitiesDelta GetDelta(ManifestEntity manifestEntity, WitIncomingEntity witEntity)
+        private EntitiesDelta GetDelta(ManifestEntity manifestEntity, WitEntityInfo? incomingEntity)
         {
-            var delta = new EntitiesDelta();
+            var delta = new EntitiesDelta()
+            {
+                Changed = new List<KeywordsDelta>(),
+                WitOnly = new HashSet<WitKeyword>()
+            };
 
             var manifestEntityKeywords = new Dictionary<string, WitKeyword>();
             foreach (var value in manifestEntity.Values)
@@ -263,21 +283,21 @@ namespace Meta.Conduit.Editor
                 manifestEntityKeywords.Add(value.keyword, value);
             }
 
-            if (witEntity == null)
+            if (!incomingEntity.HasValue)
             {
                 delta.LocalOnly = manifestEntity.Values.ToHashSet();
-                delta.WitOnly = new HashSet<WitKeyword>();
                 return delta;
             }
 
+            var witEntity = incomingEntity.Value;
+
             delta.LocalOnly = new HashSet<WitKeyword>();
-            delta.WitOnly = new HashSet<WitKeyword>();
-            
+
             var witEntityKeywords = new Dictionary<string, WitKeyword>();
 
             foreach (var keyword in witEntity.keywords)
             {
-                witEntityKeywords.Add(keyword.keyword, keyword);
+                witEntityKeywords.Add(keyword.keyword, new WitKeyword(keyword));
             }
 
             var commonKeywords = new HashSet<string>();
@@ -360,17 +380,28 @@ namespace Meta.Conduit.Editor
             var allSuccessful = true;
             foreach (var keyword in delta.LocalOnly)
             {
-                var payload = JsonConvert.SerializeObject(keyword);
-
-                yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords",
-                    WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
-                    {
-                        if (!success)
+                var request = _requestFactory.CreateWitSyncVRequest(_configuration);
+                var requestError = "";
+                var requestComplete = false;
+                if (!request.RequestAddEntityKeyword(entityName, keyword.GetAsInfo(),
+                        (result, error) =>
                         {
-                            allSuccessful = false;
-                            errorBuilder.AppendLine($"Failed to add keyword ({keyword.keyword}) to Wit.Ai");
-                        }
-                    });
+                            requestError = error;
+                            requestComplete = true;
+                        }))
+                {
+                    requestError = "Failed to send request";
+                }
+
+                if (!string.IsNullOrEmpty(requestError))
+                {
+                    allSuccessful = false;
+                    errorBuilder.AppendLine($"Failed to add keyword ({keyword.keyword}) to Wit.Ai. Error: {requestError}");
+                    continue;
+                }
+                
+                yield return new WaitUntil(()=> requestComplete || !string.IsNullOrEmpty(requestError));
+                
             }
 
             foreach (var changedKeyword in delta.Changed)
@@ -379,6 +410,7 @@ namespace Meta.Conduit.Editor
                 {
                     var payload = $"{{\"synonym\": \"{synonym}\"}}";
 
+                    // TODO: Rather than add individual synonyms, recreate the keyword with the full list in one request.
                     yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords/{changedKeyword.Keyword}/synonyms",
                         WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
                         {
@@ -396,60 +428,52 @@ namespace Meta.Conduit.Editor
 
         private IEnumerator GetEnumWitEntityNames(Action<List<string>> callBack)
         {
-            var response = "";
-            var result = false;
-            yield return _witHttp.MakeUnityWebRequest($"/entities", WebRequestMethods.Http.Get,
-                (success, data) =>
+            var request = _requestFactory.CreateWitInfoVRequest(_configuration);
+            var requestCompleted = false;
+            if (!request.RequestEntityList((infos, error) =>
                 {
-                    response = data;
-                    result = success;
-                });
+                    requestCompleted = true;
 
-            if (!result)
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        Debug.LogError($"Failed to query Wit Entities\nError: {error}");
+                        callBack(null);
+                        return;
+                    }
+
+                    callBack(infos.Where(entity => !entity.name.Contains('$')).Select(entity => entity.name)
+                        .ToList());
+
+                }))
             {
-                Debug.LogError($"Wit Entities Load Failed\nError: {response}");
-                callBack(null);
-                yield break;
+                VLog.E($"Failed to request entities from Wit");
             }
 
-            var entityNames = JsonConvert.DeserializeObject<List<WitEntityInfo>>(response);
-            if (entityNames == null)
-            {
-                Debug.LogError($"Wit Entities Decode Failed\nJSON:\n{response}");
-                callBack(null);
-                yield break;
-            }
-
-            callBack(entityNames.Where(entity => !entity.name.Contains('$')).Select(entity => entity.name).ToList());
+            yield return new WaitUntil(() => requestCompleted);
         }
 
-        private IEnumerator GetWitEntity(string manifestEntityName, Action<WitIncomingEntity> callBack)
+        private IEnumerator GetWitEntity(string manifestEntityName, Action<WitEntityInfo?> callBack)
         {
-            var response = "";
-            var result = false;
-            yield return _witHttp.MakeUnityWebRequest($"/entities/{manifestEntityName}", WebRequestMethods.Http.Get,
-                (success, data) =>
+            var request = _requestFactory.CreateWitInfoVRequest(_configuration);
+            var requestCompleted = false;
+
+            if (!request.RequestEntityInfo(manifestEntityName, (entity, error) =>
                 {
-                    response = data;
-                    result = success;
-                });
+                    requestCompleted = true;
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        callBack(null);
+                        return;
+                    }
 
-            if (!result)
+                    callBack(entity);
+                }))
             {
-                VLog.D($"Wit {manifestEntityName} Entity not found on Wit\nError: {response}");
+                VLog.E($"Failed to get entity {manifestEntityName}");
                 callBack(null);
-                yield break;
             }
-
-            var entity = JsonConvert.DeserializeObject<WitIncomingEntity>(response);
-            if (entity.keywords == null && entity.roles == null && entity.name == null)
-            {
-                VLog.E($"Wit {manifestEntityName} Entity Decode Failed\nKeywords: {(entity.keywords == null)}\nRoles: {(entity.roles == null)}\nName: {(entity.name == null)}\nJSON:\n{response}");
-                callBack(null);
-                yield break;
-            }
-
-            callBack(entity);
+                
+            yield return new WaitUntil(() => requestCompleted);
         }
     }
 }

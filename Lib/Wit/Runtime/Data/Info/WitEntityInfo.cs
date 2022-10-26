@@ -39,5 +39,31 @@ namespace Meta.WitAi.Data.Info
         /// synonyms
         /// </summary>
         [SerializeField] public WitEntityKeywordInfo[] keywords;
+
+        public override bool Equals(object obj)
+        {
+            if (obj is WitEntityInfo other)
+            {
+                return Equals(other);
+            }
+
+            return false;
+        }
+
+        public bool Equals(WitEntityInfo other)
+        {
+            return name == other.name && id == other.id && lookups.Equivalent(other.lookups) && roles.Equivalent(other.roles) && keywords.Equivalent(other.keywords);
+        }
+
+        public override int GetHashCode()
+        {
+            var hash = 17;
+            hash = hash * 31 + name.GetHashCode();
+            hash = hash * 31 + id.GetHashCode();
+            hash = hash * 31 + lookups.GetHashCode();
+            hash = hash * 31 + roles.GetHashCode();
+            hash = hash * 31 + keywords.GetHashCode();
+            return hash;
+        }
     }
 }

@@ -31,7 +31,7 @@ namespace Meta.WitAi.Requests
         /// Will only start new requests if there are less than this number
         /// If <= 0, then all requests will run immediately
         /// </summary>
-        public static int MaxConcurrentRequests = 2;
+        private static int MaxConcurrentRequests = 2;
         // Currently transmitting requests
         private static int _requestCount = 0;
 
@@ -56,7 +56,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public bool IsPerforming => _performing;
         private bool _performing = false;
-
+        
         /// <summary>
         /// Current progress for get requests
         /// </summary>
@@ -73,7 +73,7 @@ namespace Meta.WitAi.Requests
         private CoroutineUtility.CoroutinePerformer _coroutine;
 
         // Cancel error
-        public const string CANCEL_ERROR = "Cancelled";
+        private const string CANCEL_ERROR = "Cancelled";
 
         /// <summary>
         /// Initialize with a request and an on completion callback
@@ -398,7 +398,10 @@ namespace Meta.WitAi.Requests
             if (checkPath.StartsWith("http"))
             {
                 Uri uri = new Uri(CleanUrl(checkPath));
-                return RequestFileHeaders(uri, (headers, error) => onComplete?.Invoke(headers != null, error));
+                return RequestFileHeaders(uri, (headers, error) =>
+                {
+                    onComplete?.Invoke(headers != null, error);
+                });
             }
 
 #if FAKE_JAR_LOAD
@@ -544,7 +547,7 @@ namespace Meta.WitAi.Requests
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
             unityRequest.disposeUploadHandlerOnDispose = true;
             unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            unityRequest.disposeUploadHandlerOnDispose = true;
+            unityRequest.disposeDownloadHandlerOnDispose = true;
             return RequestJson(unityRequest, onComplete, onProgress);
         }
 

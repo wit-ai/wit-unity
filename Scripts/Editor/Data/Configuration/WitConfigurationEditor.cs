@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Lib.Wit.Runtime.Requests;
 using Meta.Conduit.Editor;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
@@ -43,6 +44,7 @@ namespace Meta.WitAi.Windows
         private static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
         private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
+        private static readonly IWitVRequestFactory VRequestFactory = new WitVRequestFactory();
 
         private EnumSynchronizer _enumSynchronizer;
 
@@ -633,7 +635,7 @@ namespace Meta.WitAi.Windows
             // Generate
             if (_enumSynchronizer == null)
             {
-                _enumSynchronizer = new EnumSynchronizer(configuration, AssemblyWalker, new FileIo(), new WitHttp(configuration.GetServerAccessToken(), 5000));
+                _enumSynchronizer = new EnumSynchronizer(configuration, AssemblyWalker, new FileIo(), new WitHttp(configuration.GetServerAccessToken(), 5000), VRequestFactory);
             }
 
             // Sync

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -13,6 +14,7 @@ using UnityEngine.Networking;
 
 namespace Meta.Conduit.Editor
 {
+    [Obsolete("Use VRequest instead")]
     internal interface IWitHttp
     {
         HttpWebRequest CreateWebRequest(string uriSection, string method, string body);
