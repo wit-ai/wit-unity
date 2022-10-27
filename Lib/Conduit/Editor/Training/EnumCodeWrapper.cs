@@ -14,7 +14,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Meta.WitAi;
-using Meta.WitAi.Data.Info;
 using Microsoft.CSharp;
 
 namespace Meta.Conduit.Editor
@@ -130,8 +129,7 @@ namespace Meta.Conduit.Editor
         
         public void AddValue(WitKeyword keyword)
         {
-            var arguments = new List<CodeAttributeArgument>
-                { new CodeAttributeArgument(new CodePrimitiveExpression(keyword.keyword)) };
+            List<CodeAttributeArgument> arguments = new List<CodeAttributeArgument>();
 
             if (keyword.synonyms != null)
             {
@@ -145,7 +143,7 @@ namespace Meta.Conduit.Editor
             }
             
             CodeAttributeDeclaration codeAttribute = null;
-            if (arguments.Count > 1)
+            if (arguments.Count > 0)
             {
                 var entityKeywordAttributeType =
                     new CodeTypeReference(_conduitAttributeName);
@@ -155,6 +153,12 @@ namespace Meta.Conduit.Editor
             AddValue(keyword.keyword, codeAttribute);
         }
 
+        /// <summary>
+        /// Returns a list of all aliases for the keyword starting with the original keyword.
+        /// </summary>
+        /// <param name="enumType">The enum type.</param>
+        /// <param name="enumValueName">The name of the enum value we are getting aliases for.</param>
+        /// <returns>The list of aliases starting with the keyword itself.</returns>
         private List<string> GetAliases(Type enumType, string enumValueName)
         {
             var enumValueInfo = enumType.GetMember(enumValueName);
@@ -163,14 +167,18 @@ namespace Meta.Conduit.Editor
             {
                 return new List<string>() { enumValueName };
             }
+
+            var allAliases = new List<string>() { enumValueName }; 
             
             var attribute = enumValueMemberInfo.GetCustomAttributes(typeof(ConduitValueAttribute), false).FirstOrDefault() as ConduitValueAttribute;
             if (attribute == null)
             {
-                return new List<string>() { enumValueName };
+                return allAliases;
             }
 
-            return attribute.Aliases.ToList();
+            allAliases.AddRange(attribute.Aliases.Where(alias => alias != enumValueName));
+
+            return allAliases;
         }
         
         private void ImportConduitNamespaceIfNeeded()
