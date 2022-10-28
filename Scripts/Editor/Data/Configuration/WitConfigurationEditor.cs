@@ -55,6 +55,7 @@ namespace Meta.WitAi.Windows
         private const string TAB_TRAITS_ID = "traits";
         private const string TAB_VOICES_ID = "voices";
         private readonly string[] _tabIds = new string[] { TAB_APPLICATION_ID, TAB_INTENTS_ID, TAB_ENTITIES_ID, TAB_TRAITS_ID, TAB_VOICES_ID };
+        private const string ENTITY_SYNC_CONSENT_KEY = "Conduit.EntitySync.Consent";
 
         // Generate
         private static ConduitStatistics Statistics
@@ -170,37 +171,44 @@ namespace Meta.WitAi.Windows
             {
                 GUI.enabled = Configuration.useConduit;
                 GUILayout.BeginHorizontal();
-                if (WitEditorUI.LayoutTextButton(_manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                 {
-                    GenerateManifest(Configuration, true);
-                }
-                GUI.enabled = Configuration.useConduit && _manifestAvailable;
-                if (WitEditorUI.LayoutTextButton("Select Manifest") && _manifestAvailable)
-                {
-                    Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(Configuration.GetManifestEditorPath());
-                }
-                GUI.enabled = Configuration.useConduit;
-                if (WitEditorUI.LayoutTextButton("Specify Assemblies"))
-                {
-                    PresentAssemblySelectionDialog();
-                }
-                GUILayout.FlexibleSpace();
-                GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                if (WitEditorUI.LayoutTextButton("Sync Entities"))
-                {
-                    SyncEntities();
-                }
-                if (_isAutoTrainAvailable) {
-                    GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                    if (WitEditorUI.LayoutTextButton("Auto train") && _manifestAvailable)
+                    if (WitEditorUI.LayoutTextButton(_manifestAvailable ? "Update Manifest" : "Generate Manifest"))
                     {
-                        SyncEntities(() =>
-                        {
-                            AutoTrainOnWitAi(Configuration);
-                        });
+                        GenerateManifest(Configuration, true);
                     }
+
+                    GUI.enabled = Configuration.useConduit && _manifestAvailable;
+                    if (WitEditorUI.LayoutTextButton("Select Manifest") && _manifestAvailable)
+                    {
+                        Selection.activeObject =
+                            AssetDatabase.LoadAssetAtPath<TextAsset>(Configuration.GetManifestEditorPath());
+                    }
+
+                    GUI.enabled = Configuration.useConduit;
+                    if (WitEditorUI.LayoutTextButton("Specify Assemblies"))
+                    {
+                        PresentAssemblySelectionDialog();
+                    }
+
+                    GUILayout.FlexibleSpace();
+                    GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
+                    if (WitEditorUI.LayoutTextButton("Sync Entities"))
+                    {
+                        SyncEntities();
+                        GUIUtility.ExitGUI();
+                    }
+
+                    if (_isAutoTrainAvailable)
+                    {
+                        GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
+                        if (WitEditorUI.LayoutTextButton("Auto train") && _manifestAvailable)
+                        {
+                            SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
+                        }
+                    }
+
+                    GUI.enabled = true;
                 }
-                GUI.enabled = true;
                 GUILayout.EndHorizontal();
             }
             EditorGUI.indentLevel--;
@@ -624,6 +632,12 @@ namespace Meta.WitAi.Windows
         // Sync entities
         private void SyncEntities(Action successCallback = null)
         {
+            if (!EditorUtility.DisplayDialog("Synchronizing with Wit.Ai entities", "This will synchronize local enums with Wit.Ai entities. Part of this process involves generating code locally and may result in overwriting existing code. Please make sure to backup your work before proceeding.", "Proceed", "Cancel", DialogOptOutDecisionType.ForThisSession, ENTITY_SYNC_CONSENT_KEY))
+            {
+                Debug.Log("Entity Sync cancelled");
+                return;
+            }
+
             // Fail without server token
             var validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
             if (!validServerToken)
