@@ -654,22 +654,31 @@ namespace Meta.WitAi.Windows
 
             // Sync
             _syncInProgress = true;
+            EditorUtility.DisplayProgressBar("Conduit Entity Sync", "Generating Manifest.", 0f );
             GenerateManifest(Configuration, false);
             var manifest = ManifestLoader.LoadManifest(Configuration.ManifestLocalPath);
+            const float initializationProgress = 0.1f;
+            EditorUtility.DisplayProgressBar("Conduit Entity Sync", "Synchronizing entities. Please wait...", initializationProgress);
             Debug.Log("Synchronizing enums with Wit.Ai entities");
             CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
-            {
-                _syncInProgress = false;
-                if (!success)
                 {
-                    VLog.E($"Conduit failed to synchronize entities\nError: {data}");
-                }
-                else
+                    _syncInProgress = false;
+                    EditorUtility.ClearProgressBar();
+                    if (!success)
+                    {
+                        VLog.E($"Conduit failed to synchronize entities\nError: {data}");
+                    }
+                    else
+                    {
+                        Debug.Log("Conduit successfully synchronized entities");
+                        successCallback?.Invoke();
+                    }
+                },
+                (status, progress) =>
                 {
-                    Debug.Log("Conduit successfully synchronized entities");
-                    successCallback?.Invoke();
-                }
-            }));
+                    EditorUtility.DisplayProgressBar("Conduit Entity Sync", status,
+                        initializationProgress + (1f - initializationProgress) * progress);
+                }));
         }
 
         private static void AutoTrainOnWitAi(WitConfiguration configuration)

@@ -18,6 +18,14 @@ namespace Meta.Conduit
     /// </summary>
     internal class ConduitUtilities
     {
+        /// <summary>
+        /// A delegate for reporting progress. The progress value range is 0.0f to 1.0f.
+        /// </summary>
+        public delegate void ProgressDelegate(string status, float progress);
+
+        /// <summary>
+        /// The Regex pattern for splitting on underscores.
+        /// </summary>
         private static readonly Regex UnderscoreSplitter = new Regex("(\\B[A-Z])", RegexOptions.Compiled);
 
         /// <summary>

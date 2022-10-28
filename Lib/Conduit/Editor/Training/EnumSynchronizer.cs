@@ -32,6 +32,7 @@ namespace Meta.Conduit.Editor
         private readonly IFileIo _fileIo;
         private readonly IWitHttp _witHttp;
         private readonly IWitVRequestFactory _requestFactory;
+        private float _progress = 0;
 
         public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitHttp witHttp, IWitVRequestFactory requestFactory)
         {
@@ -46,14 +47,16 @@ namespace Meta.Conduit.Editor
         /// Syncs all Wit.Ai entities with local enums. This method will create new code files for any missing enums.
         /// For entities that have corresponding enums, it will
         /// </summary>
-        public IEnumerator SyncWitEntities(Manifest manifest, StepResult completionCallback)
+        public IEnumerator SyncWitEntities(Manifest manifest, StepResult completionCallback, ConduitUtilities.ProgressDelegate progressCallback = null)
         {
             // Get all wit entity names
             // For entities not available locally, add them
             // For all other entities, sync them with manifest
 
             List<string> witEntityNames = null;
-            yield return this.GetEnumWitEntityNames(list =>
+            _progress = 0.1f;
+            progressCallback?.Invoke("Querying Wit.Ai entities", _progress);
+            yield return GetEnumWitEntityNames(list =>
             {
                 witEntityNames = list;
             });
@@ -66,10 +69,13 @@ namespace Meta.Conduit.Editor
             }
             
             var localEnumNames = manifest.Entities.Select(entity => entity.ID).ToList();
+            const float missingProgressProgressMaxRange = 0.5f;
+            var namesProgressIncrement = (missingProgressProgressMaxRange - _progress) / witEntityNames.Count;
             foreach (var entityName in witEntityNames)
             {
+                progressCallback?.Invoke("Generating missing local enums", _progress);
+                _progress += namesProgressIncrement;
                 var onWitOnly = !localEnumNames.Contains(entityName);
-
                 if (onWitOnly)
                 {
                     yield return CreateEnumFromWitEntity(entityName);
@@ -80,8 +86,11 @@ namespace Meta.Conduit.Editor
             AssetDatabase.Refresh();
 
             var allEntitiesSynced = true;
+            float mergeProgressIncrement = (1f - _progress) / manifest.Entities.Count;
             foreach (var manifestEntity in manifest.Entities)
             {
+                progressCallback?.Invoke($"Synchronizing entity: {manifestEntity.Name}", _progress);
+                _progress += mergeProgressIncrement;
                 yield return Sync(manifestEntity, (success, data) =>
                 {
                     if (!success)
