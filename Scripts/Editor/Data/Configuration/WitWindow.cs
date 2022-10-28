@@ -107,7 +107,7 @@ namespace Meta.WitAi.Windows
             // Configuration select
             base.LayoutContent();
             // Update inspector if needed
-            if (witInspector == null || witConfiguration == null || witInspector.configuration != witConfiguration)
+            if (witInspector == null || witConfiguration == null || witInspector.Configuration != witConfiguration)
             {
                 SetWitEditor();
             }

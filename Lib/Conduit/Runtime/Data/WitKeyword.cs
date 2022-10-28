@@ -26,15 +26,25 @@ namespace Meta.Conduit
         public WitKeyword(string keyword, List<string> synonyms = null)
         {
             this.keyword = keyword;
-            this.synonyms = synonyms == null ? new HashSet<string>() : synonyms.ToHashSet();
+            this.synonyms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (synonyms == null)
+            {
+                return;
+            }
+
+            // Maintain list order when adding so we accept only first instance of repeated synonyms
+            foreach (var synonym in synonyms)
+            {
+                if (!this.synonyms.Contains(synonym))
+                {
+                    this.synonyms.Add(synonym);
+                }
+            }
         }
         
-        public WitKeyword(WitEntityKeywordInfo witEntityKeywordInfo)
+        public WitKeyword(WitEntityKeywordInfo witEntityKeywordInfo): this(witEntityKeywordInfo.keyword, witEntityKeywordInfo.synonyms)
         {
-            this.keyword = witEntityKeywordInfo.keyword;
-            this.synonyms = witEntityKeywordInfo.synonyms == null
-                ? new HashSet<string>()
-                : witEntityKeywordInfo.synonyms.ToHashSet();
         }
 
         public WitEntityKeywordInfo GetAsInfo() =>

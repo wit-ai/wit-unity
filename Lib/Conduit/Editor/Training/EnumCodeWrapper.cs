@@ -26,7 +26,6 @@ namespace Meta.Conduit.Editor
         public const string DEFAULT_PATH = @"Assets\";
         
         private readonly string _sourceFilePath;
-        private readonly string _namespaceName;
         private readonly IFileIo _fileIo;
         private readonly CodeCompileUnit _compileUnit;
         private readonly CodeTypeDeclaration _typeDeclaration;
@@ -72,8 +71,7 @@ namespace Meta.Conduit.Editor
             
             // Initial setup
             _compileUnit = new CodeCompileUnit();
-            _namespaceName = enumNamespace;
-            _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GetEnumFilePath(enumName, _namespaceName) : sourceCodeFile;
+            _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GetEnumFilePath(enumName, enumNamespace) : sourceCodeFile;
             _fileIo = fileIo;
 
             // Setup namespace
@@ -83,8 +81,8 @@ namespace Meta.Conduit.Editor
             }
             else
             {
-                _namespace = new CodeNamespace(_namespaceName);
-                _namespaces.Add(_namespaceName, _namespace);
+                _namespace = new CodeNamespace(enumNamespace);
+                _namespaces.Add(enumNamespace, _namespace);
             }
 
             _compileUnit.Namespaces.Add(_namespace);
@@ -129,14 +127,18 @@ namespace Meta.Conduit.Editor
         
         public void AddValue(WitKeyword keyword)
         {
+            var pendingSynonyms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            pendingSynonyms.Add(keyword.keyword);
             List<CodeAttributeArgument> arguments = new List<CodeAttributeArgument>();
 
             if (keyword.synonyms != null)
             {
                 foreach (var synonym in keyword.synonyms)
                 {
-                    if (synonym.ToLower() != keyword.keyword.ToLower())
+                    if (!pendingSynonyms.Contains(synonym))
+                        //if (synonym.ToLower() != keyword.keyword.ToLower())
                     {
+                        pendingSynonyms.Add(synonym);
                         arguments.Add(new CodeAttributeArgument(new CodePrimitiveExpression(synonym)));
                     }
                 }
