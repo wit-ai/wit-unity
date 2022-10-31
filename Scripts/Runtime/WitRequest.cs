@@ -17,12 +17,10 @@ using System.Threading;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
-using Meta.WitAi;
-using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine;
-
+using UnityEngine.Networking;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -320,6 +318,15 @@ namespace Meta.WitAi
                 onPreSendRequest(ref uri, out headers);
             }
 
+            #if UNITY_WEBGL
+            StartUnityRequest(uri, headers);
+            #else
+            StartThreadedRequest(uri, headers);
+            #endif
+        }
+
+        private void StartThreadedRequest(Uri uri, Dictionary<string, string> headers)
+        {
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
 
@@ -331,7 +338,6 @@ namespace Meta.WitAi
             {
                 _request.KeepAlive = false;
             }
-
 
             if (null != postContentType)
             {
@@ -384,6 +390,91 @@ namespace Meta.WitAi
             {
                 StartResponse();
             }
+        }
+
+        private void StartUnityRequest(Uri uri, Dictionary<string, string> headers)
+        {
+            UnityWebRequest request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET);
+
+            if (forcedHttpMethodType != null) {
+                request.method = forcedHttpMethodType;
+            }
+
+            if (null != postContentType)
+            {
+                if (forcedHttpMethodType == null)
+                {
+                    request.method = UnityWebRequest.kHttpVerbPOST;
+                }
+
+                request.uploadHandler = new UploadHandlerRaw(postData);
+                request.uploadHandler.contentType = postContentType;
+            }
+
+            // Configure additional headers
+            if (shouldPost)
+            {
+                request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
+                    UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
+                request.SetRequestHeader("Content-Type", audioEncoding.ToString());
+                request.chunkedTransfer = true;
+            }
+
+            requestRequiresBody = RequestRequiresBody(command);
+
+            // Apply all wit headers
+            foreach (var header in headers)
+            {
+                request.SetRequestHeader(header.Key, header.Value);
+            }
+
+            requestStartTime = DateTime.UtcNow;
+            isActive = true;
+            statusCode = 0;
+            statusDescription = "Starting request";
+            request.timeout = Timeout;
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            if (request.method == UnityWebRequest.kHttpVerbPOST || request.method == UnityWebRequest.kHttpVerbPUT)
+            {
+                throw new NotImplementedException("Not yet implemented.");
+            }
+            
+            VRequest performer = new VRequest();
+            performer.RequestText(request, OnUnityRequestComplete, OnUnityRequestProgress);
+        }
+
+        private void OnUnityRequestProgress(float progress)
+        {
+            VLog.D("Request Progress: " + progress);
+        }
+
+        private void OnUnityRequestComplete(string response, string error)
+        {
+            isActive = false;
+            responseStarted = false;
+            responseData = WitResponseNode.Parse(response);
+            statusCode = string.IsNullOrEmpty(error) ? 200 : 500;
+            statusDescription = error;
+            var responseString = response;
+            responseData = WitResponseNode.Parse(responseString);
+            try
+            {
+                onRawResponse?.Invoke(responseString);
+                onPartialResponse?.Invoke(this);
+                if (!string.IsNullOrEmpty(responseData.GetTranscription()))
+                {
+                    onFullTranscription?.Invoke(responseData.GetTranscription());
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error parsing response: " + e + "\n" + responseString);
+                statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                statusDescription = "Error parsing response: " + e + "\n" + responseString;
+            }
+
+            onResponse?.Invoke(this);
         }
 
         private bool RequestRequiresBody(string command)
