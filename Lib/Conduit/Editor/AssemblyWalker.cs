@@ -83,6 +83,7 @@ namespace Meta.Conduit.Editor
             if (AssembliesToIgnore != null && AssembliesToIgnore.Any()) {
                 return GetAllAssemblies().Where(assembly => !AssembliesToIgnore.Contains(assembly.FullName));
             }
+            
             return GetAllAssemblies();
         }
 
@@ -98,7 +99,7 @@ namespace Meta.Conduit.Editor
             return _compilationAssemblies.Where(assembly => !_shortAssemblyNamesToIgnore.Contains(assembly.name));
         }
 
-        public bool GetSourceCode(Type type, out string sourceCodeFile)
+        public bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit)
         {
             if (type == null || !type.IsEnum)
             {
@@ -112,14 +113,20 @@ namespace Meta.Conduit.Editor
                     continue;
                 }
 
-                if (GetSourceCodeFromAssembly(assembly, type, out sourceCodeFile))
+                if (GetSourceCodeFromAssembly(assembly, type, out sourceCodeFile, out singleUnit))
                 {
+                    if (!singleUnit)
+                    {
+                        VLog.W($"Type {type} is not in a separate file.");
+                    }
+
                     return true;
                 }
             }
 
             VLog.W($"Failed to find source code for enum {type}");
             sourceCodeFile = string.Empty;
+            singleUnit = false;
             return false;
         }
         
@@ -139,27 +146,51 @@ namespace Meta.Conduit.Editor
             }
         }
 
-        private bool GetSourceCodeFromAssembly(Assembly assembly, Type type, out string sourceCodeFile)
+        private bool GetSourceCodeFromAssembly(Assembly assembly, Type type, out string sourceCodeFile, out bool singleUnit)
         {
             // TODO: Cache code files.
             var defaultFileName = GetDefaultFileName(type);
 
             foreach (var sourceFile in assembly.sourceFiles)
             {
-                if (!sourceFile.EndsWith(defaultFileName) || (!ContainsType(sourceFile, type)))
+                if (!sourceFile.EndsWith(defaultFileName))
                 {
                     continue;
                 }
+                
+                var sourceCode = File.ReadAllText(sourceFile);
+                
+                if (!ContainsType(sourceCode, type))
+                {
+                    continue;
+                }
+
+                singleUnit = IsSingleEnumSourceCode(sourceCode);
 
                 sourceCodeFile = sourceFile;
                 return true;
             }
 
             sourceCodeFile = string.Empty;
+            singleUnit = false;
             return false;
         }
 
-        private bool ContainsType(string sourceFile, Type type)
+        /// <summary>
+        /// Returns true if the code contains only a single enum defined.
+        /// This is not 100% accurate as it relies on simple code search so may return false positives.
+        /// This checks only for classes, structs, and enums.  
+        /// </summary>
+        /// <returns></returns>
+        private bool IsSingleEnumSourceCode(string sourceCode)
+        {
+            // This matches enums, classes and structs including their identifiers and nested braces (for scopes)
+            var codeBlockPattern = @"(enum|class|struct)\s\w+[\n\r\s]*\{(?>\{(?<c>)|[^{}]+|\}(?<-c>))*(?(c)(?!))\}";
+
+            return Regex.Matches(sourceCode, codeBlockPattern).Count == 1;
+        }
+
+        private bool ContainsType(string sourceCode, Type type)
         {
             if (!type.IsEnum)
             {
@@ -167,9 +198,8 @@ namespace Meta.Conduit.Editor
             }
 
             var pattern = $"enum\\s{type.Name}";
-            var text = File.ReadAllText(sourceFile);
 
-            return Regex.IsMatch(text, pattern);
+            return Regex.IsMatch(sourceCode, pattern);
         }
 
         private string GetDefaultFileName(Type type)

@@ -38,6 +38,16 @@ namespace Meta.Conduit.Editor
         /// <returns>The list of assemblies in the compilation pipeline.</returns>
         IEnumerable<Assembly> GetCompilationAssemblies(AssembliesType assembliesType);
 
-        bool GetSourceCode(Type type, out string sourceCodeFile);
+        /// <summary>
+        /// Returns the file path containing the specified type.
+        /// </summary>
+        /// <param name="type">The type to look for.</param>
+        /// <param name="sourceCodeFile">The full filepath.</param>
+        /// <param name="singleUnit">
+        /// True if the type is the only type defined in the file.
+        /// False if there are other types in the same file.
+        /// </param>
+        /// <returns>True if the type was found. False otherwise.</returns>
+        bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit);
     }
 }

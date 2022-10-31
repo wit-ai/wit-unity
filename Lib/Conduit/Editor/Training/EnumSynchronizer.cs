@@ -91,12 +91,12 @@ namespace Meta.Conduit.Editor
             {
                 progressCallback?.Invoke($"Synchronizing entity: {manifestEntity.Name}", _progress);
                 _progress += mergeProgressIncrement;
-                yield return Sync(manifestEntity, (success, data) =>
+                yield return Sync(manifestEntity, (success, error) =>
                 {
                     if (!success)
                     {
                         allEntitiesSynced = false;
-                        VLog.W($"Failed to sync entity {manifestEntity.Name}.\n{data}");
+                        VLog.W($"Failed to sync entity {manifestEntity.Name}.\n{error}");
                     }
                 });
             }
@@ -179,7 +179,7 @@ namespace Meta.Conduit.Editor
             }
             else
             {
-                completionCallback(false, "Failed to add entity to local enum");
+                completionCallback(false, $"Failed to add entity {manifestEntity.Name} to local enum");
             }
         }
 
@@ -208,6 +208,12 @@ namespace Meta.Conduit.Editor
             wrapper.WriteToFile();
         }
 
+        /// <summary>
+        /// Adds values to local enums.
+        /// </summary>
+        /// <param name="manifestEntity">The entity.</param>
+        /// <param name="delta">The delta between the local and remote entities.</param>
+        /// <returns>True if the values were added successfully. False otherwise.</returns>
         private bool AddValuesToLocalEnum(ManifestEntity manifestEntity,
             EntitiesDelta delta)
         {
@@ -269,7 +275,11 @@ namespace Meta.Conduit.Editor
 
         private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
         {
-            _assemblyWalker.GetSourceCode(enumType, out string sourceFile);
+            _assemblyWalker.GetSourceCode(enumType, out string sourceFile, out bool singleUnit);
+            if (!singleUnit)
+            {
+                return null;
+            }
 
             return new EnumCodeWrapper(_fileIo, enumType, entityName, sourceFile);
         }
