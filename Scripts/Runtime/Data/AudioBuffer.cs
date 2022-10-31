@@ -101,7 +101,7 @@ namespace Meta.WitAi.Data
             _micInput.OnSampleReady -= OnMicSampleReady;
 
             if (alwaysRecording) StopRecording(this);
-            
+
             _instanceInit = false;
         }
 

@@ -18,6 +18,7 @@ using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi;
+using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine;

@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 // Source: https://github.com/adrenak/unimic/blob/master/Assets/UniMic/Runtime/Mic.cs
 
+#if !UNITY_WEBGL || UNITY_EDITOR
 #if UNITY_EDITOR
 // Simulates Android Permission Popup
 #define EDITOR_PERMISSION_POPUP
@@ -134,6 +135,8 @@ namespace Meta.WitAi.Lib
         }
 
         int m_SampleCount = 0;
+
+        int MicPosition => Microphone.GetPosition(CurrentDeviceName);
 
         #endregion
 
@@ -275,23 +278,16 @@ namespace Meta.WitAi.Lib
             {
                 _devices.AddRange(micIDs);
             }
-#if EDITOR_PERMISSION_POPUP
-            if (Time.frameCount < 5)
+
+            if (_devices.Count == 0)
             {
-                _devices.Clear();
+                VLog.W("No mics found");
             }
             else
-#endif
             {
-                if (_devices.Count == 0)
-                {
-                    VLog.W("No mics found");
-                }
-                else
-                {
-                    VLog.D($"Found {_devices.Count} Mics");
-                }
+                VLog.D($"Found {_devices.Count} Mics");
             }
+
             UnityEngine.Profiling.Profiler.EndSample();
             CurrentDeviceIndex = _devices.IndexOf(oldDevice);
         }
@@ -309,7 +305,7 @@ namespace Meta.WitAi.Lib
 
         private void StartMicrophone()
         {
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL || UNITY_EDITOR
             VLog.D("Reserved mic " + CurrentDeviceName);
             AudioClip = Microphone.Start(CurrentDeviceName, true, 1, AudioEncoding.samplerate);
             AudioClip.name = CurrentDeviceName;
@@ -320,7 +316,7 @@ namespace Meta.WitAi.Lib
         {
             if (MicrophoneIsRecording(CurrentDeviceName))
             {
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL || UNITY_EDITOR
                 VLog.D("Released mic " + CurrentDeviceName);
                 Microphone.End(CurrentDeviceName);
 #endif
@@ -361,7 +357,7 @@ namespace Meta.WitAi.Lib
             {
                 StartCoroutine(ReadRawAudio());
 
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL || UNITY_EDITOR
                 // Make sure we seek before we start reading data
                 MicrophoneGetPosition(CurrentDeviceName);
                 VLog.D("Started recording with " + CurrentDeviceName);
@@ -447,7 +443,7 @@ namespace Meta.WitAi.Lib
         // Wrapper methods to handle platforms where the UnityEngine.Microphone class is non-existent
         private bool MicrophoneIsRecording(string device)
         {
-#if UNITY_WEBGL
+#if UNITY_WEBGL && !UNITY_EDITOR
             return false;
 #else
             return Microphone.IsRecording(device);
@@ -456,7 +452,7 @@ namespace Meta.WitAi.Lib
 
         private string[] MicrophoneGetDevices()
         {
-#if UNITY_WEBGL
+#if UNITY_WEBGL && !UNITY_EDITOR
             return new string[] {};
 #else
             return Microphone.devices;
@@ -465,7 +461,7 @@ namespace Meta.WitAi.Lib
 
         private int MicrophoneGetPosition(string device)
         {
-#if UNITY_WEBGL
+#if UNITY_WEBGL && !UNITY_EDITOR
             // This should (probably) never happen, since the Start/Stop Recording methods will
             // silently fail under webGL.
             return 0;
@@ -476,3 +472,4 @@ namespace Meta.WitAi.Lib
         #endregion
     }
 }
+#endif

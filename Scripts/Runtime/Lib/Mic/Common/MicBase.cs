@@ -21,6 +21,7 @@ namespace Meta.WitAi.Lib
         public abstract string GetMicName();
         public abstract int GetMicSampleRate();
         public abstract AudioClip GetMicClip();
+        public abstract int MicPosition { get; }
 
         // All Mic callbacks
         public event Action OnStartRecording;
@@ -30,6 +31,16 @@ namespace Meta.WitAi.Lib
 
         // Mic states
         public bool IsRecording { get; private set; }
+        public virtual bool IsMicListening
+        #if !UNITY_WEBGL
+        {
+            get => Microphone.IsRecording(GetMicName());
+        }
+        #else
+        {
+            get => false;
+        }
+        #endif
         public bool IsInputAvailable => GetMicClip() != null;
 
         // Encoding settings for wit
@@ -86,20 +97,20 @@ namespace Meta.WitAi.Lib
 
             // All needed data
             int loops = 0;
-            int readAbsPos = Microphone.GetPosition(micDevice);
+            int readAbsPos = MicPosition;
             int prevPos = readAbsPos;
             int micTempTotal = micSampleRate / 1000 * sampleDurationMS * micClip.channels;
             int micDif = micTempTotal / sampleTotal;
             float[] temp = new float[micTempTotal];
 
             // Continue reading
-            while (micClip != null && Microphone.IsRecording(micDevice) && IsRecording)
+            while (micClip != null && IsMicListening && IsRecording)
             {
                 bool isNewDataAvailable = true;
 
                 while (isNewDataAvailable && micClip != null)
                 {
-                    int currPos = Microphone.GetPosition(micDevice);
+                    int currPos = MicPosition;
                     if (currPos < prevPos)
                         loops++;
                     prevPos = currPos;

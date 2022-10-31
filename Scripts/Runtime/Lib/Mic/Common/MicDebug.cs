@@ -9,7 +9,6 @@
 using System;
 using System.IO;
 using Meta.WitAi.Interfaces;
-using Meta.WitAi.Utilities;
 using UnityEngine;
 
 namespace Meta.WitAi.Lib
@@ -71,10 +70,9 @@ namespace Meta.WitAi.Lib
             {
                 path = path.Substring(0, path.Length - 1);
             }
-            if (!IOUtility.CreateDirectory(path))
+            if (!Directory.Exists(path))
             {
-                Debug.LogError("MicDebug - Create Directory Failed");
-                return;
+                Directory.CreateDirectory(path);
             }
 
             // Generate file name
