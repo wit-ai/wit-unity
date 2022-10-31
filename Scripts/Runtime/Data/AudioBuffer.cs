@@ -174,6 +174,7 @@ namespace Meta.WitAi.Data
         private IEnumerator WaitForMicToStart(Component component)
         {
             yield return new WaitUntil(() => null != _micInput);
+            yield return new WaitUntil(() => _micInput.IsInputAvailable);
 
             _activeRecorders.Add(component);
             if (!_micInput.IsRecording)

@@ -200,18 +200,30 @@ namespace Meta.WitAi.Lib
 
         private void OnApplicationFocus(bool hasFocus)
         {
-            if (!hasFocus)
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            if (hasFocus && IsRecording)
             {
+                VLog.D($"Mic was recording and app is resumed, resuming listening on {CurrentDeviceName}");
+                SafeStartMicrophone();
+                StartCoroutine(ReadRawAudio());
+            }
+            else if (!hasFocus)
+            {
+                VLog.D($"Stopping listening on {CurrentDeviceName} due to loss of focus.");
                 StopMicrophone();
             }
+            #endif
         }
 
         private void OnApplicationPause(bool pauseStatus)
         {
+            #if UNITY_ANDROID && !UNITY_EDITOR
             if (pauseStatus)
             {
+                VLog.D($"Stopping listening on {CurrentDeviceName} due to application pause.");
                 StopMicrophone();
             }
+            #endif
         }
 
         private void OnDestroy()
