@@ -10,7 +10,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text;
 using Lib.Wit.Runtime.Requests;
 using Meta.WitAi;
@@ -30,16 +29,14 @@ namespace Meta.Conduit.Editor
         private readonly IWitRequestConfiguration _configuration;
         private readonly IAssemblyWalker _assemblyWalker;
         private readonly IFileIo _fileIo;
-        private readonly IWitHttp _witHttp;
         private readonly IWitVRequestFactory _requestFactory;
         private float _progress = 0;
 
-        public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitHttp witHttp, IWitVRequestFactory requestFactory)
+        public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitVRequestFactory requestFactory)
         {
             _configuration = configuration;
             _fileIo = fileIo;
             _assemblyWalker = assemblyWalker;
-            _witHttp = witHttp;
             _requestFactory = requestFactory;
         }
 
@@ -425,18 +422,28 @@ namespace Meta.Conduit.Editor
             {
                 foreach (var synonym in changedKeyword.LocalOnlySynonyms)
                 {
-                    var payload = $"{{\"synonym\": \"{synonym}\"}}";
-
-                    // TODO: Rather than add individual synonyms, recreate the keyword with the full list in one request.
-                    yield return _witHttp.MakeUnityWebRequest($"/entities/{entityName}/keywords/{changedKeyword.Keyword}/synonyms",
-                        WebRequestMethods.Http.Post, payload, delegate(bool success, string data)
-                        {
-                            if (!success)
+                    var request = _requestFactory.CreateWitSyncVRequest(_configuration);
+                    var requestError = "";
+                    var requestComplete = false;
+                    
+                    if (!request.RequestAddSynonym(entityName, changedKeyword.Keyword, synonym,
+                            (result, error) =>
                             {
-                                allSuccessful = false;
-                                errorBuilder.AppendLine($"Failed to add synonym ({synonym}) to Wit.Ai");
-                            }
-                        });
+                                requestError = error;
+                                requestComplete = true;
+                            }))
+                    {
+                        requestError = "Failed to send request";
+                    }
+
+                    if (!string.IsNullOrEmpty(requestError))
+                    {
+                        allSuccessful = false;
+                        errorBuilder.AppendLine($"Failed to add synonym ({synonym}) to keyword ({changedKeyword.Keyword}) on Wit.Ai. Error: {requestError}");
+                        continue;
+                    }
+                    
+                    yield return new WaitUntil(()=> requestComplete || !string.IsNullOrEmpty(requestError));
                 }
             }
 

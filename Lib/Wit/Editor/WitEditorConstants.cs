@@ -29,6 +29,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_ADD_INTENT = "intents";
         public const string ENDPOINT_ADD_ENTITY = "entities";
         public const string ENDPOINT_ADD_ENTITY_KEYWORD = "keywords";
+        public const string ENDPOINT_ADD_ENTITY_KEYWORD_SYNONYMS = "synonyms";
         public const string ENDPOINT_ADD_TRAIT = "traits";
         public const string ENDPOINT_ADD_TRAIT_VALUE = "values";
     }

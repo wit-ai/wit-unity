@@ -62,6 +62,23 @@ namespace Meta.WitAi.Requests
             return RequestWit($"{WitEditorConstants.ENDPOINT_ADD_ENTITY}/{entityId}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD}",
                 null, json, onComplete);
         }
+        
+        /// <summary>
+        /// Submits a synonym to be added to a keyword on the specified entity on the current wit app
+        /// </summary>
+        /// <param name="entityId">The entity that holds the keyword</param>
+        /// <param name="keyword">The keyword we're adding the synonym to</param>
+        /// <param name="synonym">The synonym we're adding</param>
+        /// <param name="onComplete">On completion that returns updated entity if successful</param>
+        /// <returns>False if fails to make request</returns>
+
+        public bool RequestAddSynonym(string entityId, string keyword, string synonym, RequestCompleteDelegate<WitEntityInfo> onComplete)
+        {
+            string json = $"{{\"synonym\": \"{synonym}\"}}";
+            return RequestWit(
+                $"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD}/{keyword}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD_SYNONYMS}",
+                null, json, onComplete);        
+        }
 
         /// <summary>
         /// Submits a trait to be added to the current wit app

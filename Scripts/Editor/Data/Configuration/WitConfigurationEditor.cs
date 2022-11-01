@@ -649,7 +649,7 @@ namespace Meta.WitAi.Windows
             // Generate
             if (_enumSynchronizer == null)
             {
-                _enumSynchronizer = new EnumSynchronizer(Configuration, AssemblyWalker, new FileIo(), new WitHttp(Configuration.GetServerAccessToken(), 5000), VRequestFactory);
+                _enumSynchronizer = new EnumSynchronizer(Configuration, AssemblyWalker, new FileIo(), VRequestFactory);
             }
 
             // Sync
