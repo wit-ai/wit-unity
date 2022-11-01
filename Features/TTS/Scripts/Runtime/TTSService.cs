@@ -507,13 +507,13 @@ namespace Meta.WitAi.TTS
 
             // Now loaded
             SetClipLoadState(clipData, TTSClipLoadState.Loaded);
+            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
 
             // Invoke playback is ready
             clipData.onPlaybackReady?.Invoke(string.Empty);
             clipData.onPlaybackReady = null;
 
             // Callback delegate
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
             Events?.Stream?.OnStreamReady?.Invoke(clipData);
         }
         // Handle cancel of disk cache streaming

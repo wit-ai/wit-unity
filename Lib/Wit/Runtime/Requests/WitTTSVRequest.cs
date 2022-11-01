@@ -21,7 +21,10 @@ namespace Meta.WitAi.Requests
         public static AudioType TTSAudioType = AudioType.WAV;
 
         // Constructor
-        public WitTTSVRequest(IWitRequestConfiguration configuration) : base(configuration, false) {}
+        public WitTTSVRequest(IWitRequestConfiguration configuration) : base(configuration, false)
+        {
+            Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
+        }
 
         // Internal base method for tts request
         private UnityWebRequest GetUnityRequest(string textToSpeak,

@@ -39,6 +39,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS_PARAM = "q";
         public const string ENDPOINT_TTS_CLIP = "WitTTSClip";
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
+        public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 140;
 
         // Dictation Endpoint

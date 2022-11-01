@@ -79,7 +79,7 @@ MonoBehaviour:
       OnDownloadError:
         m_PersistentCalls:
           m_Calls: []
-  _settings:
+  RequestSettings:
     configuration: {fileID: 0}
   _presetVoiceSettings:
   - settingsID: CHARLIE
@@ -90,6 +90,12 @@ MonoBehaviour:
     gain: 50
   - settingsID: REBECCA
     voice: Rebecca
+    style: default
+    speed: 100
+    pitch: 100
+    gain: 50
+  - settingsID: COOPER
+    voice: Cooper
     style: default
     speed: 100
     pitch: 100
@@ -106,10 +112,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d60dcb6d02034b4b96284db469db5e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _clipLimit: 1
-  _clipCapacity: 100
-  _ramLimit: 1
-  _ramCapacity: 2000
+  ClipLimit: 1
+  ClipCapacity: 100
+  RamLimit: 1
+  RamCapacity: 2000
 --- !u!114 &4852061571279439022
 MonoBehaviour:
   m_ObjectHideFlags: 0
