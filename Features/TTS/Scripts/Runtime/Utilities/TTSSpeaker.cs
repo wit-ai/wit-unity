@@ -112,9 +112,8 @@ namespace Meta.WitAi.TTS.Utilities
         #endregion
 
         #region SPEAK
-        // Whether speaking
-        public bool IsSpeaking => _speaking;
-        private bool _speaking = false;
+        // Whether currently speaking
+        public bool IsSpeaking { get; private set; } = false;
 
         /// <summary>
         /// Speaks a format delimited phrase
@@ -291,7 +290,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Started speaking
-            _speaking = true;
+            IsSpeaking = true;
             Events?.OnStartSpeaking?.Invoke(this, _lastClip.textToSpeak);
 
             // Play clip & wait
@@ -311,13 +310,13 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnPlaybackComplete()
         {
             // Not speaking
-            if (!_speaking)
+            if (!IsSpeaking)
             {
                 return;
             }
 
             // Done
-            _speaking = false;
+            IsSpeaking = false;
             _player = null;
 
             // Cancelled
@@ -330,13 +329,13 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnPlaybackCancel()
         {
             // Not speaking
-            if (!_speaking)
+            if (!IsSpeaking)
             {
                 return;
             }
 
             // Done
-            _speaking = false;
+            IsSpeaking = false;
             if (_player != null)
             {
                 StopCoroutine(_player);
@@ -348,6 +347,29 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 Events?.OnCancelledSpeaking?.Invoke(this, _lastClip.textToSpeak);
             }
+        }
+        #endregion
+
+        #region QUEUEING
+        /// <summary>
+        /// Speak and wait for load/playback completion
+        /// </summary>
+        /// <param name="textToSpeak">Text to be spoken</param>
+        public IEnumerator SpeakAsync(string textToSpeak)
+        {
+            yield return SpeakAsync(textToSpeak, (TTSDiskCacheSettings)null);
+        }
+        /// <summary>
+        /// Speak and wait for load/playback completion
+        /// </summary>
+        /// <param name="textToSpeak">Text to be spoken</param>
+        /// <param name="diskCacheSettings">Custom cache settings</param>
+        public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings)
+        {
+            // Speak
+            Speak(textToSpeak, diskCacheSettings);
+            // Wait while loading/speaking
+            yield return new WaitWhile(() => IsLoading || IsSpeaking);
         }
         #endregion
     }
