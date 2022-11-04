@@ -38,7 +38,7 @@ namespace Meta.WitAi.TTS.Editor
         }
 
         // Default TTS Service
-        public static TTSService CreateService(Transform parent = null)
+        public static TTSService CreateService(Transform parent = null, bool ignoreErrors = false)
         {
             // Get parent
             if (parent == null)
@@ -54,7 +54,10 @@ namespace Meta.WitAi.TTS.Editor
             if (instance != null)
             {
                 // Log
-                Debug.LogWarning($"TTS Service - A TTSService is already in scene\nGameObject: {instance.gameObject.name}");
+                if (!ignoreErrors)
+                {
+                    Debug.LogWarning($"TTS Service - A TTSService is already in scene\nGameObject: {instance.gameObject.name}");
+                }
 
                 // Move into parent
                 if (parent != null)
