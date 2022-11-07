@@ -181,7 +181,7 @@ namespace Meta.WitAi.Lib
             {
                 if (m_Instance == null)
                     m_Instance = GameObject.FindObjectOfType<Mic>();
-                if (m_Instance == null)
+                if (m_Instance == null && Application.isPlaying)
                 {
                     m_Instance = new GameObject("UniMic.Mic").AddComponent<Mic>();
                     DontDestroyOnLoad(m_Instance.gameObject);
@@ -323,7 +323,18 @@ namespace Meta.WitAi.Lib
             }
             if (AudioClip != null)
             {
-                Destroy(AudioClip);
+                #if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    // Editor only
+                    DestroyImmediate(AudioClip);
+                }
+                else
+                #endif
+                {
+                    // Safe destroy
+                    Destroy(AudioClip);
+                }
                 AudioClip = null;
             }
         }
