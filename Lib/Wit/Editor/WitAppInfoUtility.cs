@@ -17,8 +17,8 @@ namespace Meta.WitAi.Lib
     public static class WitAppInfoUtility
     {
         // Returns a vrequest
-        private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration) =>
-            new WitInfoVRequest(configuration);
+        private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration, bool useServerToken = true) =>
+            new WitInfoVRequest(configuration, useServerToken);
 
         /// <summary>
         /// Get application info using server access token
@@ -47,9 +47,19 @@ namespace Meta.WitAi.Lib
             // Needs server access token
             if (string.IsNullOrEmpty(configuration.GetServerAccessToken()))
             {
-                warnings.AppendLine("No server access tokens provided.");
-                UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-                return;
+                // Update data without server access token
+                if (!string.IsNullOrEmpty(appInfo.id) && !string.IsNullOrEmpty(configuration.GetClientAccessToken()))
+                {
+                    UpdateIntents(configuration, appInfo, warnings, false, onUpdateComplete);
+                    return;
+                }
+                // Fail
+                else
+                {
+                    warnings.AppendLine("No server access tokens provided.");
+                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                    return;
+                }
             }
 
             // Needs app id
@@ -98,6 +108,11 @@ namespace Meta.WitAi.Lib
                 {
                     warnings.AppendLine($"Application info update failed ({error})");
                 }
+                // No app id
+                else if (string.IsNullOrEmpty(appInfo.id))
+                {
+                    warnings.AppendLine($"Application info does not include app id");
+                }
                 // Success
                 else
                 {
@@ -135,16 +150,16 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Update intents
-                UpdateIntents(configuration, appInfo, warnings, onUpdateComplete);
+                UpdateIntents(configuration, appInfo, warnings, true, onUpdateComplete);
             });
         }
 
         // Update intents
         private static void UpdateIntents(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            GetRequest(configuration).RequestIntentList((intents, error) =>
+            GetRequest(configuration, useServerToken).RequestIntentList((intents, error) =>
             {
                 // Failed to update intent list
                 if (!string.IsNullOrEmpty(error))
@@ -159,18 +174,18 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Update each intent
-                UpdateIntent(0, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateIntent(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
         // Perform each
         private static void UpdateIntent(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
             // Done
             if (appInfo.intents == null || index >= appInfo.intents.Length)
             {
-                UpdateEntities(configuration, appInfo, warnings, onUpdateComplete);
+                UpdateEntities(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
                 return;
             }
 
@@ -178,7 +193,7 @@ namespace Meta.WitAi.Lib
             WitIntentInfo intent = appInfo.intents[index];
 
             // Perform update
-            GetRequest(configuration).RequestIntentInfo(intent.id, (result, error) =>
+            GetRequest(configuration, useServerToken).RequestIntentInfo(intent.id, (result, error) =>
             {
                 // Failed to update intent
                 if (!string.IsNullOrEmpty(error))
@@ -192,16 +207,16 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Next
-                UpdateIntent(index + 1, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateIntent(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
 
         // Update entities
         private static void UpdateEntities(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            GetRequest(configuration).RequestEntityList((entities, error) =>
+            GetRequest(configuration, useServerToken).RequestEntityList((entities, error) =>
             {
                 // Failed to update entity list
                 if (!string.IsNullOrEmpty(error))
@@ -216,18 +231,18 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Update each
-                UpdateEntity(0, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateEntity(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
         // Perform each
         private static void UpdateEntity(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
             // Done
             if (appInfo.entities == null || index >= appInfo.entities.Length)
             {
-                UpdateTraits(configuration, appInfo, warnings, onUpdateComplete);
+                UpdateTraits(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
                 return;
             }
 
@@ -235,7 +250,7 @@ namespace Meta.WitAi.Lib
             WitEntityInfo entity = appInfo.entities[index];
 
             // Perform update
-            GetRequest(configuration).RequestEntityInfo(entity.id, (result, error) =>
+            GetRequest(configuration, useServerToken).RequestEntityInfo(entity.id, (result, error) =>
             {
                 // Failed to update entity
                 if (!string.IsNullOrEmpty(error))
@@ -249,16 +264,16 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Next
-                UpdateEntity(index + 1, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateEntity(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
 
         // Update traits
         private static void UpdateTraits(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            GetRequest(configuration).RequestTraitList((traits, error) =>
+            GetRequest(configuration, useServerToken).RequestTraitList((traits, error) =>
             {
                 // Failed to update trait list
                 if (!string.IsNullOrEmpty(error))
@@ -272,18 +287,18 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Update each trait
-                UpdateTrait(0, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateTrait(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
         // Perform each
         private static void UpdateTrait(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
             // Done
-            if (index >= appInfo.traits.Length)
+            if (appInfo.traits == null || index >= appInfo.traits.Length)
             {
-                UpdateVoices(configuration, appInfo, warnings, onUpdateComplete);
+                UpdateVoices(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
                 return;
             }
 
@@ -291,7 +306,7 @@ namespace Meta.WitAi.Lib
             WitTraitInfo trait = appInfo.traits[index];
 
             // Perform update
-            GetRequest(configuration).RequestTraitInfo(trait.id, (result, error) =>
+            GetRequest(configuration, useServerToken).RequestTraitInfo(trait.id, (result, error) =>
             {
                 // Failed to update trait
                 if (!string.IsNullOrEmpty(error))
@@ -305,16 +320,16 @@ namespace Meta.WitAi.Lib
                 }
 
                 // Next
-                UpdateTrait(index + 1, configuration, appInfo, warnings, onUpdateComplete);
+                UpdateTrait(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
             });
         }
 
         // Update tts voices
         private static void UpdateVoices(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
+            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            GetRequest(configuration).RequestVoiceList((voicesByLocale, error) =>
+            GetRequest(configuration, useServerToken).RequestVoiceList((voicesByLocale, error) =>
                 {
                     // Failed
                     if (!string.IsNullOrEmpty(error))

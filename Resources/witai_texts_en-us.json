@@ -71,6 +71,6 @@
   "ConfigurationTraitsMissingLabel": "No traits found.",
   "ConfigurationTraitsIdLabel": "Trait ID",
   "ConfigurationTraitsValuesLabel": "Values",
-  "ConfigurationVoicesTabLabel": "TTS Voices",
+  "ConfigurationVoicesTabLabel": "Voices",
   "ConfigurationVoicesMissingLabel": "No TTS voices found."
 }
