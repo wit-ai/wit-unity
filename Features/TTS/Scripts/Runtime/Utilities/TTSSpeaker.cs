@@ -60,6 +60,14 @@ namespace Meta.WitAi.TTS.Utilities
         // Audio source
         [SerializeField] [FormerlySerializedAs("_source")]
         public AudioSource AudioSource;
+
+        [Tooltip("Text that is added to the front of any Speech() request")]
+        [TextArea]
+        [SerializeField] private string prependedText;
+        [TextArea]
+        [Tooltip("Text that is added to the end of any Speech() text")]
+        [SerializeField] private string appendedText;
+        
         // Events
         [SerializeField] private TTSSpeakerEvents _events;
         public TTSSpeakerEvents Events => _events;
@@ -272,6 +280,19 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the speak queue</param>
         protected virtual void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
+            
+            if (prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            {
+                prependedText += " ";
+            }
+
+            if (appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            {
+                appendedText = " " + appendedText;
+            }
+
+            textToSpeak = prependedText + textToSpeak + appendedText;
+
             // Ensure voice settings exist
             TTSVoiceSettings voiceSettings = VoiceSettings;
             if (voiceSettings == null)
