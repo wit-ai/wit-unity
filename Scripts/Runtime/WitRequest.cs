@@ -99,6 +99,11 @@ namespace Meta.WitAi
         private bool requestRequiresBody;
 
         /// <summary>
+        /// When set to true, will not log errors on request failures.
+        /// </summary>
+        public bool SuppressErrorLogging { get; set; } = false;
+
+        /// <summary>
         /// Callback called when a response is received from the server off a partial transcription
         /// </summary>
         public event Action<WitRequest> onPartialResponse;
@@ -279,7 +284,7 @@ namespace Meta.WitAi
             if (configuration == null && configurationRequired)
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
-                Debug.LogError(statusDescription);
+                LogError(statusDescription);
                 statusCode = ERROR_CODE_NO_CONFIGURATION;
                 SafeInvoke(onResponse);
                 return;
@@ -288,7 +293,7 @@ namespace Meta.WitAi
             if (!isServerAuthRequired && string.IsNullOrEmpty(configuration.GetClientAccessToken()))
             {
                 statusDescription = "Client access token is not defined. Cannot start request.";
-                Debug.LogError(statusDescription);
+                LogError(statusDescription);
                 statusCode = ERROR_CODE_NO_CLIENT_TOKEN;
                 SafeInvoke(onResponse);
                 return;
@@ -469,7 +474,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                Debug.LogError("Error parsing response: " + e + "\n" + responseString);
+                LogError("Error parsing response: " + e + "\n" + responseString);
                 statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                 statusDescription = "Error parsing response: " + e + "\n" + responseString;
             }
@@ -584,7 +589,7 @@ namespace Meta.WitAi
                 }
                 catch (JSONParseException e)
                 {
-                    Debug.LogError("Server returned invalid data: " + e.Message + "\n" +
+                    LogError("Server returned invalid data: " + e.Message + "\n" +
                                    stringResponse);
                     statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                     statusDescription = "Server returned invalid data.";
@@ -594,7 +599,7 @@ namespace Meta.WitAi
                     // Ensure was not cancelled
                     if (e.Status != WebExceptionStatus.RequestCanceled)
                     {
-                        Debug.LogError(
+                        LogError(
                             $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                         statusCode = (int) e.Status;
                         statusDescription = e.Message;
@@ -602,7 +607,7 @@ namespace Meta.WitAi
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError(
+                    LogError(
                         $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                     statusCode = ERROR_CODE_GENERAL;
                     statusDescription = e.Message;
@@ -648,7 +653,7 @@ namespace Meta.WitAi
                 statusDescription = e.Message;
                 if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
-                    Debug.LogError(
+                    LogError(
                         $"Http Request Failed [{statusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                 }
             }
@@ -796,7 +801,7 @@ namespace Meta.WitAi
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError(e);
+                        LogError(e);
                     }
                 }
             });
@@ -886,7 +891,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                Debug.LogError(e);
+                LogError(e);
             }
 
             if (requestRequiresBody && bytesWritten == 0)
@@ -894,6 +899,15 @@ namespace Meta.WitAi
                 Debug.LogWarning("Stream was closed with no data written. Aborting request.");
                 AbortRequest();
             }
+        }
+
+        private void LogError(object loggedObject)
+        {
+            if (SuppressErrorLogging)
+            {
+                return;
+            }
+            Debug.LogError(loggedObject);
         }
 
         #region CALLBACKS

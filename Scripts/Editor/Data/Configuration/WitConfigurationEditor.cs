@@ -687,10 +687,16 @@ namespace Meta.WitAi.Windows
             var intents = ManifestGenerator.ExtractManifestData();
             VLog.D($"Auto training on WIT.ai: {intents.Count} intents.");
 
-            configuration.ImportData(manifest, (isSuccess) => {
-                if (isSuccess) {
-                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.", "OK");
-                } else {
+            configuration.ImportData(manifest, (isSuccess, error) =>
+            {
+                if (isSuccess)
+                {
+                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.",
+                        "OK");
+                }
+                else
+                {
+                    VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifest}");
                     EditorUtility.DisplayDialog("Auto Train", "Failed to start auto train process on WIT.ai.", "OK");
                 }
             });
@@ -701,7 +707,7 @@ namespace Meta.WitAi.Windows
             Meta.WitAi.Data.Info.WitAppInfo appInfo = configuration.GetApplicationInfo();
             string manifestText = ManifestGenerator.GenerateEmptyManifest(appInfo.name, appInfo.id);
             var manifest = ManifestLoader.LoadManifestFromString(manifestText);
-            configuration.ImportData(manifest, onComplete);
+            configuration.ImportData(manifest, (result, error) => onComplete(result), true);
         }
 
         private static string GetManifestPullPath(WitConfiguration configuration, bool shouldCreateDirectoryIfNotExist = false)

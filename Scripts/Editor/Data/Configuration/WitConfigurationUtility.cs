@@ -18,6 +18,7 @@ using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Lib;
+using Meta.WitAi.Requests;
 using Meta.WitAi.Windows;
 
 namespace Meta.WitAi.Data.Configuration
@@ -274,21 +275,20 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Import supplied Manifest into WIT.ai.
         /// </summary>
-        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, Action<bool> onComplete = null)
+        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, VRequest.RequestCompleteDelegate<bool> onComplete = null, bool suppressErrors = false)
         {
             var manifestData = GetSanitizedManifestString(manifest);
             var request = configuration.CreateImportDataRequest(GetAppName(configuration), manifestData);
+            request.SuppressErrorLogging = suppressErrors;
             PerformRequest(request, (error) =>
             {
                 if (!string.IsNullOrEmpty(error))
                 {
-                    VLog.E($"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifestData}");
-                    onComplete?.Invoke(false);
+                    onComplete?.Invoke(false,"error");
                 }
                 else
                 {
-                    VLog.D("Successfully imported generated manifest JSON into WIT.ai.");
-                    onComplete?.Invoke(true);
+                    onComplete?.Invoke(true, string.Empty);
                 }
             });
         }
