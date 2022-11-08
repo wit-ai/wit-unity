@@ -16,6 +16,32 @@ namespace Meta.WitAi.Lib
 {
     public static class WitAppInfoUtility
     {
+        // List of app ids for currently updating configurations
+        private static List<string> _updatingAppIds = new List<string>();
+        // Getter for configuration update state
+        public static bool IsUpdatingData(this IWitRequestConfiguration configuration)
+        {
+            string appId = configuration.GetApplicationId();
+            return !string.IsNullOrEmpty(appId) && _updatingAppIds.Contains(appId);
+        }
+        // Setter for configuration update state
+        private static void SetUpdatingData(IWitRequestConfiguration configuration, bool toRefreshing)
+        {
+            string appId = configuration.GetApplicationId();
+            if (!string.IsNullOrEmpty(appId))
+            {
+                bool wasRefreshing = _updatingAppIds.Contains(appId);
+                if (toRefreshing && !wasRefreshing)
+                {
+                    _updatingAppIds.Add(appId);
+                }
+                else if (!toRefreshing && wasRefreshing)
+                {
+                    _updatingAppIds.Remove(appId);
+                }
+            }
+        }
+
         // Returns a vrequest
         private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration, bool useServerToken = true) =>
             new WitInfoVRequest(configuration, useServerToken);
@@ -50,6 +76,7 @@ namespace Meta.WitAi.Lib
                 // Update data without server access token
                 if (!string.IsNullOrEmpty(appInfo.id) && !string.IsNullOrEmpty(configuration.GetClientAccessToken()))
                 {
+                    SetUpdatingData(configuration, true);
                     UpdateIntents(configuration, appInfo, warnings, false, onUpdateComplete);
                     return;
                 }
@@ -70,6 +97,7 @@ namespace Meta.WitAi.Lib
             // Update existing app info
             else
             {
+                SetUpdatingData(configuration, true);
                 UpdateAppInfo(configuration, appInfo, warnings, onUpdateComplete);
             }
         }
@@ -90,6 +118,7 @@ namespace Meta.WitAi.Lib
 
                 // Set app id
                 appInfo.id = appId;
+                SetUpdatingData(configuration, true);
 
                 // Update app data
                 UpdateAppInfo(configuration, appInfo, warnings, onUpdateComplete);
@@ -360,6 +389,9 @@ namespace Meta.WitAi.Lib
         {
             // Get app name
             string appNameLog = string.IsNullOrEmpty(appInfo.name) ? string.Empty : $"\nWit App: {appInfo.name}";
+
+            // No longer updating
+            SetUpdatingData(configuration, false);
 
             // Success
             if (warnings.Length == 0)

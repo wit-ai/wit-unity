@@ -18,6 +18,7 @@ using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Utilities;
 using Meta.Conduit;
 using Meta.WitAi;
+using Meta.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Windows.Conponents;
@@ -245,7 +246,7 @@ namespace Meta.WitAi.Windows
                 }
                 else
                 {
-                    bool isRefreshing = Configuration.IsRefreshingData();
+                    bool isRefreshing = Configuration.IsUpdatingData();
                     GUI.enabled = !isRefreshing;
                     if (WitEditorUI.LayoutTextButton(isRefreshing ? WitTexts.Texts.ConfigurationRefreshingButtonLabel : WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {

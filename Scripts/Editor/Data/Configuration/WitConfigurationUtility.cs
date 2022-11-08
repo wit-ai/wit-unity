@@ -311,19 +311,6 @@ namespace Meta.WitAi.Data.Configuration
         #endregion
 
         #region REFRESH
-        // Refresh if possible & return true if still refreshing
-        private static List<string> refreshAppIDs = new List<string>();
-        // Check if refreshing
-        private static bool IsRefreshing(string appID)
-        {
-            return !string.IsNullOrEmpty(appID) && refreshAppIDs.Contains(appID);
-        }
-        // Check if refreshing
-        public static bool IsRefreshingData(this WitConfiguration configuration)
-        {
-            string appID = configuration.GetApplicationId();
-            return IsRefreshing(appID);
-        }
         // Refreshes configuration data
         public static void RefreshAppInfo(this WitConfiguration configuration, Action<string> onRefreshComplete = null)
         {
