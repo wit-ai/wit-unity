@@ -279,12 +279,6 @@ namespace Meta.WitAi
                 parameters.Add(parameterName, parameterValue);
             }
             parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
-
-            if (!parameters.ContainsKey(WitConduitParameterProvider.VoiceSessionReservedName))
-            {
-                parameters.Add(WitConduitParameterProvider.VoiceSessionReservedName, GetVoiceSession(response));
-            }
-
             return parameters;
         }
 
