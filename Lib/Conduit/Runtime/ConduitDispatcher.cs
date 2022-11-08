@@ -138,6 +138,7 @@ namespace Meta.Conduit
         {
             if (!_manifest.ContainsAction(actionId))
             {
+                VLog.D($"Conduit did not find {actionId} in manifest");
                 return false;
             }
 
@@ -146,6 +147,7 @@ namespace Meta.Conduit
             var invocationContexts = ResolveInvocationContexts(actionId, confidence, partial);
             if (invocationContexts.Count < 1)
             {
+                VLog.D($"Failed to resolve method for {actionId} with supplied context");
                 return false;
             }
 

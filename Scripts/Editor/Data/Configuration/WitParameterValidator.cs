@@ -22,7 +22,8 @@ namespace Meta.WitAi.Windows
         /// <summary>
         /// These are the types that we natively support.
         /// </summary>
-        private readonly HashSet<Type> _builtInTypes = new HashSet<Type>() { typeof(string), typeof(int) };
+        private readonly HashSet<Type> _builtInTypes = new HashSet<Type>()
+            { typeof(string), typeof(int), typeof(DateTime), typeof(float), typeof(double), typeof(decimal) };
 
         /// <summary>
         /// Tests if a parameter type can be supplied directly to a callback method from.
