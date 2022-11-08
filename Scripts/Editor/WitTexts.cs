@@ -56,6 +56,7 @@ namespace Meta.WitAi
             public string SettingsServerTokenTooltip;
             public string SettingsRelinkButtonLabel;
             public string SettingsAddButtonLabel;
+            public string SettingsAddMainButtonLabel;
             [Header("Configuration Texts")]
             public string ConfigurationHeaderLabel;
             public string ConfigurationRefreshButtonLabel;

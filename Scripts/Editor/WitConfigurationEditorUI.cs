@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Data.Configuration;
@@ -15,27 +16,26 @@ namespace Meta.WitAi
     public static class WitConfigurationEditorUI
     {
         // Configuration select
-        public static void LayoutConfigurationSelect(ref int configIndex)
+        public static void LayoutConfigurationSelect(ref int configIndex, Action onNewClick)
         {
             // Refresh configurations if needed
             WitConfiguration[] witConfigs = WitConfigurationUtility.WitConfigs;
 
+            // If no configuration exists, provide a means for the user to create a new one.
             if (witConfigs == null || witConfigs.Length == 0)
             {
-                // If no configuration exists, provide a means for the user to create a new one.
+                // Begin layout
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                    
-                if (WitEditorUI.LayoutTextButton("New Config"))
-                {
-                    WitConfigurationUtility.CreateConfiguration("");
 
-                    EditorUtility.FocusProjectWindow();
+                if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsAddMainButtonLabel))
+                {
+                    onNewClick?.Invoke();
                 }
-                    
+
+                // End layout
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-                
                 return;
             }
 
@@ -48,7 +48,7 @@ namespace Meta.WitAi
             }
 
             GUILayout.BeginHorizontal();
-            
+
             // Layout popup
             WitEditorUI.LayoutPopup(WitTexts.Texts.ConfigurationSelectLabel, WitConfigurationUtility.WitConfigNames, ref configIndex, ref configUpdated);
 
@@ -57,7 +57,7 @@ namespace Meta.WitAi
                 EditorUtility.FocusProjectWindow();
                 EditorGUIUtility.PingObject(witConfigs[configIndex]);
             }
-            
+
             GUILayout.EndHorizontal();
         }
     }
