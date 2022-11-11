@@ -220,7 +220,7 @@ namespace Meta.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
             if (_isActive) return;
@@ -249,7 +249,7 @@ namespace Meta.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
             // Make sure we aren't checking activation time until
@@ -289,7 +289,7 @@ namespace Meta.WitAi
             {
                 var file = Application.dataPath + "/test.pcm";
                 sampleFile = File.Open(file, FileMode.Create);
-                Debug.Log("Writing recording to file: " + file);
+                VLog.D("Writing recording to file: " + file);
             }
 #endif
             _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider
@@ -305,7 +305,7 @@ namespace Meta.WitAi
         {
             if (!IsConfigurationValid())
             {
-                Debug.LogError($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return;
             }
 
@@ -336,7 +336,7 @@ namespace Meta.WitAi
 #if DEBUG_SAMPLE
             if (null != sampleFile)
             {
-                Debug.Log($"Wrote test samples to {Application.dataPath}/test.pcm");
+                VLog.D($"Wrote test samples to {Application.dataPath}/test.pcm");
                 sampleFile?.Close();
                 sampleFile = null;
             }
@@ -427,18 +427,23 @@ namespace Meta.WitAi
 
                 if (_receivedTranscription)
                 {
-                    if (_time - _lastWordTime >
+                    float elapsed = _time - _lastWordTime;
+                    if (elapsed >
                         RuntimeConfiguration.minTranscriptionKeepAliveTimeInSeconds)
                     {
-                        Debug.Log("Deactivated due to inactivity. No new words detected.");
+                        VLog.D($"Deactivated due to inactivity. No new words detected in {elapsed:0.00} seconds.");
                         DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
                     }
                 }
-                else if (_time - _lastMinVolumeLevelTime >
-                         RuntimeConfiguration.minKeepAliveTimeInSeconds)
+                else
                 {
-                    Debug.Log("Deactivated input due to inactivity.");
-                    DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
+                    float elapsed = _time - _lastMinVolumeLevelTime;
+                    if (elapsed >
+                        RuntimeConfiguration.minKeepAliveTimeInSeconds)
+                    {
+                        VLog.D($"Deactivated due to inactivity. No sound detected in {elapsed:0.00} seconds.");
+                        DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
+                    }
                 }
             }
             else if (_isSoundWakeActive && levelMax > RuntimeConfiguration.soundWakeThreshold)
@@ -499,7 +504,7 @@ namespace Meta.WitAi
             yield return new WaitForSeconds(RuntimeConfiguration.maxRecordingTime);
             if (IsRequestActive)
             {
-                Debug.Log($"Deactivated input due to timeout.\nMax Record Time: {RuntimeConfiguration.maxRecordingTime}");
+                VLog.D($"Deactivated input due to timeout.\nMax Record Time: {RuntimeConfiguration.maxRecordingTime}");
                 DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToTimeout, false);
             }
         }

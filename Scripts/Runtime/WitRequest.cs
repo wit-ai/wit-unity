@@ -99,11 +99,6 @@ namespace Meta.WitAi
         private bool requestRequiresBody;
 
         /// <summary>
-        /// When set to true, will not log errors on request failures.
-        /// </summary>
-        public bool SuppressErrorLogging { get; set; } = false;
-
-        /// <summary>
         /// Callback called when a response is received from the server off a partial transcription
         /// </summary>
         public event Action<WitRequest> onPartialResponse;
@@ -284,7 +279,7 @@ namespace Meta.WitAi
             if (configuration == null && configurationRequired)
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
-                LogError(statusDescription);
+                VLog.E(statusDescription);
                 statusCode = ERROR_CODE_NO_CONFIGURATION;
                 SafeInvoke(onResponse);
                 return;
@@ -293,7 +288,7 @@ namespace Meta.WitAi
             if (!isServerAuthRequired && string.IsNullOrEmpty(configuration.GetClientAccessToken()))
             {
                 statusDescription = "Client access token is not defined. Cannot start request.";
-                LogError(statusDescription);
+                VLog.E(statusDescription);
                 statusCode = ERROR_CODE_NO_CLIENT_TOKEN;
                 SafeInvoke(onResponse);
                 return;
@@ -474,7 +469,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                LogError("Error parsing response: " + e + "\n" + responseString);
+                VLog.E("Error parsing response: " + e + "\n" + responseString);
                 statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                 statusDescription = "Error parsing response: " + e + "\n" + responseString;
             }
@@ -500,7 +495,7 @@ namespace Meta.WitAi
             // Clean up the current request if it is still going
             if (null != _request)
             {
-                Debug.Log("Request timed out after " + (DateTime.UtcNow - requestStartTime));
+                VLog.D("Request timed out after " + (DateTime.UtcNow - requestStartTime));
                 _request.Abort();
             }
 
@@ -553,7 +548,7 @@ namespace Meta.WitAi
                                     catch (JSONParseException e)
                                     {
                                         offset = bytes;
-                                        Debug.LogWarning(
+                                        VLog.W(
                                             "Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " +
                                             e.Message + "\n" + stringResponse);
                                     }
@@ -589,7 +584,7 @@ namespace Meta.WitAi
                 }
                 catch (JSONParseException e)
                 {
-                    LogError("Server returned invalid data: " + e.Message + "\n" +
+                    VLog.E("Server returned invalid data: " + e.Message + "\n" +
                                    stringResponse);
                     statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                     statusDescription = "Server returned invalid data.";
@@ -599,7 +594,7 @@ namespace Meta.WitAi
                     // Ensure was not cancelled
                     if (e.Status != WebExceptionStatus.RequestCanceled)
                     {
-                        LogError(
+                        VLog.E(
                             $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                         statusCode = (int) e.Status;
                         statusDescription = e.Message;
@@ -607,7 +602,7 @@ namespace Meta.WitAi
                 }
                 catch (Exception e)
                 {
-                    LogError(
+                    VLog.E(
                         $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                     statusCode = ERROR_CODE_GENERAL;
                     statusDescription = e.Message;
@@ -646,14 +641,14 @@ namespace Meta.WitAi
                     {
                         // We've already caught that there is an error, we'll ignore any errors
                         // reading error response data and use the status/original error for validation
-                        Debug.LogWarning(errorResponseError);
+                        VLog.W(errorResponseError);
                     }
                 }
 
                 statusDescription = e.Message;
                 if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
-                    LogError(
+                    VLog.E(
                         $"Http Request Failed [{statusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                 }
             }
@@ -677,8 +672,7 @@ namespace Meta.WitAi
             {
                 statusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
                 statusDescription = "Server did not return a valid json response.";
-                Debug.LogWarning(
-                    "No valid data was received from the server even though the request was successful. Actual potential response data: \n" +
+                VLog.W("No valid data was received from the server even though the request was successful. Actual potential response data: \n" +
                     stringResponse);
             }
 
@@ -723,7 +717,6 @@ namespace Meta.WitAi
 
             // Return transcription
             string transcription = responseData.GetTranscription();
-            Debug.Log($"Response: {hasResponse}\nFinal: {final}\nTranscription: {transcription}\n\n{stringResponse}");
             if (!string.IsNullOrEmpty(transcription) && (!hasResponse || final))
             {
                 // Call partial transcription
@@ -815,7 +808,7 @@ namespace Meta.WitAi
                     }
                     catch (Exception e)
                     {
-                        LogError(e);
+                        VLog.E(e);
                     }
                 }
             });
@@ -867,7 +860,7 @@ namespace Meta.WitAi
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Write Stream - Close Failed\n{e}");
+                        VLog.W($"Write Stream - Close Failed\n{e}");
                     }
                     _writeStream = null;
                 }
@@ -896,32 +889,23 @@ namespace Meta.WitAi
                 // This problem occurs when the Web server resets or closes the connection after
                 // the client application sends the HTTP header.
                 // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
-                Debug.LogWarning(
+                VLog.W(
                     "Stream already disposed. It is likely the server reset the connection before streaming started.");
             }
             catch (IOException e)
             {
-                Debug.LogWarning(e.Message);
+                VLog.W(e.Message);
             }
             catch (Exception e)
             {
-                LogError(e);
+                VLog.E(e);
             }
 
             if (requestRequiresBody && bytesWritten == 0)
             {
-                Debug.LogWarning("Stream was closed with no data written. Aborting request.");
+                VLog.W("Stream was closed with no data written. Aborting request.");
                 AbortRequest();
             }
-        }
-
-        private void LogError(object loggedObject)
-        {
-            if (SuppressErrorLogging)
-            {
-                return;
-            }
-            Debug.LogError(loggedObject);
         }
 
         #region CALLBACKS
