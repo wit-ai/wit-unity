@@ -42,12 +42,12 @@ namespace Meta.WitAi
         private static LogType _editorLogLevel = (LogType)(-1);
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const LogType EDITOR_LOG_LEVEL_DEFAULT = LogType.Warning;
+        #endif
 
         /// <summary>
         /// Allows supression of all vlog errors
         /// </summary>
         public static bool SuppressErrors { get; set; } = false;
-        #endif
 
         /// <summary>
         /// Event for appending custom data to a log before logging to console
