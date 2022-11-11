@@ -150,10 +150,10 @@ namespace Meta.WitAi.Windows
 
         private void LayoutConduitContent()
         {
-            if (!WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            var isServerTokenValid = WitConfigurationUtility.IsServerTokenValid(_serverToken);
+            if (!isServerTokenValid)
             {
                 GUILayout.TextArea(WitTexts.Texts.ConfigurationConduitMissingTokenLabel, WitStyles.LabelError);
-                return;
             }
 
             // Set conduit
@@ -193,13 +193,13 @@ namespace Meta.WitAi.Windows
 
                     GUILayout.FlexibleSpace();
                     GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                    if (WitEditorUI.LayoutTextButton("Sync Entities"))
+                    if (isServerTokenValid && WitEditorUI.LayoutTextButton("Sync Entities"))
                     {
                         SyncEntities();
                         GUIUtility.ExitGUI();
                     }
 
-                    if (_isAutoTrainAvailable)
+                    if (isServerTokenValid && _isAutoTrainAvailable)
                     {
                         GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
                         if (WitEditorUI.LayoutTextButton("Auto train") && _manifestAvailable)
