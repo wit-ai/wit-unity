@@ -22,12 +22,12 @@ namespace Meta.WitAi.Samples.Shapes
 
         private void OnEnable()
         {
-            wit.events.OnRequestCreated.AddListener(OnRequestStarted);
+            wit.VoiceEvents.OnRequestCreated.AddListener(OnRequestStarted);
         }
 
         private void OnDisable()
         {
-            wit.events.OnRequestCreated.RemoveListener(OnRequestStarted);
+            wit.VoiceEvents.OnRequestCreated.RemoveListener(OnRequestStarted);
         }
 
         private void OnRequestStarted(WitRequest r)

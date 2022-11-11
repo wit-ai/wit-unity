@@ -31,7 +31,7 @@ namespace Meta.WitAi.CallbackHandlers
             }
             else
             {
-                wit.events.OnResponse.AddListener(OnHandleResponse);
+                wit.VoiceEvents.OnResponse.AddListener(OnHandleResponse);
             }
         }
 
@@ -39,7 +39,7 @@ namespace Meta.WitAi.CallbackHandlers
         {
             if (wit)
             {
-                wit.events.OnResponse.RemoveListener(OnHandleResponse);
+                wit.VoiceEvents.OnResponse.RemoveListener(OnHandleResponse);
             }
         }
 

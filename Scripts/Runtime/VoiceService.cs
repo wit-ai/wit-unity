@@ -36,8 +36,12 @@ namespace Meta.WitAi
 
         private readonly IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
 
+        /// <summary>
+        /// This field should not be accessed outside the Wit-Unity library. If you need access
+        /// to events you should be using the VoiceService.VoiceEvents property instead.
+        /// </summary>
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
-        public VoiceEvents events = new VoiceEvents();
+        protected VoiceEvents events = new VoiceEvents();
 
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
