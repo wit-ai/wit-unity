@@ -577,8 +577,6 @@ namespace Meta.WitAi
         }
         private void OnFullTranscription(string transcription)
         {
-            // End existing request
-            DeactivateRequest(null);
             // Delegate
             VoiceEvents?.OnFullTranscription?.Invoke(transcription);
             // Send transcription

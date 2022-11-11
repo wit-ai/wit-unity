@@ -28,11 +28,11 @@ namespace Meta.WitAi
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
 
-
         // NLP Endpoints
         public const string ENDPOINT_SPEECH = "speech";
         public const string ENDPOINT_MESSAGE = "message";
         public const string ENDPOINT_MESSAGE_PARAM = "q";
+        public const string ENDPOINT_JSON_DELIMITER = "\r\n";
 
         // TTS Endpoint
         public const string ENDPOINT_TTS = "synthesize";

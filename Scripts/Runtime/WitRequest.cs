@@ -444,7 +444,7 @@ namespace Meta.WitAi
             {
                 throw new NotImplementedException("Not yet implemented.");
             }
-            
+
             VRequest performer = new VRequest();
             performer.RequestText(request, OnUnityRequestComplete, OnUnityRequestProgress);
         }
@@ -542,13 +542,13 @@ namespace Meta.WitAi
                             {
                                 totalRead += bytes;
                                 stringResponse = Encoding.UTF8.GetString(buffer, 0, totalRead);
-                                if (stringResponse.EndsWith("\r\n"))
+                                if (stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER))
                                 {
                                     try
                                     {
                                         offset = 0;
                                         totalRead = 0;
-                                        sentResponse |= ProcessStringResponse(stringResponse);
+                                        sentResponse |= ProcessStringResponses(stringResponse);
                                     }
                                     catch (JSONParseException e)
                                     {
@@ -566,9 +566,9 @@ namespace Meta.WitAi
 
                             // If the final transmission didn't end with \r\n process it as the final
                             // result
-                            if (!stringResponse.EndsWith("\r\n") && !string.IsNullOrEmpty(stringResponse))
+                            if (!stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER) && !string.IsNullOrEmpty(stringResponse))
                             {
-                                sentResponse |= ProcessStringResponse(stringResponse);
+                                sentResponse |= ProcessStringResponses(stringResponse);
                             }
 
                             if (stringResponse.Length > 0 && null != responseData)
@@ -685,9 +685,9 @@ namespace Meta.WitAi
             // Send final response if have not yet
             if (!sentResponse)
             {
-                // Final transcription
+                // Final transcription if not already sent
                 string transcription = responseData.GetTranscription();
-                if (!string.IsNullOrEmpty(transcription))
+                if (!string.IsNullOrEmpty(transcription) && !responseData.GetIsFinal())
                 {
                     MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
                 }
@@ -698,6 +698,19 @@ namespace Meta.WitAi
             // Complete
             responseStarted = false;
         }
+        // Process individual piece
+        private bool ProcessStringResponses(string stringResponse)
+        {
+            // Split by delimiter
+            foreach (var stringPart in stringResponse.Split(new string[]{WitConstants.ENDPOINT_JSON_DELIMITER}, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (ProcessStringResponse(stringPart))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         // Safely handles
         private bool ProcessStringResponse(string stringResponse)
         {
@@ -706,10 +719,11 @@ namespace Meta.WitAi
 
             // Handle responses
             bool hasResponse = responseData.HasResponse();
-            bool final = hasResponse && responseData.GetIsFinal();
+            bool final = responseData.GetIsFinal();
 
             // Return transcription
             string transcription = responseData.GetTranscription();
+            Debug.Log($"Response: {hasResponse}\nFinal: {final}\nTranscription: {transcription}\n\n{stringResponse}");
             if (!string.IsNullOrEmpty(transcription) && (!hasResponse || final))
             {
                 // Call partial transcription
