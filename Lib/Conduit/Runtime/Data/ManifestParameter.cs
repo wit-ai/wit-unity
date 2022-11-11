@@ -82,6 +82,11 @@ namespace Meta.Conduit
         /// Additional names by which the backend can refer to this parameter.
         /// </summary>
         public List<string> Aliases { get; set; }
+        
+        /// <summary>
+        /// Example values this parameter can accept.
+        /// </summary>
+        public List<string> Examples { get; set; }
 
         public override bool Equals(object obj)
         {

@@ -195,6 +195,7 @@ namespace Meta.Conduit.Editor
                     }
                     
                     List<string> aliases;
+                    List<string> examples;
 
                     if (parameter.GetCustomAttributes(typeof(ConduitParameterAttribute), false).Length > 0)
                     {
@@ -202,10 +203,12 @@ namespace Meta.Conduit.Editor
                             parameter.GetCustomAttributes(typeof(ConduitParameterAttribute), false).First() as
                                 ConduitParameterAttribute;
                         aliases = parameterAttribute.Aliases;
+                        examples = parameterAttribute.Examples;
                     }
                     else
                     {
                         aliases = new List<string>();
+                        examples = new List<string>();
                     }
 
                     var snakeCaseName= ConduitUtilities.DelimitWithUnderscores(parameter.Name).ToLower().TrimStart('_');
@@ -218,6 +221,7 @@ namespace Meta.Conduit.Editor
                         QualifiedTypeName = parameter.ParameterType.FullName,
                         TypeAssembly = parameter.ParameterType.Assembly.FullName,
                         Aliases = aliases,
+                        Examples = examples,
                         QualifiedName = $"{snakeCaseAction}_{snakeCaseName}"
                     };
 
