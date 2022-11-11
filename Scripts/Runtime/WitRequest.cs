@@ -334,10 +334,10 @@ namespace Meta.WitAi
                 _request.Method = forcedHttpMethodType;
             }
 
-            if (Application.isBatchMode)
-            {
-                _request.KeepAlive = false;
-            }
+            #if UNITY_EDITOR
+            // Required for batch mode & to ensure connections close properly
+            _request.KeepAlive = false;
+            #endif
 
             if (null != postContentType)
             {
@@ -519,7 +519,6 @@ namespace Meta.WitAi
             try
             {
                 WebResponse response = _request.EndGetResponse(asyncResult);
-
                 try
                 {
                     HttpWebResponse httpResponse = response as HttpWebResponse;
@@ -527,58 +526,45 @@ namespace Meta.WitAi
                     statusDescription = httpResponse.StatusDescription;
                     using (var responseStream = httpResponse.GetResponseStream())
                     {
-                        if (response.Headers["Transfer-Encoding"] == "chunked")
+                        byte[] buffer = new byte[10240];
+                        int bytes = 0;
+                        int offset = 0;
+                        int totalRead = 0;
+                        while ((bytes = responseStream.Read(buffer, offset, buffer.Length - offset)) > 0)
                         {
-                            byte[] buffer = new byte[10240];
-                            int bytes = 0;
-                            int offset = 0;
-                            int totalRead = 0;
-                            while ((bytes = responseStream.Read(buffer, offset, buffer.Length - offset)) > 0)
+                            totalRead += bytes;
+                            stringResponse = Encoding.UTF8.GetString(buffer, 0, totalRead);
+                            if (stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER))
                             {
-                                totalRead += bytes;
-                                stringResponse = Encoding.UTF8.GetString(buffer, 0, totalRead);
-                                if (stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER))
+                                try
                                 {
-                                    try
-                                    {
-                                        offset = 0;
-                                        totalRead = 0;
-                                        sentResponse |= ProcessStringResponses(stringResponse);
-                                    }
-                                    catch (JSONParseException e)
-                                    {
-                                        offset = bytes;
-                                        VLog.W(
-                                            "Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " +
-                                            e.Message + "\n" + stringResponse);
-                                    }
+                                    offset = 0;
+                                    totalRead = 0;
+                                    sentResponse |= ProcessStringResponses(stringResponse);
                                 }
-                                else
+                                catch (JSONParseException e)
                                 {
-                                    offset = totalRead;
+                                    offset = bytes;
+                                    VLog.W(
+                                        "Received what appears to be a partial response or invalid json. Attempting to continue reading. Parsing error: " +
+                                        e.Message + "\n" + stringResponse);
                                 }
                             }
-
-                            // If the final transmission didn't end with \r\n process it as the final
-                            // result
-                            if (!stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER) && !string.IsNullOrEmpty(stringResponse))
+                            else
                             {
-                                sentResponse |= ProcessStringResponses(stringResponse);
+                                offset = totalRead;
                             }
+                    }
 
-                            if (stringResponse.Length > 0 && null != responseData)
-                            {
-                                MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                            }
+                        // If the final transmission didn't end with \r\n process it as the final
+                        if (!stringResponse.EndsWith(WitConstants.ENDPOINT_JSON_DELIMITER) && !string.IsNullOrEmpty(stringResponse))
+                        {
+                            sentResponse |= ProcessStringResponses(stringResponse);
                         }
-                        else
+                        // Call raw response
+                        if (stringResponse.Length > 0 && null != responseData)
                         {
-                            using (StreamReader reader = new StreamReader(responseStream))
-                            {
-                                stringResponse = reader.ReadToEnd();
-                                MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                responseData = WitResponseNode.Parse(stringResponse);
-                            }
+                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                         }
                     }
                 }
@@ -628,7 +614,7 @@ namespace Meta.WitAi
                                 {
                                     stringResponse = errorReader.ReadToEnd();
                                     MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                    responseData = WitResponseNode.Parse(stringResponse);
+                                    sentResponse = ProcessStringResponses(stringResponse);
                                 }
                             }
                         }
@@ -650,6 +636,10 @@ namespace Meta.WitAi
                 {
                     VLog.E(
                         $"Http Request Failed [{statusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                }
+                if (e.Response != null)
+                {
+                    e.Response.Close();
                 }
             }
             finally
@@ -878,19 +868,25 @@ namespace Meta.WitAi
         /// <param name="length"></param>
         public void Write(byte[] data, int offset, int length)
         {
+            // Ignore without write stream
+            if (_writeStream == null)
+            {
+                return;
+            }
             try
             {
                 _writeStream.Write(data, offset, length);
                 bytesWritten += length;
             }
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException e)
             {
                 // Handling edge case where stream is closed remotely
                 // This problem occurs when the Web server resets or closes the connection after
                 // the client application sends the HTTP header.
                 // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
-                VLog.W(
-                    "Stream already disposed. It is likely the server reset the connection before streaming started.");
+                VLog.W("Stream already disposed. It is likely the server reset the connection before streaming started.");
+                // This prevents a very long holdup on _writeStream.Close
+                _writeStream = null;
             }
             catch (IOException e)
             {
