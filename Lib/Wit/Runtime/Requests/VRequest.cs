@@ -56,7 +56,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public bool IsPerforming => _performing;
         private bool _performing = false;
-        
+
         /// <summary>
         /// Current progress for get requests
         /// </summary>
@@ -73,7 +73,7 @@ namespace Meta.WitAi.Requests
         private CoroutineUtility.CoroutinePerformer _coroutine;
 
         // Cancel error
-        private const string CANCEL_ERROR = "Cancelled";
+        public const string CANCEL_ERROR = "Cancelled";
 
         /// <summary>
         /// Initialize with a request and an on completion callback

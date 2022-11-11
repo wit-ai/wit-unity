@@ -14,7 +14,6 @@ using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
-using Meta.WitAi;
 using Meta.WitAi.Requests;
 using UnityEngine.Serialization;
 
@@ -152,7 +151,14 @@ namespace Meta.WitAi.TTS.Integrations
                     }
                     else
                     {
-                        WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
+                        if (string.Equals(error, VRequest.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
+                        }
+                        else
+                        {
+                            WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
+                        }
                     }
                 },
                 (progress) => clipData.loadProgress = progress);
