@@ -279,7 +279,7 @@ namespace Meta.WitAi.Data.Configuration
         {
             var manifestData = GetSanitizedManifestString(manifest);
             var request = configuration.CreateImportDataRequest(GetAppName(configuration), manifestData);
-            request.SuppressErrorLogging = suppressErrors;
+            VLog.SuppressErrors = suppressErrors;
             PerformRequest(request, (error) =>
             {
                 if (!string.IsNullOrEmpty(error))

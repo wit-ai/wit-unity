@@ -42,6 +42,11 @@ namespace Meta.WitAi
         private static LogType _editorLogLevel = (LogType)(-1);
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const LogType EDITOR_LOG_LEVEL_DEFAULT = LogType.Warning;
+
+        /// <summary>
+        /// Allows supression of all vlog errors
+        /// </summary>
+        public static bool SuppressErrors { get; set; } = false;
         #endif
 
         /// <summary>
@@ -54,24 +59,24 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void D(string log) => Log(LogType.Log, null, log);
-        public static void D(string logCategory, string log) => Log(LogType.Log, logCategory, log);
+        public static void D(object log) => Log(LogType.Log, null, log);
+        public static void D(string logCategory, object log) => Log(LogType.Log, logCategory, log);
 
         /// <summary>
         /// Performs a Debug.LogWarning with custom categorization and using the global log level
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void W(string log) => Log(LogType.Warning, null, log);
-        public static void W(string logCategory, string log) => Log(LogType.Warning, logCategory, log);
+        public static void W(object log) => Log(LogType.Warning, null, log);
+        public static void W(string logCategory, object log) => Log(LogType.Warning, logCategory, log);
 
         /// <summary>
         /// Performs a Debug.LogError with custom categorization and using the global log level
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void E(string log) => Log(LogType.Error, null, log);
-        public static void E(string logCategory, string log) => Log(LogType.Error, logCategory, log);
+        public static void E(object log) => Log(LogType.Error, null, log);
+        public static void E(string logCategory, object log) => Log(LogType.Error, logCategory, log);
 
         /// <summary>
         /// Filters out unwanted logs, appends category information
@@ -80,7 +85,7 @@ namespace Meta.WitAi
         /// <param name="logType"></param>
         /// <param name="log"></param>
         /// <param name="category"></param>
-        private static void Log(LogType logType, string logCategory, string log)
+        private static void Log(LogType logType, string logCategory, object log)
         {
             #if UNITY_EDITOR
             // Skip logs with higher log type then global log level
@@ -124,7 +129,7 @@ namespace Meta.WitAi
             WrapWithCallingLink(result, start);
 
             // Append the actual log
-            result.Append(log);
+            result.Append(log == null ? string.Empty : log.ToString());
 
             // Final log append
             OnPreLog?.Invoke(result, logCategory, logType);
@@ -133,7 +138,14 @@ namespace Meta.WitAi
             switch (logType)
             {
                 case LogType.Error:
-                    UnityEngine.Debug.LogError(result);
+                    if (SuppressErrors)
+                    {
+                        UnityEngine.Debug.LogWarning(result);
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogError(result);
+                    }
                     break;
                 case LogType.Warning:
                     UnityEngine.Debug.LogWarning(result);
