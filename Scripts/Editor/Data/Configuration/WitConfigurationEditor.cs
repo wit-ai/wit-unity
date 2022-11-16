@@ -157,7 +157,7 @@ namespace Meta.WitAi.Windows
             }
 
             // Set conduit
-            var useConduit = (GUILayout.Toggle(Configuration.useConduit, "Use Conduit (Beta)"));
+            var useConduit = GUILayout.Toggle(Configuration.useConduit, "Use Conduit (Beta)");
             if (Configuration.useConduit != useConduit)
             {
                 Configuration.useConduit = useConduit;
@@ -171,6 +171,13 @@ namespace Meta.WitAi.Windows
             GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
             {
                 GUI.enabled = Configuration.useConduit;
+                var useRelaxedMatching = GUILayout.Toggle(Configuration.relaxedResolution, new GUIContent("Relaxed Resolution", "Allows resolving parameters by value if an exact match was not found. Disable to improve runtime performance."));
+                if (Configuration.relaxedResolution != useRelaxedMatching)
+                {
+                    Configuration.relaxedResolution = useRelaxedMatching;
+                    EditorUtility.SetDirty(Configuration);
+                }
+
                 GUILayout.BeginHorizontal();
                 {
                     if (WitEditorUI.LayoutTextButton(_manifestAvailable ? "Update Manifest" : "Generate Manifest"))
@@ -390,7 +397,7 @@ namespace Meta.WitAi.Windows
         protected virtual void LayoutConfigurationRequestTabs()
         {
             // Application info
-            Meta.WitAi.Data.Info.WitAppInfo appInfo = Configuration.GetApplicationInfo();
+            Data.Info.WitAppInfo appInfo = Configuration.GetApplicationInfo();
 
             // Indent
             EditorGUI.indentLevel++;

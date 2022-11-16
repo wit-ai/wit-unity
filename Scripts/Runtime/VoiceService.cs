@@ -34,7 +34,10 @@ namespace Meta.WitAi
         /// </summary>
         private WitConfiguration _witConfiguration;
 
-        private readonly IParameterProvider conduitParameterProvider = new WitConduitParameterProvider();
+        /// <summary>
+        /// The Conduit parameter provider.
+        /// </summary>
+        private readonly IParameterProvider _conduitParameterProvider = new ParameterProvider();
 
         /// <summary>
         /// This field should not be accessed outside the Wit-Unity library. If you need access
@@ -95,7 +98,9 @@ namespace Meta.WitAi
         /// </summary>
         protected VoiceService()
         {
-            var conduitDispatcherFactory = new ConduitDispatcherFactory(this, this.conduitParameterProvider);
+            _conduitParameterProvider.SetSpecializedParameter(ParameterProvider.WitResponseNodeReservedName, typeof(WitResponseNode));
+            _conduitParameterProvider.SetSpecializedParameter(ParameterProvider.VoiceSessionReservedName, typeof(VoiceSession));
+            var conduitDispatcherFactory = new ConduitDispatcherFactory(this);
             ConduitDispatcher = conduitDispatcherFactory.GetDispatcher();
         }
 
@@ -186,6 +191,18 @@ namespace Meta.WitAi
             if (UseConduit)
             {
                 ConduitDispatcher.Initialize(_witConfiguration.ManifestLocalPath);
+                if (_witConfiguration.relaxedResolution)
+                {
+                    if (!ConduitDispatcher.Manifest.ResolveEntities())
+                    {
+                        VLog.E("Failed to resolve Conduit entities");
+                    }
+
+                    foreach (var entity in ConduitDispatcher.Manifest.CustomEntityTypes)
+                    {
+                        _conduitParameterProvider.AddCustomType(entity.Key, entity.Value);
+                    }
+                }
             }
             VoiceEvents.OnPartialResponse.AddListener(ValidateShortResponse);
             VoiceEvents.OnResponse.AddListener(HandleResponse);
@@ -224,9 +241,11 @@ namespace Meta.WitAi
                     WitIntentData intent = response.GetFirstIntentData();
                     if (intent != null)
                     {
-                        Dictionary<string, object> parameters = GetConduitResponseParameters(response);
-                        parameters[WitConduitParameterProvider.VoiceSessionReservedName] = validationData;
-                        ConduitDispatcher.InvokeAction(intent.name, parameters, intent.confidence, true);
+                        _conduitParameterProvider.PopulateParametersFromNode(response);
+                        _conduitParameterProvider.AddParameter(ParameterProvider.VoiceSessionReservedName,
+                            validationData);
+                        _conduitParameterProvider.AddParameter(ParameterProvider.WitResponseNodeReservedName, response);
+                        ConduitDispatcher.InvokeAction(_conduitParameterProvider, intent.name, _witConfiguration.relaxedResolution, intent.confidence, true);
                     }
                 }
 
@@ -260,7 +279,10 @@ namespace Meta.WitAi
         {
             if (UseConduit)
             {
-                ConduitDispatcher.InvokeAction(intent.name, GetConduitResponseParameters(response), intent.confidence, false);
+                _conduitParameterProvider.PopulateParametersFromNode(response);
+                _conduitParameterProvider.AddParameter(ParameterProvider.WitResponseNodeReservedName, response);
+                ConduitDispatcher.InvokeAction(_conduitParameterProvider, intent.name,
+                    _witConfiguration.relaxedResolution, intent.confidence, false);
             }
             else
             {
@@ -272,19 +294,7 @@ namespace Meta.WitAi
             }
         }
 
-        // Handle conduit response parameters
-        private Dictionary<string, object> GetConduitResponseParameters(WitResponseNode response)
-        {
-            var parameters = new Dictionary<string, object>();
-            foreach (var entity in response.AsObject["entities"].Childs)
-            {
-                var parameterName = entity[0]["role"].Value;
-                var parameterValue = entity[0]["value"].Value;
-                parameters.Add(parameterName, parameterValue);
-            }
-            parameters.Add(WitConduitParameterProvider.WitResponseNodeReservedName, response);
-            return parameters;
-        }
+
 
         private void ExecuteRegisteredMatch(RegisteredMatchIntent registeredMethod,
             WitIntentData intent, WitResponseNode response)

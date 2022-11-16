@@ -71,6 +71,9 @@ namespace Meta.WitAi.Data.Configuration
         /// </summary>
         [SerializeField] public List<string> excludedAssemblies = new List<string>();
 
+        [Tooltip("When true, Conduit will attempt to match incoming requests by type when no exact matches are found. This increases tolerance but reduces runtime performance.")]
+        [SerializeField] public bool relaxedResolution;
+
         /// <summary>
         /// Safe access of local path
         /// </summary>

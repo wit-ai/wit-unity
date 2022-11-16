@@ -56,9 +56,35 @@ namespace Meta.Conduit
         /// The list is sorted with the most parameters listed first, so we get maximal matches during dispatching by
         /// default without needing to sort them at runtime.
         /// </summary>
-        private readonly Dictionary<string, List<InvocationContext>> methodLookup =
+        private readonly Dictionary<string, List<InvocationContext>> _methodLookup =
             new Dictionary<string, List<InvocationContext>>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// If entities are resolved, this will hold their data types.
+        /// This will be empty if entities were not explicitly resolved.
+        /// </summary>
+        public Dictionary<string, Type> CustomEntityTypes { get; } = new Dictionary<string, Type>();
+
+        public bool ResolveEntities()
+        {
+            bool allResolved = true;
+            foreach (var entity in Entities)
+            {
+                var typeName = string.IsNullOrEmpty(entity.Namespace) ? entity.ID : $"{entity.Namespace}.{entity.ID}";
+                
+                var qualifiedTypeName = $"{typeName},{entity.Assembly}";
+                var type = Type.GetType(qualifiedTypeName);
+                if (type == null)
+                {
+                    VLog.E($"Failed to resolve type: {qualifiedTypeName}");
+                    allResolved = false;
+                }
+                CustomEntityTypes[entity.Name] = type;
+            }
+
+            return allResolved;
+        }
+        
         /// <summary>
         /// Processes all actions in the manifest and associate them with the methods they should invoke.
         /// </summary>
@@ -125,15 +151,15 @@ namespace Meta.Conduit
                     ValidatePartial = actionAttribute.ValidatePartial
                 };
 
-                if (!this.methodLookup.ContainsKey(action.Name))
+                if (!_methodLookup.ContainsKey(action.Name))
                 {
-                    this.methodLookup.Add(action.Name, new List<InvocationContext>());
+                    _methodLookup.Add(action.Name, new List<InvocationContext>());
                 }
 
-                this.methodLookup[action.Name].Add(invocationContext);
+                _methodLookup[action.Name].Add(invocationContext);
             }
 
-            foreach (var invocationContext in this.methodLookup.Values.Where(invocationContext =>
+            foreach (var invocationContext in _methodLookup.Values.Where(invocationContext =>
                          invocationContext.Count > 1))
             {
                 // This is a slow operation. If there multiple overloads are common, we should optimize this
@@ -160,7 +186,7 @@ namespace Meta.Conduit
         /// <returns>True if the action exists, false otherwise.</returns>
         public bool ContainsAction(string @action)
         {
-            return this.methodLookup.ContainsKey(action);
+            return _methodLookup.ContainsKey(action);
         }
 
         /// <summary>
@@ -170,7 +196,7 @@ namespace Meta.Conduit
         /// <returns>The invocationContext.</returns>
         public List<InvocationContext> GetInvocationContexts(string actionId)
         {
-            return this.methodLookup[actionId];
+            return _methodLookup[actionId];
         }
     }
 }

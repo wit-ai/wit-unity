@@ -8,9 +8,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 
 namespace Meta.Conduit
 {
@@ -19,29 +21,140 @@ namespace Meta.Conduit
     /// </summary>
     internal class ParameterProvider : IParameterProvider
     {
+        public const string WitResponseNodeReservedName = "@WitResponseNode";
+        public const string VoiceSessionReservedName = "@VoiceSession";
+        
         /// <summary>
         /// Maps the parameters to their supplied values.
         /// The keys are normalized to lowercase.
         /// </summary>
-        protected Dictionary<string, object> ActualParameters = new Dictionary<string, object>();
+        protected readonly Dictionary<string, object> ActualParameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Maps internal parameter names (in code) to fully qualified parameter names (roles/slots).
         /// The keys are normalized to lowercase.
         /// </summary>
-        private Dictionary<string, string> _parameterToRoleMap = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _parameterToRoleMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        
+        /// <summary>
+        /// Maps types to the list of parameters of that type. This is used as a cache to avoid repeated type lookups.
+        /// </summary>
+        private readonly Dictionary<Type, List<string>> _parametersOfType = new Dictionary<Type, List<string>>();
 
         /// <summary>
-        /// Must be called after all parameters have been obtained and mapped but before any are extracted.
+        /// Maps reserved parameter types to their reserved names.
         /// </summary>
-        public void Populate(Dictionary<string, object> actualParameters, Dictionary<string, string> parameterToRoleMap)
+        private readonly Dictionary<Type, string> _specializedParameters = new Dictionary<Type, string>();
+        
+        /// <summary>
+        /// Maps Wit.Ai type names to native types that support them starting with the preferred data type.
+        /// </summary>
+        private static readonly Dictionary<string, List<Type>> _builtInTypes = new Dictionary<string, List<Type>>()
+        {
+            { "wit$age_of_person", new List<Type>{typeof(int), typeof(short), typeof(long), typeof(float), typeof(double), typeof(decimal) }},
+            { "wit$amount_of_money", new List<Type>{typeof(decimal), typeof(float), typeof(double), typeof(int)}},
+            { "wit$datetime", new List<Type>{typeof(DateTime)}},
+            { "wit$distance", new List<Type>{typeof(decimal), typeof(float), typeof(double), typeof(int)}},
+            { "wit$duration", new List<Type>{typeof(TimeSpan), typeof(float), typeof(double), typeof(int), typeof(decimal)}},
+            { "wit$number", new List<Type>{typeof(int), typeof(long), typeof(short), typeof(float), typeof(double), typeof(decimal) }},
+            { "wit$ordinal", new List<Type>{typeof(int), typeof(long), typeof(short) }},
+            { "wit$quantity", new List<Type>{typeof(int), typeof(long), typeof(short), typeof(float), typeof(double), typeof(decimal) }},
+            { "wit$temperature", new List<Type>{typeof(decimal), typeof(float), typeof(double), typeof(int), typeof(short), typeof(long)}},
+            { "wit$volume", new List<Type>{typeof(int), typeof(long), typeof(short), typeof(float), typeof(double), typeof(decimal) }}
+        };
+
+        /// <summary>
+        /// Custom types defined locally.
+        /// </summary>
+        private readonly Dictionary<string, Type> _customTypes = new Dictionary<string, Type>();
+
+        /// <summary>
+        /// Add a custom known type (typically enum) to the provider.
+        /// This should be called BEFORE calling any of the population methods.
+        /// </summary>
+        /// <param name="name">The internal name of the type.</param>
+        /// <param name="type">The data type.</param>
+        public void AddCustomType(string name, Type type)
+        {
+            _customTypes[name] = type;
+        }
+        
+        /// <summary>
+        /// Explicitly adds, or replaces, a parameter.
+        /// </summary>
+        /// <param name="parameterName">The parameter name.</param>
+        /// <param name="value">The parameter value.</param>
+        public void AddParameter(string parameterName, object value)
+        {
+            ActualParameters[parameterName] = value;
+        }
+        
+        /// <summary>
+        /// Extracts Conduit parameters from a Wit.Ai response.
+        /// </summary>
+        /// <param name="responseNode">The response node from Wit.Ai</param>
+        /// <returns>A dictionary where the parameter names are keys and they </returns>
+        public void PopulateParametersFromNode(WitResponseNode responseNode)
+        {
+            _parametersOfType.Clear();
+
+            var parameters = new Dictionary<string, ConduitParameterValue>();
+            foreach (var entity in responseNode.AsObject["entities"].Childs)
+            {
+                var parameterName = entity[0]["role"].Value;
+                var parameterValue = entity[0]["value"].Value;
+                var parameterTypes = GetParameterTypes(entity[0]["name"].Value, parameterValue);
+
+                foreach (var parameterType in parameterTypes)
+                {
+                    if (!_parametersOfType.ContainsKey(parameterType))
+                    {
+                        _parametersOfType.Add(parameterType, new List<string>());
+                    }
+
+                    _parametersOfType[parameterType].Add(parameterName);
+                }
+
+                parameters.Add(parameterName, new ConduitParameterValue(parameterValue, parameterTypes.First()));
+            }
+            parameters.Add(WitResponseNodeReservedName, new ConduitParameterValue(responseNode, typeof(WitResponseNode)));
+            
+            PopulateParameters(parameters);
+        }
+        
+        /// <summary>
+        /// Registers a certain keyword as reserved for a specialized parameter.
+        /// </summary>
+        /// <param name="reservedParameterName">The name of the specialized parameter. For example @WitResponseNode</param>
+        /// <param name="parameterType">The data type of the parameter</param>
+        public void SetSpecializedParameter(string reservedParameterName, Type parameterType)
+        {
+            _specializedParameters[parameterType] = reservedParameterName.ToLower();
+        }
+
+        /// <summary>
+        /// Populates the parameters.
+        /// Must be called after all parameters have been obtained and mapped but before any are read.
+        /// </summary>
+        public void PopulateParameters(Dictionary<string, ConduitParameterValue> actualParameters)
         {
             ActualParameters.Clear();
             foreach (var actualParameter in actualParameters)
             {
-                this.ActualParameters[actualParameter.Key.ToLower()] = actualParameter.Value;
+                ActualParameters[actualParameter.Key] = actualParameter.Value.Value;
             }
+        }
 
+        /// <summary>
+        /// Populates the roles mappings between actual parameters and their roles..
+        /// Must be called after all parameters have been populated using PopulateParameters but before any are read.
+        /// </summary>
+        /// <param name="parameterToRoleMap">
+        /// Keys are normalized lowercase internal (code) names.
+        /// Values are fully qualified parameter names (roles)
+        /// </param>
+        public void PopulateRoles(Dictionary<string, string> parameterToRoleMap)
+        {
             _parameterToRoleMap.Clear();
             foreach (var entry in parameterToRoleMap)
             {
@@ -56,43 +169,43 @@ namespace Meta.Conduit
         /// <returns>True if a parameter with the specified name can be provided.</returns>
         public bool ContainsParameter(ParameterInfo parameter, StringBuilder log)
         {
-            if (this.SupportedSpecializedParameter(parameter))
+            if (SupportedSpecializedParameter(parameter))
             {
                 return true;
             }
-            if (!ActualParameters.ContainsKey(parameter.Name.ToLower()))
+            if (!ActualParameters.ContainsKey(parameter.Name))
             {
                 log.AppendLine($"\tParameter '{parameter.Name}' not sent in invoke");
                 return false;
             }
-            if (!this._parameterToRoleMap.ContainsKey(parameter.Name.ToLower()))
+            if (!_parameterToRoleMap.ContainsKey(parameter.Name))
             {
                 log.AppendLine($"\tParameter '{parameter.Name}' not found in role map");
                 return false;
             }
             return true;
         }
-
+        
         /// <summary>
         /// Provides the actual parameter value matching the supplied formal parameter.
         /// </summary>
         /// <param name="formalParameter">The formal parameter.</param>
-        /// <returns>The actual parameter value matching the formal parameter.</returns>
-        public object GetParameterValue(ParameterInfo formalParameter)
+        /// <param name="relaxed">When true, will match by type when name matching fails.</param>
+        /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
+        public object GetParameterValue(ParameterInfo formalParameter, bool relaxed)
         {
-            var formalParameterName = formalParameter.Name;
-            if (!this.ActualParameters.ContainsKey(formalParameterName.ToLower()))
+            if (SupportedSpecializedParameter(formalParameter))
             {
-                if (!this._parameterToRoleMap.ContainsKey(formalParameterName.ToLower()))
-                {
-                    VLog.E($"Parameter '{formalParameterName}' is missing");
-                    return false;
-                }
-
-                formalParameterName = this._parameterToRoleMap[formalParameterName.ToLower()];
+                return this.GetSpecializedParameter(formalParameter);
             }
             
-            if (this.ActualParameters.TryGetValue(formalParameterName.ToLower(), out var parameterValue))
+            var actualParameterName = GetActualParameterName(formalParameter, relaxed);
+            if (string.IsNullOrEmpty(actualParameterName))
+            {
+                return null;
+            }
+            
+            if (ActualParameters.TryGetValue(actualParameterName, out var parameterValue))
             {
                 if (formalParameter.ParameterType == typeof(string))
                 {
@@ -107,7 +220,7 @@ namespace Meta.Conduit
                     catch (Exception e)
                     {
                         VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
-                        return false;
+                        return null;
                     }
                 }
                 else
@@ -119,17 +232,39 @@ namespace Meta.Conduit
                     catch (Exception e)
                     {
                         VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast\nType: {formalParameter.ParameterType.FullName}\n{e}");
-                        return false;
+                        return null;
                     }
 
                 }
             }
-            else if (SupportedSpecializedParameter(formalParameter))
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns a list of parameter names that hold values of the specified type.
+        /// Note: This is an expensive operation.
+        /// </summary>
+        /// <param name="targetType">The type we are querying.</param>
+        /// <returns>The names of the parameters that match this type.</returns>
+        public List<string> GetParameterNamesOfType(Type targetType)
+        {
+            if (_parametersOfType.ContainsKey(targetType))
             {
-                return this.GetSpecializedParameter(formalParameter);
+                return _parametersOfType[targetType];
+            }
+            
+            var parameters = new List<string>();
+
+            foreach (var parameter in ActualParameters)
+            {
+                if (parameter.Value.GetType() == targetType)
+                {
+                    parameters.Add(parameter.Key);
+                }
             }
 
-            return false;
+            return _parametersOfType[targetType] = parameters;
         }
 
         /// <summary>
@@ -140,7 +275,7 @@ namespace Meta.Conduit
         /// <returns>True if this parameter can be resolved. False otherwise.</returns>
         protected virtual bool SupportedSpecializedParameter(ParameterInfo formalParameter)
         {
-            return false;
+            return _specializedParameters.ContainsKey(formalParameter.ParameterType);
         }
 
         /// <summary>
@@ -150,7 +285,118 @@ namespace Meta.Conduit
         /// <returns>The actual (supplied) invocation value for the parameter.</returns>
         protected virtual object GetSpecializedParameter(ParameterInfo formalParameter)
         {
-            throw new NotSupportedException();
+            if (_specializedParameters.ContainsKey(formalParameter.ParameterType))
+            {
+                var parameterName = _specializedParameters[formalParameter.ParameterType];
+                if (ActualParameters.ContainsKey(parameterName))
+                {
+                    return ActualParameters[parameterName];
+                }
+            }
+            
+            // Log warning when not found
+            StringBuilder error = new StringBuilder();
+            error.AppendLine("Specialized parameter not found");
+            error.AppendLine($"Parameter Type: {formalParameter.ParameterType}");
+            error.AppendLine($"Parameter Name: {formalParameter.Name}");
+            error.AppendLine($"Actual Parameters: {ActualParameters.Keys.Count}");
+            foreach (var key in ActualParameters.Keys)
+            {
+                string val = ActualParameters[key] == null ? "NULL" : ActualParameters[key].GetType().ToString();
+                error.AppendLine($"\t{key}: {val}");
+            }
+            VLog.W(error.ToString());
+            return null;
+        }
+        
+        /// <summary>
+        /// Returns a list of all types that fit the parameter. 
+        /// </summary>
+        /// <param name="typeString">The textual expression of the type.</param>
+        /// <param name="value">The value obtained. Used to validate some types.</param>
+        /// <returns>
+        /// The possible parameter types. Types that would result in data loss are omitted.
+        /// </returns>
+        private IEnumerable<Type> GetParameterTypes(string typeString, string value)
+        {
+            if (_customTypes.ContainsKey(typeString))
+            {
+                return new List<Type>() { _customTypes[typeString] };
+            }
+
+            if (!_builtInTypes.ContainsKey(typeString) || _builtInTypes[typeString].Count == 0)
+            {
+                return new List<Type>() { typeof(string) };
+            }
+
+            return _builtInTypes[typeString].Where(type => PerfectTypeMatch(type, value)).ToList();
+        }
+
+        private bool PerfectTypeMatch(Type targetType, string value)
+        {
+            try
+            {
+                var valueAsTarget = Convert.ChangeType(value, targetType);
+
+                if (valueAsTarget == null)
+                {
+                    return false;
+                }
+                
+                if (!targetType.IsPrimitive)
+                {
+                    return true;
+                }
+
+                return value.Equals(valueAsTarget.ToString());
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Extracts the parameter name that the formal parameter should be matched with. This may attempt to match the name by type
+        /// if there is no exact match and the relaxed flag is set to true.
+        /// </summary>
+        /// <param name="formalParameter">The parameter info we are trying to find a value for.</param>
+        /// <param name="relaxed">When true, will allow matching by type when exact matching fails.</param>
+        /// <returns>The matched actual parameter name if found, or null otherwise.</returns>
+        private string GetActualParameterName(ParameterInfo formalParameter, bool relaxed)
+        {
+            var formalParameterName = formalParameter.Name;
+            if (ActualParameters.ContainsKey(formalParameterName))
+            {
+                return formalParameterName;
+            }
+
+            if (_parameterToRoleMap.ContainsKey(formalParameterName))
+            {
+                var roleName = _parameterToRoleMap[formalParameterName];
+                if (!string.IsNullOrEmpty(roleName) && this.ActualParameters.ContainsKey(roleName))
+                {
+                    return roleName;
+                }
+            }
+
+            if (!relaxed)
+            {
+                VLog.E($"Parameter '{formalParameterName}' is missing");
+                return null;
+            }
+
+            var possibleNames = GetParameterNamesOfType(formalParameter.ParameterType);
+            if (possibleNames.Count != 1)
+            {
+                VLog.E(
+                    $"Got multiple parameters of type {formalParameter.ParameterType} but none with the correct name");
+                return null;
+            }
+
+            formalParameterName = possibleNames[0];
+
+            return formalParameterName;
         }
     }
 }
