@@ -59,12 +59,17 @@ namespace Meta.Conduit
         void AddCustomType(string name, Type type);
 
         /// <summary>
-        /// Returns the actual value for a formal parameter.
+        /// Provides the actual parameter value matching the supplied formal parameter.
         /// </summary>
-        /// <param name="formalParameter">The parameter info.</param>
-        /// <param name="relaxed"></param>
+        /// <param name="formalParameter">The formal parameter.</param>
+        /// <param name="parameterMap">
+        /// A map from actual parameter names to formal parameter names. Used when parameters have been resolved
+        /// using type, to identify their mapped names.
+        /// </param>
+        /// <param name="relaxed">When true, will match by type when name matching fails.</param>
         /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
-        object GetParameterValue(ParameterInfo formalParameter, bool relaxed);
+        object GetParameterValue(ParameterInfo formalParameter, Dictionary<string, string> parameterMap,
+            bool relaxed);
 
         /// <summary>
         /// Returns a list of parameter names that hold values of the specified type.

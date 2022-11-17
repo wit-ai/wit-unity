@@ -136,6 +136,8 @@ namespace Meta.Conduit
         /// single call is made. If it's an instance method, then it is invoked on all instances.
         /// </summary>
         /// <param name="invocationContext">The invocation context.</param>
+        /// <param name="parameterProvider">The parameter provider.</param>
+        /// <param name="relaxed">True if parameters should be matched by type if name matching fails.</param>
         /// <returns>True if the method was invoked successfully on all valid targets.</returns>
         private bool InvokeMethod(InvocationContext invocationContext, IParameterProvider parameterProvider, bool relaxed)
         {
@@ -145,7 +147,8 @@ namespace Meta.Conduit
             for (var i = 0; i < formalParametersInfo.Length; i++)
             {
                 var log = new StringBuilder();
-                parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i], relaxed);
+                parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i],
+                    invocationContext.ParameterMap, relaxed);
 
                 if (parameterObjects[i] == null)
                 {
@@ -172,7 +175,7 @@ namespace Meta.Conduit
             else
             {
                 var allSucceeded = true;
-                foreach (var obj in this._instanceResolver.GetObjectsOfType(invocationContext.Type))
+                foreach (var obj in _instanceResolver.GetObjectsOfType(invocationContext.Type))
                 {
                     try
                     {
@@ -242,13 +245,17 @@ namespace Meta.Conduit
             /// <summary>
             /// Returns true if the invocation context is compatible with the actual parameters the parameter provider
             /// is supplying. False otherwise.
+            /// If the context is compatible, its parameter map will be updated if necessary.
             /// </summary>
             /// <param name="invocationContext">The invocation context.</param>
             /// <param name="confidence">The intent confidence level.</param>
+            /// <param name="partial">Whether this is a partial invocation.</param>
             /// <returns>True if the invocation can be made with the actual parameters. False otherwise.</returns>
             private bool CompatibleInvocationContext(InvocationContext invocationContext, float confidence,
                 bool partial)
             {
+                Dictionary<string, string> parameterMap = new Dictionary<string, string>();
+                
                 var parameters = invocationContext.MethodInfo.GetParameters();
                 if (invocationContext.ValidatePartial != partial)
                 {
@@ -260,24 +267,23 @@ namespace Meta.Conduit
                     return false;
                 }
 
+                var exactMatches = new HashSet<string>();
+
                 var log = new StringBuilder();
-                bool allParametersMatched = true;
+                var allParametersMatched = true;
                 foreach (var parameter in parameters)
                 {
-                    if (!_parameterProvider.ContainsParameter(parameter, log))
+                    if (_parameterProvider.ContainsParameter(parameter, log))
                     {
-                        if (!_relaxed)
-                        {
-                            VLog.D($"Could not find value for parameter: {parameter.Name}");
-                        }
-                        else
-                        {
-                            VLog.D($"Could not find exact value for parameter: {parameter.Name}. Will attempt resolving by type.");
-                        }
-
-                        allParametersMatched = false;
-                        break;
+                        exactMatches.Add(parameter.Name);
+                        continue;
                     }
+
+                    VLog.D(!_relaxed
+                        ? $"Could not find value for parameter: {parameter.Name}"
+                        : $"Could not find exact value for parameter: {parameter.Name}. Will attempt resolving by type.");
+
+                    allParametersMatched = false;
                 }
 
                 if (allParametersMatched)
@@ -295,6 +301,11 @@ namespace Meta.Conduit
                 var actualTypes = new HashSet<Type>();
                 foreach (var parameter in parameters)
                 {
+                    if (exactMatches.Contains(parameter.Name))
+                    {
+                        continue;
+                    }
+                    
                     if (actualTypes.Contains(parameter.ParameterType))
                     {
                         VLog.D($"Failed to resolve parameters by type. More than one value of type {parameter.ParameterType} were provided.");
@@ -303,14 +314,18 @@ namespace Meta.Conduit
 
                     actualTypes.Add(parameter.ParameterType);
                     
-                    var actualParameterNames = _parameterProvider.GetParameterNamesOfType(parameter.ParameterType);
+                    var actualParameterNames = _parameterProvider.GetParameterNamesOfType(parameter.ParameterType).Where(parameterName => !exactMatches.Contains(parameterName)).ToList();
+                    
                     if (actualParameterNames.Count != 1)
                     {
                         VLog.D($"Failed to find compatible value for {parameter.Name}");
                         return false;
                     }
+
+                    parameterMap[parameter.Name] = actualParameterNames[0];
                 }
 
+                invocationContext.ParameterMap = parameterMap;
                 return true;
             }
         }

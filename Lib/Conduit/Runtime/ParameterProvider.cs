@@ -185,21 +185,25 @@ namespace Meta.Conduit
             }
             return true;
         }
-        
+
         /// <summary>
         /// Provides the actual parameter value matching the supplied formal parameter.
         /// </summary>
         /// <param name="formalParameter">The formal parameter.</param>
+        /// <param name="parameterMap">
+        /// A map from actual parameter names to formal parameter names. Used when parameters have been resolved
+        /// using type, to identify their mapped names.
+        /// </param>
         /// <param name="relaxed">When true, will match by type when name matching fails.</param>
         /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
-        public object GetParameterValue(ParameterInfo formalParameter, bool relaxed)
+        public object GetParameterValue(ParameterInfo formalParameter, Dictionary<string, string> parameterMap, bool relaxed)
         {
             if (SupportedSpecializedParameter(formalParameter))
             {
                 return this.GetSpecializedParameter(formalParameter);
             }
             
-            var actualParameterName = GetActualParameterName(formalParameter, relaxed);
+            var actualParameterName = GetActualParameterName(formalParameter, parameterMap, relaxed);
             if (string.IsNullOrEmpty(actualParameterName))
             {
                 return null;
@@ -361,19 +365,32 @@ namespace Meta.Conduit
         /// if there is no exact match and the relaxed flag is set to true.
         /// </summary>
         /// <param name="formalParameter">The parameter info we are trying to find a value for.</param>
+        /// <param name="parameterMap"></param>
         /// <param name="relaxed">When true, will allow matching by type when exact matching fails.</param>
         /// <returns>The matched actual parameter name if found, or null otherwise.</returns>
-        private string GetActualParameterName(ParameterInfo formalParameter, bool relaxed)
+        private string GetActualParameterName(ParameterInfo formalParameter, Dictionary<string, string> parameterMap,
+            bool relaxed)
         {
             var formalParameterName = formalParameter.Name;
-            if (ActualParameters.ContainsKey(formalParameterName))
+            string targetActualParameterName;
+
+            if (parameterMap.ContainsKey(formalParameterName))
             {
-                return formalParameterName;
+                targetActualParameterName = parameterMap[formalParameterName];
+            }
+            else
+            {
+                targetActualParameterName = formalParameterName;
+            }
+            
+            if (ActualParameters.ContainsKey(targetActualParameterName))
+            {
+                return targetActualParameterName;
             }
 
-            if (_parameterToRoleMap.ContainsKey(formalParameterName))
+            if (_parameterToRoleMap.ContainsKey(targetActualParameterName))
             {
-                var roleName = _parameterToRoleMap[formalParameterName];
+                var roleName = _parameterToRoleMap[targetActualParameterName];
                 if (!string.IsNullOrEmpty(roleName) && this.ActualParameters.ContainsKey(roleName))
                 {
                     return roleName;
@@ -394,9 +411,9 @@ namespace Meta.Conduit
                 return null;
             }
 
-            formalParameterName = possibleNames[0];
+            targetActualParameterName = possibleNames[0];
 
-            return formalParameterName;
+            return targetActualParameterName;
         }
     }
 }
