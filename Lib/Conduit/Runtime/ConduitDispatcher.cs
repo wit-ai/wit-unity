@@ -40,6 +40,12 @@ namespace Meta.Conduit
         /// </summary>
         private readonly Dictionary<string, string> _parameterToRoleMap = new Dictionary<string, string>();
 
+        
+        /// <summary>
+        /// List of actions that we won't log warnings about any more to avoid spamming the logs.  
+        /// </summary>
+        private readonly HashSet<string> _ignoredActionIds = new HashSet<string>();
+
         public ConduitDispatcher(IManifestLoader manifestLoader, IInstanceResolver instanceResolver)
         {
             _manifestLoader = manifestLoader;
@@ -91,7 +97,12 @@ namespace Meta.Conduit
         {
             if (!Manifest.ContainsAction(actionId))
             {
-                VLog.D($"Conduit did not find {actionId} in manifest");
+                if (!_ignoredActionIds.Contains(actionId))
+                {
+                    _ignoredActionIds.Add(actionId);
+                    VLog.W($"Conduit did not find intent '{actionId}' in manifest.");
+                }
+                
                 return false;
             }
             
