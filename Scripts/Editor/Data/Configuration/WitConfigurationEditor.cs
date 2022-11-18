@@ -541,8 +541,10 @@ namespace Meta.WitAi.Windows
             {
                 Configuration.RefreshAppInfo();
             }
-
-            CheckAutoTrainAvailabilityIfNeeded();
+            if (Configuration.useConduit)
+            {
+                CheckAutoTrainAvailabilityIfNeeded();
+            }
         }
 
         private void CheckAutoTrainAvailabilityIfNeeded()
