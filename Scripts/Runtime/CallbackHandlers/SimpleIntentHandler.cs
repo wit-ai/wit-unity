@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
@@ -13,11 +14,8 @@ using UnityEngine.Events;
 namespace Meta.WitAi.CallbackHandlers
 {
     [AddComponentMenu("Wit.ai/Response Matchers/Simple Intent Handler")]
-    public class SimpleIntentHandler : WitResponseHandler
+    public class SimpleIntentHandler : WitIntentMatcher
     {
-        [SerializeField] public string intent;
-        [Range(0, 1f)]
-        [SerializeField] public float confidence = .9f;
         [SerializeField] private UnityEvent onIntentTriggered = new UnityEvent();
 
         [Tooltip("Confidence ranges are executed in order. If checked, all confidence values will be checked instead of stopping on the first one that matches.")]
@@ -29,32 +27,40 @@ namespace Meta.WitAi.CallbackHandlers
 
         public UnityEvent OnIntentTriggered => onIntentTriggered;
 
-        protected override void OnHandleResponse(WitResponseNode response)
+        protected override void OnResponseSuccess(WitResponseNode response)
         {
-            if (null == response) return;
+            onIntentTriggered.Invoke();
+            UpdateRanges(response);
+        }
+        protected override void OnResponseInvalid(WitResponseNode response, string error)
+        {
+            UpdateRanges(response);
+        }
 
-            bool matched = false;
-            foreach (var intentNode in response?["intents"]?.Childs)
+        private void UpdateRanges(WitResponseNode response)
+        {
+            // Find intents if possible
+            var intents = response?.GetIntents();
+            if (intents == null)
             {
-                var resultConfidence = intentNode["confidence"].AsFloat;
-                if (intent == intentNode["name"].Value)
-                {
-                    matched = true;
-                    if (resultConfidence >= confidence)
-                    {
-                        onIntentTriggered.Invoke();
-                    }
+                return;
+            }
 
+            // Iterate intents
+            foreach (var intentData in intents)
+            {
+                var resultConfidence = intentData.confidence;
+                if (string.Equals(intent, intentData.name, StringComparison.CurrentCultureIgnoreCase))
+                {
                     CheckInsideRange(resultConfidence);
                     CheckOutsideRange(resultConfidence);
+                    return;
                 }
             }
 
-            if(!matched)
-            {
-                CheckInsideRange(0);
-                CheckOutsideRange(0);
-            }
+            // Not matched
+            CheckInsideRange(0);
+            CheckOutsideRange(0);
         }
 
         private void CheckOutsideRange(float resultConfidence)

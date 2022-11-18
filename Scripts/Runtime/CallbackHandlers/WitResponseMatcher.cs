@@ -18,13 +18,8 @@ using UnityEngine.Serialization;
 namespace Meta.WitAi.CallbackHandlers
 {
     [AddComponentMenu("Wit.ai/Response Matchers/Response Matcher")]
-    public class WitResponseMatcher : WitResponseHandler
+    public class WitResponseMatcher : WitIntentMatcher
     {
-        [Header("Intent")]
-        [SerializeField] public string intent;
-        [FormerlySerializedAs("confidence")]
-        [Range(0, 1f), SerializeField] public float confidenceThreshold = .6f;
-
         [FormerlySerializedAs("valuePaths")]
         [Header("Value Matching")]
 #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
@@ -41,51 +36,69 @@ namespace Meta.WitAi.CallbackHandlers
 
         private static Regex valueRegex = new Regex(Regex.Escape("{value}"), RegexOptions.Compiled);
 
-        protected override void OnHandleResponse(WitResponseNode response)
+        // Handle validation
+        protected override string OnValidateResponse(WitResponseNode response, bool isEarlyResponse)
         {
-            if (IntentMatches(response))
+            // Return base
+            string result = base.OnValidateResponse(response, isEarlyResponse);
+            if (!string.IsNullOrEmpty(result))
             {
-                if (ValueMatches(response))
+                return result;
+            }
+            // Only check value matches on early
+            if (isEarlyResponse && !ValueMatches(response))
+            {
+                return "No value matches";
+            }
+            // Success
+            return string.Empty;
+        }
+        // Ignore if invalid
+        protected override void OnResponseInvalid(WitResponseNode response, string error) {}
+        // Handle valid callback
+        protected override void OnResponseSuccess(WitResponseNode response)
+        {
+            // Check value matches
+            if (ValueMatches(response))
+            {
+                for (int j = 0; j < formattedValueEvents.Length; j++)
                 {
-                    for (int j = 0; j < formattedValueEvents.Length; j++)
+                    var formatEvent = formattedValueEvents[j];
+                    var result = formatEvent.format;
+                    for (int i = 0; i < valueMatchers.Length; i++)
                     {
-                        var formatEvent = formattedValueEvents[j];
-                        var result = formatEvent.format;
-                        for (int i = 0; i < valueMatchers.Length; i++)
+                        var reference = valueMatchers[i].Reference;
+                        var value = reference.GetStringValue(response);
+                        if (!string.IsNullOrEmpty(formatEvent.format))
                         {
-                            var reference = valueMatchers[i].Reference;
-                            var value = reference.GetStringValue(response);
-                            if (!string.IsNullOrEmpty(formatEvent.format))
+                            if (!string.IsNullOrEmpty(value))
                             {
-                                if (!string.IsNullOrEmpty(value))
-                                {
-                                    result = valueRegex.Replace(result, value, 1);
-                                    result = result.Replace("{" + i + "}", value);
-                                }
-                                else if (result.Contains("{" + i + "}"))
-                                {
-                                    result = "";
-                                    break;
-                                }
+                                result = valueRegex.Replace(result, value, 1);
+                                result = result.Replace("{" + i + "}", value);
+                            }
+                            else if (result.Contains("{" + i + "}"))
+                            {
+                                result = "";
+                                break;
                             }
                         }
+                    }
 
-                        if (!string.IsNullOrEmpty(result))
-                        {
-                            formatEvent.onFormattedValueEvent?.Invoke(result);
-                        }
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        formatEvent.onFormattedValueEvent?.Invoke(result);
                     }
                 }
-
-                List<string> values = new List<string>();
-                for (int i = 0; i < valueMatchers.Length; i++)
-                {
-                    var value = valueMatchers[i].Reference.GetStringValue(response);
-                    values.Add(value);
-                }
-
-                onMultiValueEvent.Invoke(values.ToArray());
             }
+
+            // Get all values & perform multi value event
+            List<string> values = new List<string>();
+            for (int i = 0; i < valueMatchers.Length; i++)
+            {
+                var value = valueMatchers[i].Reference.GetStringValue(response);
+                values.Add(value);
+            }
+            onMultiValueEvent.Invoke(values.ToArray());
         }
 
         private bool ValueMatches(WitResponseNode response)
@@ -204,28 +217,6 @@ namespace Meta.WitAi.CallbackHandlers
                     return dValue >= dMatchValue;
                 case ComparisonMethod.LessThanOrEqualTo:
                     return dValue <= dMatchValue;
-            }
-
-            return false;
-        }
-
-        private bool IntentMatches(WitResponseNode response)
-        {
-            var intentNode = response.GetFirstIntent();
-            if (string.IsNullOrEmpty(intent))
-            {
-                return true;
-            }
-
-            if (intent == intentNode["name"].Value)
-            {
-                var actualConfidence = intentNode["confidence"].AsFloat;
-                if (actualConfidence >= confidenceThreshold)
-                {
-                    return true;
-                }
-
-                Debug.Log($"{intent} matched, but confidence ({actualConfidence.ToString("F")}) was below threshold ({confidenceThreshold.ToString("F")})");
             }
 
             return false;

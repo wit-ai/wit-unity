@@ -6,44 +6,105 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
+using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.CallbackHandlers
 {
+    [Serializable]
+    public class WitResponseEvent : UnityEvent<WitResponseNode> {}
+    [Serializable]
+    public class WitResponseErrorEvent : UnityEvent<WitResponseNode, string> {}
+
     public abstract class WitResponseHandler : MonoBehaviour
     {
-        [SerializeField] public VoiceService wit;
+        [FormerlySerializedAs("wit")]
+        [SerializeField] public VoiceService Voice;
+        [SerializeField] public bool ValidateEarly = false;
+
+        // Whether validated early
+        private bool _validated = false;
 
         private void OnValidate()
         {
-            if (!wit) wit = FindObjectOfType<VoiceService>();
+            if (!Voice) Voice = FindObjectOfType<VoiceService>();
         }
 
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
-            if (!wit) wit = FindObjectOfType<VoiceService>();
-            if (!wit)
+            if (!Voice) Voice = FindObjectOfType<VoiceService>();
+            if (!Voice)
             {
-                Debug.LogError("Wit not found in scene. Disabling " + GetType().Name + " on " +
-                               name);
+                VLog.E($"VoiceService not found in scene.\nDisabling {GetType().Name} on {gameObject.name}");
                 enabled = false;
             }
             else
             {
-                wit.VoiceEvents.OnResponse.AddListener(OnHandleResponse);
+                Voice.VoiceEvents.OnStartListening.AddListener(OnStartListening);
+                Voice.VoiceEvents.OnValidatePartialResponse.AddListener(HandleValidateEarlyResponse);
+                Voice.VoiceEvents.OnResponse.AddListener(HandleFinalResponse);
             }
         }
 
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
-            if (wit)
+            if (Voice)
             {
-                wit.VoiceEvents.OnResponse.RemoveListener(OnHandleResponse);
+                Voice.VoiceEvents.OnStartListening.RemoveListener(OnStartListening);
+                Voice.VoiceEvents.OnValidatePartialResponse.RemoveListener(HandleValidateEarlyResponse);
+                Voice.VoiceEvents.OnResponse.RemoveListener(HandleFinalResponse);
             }
         }
 
-        public void HandleResponse(WitResponseNode response) => OnHandleResponse(response);
-        protected abstract void OnHandleResponse(WitResponseNode response);
+        protected virtual void OnStartListening()
+        {
+            _validated = false;
+        }
+        protected virtual void HandleValidateEarlyResponse(VoiceSession session)
+        {
+            if (ValidateEarly && !_validated)
+            {
+                string invalidReason = OnValidateResponse(session.response, true);
+                if (string.IsNullOrEmpty(invalidReason))
+                {
+                    _validated = true;
+                    OnResponseSuccess(session.response);
+                    session.validResponse = true;
+                }
+            }
+        }
+        protected virtual void HandleFinalResponse(WitResponseNode response)
+        {
+            // Not yet handled
+            if (!_validated)
+            {
+                string invalidReason = OnValidateResponse(response, false);
+                if (!string.IsNullOrEmpty(invalidReason))
+                {
+                    OnResponseInvalid(response, invalidReason);
+                }
+                else
+                {
+                    OnResponseSuccess(response);
+                }
+                _validated = true;
+            }
+        }
+
+        // Handle validation
+        protected abstract string OnValidateResponse(WitResponseNode response, bool isEarlyResponse);
+        // Handle invalid
+        protected abstract void OnResponseInvalid(WitResponseNode response, string error);
+        // Handle valid
+        protected abstract void OnResponseSuccess(WitResponseNode response);
+
+        #if UNITY_EDITOR
+        // For tests
+        public void HandleResponse(WitResponseNode response) => HandleFinalResponse(response);
+        #endif
     }
 }

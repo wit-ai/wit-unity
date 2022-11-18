@@ -20,14 +20,22 @@ namespace Meta.WitAi.CallbackHandlers
     {
         [SerializeField] private UnityEvent onOutOfDomain = new UnityEvent();
 
-        protected override void OnHandleResponse(WitResponseNode response)
+        protected override string OnValidateResponse(WitResponseNode response, bool isEarlyResponse)
         {
-            if (null == response) return;
-
-            if (response["intents"].Count == 0)
+            if (response == null)
             {
-                onOutOfDomain?.Invoke();
+                return "Response is null";
             }
+            if (response["intents"].Count > 0)
+            {
+                return "Intents found";
+            }
+            return string.Empty;
+        }
+        protected override void OnResponseInvalid(WitResponseNode response, string error) {}
+        protected override void OnResponseSuccess(WitResponseNode response)
+        {
+            onOutOfDomain?.Invoke();
         }
     }
 }
