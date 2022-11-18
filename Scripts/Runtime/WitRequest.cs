@@ -706,7 +706,6 @@ namespace Meta.WitAi
             }
 
             // If no delimiter is found, return the rest of the chunk
-            VLog.W("Read stream ended abruptly");
             return results.Length == 0 ? null : results.ToString();
         }
         // Process individual piece
