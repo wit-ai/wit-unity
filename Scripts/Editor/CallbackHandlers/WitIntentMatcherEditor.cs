@@ -16,7 +16,6 @@ using UnityEngine;
 
 namespace Meta.WitAi.CallbackHandlers
 {
-    [CustomEditor(typeof(WitIntentMatcher), true)]
     public class WitIntentMatcherEditor : Editor
     {
         // The matcher

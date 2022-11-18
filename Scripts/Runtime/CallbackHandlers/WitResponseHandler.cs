@@ -106,5 +106,56 @@ namespace Meta.WitAi.CallbackHandlers
         // For tests
         public void HandleResponse(WitResponseNode response) => HandleFinalResponse(response);
         #endif
+
+        /// <summary>
+        /// Refresh confidence range
+        /// </summary>
+        /// <param name="confidence"></param>
+        /// <param name="confidenceRanges"></param>
+        /// <param name="allowConfidenceOverlap"></param>
+        /// <returns></returns>
+        public static bool RefreshConfidenceRange(float confidence, ConfidenceRange[] confidenceRanges, bool allowConfidenceOverlap)
+        {
+            // Whether found
+            bool foundIn = false;
+            bool foundOut = false;
+
+            // Iterate confidences
+            for (int i = 0; null != confidenceRanges && i < confidenceRanges.Length; i++)
+            {
+                var range = confidenceRanges[i];
+
+                // Within Range
+                if (confidence >= range.minConfidence &&
+                    confidence <= range.maxConfidence)
+                {
+                    // Ignore overlap
+                    if (!allowConfidenceOverlap && foundIn)
+                    {
+                        continue;
+                    }
+
+                    // Within delegate
+                    range.onWithinConfidenceRange?.Invoke();
+                    foundIn = true;
+                }
+                // Out of Range
+                else
+                {
+                    // Ignore overlap
+                    if (!allowConfidenceOverlap && foundOut)
+                    {
+                        continue;
+                    }
+
+                    // Outside delegate
+                    range.onOutsideConfidenceRange?.Invoke();
+                    foundOut = true;
+                }
+            }
+
+            // Return if found within
+            return foundIn;
+        }
     }
 }

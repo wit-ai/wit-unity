@@ -49,48 +49,16 @@ namespace Meta.WitAi.CallbackHandlers
             // Iterate intents
             foreach (var intentData in intents)
             {
-                var resultConfidence = intentData.confidence;
                 if (string.Equals(intent, intentData.name, StringComparison.CurrentCultureIgnoreCase))
                 {
-                    CheckInsideRange(resultConfidence);
-                    CheckOutsideRange(resultConfidence);
+                    // Found intent
+                    RefreshConfidenceRange(intentData.confidence, confidenceRanges, allowConfidenceOverlap);
                     return;
                 }
             }
 
             // Not matched
-            CheckInsideRange(0);
-            CheckOutsideRange(0);
-        }
-
-        private void CheckOutsideRange(float resultConfidence)
-        {
-            for (int i = 0; null != confidenceRanges && i < confidenceRanges.Length; i++)
-            {
-                var range = confidenceRanges[i];
-                if (resultConfidence < range.minConfidence ||
-                    resultConfidence > range.maxConfidence)
-                {
-                    range.onOutsideConfidenceRange?.Invoke();
-
-                    if (!allowConfidenceOverlap) break;
-                }
-            }
-        }
-
-        private void CheckInsideRange(float resultConfidence)
-        {
-            for (int i = 0; null != confidenceRanges && i < confidenceRanges.Length; i++)
-            {
-                var range = confidenceRanges[i];
-                if (resultConfidence >= range.minConfidence &&
-                    resultConfidence <= range.maxConfidence)
-                {
-                    range.onWithinConfidenceRange?.Invoke();
-
-                    if (!allowConfidenceOverlap) break;
-                }
-            }
+            RefreshConfidenceRange(0, confidenceRanges, allowConfidenceOverlap);
         }
     }
 }

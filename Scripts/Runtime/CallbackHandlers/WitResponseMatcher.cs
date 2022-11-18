@@ -53,8 +53,17 @@ namespace Meta.WitAi.CallbackHandlers
             // Success
             return string.Empty;
         }
-        // Ignore if invalid
-        protected override void OnResponseInvalid(WitResponseNode response, string error) {}
+        // Refresh all confidence ranges
+        protected override void OnResponseInvalid(WitResponseNode response, string error)
+        {
+            foreach (var matcher in valueMatchers)
+            {
+                if (matcher.ConfidenceReference != null)
+                {
+                    RefreshConfidenceRange(0f, matcher.confidenceRanges, matcher.allowConfidenceOverlap);
+                }
+            }
+        }
         // Handle valid callback
         protected override void OnResponseSuccess(WitResponseNode response)
         {
@@ -93,10 +102,17 @@ namespace Meta.WitAi.CallbackHandlers
 
             // Get all values & perform multi value event
             List<string> values = new List<string>();
-            for (int i = 0; i < valueMatchers.Length; i++)
+            foreach (var matcher in valueMatchers)
             {
-                var value = valueMatchers[i].Reference.GetStringValue(response);
+                // Add value
+                var value = matcher.Reference.GetStringValue(response);
                 values.Add(value);
+                // Refresh confidence
+                if (matcher.ConfidenceReference != null)
+                {
+                    RefreshConfidenceRange(matcher.ConfidenceReference.GetFloatValue(response),
+                        matcher.confidenceRanges, matcher.allowConfidenceOverlap);
+                }
             }
             onMultiValueEvent.Invoke(values.ToArray());
         }
@@ -259,6 +275,8 @@ namespace Meta.WitAi.CallbackHandlers
         [Tooltip("The variance allowed when comparing two floating point values for equality")]
         public double floatingPointComparisonTolerance = .0001f;
 
+        [Tooltip("Confidence ranges are executed in order. If checked, all confidence values will be checked instead of stopping on the first one that matches.")]
+        [SerializeField] public bool allowConfidenceOverlap;
         [Tooltip("The confidence levels to handle for this value.\nNOTE: The selected node must have a confidence sibling node.")]
         public ConfidenceRange[] confidenceRanges;
 
