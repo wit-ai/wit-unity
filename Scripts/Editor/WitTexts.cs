@@ -32,6 +32,9 @@ namespace Meta.WitAi
             public string SetupTitleLabel;
             public string SetupSubheaderLabel;
             public string SetupServerTokenLabel;
+            public string SetupServerTokenVerifyLabel;
+            public string SetupServerTokenVerifyWarning;
+            public string SetupClientTokenWarningLabel;
             public string SetupSubmitButtonLabel;
             public string SetupSubmitFailLabel;
             [Header("Understanding Viewer Texts")]

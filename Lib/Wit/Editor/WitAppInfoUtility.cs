@@ -42,6 +42,19 @@ namespace Meta.WitAi.Lib
             }
         }
 
+        // Determine if is a server token
+        public static VRequest CheckServerToken(string serverToken, Action<bool> onComplete)
+        {
+            WitServerRequestConfiguration config = new WitServerRequestConfiguration(serverToken);
+            WitInfoVRequest request = GetRequest(config);
+            request.RequestAppId((appId, error) =>
+            {
+                bool success = string.IsNullOrEmpty(error);
+                onComplete?.Invoke(success);
+            });
+            return request;
+        }
+
         // Returns a vrequest
         private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration, bool useServerToken = true) =>
             new WitInfoVRequest(configuration, useServerToken);

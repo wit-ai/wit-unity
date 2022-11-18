@@ -268,6 +268,8 @@ namespace Meta.WitAi.Data.Configuration
                 onSetComplete?.Invoke(error);
             });
         }
+        // Determine if is a server token
+        public static VRequest CheckServerToken(string serverToken, Action<bool> onComplete) => WitAppInfoUtility.CheckServerToken(serverToken, onComplete);
         #endregion
 
         #region APP DATA IMPORT
