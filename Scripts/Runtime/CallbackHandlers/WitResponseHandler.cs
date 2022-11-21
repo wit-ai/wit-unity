@@ -44,7 +44,7 @@ namespace Meta.WitAi.CallbackHandlers
             }
             else
             {
-                Voice.VoiceEvents.OnStartListening.AddListener(OnStartListening);
+                Voice.VoiceEvents.OnRequestCreated.AddListener(OnRequestCreated);
                 Voice.VoiceEvents.OnValidatePartialResponse.AddListener(HandleValidateEarlyResponse);
                 Voice.VoiceEvents.OnResponse.AddListener(HandleFinalResponse);
             }
@@ -54,16 +54,17 @@ namespace Meta.WitAi.CallbackHandlers
         {
             if (Voice)
             {
-                Voice.VoiceEvents.OnStartListening.RemoveListener(OnStartListening);
+                Voice.VoiceEvents.OnRequestCreated.RemoveListener(OnRequestCreated);
                 Voice.VoiceEvents.OnValidatePartialResponse.RemoveListener(HandleValidateEarlyResponse);
                 Voice.VoiceEvents.OnResponse.RemoveListener(HandleFinalResponse);
             }
         }
 
-        protected virtual void OnStartListening()
+        protected virtual void OnRequestCreated(WitRequest request)
         {
             _validated = false;
         }
+
         protected virtual void HandleValidateEarlyResponse(VoiceSession session)
         {
             if (ValidateEarly && !_validated)
