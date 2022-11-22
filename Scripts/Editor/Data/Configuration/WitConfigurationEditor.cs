@@ -17,7 +17,6 @@ using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Utilities;
 using Meta.Conduit;
-using Meta.WitAi;
 using Meta.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;

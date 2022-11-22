@@ -286,7 +286,7 @@ namespace Meta.WitAi.Data.Configuration
             {
                 if (!string.IsNullOrEmpty(error))
                 {
-                    onComplete?.Invoke(false,"error");
+                    onComplete?.Invoke(false, error);
                 }
                 else
                 {
