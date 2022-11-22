@@ -25,6 +25,7 @@ namespace Meta.WitAi.CallbackHandlers
         // Set app info
         protected override void SetAppInfo(WitAppInfo appInfo)
         {
+            base.SetAppInfo(appInfo);
             if (appInfo.entities != null)
             {
                 _entityNames = appInfo.entities.Select(i => i.name).ToArray();
@@ -32,8 +33,9 @@ namespace Meta.WitAi.CallbackHandlers
             }
         }
         // Custom GUI
-        protected virtual bool OnInspectorCustomGUI(FieldInfo fieldInfo)
+        protected override bool OnInspectorCustomGUI(FieldInfo fieldInfo)
         {
+            base.OnInspectorCustomGUI(fieldInfo);
             // Custom layout
             if (string.Equals(fieldInfo.Name, "entity"))
             {
