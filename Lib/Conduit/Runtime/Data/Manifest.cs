@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 
 namespace Meta.Conduit
 {
@@ -197,6 +198,11 @@ namespace Meta.Conduit
         public List<InvocationContext> GetInvocationContexts(string actionId)
         {
             return _methodLookup[actionId];
+        }
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
         }
     }
 }

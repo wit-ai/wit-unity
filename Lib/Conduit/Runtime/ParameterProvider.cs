@@ -67,6 +67,11 @@ namespace Meta.Conduit
         /// Custom types defined locally.
         /// </summary>
         private readonly Dictionary<string, Type> _customTypes = new Dictionary<string, Type>();
+        
+        /// <summary>
+        /// The list of the names of all parameters in the provider. 
+        /// </summary>
+        public List<string> AllParameterNames => this.ActualParameters.Keys.ToList();
 
         /// <summary>
         /// Add a custom known type (typically enum) to the provider.
@@ -414,6 +419,11 @@ namespace Meta.Conduit
             targetActualParameterName = possibleNames[0];
 
             return targetActualParameterName;
+        }
+
+        public override string ToString()
+        {
+            return string.Join("',", AllParameterNames);
         }
     }
 }

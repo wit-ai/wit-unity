@@ -20,6 +20,11 @@ namespace Meta.Conduit
     internal interface IParameterProvider
     {
         /// <summary>
+        /// The list of the names of all parameters in the provider. 
+        /// </summary>
+        List<string> AllParameterNames { get; }
+        
+        /// <summary>
         /// Populates the parameters from a Wit.Ai response node.
         /// Must be called after all parameters have been obtained from Wit.Ai and mapped but before any are read.
         /// </summary>

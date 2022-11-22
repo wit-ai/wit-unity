@@ -113,10 +113,10 @@ namespace Meta.Conduit
             var invocationContexts = filter.ResolveInvocationContexts(actionId, confidence, partial);
             if (invocationContexts.Count < 1)
             {
-                // Only log if inverse does not contain any matches either
-                if (filter.ResolveInvocationContexts(actionId, confidence, !partial).Count < 1)
+                // Only log if this is non-partial and inverse does not contain any matches either
+                if (!partial && filter.ResolveInvocationContexts(actionId, confidence, true).Count < 1)
                 {
-                    VLog.W($"Failed to resolve {(partial ? "partial" : "final")} method for {actionId} with supplied context");
+                    VLog.W($"Failed to resolve {("final")} method for {actionId} with supplied context\nParameters: {parameterProvider}");
                 }
 
                 return false;
