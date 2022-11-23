@@ -417,7 +417,6 @@ namespace Meta.WitAi
                 request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
                     UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
                 request.SetRequestHeader("Content-Type", audioEncoding.ToString());
-                request.chunkedTransfer = true;
             }
 
             requestRequiresBody = RequestRequiresBody(command);
@@ -910,7 +909,7 @@ namespace Meta.WitAi
                 // This problem occurs when the Web server resets or closes the connection after
                 // the client application sends the HTTP header.
                 // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
-                VLog.W("Stream already disposed. It is likely the server reset the connection before streaming started.");
+                VLog.W($"Stream already disposed. It is likely the server reset the connection before streaming started.\n{e}");
                 // This prevents a very long holdup on _writeStream.Close
                 _writeStream = null;
             }

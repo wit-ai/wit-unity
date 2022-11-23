@@ -9,7 +9,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using Meta.WitAi.Configuration;
@@ -17,6 +16,7 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
@@ -145,6 +145,7 @@ namespace Meta.WitAi
         // Add mic delegates
         protected void OnEnable()
         {
+            SceneManager.sceneLoaded += OnSceneLoaded;
             _runtimeConfigProvider = GetComponent<IWitRuntimeConfigProvider>();
             _voiceEventProvider = GetComponent<IVoiceEventProvider>();
 
@@ -161,11 +162,12 @@ namespace Meta.WitAi
         // Remove mic delegates
         protected void OnDisable()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             AudioBufferEvents e = AudioBuffer.Instance?.Events;
             SetMicDelegates(false);
         }
         // On scene refresh
-        protected virtual void OnLevelWasLoaded(int level)
+        protected virtual void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             SetMicDelegates(true);
         }
