@@ -67,7 +67,7 @@ namespace Meta.WitAi.TTS.Utilities
         [TextArea]
         [Tooltip("Text that is added to the end of any Speech() text")]
         [SerializeField] private string appendedText;
-        
+
         // Events
         [SerializeField] private TTSSpeakerEvents _events;
         public TTSSpeakerEvents Events => _events;
@@ -222,14 +222,16 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        public void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings = null) => Speak(textToSpeak, diskCacheSettings, false);
+        public void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings) => Speak(textToSpeak, diskCacheSettings, false);
+        public void Speak(string textToSpeak) => Speak(textToSpeak, null);
         /// <summary>
         /// Load a tts clip using the specified text & cache settings.
         /// Adds clip to speak queue and will speak once previously spoken phrases are complete
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        public void SpeakQueued(string textToSpeak, TTSDiskCacheSettings diskCacheSettings = null) => Speak(textToSpeak, diskCacheSettings, true);
+        public void SpeakQueued(string textToSpeak, TTSDiskCacheSettings diskCacheSettings) => Speak(textToSpeak, diskCacheSettings, true);
+        public void SpeakQueued(string textToSpeak) => SpeakQueued(textToSpeak, null);
 
         /// <summary>
         /// Loads a formated phrase to be spoken
@@ -251,17 +253,21 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings = null)
+        public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings)
         {
             Stop();
             yield return SpeakQueuedAsync(new string[] {textToSpeak}, diskCacheSettings);
+        }
+        public IEnumerator SpeakAsync(string textToSpeak)
+        {
+            yield return SpeakAsync(textToSpeak, null);
         }
         /// <summary>
         /// Speak and wait for load/playback completion
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        public IEnumerator SpeakQueuedAsync(string[] textsToSpeak, TTSDiskCacheSettings diskCacheSettings = null)
+        public IEnumerator SpeakQueuedAsync(string[] textsToSpeak, TTSDiskCacheSettings diskCacheSettings)
         {
             // Speak each queued
             foreach (var textToSpeak in textsToSpeak)
@@ -270,6 +276,10 @@ namespace Meta.WitAi.TTS.Utilities
             }
             // Wait while loading/speaking
             yield return new WaitWhile(() => IsLoading || IsSpeaking);
+        }
+        public IEnumerator SpeakQueuedAsync(string[] textsToSpeak)
+        {
+            yield return SpeakQueuedAsync(textsToSpeak, null);
         }
 
         /// <summary>
@@ -280,7 +290,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the speak queue</param>
         protected virtual void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
-            
+
             if (prependedText.Length > 0 && !prependedText.EndsWith(" "))
             {
                 prependedText += " ";
