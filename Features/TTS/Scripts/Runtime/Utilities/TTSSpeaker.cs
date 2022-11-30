@@ -171,7 +171,7 @@ namespace Meta.WitAi.TTS.Utilities
             while (index < _playbackQueue.Count)
             {
                 // Abort all matching clips
-                TTSClipData speakingClipData = _loadingQueue[index];
+                TTSClipData speakingClipData = _playbackQueue[index];
                 if (speakingClipData == null || speakingClipData.Equals(clipData))
                 {
                     OnPlaybackCancel(index);
