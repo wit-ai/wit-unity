@@ -21,6 +21,8 @@ namespace Meta.WitAi.TTS.Samples
         [SerializeField] private Button _speakButton;
         [SerializeField] private Button _speakQueuedButton;
 
+        [SerializeField] private string[] _queuedText;
+
         // States
         private bool _loading;
         private bool _speaking;
@@ -37,8 +39,15 @@ namespace Meta.WitAi.TTS.Samples
         private void StopClick() => _speaker.Stop();
         // Speak phrase click
         private void SpeakClick() => _speaker.Speak(_input.text);
-        // Speack queued phrase click
-        private void SpeakQueuedClick() => _speaker.SpeakQueued(_input.text);
+        // Speak queued phrase click
+        private void SpeakQueuedClick()
+        {
+            foreach (var text in _queuedText)
+            {
+                _speaker.SpeakQueued(text);
+            }
+            _speaker.SpeakQueued(_input.text);
+        }
         // Remove delegates
         private void OnDisable()
         {

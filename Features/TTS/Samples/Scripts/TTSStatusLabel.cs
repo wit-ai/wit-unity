@@ -7,6 +7,7 @@
  */
 
 using System.Text;
+using Meta.WitAi.TTS.Data;
 using UnityEngine;
 using UnityEngine.UI;
 using Meta.WitAi.TTS.Utilities;
@@ -21,44 +22,50 @@ namespace Meta.WitAi.TTS.Samples
         private void OnEnable()
         {
             RefreshLabel();
-            _speaker.Events.OnClipLoadBegin.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadAbort.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadFailed.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadSuccess.AddListener(OnClipRefresh);
-            _speaker.Events.OnQueuedSpeaking.AddListener(OnClipRefresh);
-            _speaker.Events.OnStartSpeaking.AddListener(OnClipRefresh);
-            _speaker.Events.OnCancelledSpeaking.AddListener(OnClipRefresh);
-            _speaker.Events.OnFinishedSpeaking.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadBegin.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadAbort.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadFailed.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadSuccess.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataQueued.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackReady.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackStart.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackFinished.AddListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackCancelled.AddListener(OnClipRefresh);
         }
-        private void OnClipRefresh(TTSSpeaker speaker, string textToSpeak)
+        private void OnClipRefresh(TTSClipData clipData)
         {
             RefreshLabel();
         }
         private void OnDisable()
         {
-            _speaker.Events.OnClipLoadBegin.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadAbort.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadFailed.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipLoadSuccess.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnQueuedSpeaking.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnStartSpeaking.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnCancelledSpeaking.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnFinishedSpeaking.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataQueued.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadBegin.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadAbort.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadFailed.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataLoadSuccess.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackReady.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackStart.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackFinished.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnClipDataPlaybackCancelled.RemoveListener(OnClipRefresh);
         }
 
         private void RefreshLabel()
         {
             StringBuilder status = new StringBuilder();
-
-            if (_speaker.IsLoading)
+            if (_speaker.SpeakingClip != null)
             {
-                status.AppendLine($"Loading ({_speaker.LoadingClips.Length})");
+                status.AppendLine($"Speaking: {_speaker.IsSpeaking}");
             }
-            if (_speaker.IsSpeaking)
+            int index = 0;
+            foreach (var clip in _speaker.QueuedClips)
             {
-                status.AppendLine($"Play Queue ({_speaker.PlaybackQueue.Length})");
+                status.Insert(0, $"Queue[{index}]: {clip.loadState.ToString()}\n");
+                index++;
             }
-
+            if (status.Length > 0)
+            {
+                status.Remove(status.Length - 1, 1);
+            }
             _label.text = status.ToString();
         }
     }
