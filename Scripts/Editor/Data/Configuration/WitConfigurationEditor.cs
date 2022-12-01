@@ -39,9 +39,9 @@ namespace Meta.WitAi.Windows
         private bool _didCheckAutoTrainAvailability = false;
         private bool _isAutoTrainAvailable = false;
 
+        internal static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static ConduitStatistics _statistics;
         private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
-        private static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static readonly ManifestGenerator ManifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
         private static readonly ManifestLoader ManifestLoader = new ManifestLoader();
         private static readonly IWitVRequestFactory VRequestFactory = new WitVRequestFactory();

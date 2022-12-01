@@ -73,6 +73,13 @@ namespace Meta.Conduit
             };
         }
 
+        public string GetQualifiedTypeName()
+        {
+            return string.IsNullOrEmpty(Namespace)
+                ? $"{ID}"
+                : $"{Namespace}.{ID}";
+        }
+
         public override bool Equals(object obj)
         {
             return obj is ManifestEntity other && this.Equals(other);

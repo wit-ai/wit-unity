@@ -122,8 +122,8 @@ namespace Meta.Conduit
             return result;
         }
     }
-    
-    #if !UNITY_2021_1_OR_NEWER
+
+#if !UNITY_2021_1_OR_NEWER
     internal static class ListExtensions
     {
         public static HashSet<T> ToHashSet<T> (this List<T> source)
