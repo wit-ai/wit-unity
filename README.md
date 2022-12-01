@@ -1,7 +1,24 @@
 # wit-unity
-`wit-unity` is the Unity SDK for [Wit.ai](http://wit.ai).
+`wit-unity` is a Unity C# based wrapper around the rest apis provided by [Wit.ai](http://wit.ai). It is meant to be used as a base library within Voice SDK. We have made it accessible here for contributions and early adoption testing. Wit-unity is ideal for developers looking to do early research with voice and potential expand the core capabilities of Voice SDK.
 
-## Install
+**NOTE** The wit-unity github repo is bleeding edge. Even the releases within this repo are early access. If you are looking for something stable to use in production you should use the release packages of Voice SDK instead.
+
+It is strongly recommended if you are building anything in production you use Voice SDK instead of Wit-Unity.
+
+## Voice SDK
+Voice SDK is the primary release mechanism and use of the Wit-Unity library. You can learn more about Voice SDK in the Oculus Developer documentation under the [Voice SDK Overview](https://developer.oculus.com/documentation/unity/voice-sdk-overview/).
+
+### Differences between Wit-Unity and Voice SDK
+* **Quality** One of the core differences between wit-unity and Voice SDK is its QA process. Voice SDK goes through more rigorous testing before releases are published and is considered production ready. Changes published to wit-unity are engineer tested and then vetted by QA after checkin.
+* **Completion** If you are working off of the main-line wit-unity branch you may clone work in progress features.
+* **Platform Integration** Voice SDK offers extended platform specific implementations. Wit-Unity's purpose is to wrap the Wit.ai APIs. It does not deal with any platform specific optimizations. Voice SDK however provides platform integrations and additional optimizations for devices like the Oculus Quest.
+* **Documentation** The documentation around wit-unity is somewhat limited. You will find more detailed documentation and tutorials on Voice SDK as a whole in the [Voice SDK documentation](https://developer.oculus.com/documentation/unity/voice-sdk-overview/).
+
+## Installing Voice SDK
+1. Download the repo. You can get it on the Unity Asset Store as part of the [Oculus Integration](https://assetstore.unity.com/packages/tools/integration/oculus-integration-82022) asset. Or you can download just the Voice SDK through the [Oculus developer website](https://developer.oculus.com/downloads/package/oculus-voice-sdk/).
+2. Once you have imported you can find the initial setup in the Oculus menu under Oculus/Voice SDK/Settings button.
+
+## Installing Wit-Unity without Voice SDK
 There are a couple ways you can install this plugin in Unity.
 
 1. You can download the repo and drop it in your Unity project's Assets directory
