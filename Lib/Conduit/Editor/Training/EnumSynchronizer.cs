@@ -270,6 +270,11 @@ namespace Meta.Conduit.Editor
 
         private EnumCodeWrapper GetEnumWrapper(Type enumType, string entityName)
         {
+            if (!enumType.IsEnum)
+            {
+                return null;
+            }
+            
             _assemblyWalker.GetSourceCode(enumType, out string sourceFile, out bool singleUnit);
             if (!singleUnit)
             {

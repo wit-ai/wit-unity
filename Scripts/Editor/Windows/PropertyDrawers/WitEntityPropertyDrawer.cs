@@ -81,7 +81,6 @@ namespace Meta.WitAi.Windows
                 
                 UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(sourceCodeFile, 1);
             }
-            
         }
     }
 }

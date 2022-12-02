@@ -101,9 +101,9 @@ namespace Meta.Conduit.Editor
 
         public bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit)
         {
-            if (type == null || !type.IsEnum)
+            if (type == null)
             {
-                throw new ArgumentException("Type needs to be an enum");
+                throw new ArgumentException("Type cannot be null");
             }
 
             foreach (var assembly in GetCompilationAssemblies(AssembliesType.Player))
@@ -204,12 +204,7 @@ namespace Meta.Conduit.Editor
 
         private bool ContainsType(string sourceCode, Type type)
         {
-            if (!type.IsEnum)
-            {
-                throw new ArgumentException("Type needs to be an enum");
-            }
-
-            var pattern = $"enum\\s{type.Name}";
+            var pattern = $"(enum|class|struct)\\s{type.Name}";
 
             return Regex.IsMatch(sourceCode, pattern);
         }
