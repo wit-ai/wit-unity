@@ -72,6 +72,7 @@ namespace Meta.WitAi.Windows
 
         protected virtual Texture2D HeaderIcon => WitTexts.HeaderIcon;
         public virtual string HeaderUrl => WitTexts.GetAppURL(Configuration.GetApplicationId(), WitTexts.WitAppEndpointType.Settings);
+        protected virtual string DocsUrl => WitTexts.Texts.WitDocsUrl;
         protected virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
 
         public void Initialize()
@@ -114,7 +115,7 @@ namespace Meta.WitAi.Windows
             // Draw header
             if (drawHeader)
             {
-                WitEditorUI.LayoutHeaderButton(HeaderIcon, HeaderUrl);
+                WitEditorUI.LayoutHeaderButton(HeaderIcon, HeaderUrl, DocsUrl);
                 GUILayout.Space(WitStyles.HeaderPaddingBottom);
                 EditorGUI.indentLevel++;
             }
