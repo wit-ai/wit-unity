@@ -53,17 +53,8 @@ namespace Meta.WitAi.CallbackHandlers
             // Success
             return string.Empty;
         }
-        // Refresh all confidence ranges
-        protected override void OnResponseInvalid(WitResponseNode response, string error)
-        {
-            foreach (var matcher in valueMatchers)
-            {
-                if (matcher.ConfidenceReference != null)
-                {
-                    RefreshConfidenceRange(0f, matcher.confidenceRanges, matcher.allowConfidenceOverlap);
-                }
-            }
-        }
+        // Ignore for mismatched intent
+        protected override void OnResponseInvalid(WitResponseNode response, string error) {}
         // Handle valid callback
         protected override void OnResponseSuccess(WitResponseNode response)
         {
@@ -107,11 +98,14 @@ namespace Meta.WitAi.CallbackHandlers
                 // Add value
                 var value = matcher.Reference.GetStringValue(response);
                 values.Add(value);
+
                 // Refresh confidence
                 if (matcher.ConfidenceReference != null)
                 {
-                    RefreshConfidenceRange(matcher.ConfidenceReference.GetFloatValue(response),
-                        matcher.confidenceRanges, matcher.allowConfidenceOverlap);
+                    float confidenceValue = ValueMatches(response, matcher)
+                        ? matcher.ConfidenceReference.GetFloatValue(response)
+                        : 0f;
+                    RefreshConfidenceRange(confidenceValue, matcher.confidenceRanges, matcher.allowConfidenceOverlap);
                 }
             }
             onMultiValueEvent.Invoke(values.ToArray());
@@ -122,31 +116,34 @@ namespace Meta.WitAi.CallbackHandlers
             bool matches = true;
             for (int i = 0; i < valueMatchers.Length && matches; i++)
             {
-                var matcher = valueMatchers[i];
-                var value = matcher.Reference.GetStringValue(response);
-                matches &= !matcher.contentRequired || !string.IsNullOrEmpty(value);
-
-                switch (matcher.matchMethod)
-                {
-                    case MatchMethod.RegularExpression:
-                        matches &= Regex.Match(value, matcher.matchValue).Success;
-                        break;
-                    case MatchMethod.Text:
-                        matches &= value == matcher.matchValue;
-                        break;
-                    case MatchMethod.IntegerComparison:
-                        matches &= CompareInt(value, matcher);
-                        break;
-                    case MatchMethod.FloatComparison:
-                        matches &= CompareFloat(value, matcher);
-                        break;
-                    case MatchMethod.DoubleComparison:
-                        matches &= CompareDouble(value, matcher);
-                        break;
-                }
+                matches &= ValueMatches(response, valueMatchers[i]);
             }
-
             return matches;
+        }
+
+        private bool ValueMatches(WitResponseNode response, ValuePathMatcher matcher)
+        {
+            var value = matcher.Reference.GetStringValue(response);
+            bool result = !matcher.contentRequired || !string.IsNullOrEmpty(value);
+            switch (matcher.matchMethod)
+            {
+                case MatchMethod.RegularExpression:
+                    result &= Regex.Match(value, matcher.matchValue).Success;
+                    break;
+                case MatchMethod.Text:
+                    result &= value == matcher.matchValue;
+                    break;
+                case MatchMethod.IntegerComparison:
+                    result &= CompareInt(value, matcher);
+                    break;
+                case MatchMethod.FloatComparison:
+                    result &= CompareFloat(value, matcher);
+                    break;
+                case MatchMethod.DoubleComparison:
+                    result &= CompareDouble(value, matcher);
+                    break;
+            }
+            return result;
         }
 
         private bool CompareDouble(string value, ValuePathMatcher matcher)
