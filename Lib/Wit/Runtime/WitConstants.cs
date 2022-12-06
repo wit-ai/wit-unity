@@ -6,8 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi.Json;
+
 namespace Meta.WitAi
 {
+    public enum WitComposerMessageType
+    {
+        Message
+    }
+
     public static class WitConstants
     {
         // Wit service version info
@@ -48,6 +55,8 @@ namespace Meta.WitAi
         // Composer Endpoints
         public const string ENDPOINT_COMPOSER_SPEECH = "converse";
         public const string ENDPOINT_COMPOSER_MESSAGE = "event";
+        public const string ENDPOINT_COMPOSER_MESSAGE_PARAM_MESSAGE = "message";
+        public const string ENDPOINT_COMPOSER_MESSAGE_PARAM_TYPE = "type";
         public const string ENDPOINT_COMPOSER_PARAM_SESSION = "session_id";
         public const string ENDPOINT_COMPOSER_PARAM_CONTEXT_MAP = "context_map";
 
