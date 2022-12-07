@@ -329,6 +329,8 @@ namespace Meta.WitAi.Json
 
         internal static string Escape(string aText)
         {
+            if (string.IsNullOrEmpty(aText)) return aText;
+            
             string result = "";
             foreach (char c in aText)
             {
