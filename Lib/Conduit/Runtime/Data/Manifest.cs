@@ -64,6 +64,7 @@ namespace Meta.Conduit
         /// If entities are resolved, this will hold their data types.
         /// This will be empty if entities were not explicitly resolved.
         /// </summary>
+        [JsonIgnore]
         public Dictionary<string, Type> CustomEntityTypes { get; } = new Dictionary<string, Type>();
 
         public bool ResolveEntities()

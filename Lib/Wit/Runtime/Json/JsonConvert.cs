@@ -653,38 +653,18 @@ namespace Meta.WitAi.Json
                 WitResponseClass newClass = new WitResponseClass();
                 foreach (var field in inType.GetFields(BIND_FLAGS))
                 {
-                    object newObj = EnsureExists(field.FieldType, field.GetValue(inObject));
-                    JsonPropertyAttribute[] attributes = (JsonPropertyAttribute[])field.GetCustomAttributes(typeof(JsonPropertyAttribute));
-                    if (attributes != null && attributes.Length > 0)
-                    {
-                        foreach (var attribute in attributes)
-                        {
-                            newClass.Add(attribute.PropertyName, SerializeToken(field.FieldType, newObj, log, customConverters));
-                        }
-                    }
-                    else
-                    {
-                        newClass.Add(field.Name, SerializeToken(field.FieldType, newObj, log, customConverters));
-                    }
+                    JsonPropertyAttribute[] fieldAttributes = (JsonPropertyAttribute[])field.GetCustomAttributes(typeof(JsonPropertyAttribute));
+                    SerializeProperty(newClass, field.FieldType, field.Name, field.GetValue(inObject),
+                        fieldAttributes, log, customConverters);
                 }
                 foreach (var property in inType.GetProperties(BIND_FLAGS))
                 {
                     MethodInfo getter = property.GetGetMethod();
                     if (getter != null && getter.GetParameters().Length == 0)
                     {
-                        object newObj = EnsureExists(property.PropertyType, property.GetValue(inObject));
-                        JsonPropertyAttribute[] attributes = (JsonPropertyAttribute[])property.GetCustomAttributes(typeof(JsonPropertyAttribute));
-                        if (attributes != null && attributes.Length > 0)
-                        {
-                            foreach (var attribute in attributes)
-                            {
-                                newClass.Add(attribute.PropertyName, SerializeToken(property.PropertyType, newObj, log, customConverters));
-                            }
-                        }
-                        else
-                        {
-                            newClass.Add(property.Name, SerializeToken(property.PropertyType, newObj, log, customConverters));
-                        }
+                        JsonPropertyAttribute[] propertyAttributes = (JsonPropertyAttribute[])property.GetCustomAttributes(typeof(JsonPropertyAttribute));
+                        SerializeProperty(newClass, property.PropertyType, property.Name, property.GetValue(inObject),
+                            propertyAttributes, log, customConverters);
                     }
                 }
                 if (inType.GetInterfaces().Contains(typeof(IJsonSerializer)))
@@ -701,6 +681,32 @@ namespace Meta.WitAi.Json
             // Warn & incode to string
             log.AppendLine($"\tJson Serializer cannot serialize: {inType}");
             return new WitResponseData(inObject.ToString());
+        }
+        // Serialize a property using property attributes
+        private static void SerializeProperty(WitResponseClass newClass, Type propertyType, string propertyName,
+            object propertyValue, JsonPropertyAttribute[] propertyAttributes,
+            StringBuilder log, JsonConverter[] customConverters)
+        {
+            // Get default object
+            object newObj = EnsureExists(propertyType, propertyValue);
+
+            // If properties exist, use them to decode
+            if (propertyAttributes != null && propertyAttributes.Length > 0)
+            {
+                foreach (var attribute in propertyAttributes)
+                {
+                    // Ignore unless property name exists
+                    if (!string.IsNullOrEmpty(attribute.PropertyName))
+                    {
+                        //
+                        newClass.Add(attribute.PropertyName, SerializeToken(propertyType, newObj, log, customConverters));
+                    }
+                }
+                return;
+            }
+
+            // Use default property name
+            newClass.Add(propertyName, SerializeToken(propertyType, newObj, log, customConverters));
         }
         #endregion
     }

@@ -8,6 +8,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.WitAi.Json;
 
 namespace Meta.Conduit
 {
@@ -45,6 +46,7 @@ namespace Meta.Conduit
         /// <summary>
         /// This is the data type of the parameter, exposed as an entity type.
         /// </summary>
+        [JsonIgnore]
         public string EntityType
         {
             get

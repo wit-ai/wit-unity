@@ -8,6 +8,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.WitAi.Json;
 
 namespace Meta.Conduit
 {
@@ -45,6 +46,7 @@ namespace Meta.Conduit
         /// <summary>
         /// Returns the fully qualified name of the declaring type of the action.
         /// </summary>
+        [JsonIgnore]
         public string DeclaringTypeName => ID.Substring(0, ID.LastIndexOf('.'));
 
         /// <summary>
