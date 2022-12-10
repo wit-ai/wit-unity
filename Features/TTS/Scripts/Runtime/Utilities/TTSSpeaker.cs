@@ -9,12 +9,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
-using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
-using Meta.WitAi.TTS.Data;
 using UnityEngine.Serialization;
+using Meta.WitAi.TTS.Data;
 
 namespace Meta.WitAi.TTS.Utilities
 {
@@ -578,15 +578,38 @@ namespace Meta.WitAi.TTS.Utilities
             Type componentType = typeof(TComponent);
             foreach (var componentField in componentType.GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
-                componentField.SetValue(to, componentField.GetValue(from));
+                if (!IsObsolete(componentField.CustomAttributes))
+                {
+                    componentField.SetValue(to, componentField.GetValue(from));
+                }
             }
             foreach (var componentProperty in componentType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
-                if (componentProperty.CanWrite && componentProperty.CanRead && !string.Equals(componentProperty.Name, "name"))
+                if (componentProperty.CanWrite && componentProperty.CanRead && !string.Equals(componentProperty.Name, "name") && !IsObsolete(componentProperty.CustomAttributes))
                 {
                     componentProperty.SetValue(to, componentProperty.GetValue(from));
                 }
             }
+        }
+        // Check for obsolete attribute
+        private bool IsObsolete(IEnumerable<CustomAttributeData> attributes)
+        {
+            return HasCustomAttributes<ObsoleteAttribute>(attributes);
+        }
+        // Check attributes for obsolete attribute (GetCustomAttributes extension took multiple ms)
+        private static bool HasCustomAttributes<TAttribute>(IEnumerable<CustomAttributeData> attributes) where TAttribute : Attribute
+        {
+            if (attributes != null)
+            {
+                foreach (var attribute in attributes)
+                {
+                    if (attribute.AttributeType == typeof(TAttribute))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
         // Wait for clip completion
         protected virtual IEnumerator WaitForCompletion()

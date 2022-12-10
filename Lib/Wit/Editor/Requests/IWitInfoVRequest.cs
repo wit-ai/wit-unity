@@ -170,30 +170,6 @@ namespace Meta.WitAi.Requests
         bool RequestJson<TData>(Uri uri, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestProgressDelegate onProgress = null);
 
-        /// <summary>
-        /// Request audio clip with url, type, progress delegate & ready delegate
-        /// </summary>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
-        /// <param name="onClipReady">Called when the clip is ready for playback or has failed to load</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="onProgress">Clip progress callback</param>
-        bool RequestAudioClip(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<AudioClip> onClipReady,
-            AudioType audioType = AudioType.UNKNOWN, bool audioStream = true,
-            VRequest.RequestProgressDelegate onProgress = null);
-
-        /// <summary>
-        /// Request audio clip with url, type, progress delegate & ready delegate
-        /// </summary>
-        /// <param name="uri">The url to be called</param>
-        /// <param name="onClipReady">Called when the clip is ready for playback or has failed to load</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="onProgress">Clip progress callback</param>
-        bool RequestAudioClip(Uri uri, VRequest.RequestCompleteDelegate<AudioClip> onClipReady,
-            AudioType audioType = AudioType.UNKNOWN, bool audioStream = true,
-            VRequest.RequestProgressDelegate onProgress = null);
-
         Uri GetUri(string path, Dictionary<string, string> queryParams = null);
 
         /// <summary>

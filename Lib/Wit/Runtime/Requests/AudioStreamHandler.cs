@@ -18,20 +18,29 @@ namespace Meta.WitAi.Requests
         PCM16,
         MP3
     }
+    // Data used to handle stream
+    public struct AudioStreamData
+    {
+        // Generated clip name
+        public string ClipName;
+        // Amount of clip length in seconds that must be received before stream is considered ready.
+        public float ClipReadyLength;
+        // Total samples to be used to generate clip. A new clip will be generated every time this chunk size is surpassed
+        public int ClipChunkSize;
+
+        // Type of audio code to be decoded
+        public AudioStreamDecodeType DecodeType;
+        // Total channels being streamed
+        public int DecodeChannels;
+        // Samples per second being streamed
+        public int DecodeSampleRate;
+    }
 
     // Audio stream handler
     public class AudioStreamHandler : DownloadHandlerScript, IVRequestStreamable
     {
-        // Generated clip name
-        public string ClipName { get; }
-        // Type of audio file to be decoded
-        public AudioStreamDecodeType DecodeType { get; }
-        // Number of channels sent by stream
-        public int DecodeChannels { get; }
-        // Decode sample rate
-        public int DecodeSampleRate { get; }
-        // Length of clip chunk size in seconds
-        public int DecodeChunkLength { get; }
+        // Audio stream data
+        public AudioStreamData StreamData { get; }
 
         // Current audio clip
         public AudioClip Clip { get; private set; }
@@ -39,8 +48,6 @@ namespace Meta.WitAi.Requests
         public bool IsStreamReady { get; private set; }
         // Ready to stream
         public bool IsStreamComplete { get; private set; }
-        // Amount of time required before stream is considered ready (seconds)
-        public float StreamReadyDuration{ get; private set; }
 
         // Current total samples loaded
         private int _sampleCount = 0;
@@ -56,15 +63,10 @@ namespace Meta.WitAi.Requests
         public static event Action<AudioClip> OnStreamComplete;
 
         // Generate
-        public AudioStreamHandler(string clipName, AudioStreamDecodeType decodeType, int decodeChannels, int decodeSampleRate, int decodeChunkLength = 5, float streamReadyDuration = 0.5f) : base()
+        public AudioStreamHandler(AudioStreamData streamData) : base()
         {
             // Apply parameters
-            ClipName = clipName;
-            DecodeType = decodeType;
-            DecodeChannels = decodeChannels;
-            DecodeSampleRate = decodeSampleRate;
-            DecodeChunkLength = decodeChunkLength;
-            StreamReadyDuration = streamReadyDuration;
+            StreamData = streamData;
 
             // Setup data
             _sampleCount = 0;
@@ -73,7 +75,7 @@ namespace Meta.WitAi.Requests
             IsStreamComplete = false;
 
             // Generate initial clip
-            GenerateClip(DecodeChunkLength * DecodeSampleRate);
+            GenerateClip(StreamData.ClipChunkSize);
         }
 
         // Receive data
@@ -89,14 +91,14 @@ namespace Meta.WitAi.Requests
             float[] newSamples = null;
 
             // Decode PCM chunk
-            if (DecodeType == AudioStreamDecodeType.PCM16)
+            if (StreamData.DecodeType == AudioStreamDecodeType.PCM16)
             {
                 newSamples = DecodeChunkPCM16(receiveData, dataLength, ref _hasLeftover, ref _leftovers);
             }
             // Not supported
             else
             {
-                VLog.E($"Not Supported Decode File Type\nType: {DecodeType}");
+                VLog.E($"Not Supported Decode File Type\nType: {StreamData.DecodeType}");
             }
             // Failed
             if (newSamples == null)
@@ -107,7 +109,7 @@ namespace Meta.WitAi.Requests
             // Generate larger clip
             if (_sampleCount + newSamples.Length >= Clip.samples)
             {
-                int newMaxSamples = Mathf.Max(Clip.samples + (DecodeChunkLength * DecodeSampleRate),
+                int newMaxSamples = Mathf.Max(Clip.samples + StreamData.ClipChunkSize,
                     _sampleCount + newSamples.Length);
                 GenerateClip(newMaxSamples);
             }
@@ -117,7 +119,7 @@ namespace Meta.WitAi.Requests
             _sampleCount += newSamples.Length;
 
             // Stream is now ready
-            if (!IsStreamReady && (float)_sampleCount / DecodeSampleRate >= StreamReadyDuration)
+            if (!IsStreamReady && (float)_sampleCount / StreamData.DecodeSampleRate >= StreamData.ClipReadyLength)
             {
                 IsStreamReady = true;
             }
@@ -150,7 +152,7 @@ namespace Meta.WitAi.Requests
             AudioClip oldClip = Clip;
 
             // Generate new clip
-            Clip = AudioClip.Create(ClipName, samples, DecodeChannels, DecodeSampleRate, false);
+            Clip = AudioClip.Create(StreamData.ClipName, samples, StreamData.DecodeChannels, StreamData.DecodeSampleRate, false);
 
             // If previous clip existed, get previous data
             if (oldClip != null)
@@ -178,12 +180,8 @@ namespace Meta.WitAi.Requests
 
         #region STATIC
         // Decode raw pcm data
-        public static AudioClip GetClipFromRawData(byte[] rawData, AudioStreamDecodeType decodeType)
+        public static AudioClip GetClipFromRawData(byte[] rawData, AudioStreamDecodeType decodeType, string clipName, int channels, int sampleRate)
         {
-            // Get channels & sample rate
-            int channels = WitConstants.ENDPOINT_TTS_CHANNELS;
-            int sampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE;
-
             // Decode data
             float[] samples = null;
             if (decodeType == AudioStreamDecodeType.PCM16)
@@ -202,7 +200,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Generate clip
-            AudioClip result = AudioClip.Create(WitConstants.ENDPOINT_TTS_CLIP, samples.Length, channels, sampleRate, false);
+            AudioClip result = AudioClip.Create(clipName, samples.Length, channels, sampleRate, false);
             result.SetData(samples, 0);
             return result;
         }

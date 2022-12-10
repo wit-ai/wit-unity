@@ -16,6 +16,7 @@ using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Requests;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace Meta.WitAi.TTS.Integrations
 {
@@ -47,6 +48,10 @@ namespace Meta.WitAi.TTS.Integrations
         public WitConfiguration configuration;
         public TTSWitAudioType audioType;
         public bool audioStream;
+        [Tooltip("Amount of clip length in seconds that must be received before stream is considered ready.")]
+        public float audioStreamReadyDuration;
+        [Tooltip("Total samples to be used to generate clip. A new clip will be generated every time this chunk size is surpassed.")]
+        public float audioStreamChunkLength;
     }
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler
@@ -134,7 +139,9 @@ namespace Meta.WitAi.TTS.Integrations
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
             audioType = TTSWitAudioType.PCM,
-            audioStream = true
+            audioStream = true,
+            audioStreamReadyDuration = 0.1f, // .1 seconds received before starting playback
+            audioStreamChunkLength = 5f // 5 seconds per clip generation
         };
 
         // Use settings web stream events
@@ -192,7 +199,7 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Request tts
             WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestStream(clipData.textToSpeak, RequestSettings.audioType, stream, clipData.queryParameters,
+            request.RequestStream(clipData.textToSpeak, RequestSettings.audioType, stream, RequestSettings.audioStreamReadyDuration, RequestSettings.audioStreamChunkLength, clipData.queryParameters,
                 (clip, error) =>
                 {
                     _webStreams.Remove(clipData.clipID);

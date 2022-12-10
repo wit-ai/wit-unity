@@ -161,6 +161,7 @@ namespace Meta.WitAi.Requests
         public bool RequestStream(string textToSpeak,
             TTSWitAudioType audioType,
             bool audioStream,
+            float audioStreamReadyDuration, float audioStreamChunkLength,
             Dictionary<string, string> ttsData,
             RequestCompleteDelegate<AudioClip> onClipReady,
             RequestProgressDelegate onProgress = null)
@@ -181,7 +182,7 @@ namespace Meta.WitAi.Requests
             UnityWebRequest unityRequest = GetUnityRequest(textToSpeak, audioType, ttsData);
 
             // Perform an audio stream request
-            return RequestAudioClip(unityRequest, onClipReady, GetAudioType(audioType), audioStream, onProgress);
+            return RequestAudioClip(unityRequest, onClipReady, GetAudioType(audioType), audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
         }
 
         /// <summary>

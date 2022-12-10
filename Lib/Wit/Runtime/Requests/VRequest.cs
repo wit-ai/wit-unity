@@ -602,7 +602,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">Clip progress callback</param>
         public bool RequestAudioClip(UnityWebRequest unityRequest,
             RequestCompleteDelegate<AudioClip> onClipReady,
-            AudioType audioType, bool audioStream = true,
+            AudioType audioType, bool audioStream,
+            float audioStreamReadyDuration, float audioStreamChunkLength,
             RequestProgressDelegate onProgress = null)
         {
             // Audio streaming
@@ -627,7 +628,16 @@ namespace Meta.WitAi.Requests
                 // Assumes Raw PCM
                 else
                 {
-                    unityRequest.downloadHandler = new AudioStreamHandler(WitConstants.ENDPOINT_TTS_CLIP, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, WitConstants.ENDPOINT_TTS_STREAM_CLIP_BUFFER, WitConstants.ENDPOINT_TTS_STREAM_READY_DURATION);
+                    AudioStreamData data = new AudioStreamData()
+                    {
+                        ClipName = WitConstants.ENDPOINT_TTS_CLIP,
+                        ClipReadyLength = audioStreamReadyDuration,
+                        ClipChunkSize = Mathf.CeilToInt(audioStreamChunkLength * WitConstants.ENDPOINT_TTS_SAMPLE_RATE),
+                        DecodeType = AudioStreamDecodeType.PCM16,
+                        DecodeChannels = WitConstants.ENDPOINT_TTS_CHANNELS,
+                        DecodeSampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE
+                    };
+                    unityRequest.downloadHandler = new AudioStreamHandler(data);
                 }
             }
 
@@ -665,7 +675,7 @@ namespace Meta.WitAi.Requests
                         // Buffer assumes Raw PCM
                         else if (response.downloadHandler is DownloadHandlerBuffer)
                         {
-                            clip = AudioStreamHandler.GetClipFromRawData(response.downloadHandler.data, AudioStreamDecodeType.PCM16);
+                            clip = AudioStreamHandler.GetClipFromRawData(response.downloadHandler.data, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CLIP, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
                         }
                     }
                     catch (Exception exception)
@@ -700,26 +710,6 @@ namespace Meta.WitAi.Requests
                     onClipReady?.Invoke(clip, string.Empty);
                 }, onProgress);
         }
-        // Decode raw pcm data
-        private static AudioClip DecodeRawPCM(byte[] data)
-        {
-            // Get channels & sample rate
-            int channels = WitConstants.ENDPOINT_TTS_CHANNELS;
-            int sampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE;
-
-            // Decode data
-            float max = Int16.MaxValue;
-            float[] samples = new float[data.Length / 2];
-            for (int i = 0; i < samples.Length; i++)
-            {
-                samples[i] = Mathf.Clamp(BitConverter.ToInt16(data, i * 2) / max, -1f, 1f);
-            }
-
-            // Generate clip
-            AudioClip result = AudioClip.Create(WitConstants.ENDPOINT_TTS_CLIP, samples.Length, channels, sampleRate, false);
-            result.SetData(samples, 0);
-            return result;
-        }
 
         /// <summary>
         /// Request audio clip with url, type, progress delegate & ready delegate
@@ -731,11 +721,12 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">Clip progress callback</param>
         public bool RequestAudioClip(Uri uri,
             RequestCompleteDelegate<AudioClip> onClipReady,
-            AudioType audioType = AudioType.UNKNOWN, bool audioStream = true,
+            AudioType audioType, bool audioStream,
+            float audioStreamReadyDuration, float audioStreamChunkLength,
             RequestProgressDelegate onProgress = null)
         {
             UnityWebRequest unityRequest = UnityWebRequestMultimedia.GetAudioClip(uri, audioType);
-            return RequestAudioClip(unityRequest, onClipReady, audioType, audioStream, onProgress);
+            return RequestAudioClip(unityRequest, onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
         }
         #endregion
     }
