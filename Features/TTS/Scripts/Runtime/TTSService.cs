@@ -122,6 +122,8 @@ namespace Meta.WitAi.TTS
                 WebHandler.WebStreamEvents.OnStreamCancel.AddListener(OnWebStreamCancel);
                 WebHandler.WebStreamEvents.OnStreamReady.AddListener(OnWebStreamReady);
                 WebHandler.WebStreamEvents.OnStreamError.AddListener(OnWebStreamError);
+                WebHandler.WebStreamEvents.OnStreamClipUpdate.AddListener(OnStreamClipUpdated);
+                WebHandler.WebStreamEvents.OnStreamComplete.AddListener(OnWebStreamComplete);
                 WebHandler.WebDownloadEvents.OnDownloadBegin.AddListener(OnWebDownloadBegin);
                 WebHandler.WebDownloadEvents.OnDownloadCancel.AddListener(OnWebDownloadCancel);
                 WebHandler.WebDownloadEvents.OnDownloadSuccess.AddListener(OnWebDownloadSuccess);
@@ -156,6 +158,8 @@ namespace Meta.WitAi.TTS
                 WebHandler.WebStreamEvents.OnStreamCancel.RemoveListener(OnWebStreamCancel);
                 WebHandler.WebStreamEvents.OnStreamReady.RemoveListener(OnWebStreamReady);
                 WebHandler.WebStreamEvents.OnStreamError.RemoveListener(OnWebStreamError);
+                WebHandler.WebStreamEvents.OnStreamClipUpdate.RemoveListener(OnStreamClipUpdated);
+                WebHandler.WebStreamEvents.OnStreamComplete.RemoveListener(OnWebStreamComplete);
                 WebHandler.WebDownloadEvents.OnDownloadBegin.RemoveListener(OnWebDownloadBegin);
                 WebHandler.WebDownloadEvents.OnDownloadCancel.RemoveListener(OnWebDownloadCancel);
                 WebHandler.WebDownloadEvents.OnDownloadSuccess.RemoveListener(OnWebDownloadSuccess);
@@ -200,6 +204,8 @@ namespace Meta.WitAi.TTS
                     }
                 }
                 builder.AppendLine($"Cache: {cacheLocation}");
+                builder.AppendLine($"Type: {clipData.audioType}");
+                builder.AppendLine($"Length: {(clipData.clip == null ? "NULL" : clipData.clip.length.ToString("0.000") + "secs")}");
             }
             return builder.ToString();
         }
@@ -288,6 +294,7 @@ namespace Meta.WitAi.TTS
             clipData = new TTSClipData()
             {
                 clipID = clipID,
+                audioType = GetAudioType(),
                 textToSpeak = textToSpeak,
                 voiceSettings = voiceSettings,
                 diskCacheSettings = diskCacheSettings,
@@ -298,6 +305,11 @@ namespace Meta.WitAi.TTS
 
             // Return generated clip
             return clipData;
+        }
+        // Get audio type
+        protected virtual AudioType GetAudioType()
+        {
+            return AudioType.WAV;
         }
         // Set clip state
         protected virtual void SetClipLoadState(TTSClipData clipData, TTSClipLoadState loadState)
@@ -554,6 +566,18 @@ namespace Meta.WitAi.TTS
             // Unload clip
             Unload(clipData);
         }
+        // Web stream complete
+        private void OnStreamClipUpdated(TTSClipData clipData)
+        {
+            VLog.D(GetClipLog($"Stream Clip Updated", clipData));
+            Events?.Stream?.OnStreamClipUpdate?.Invoke(clipData);
+        }
+        // Web stream complete
+        private void OnWebStreamComplete(TTSClipData clipData)
+        {
+            VLog.D(GetClipLog($"Web Stream Complete", clipData));
+            Events?.Stream?.OnStreamComplete?.Invoke(clipData);
+        }
         #endregion
 
         #region UNLOAD
@@ -770,7 +794,7 @@ namespace Meta.WitAi.TTS
             clipData.onDownloadComplete = null;
 
             // Log
-            VLog.E(GetClipLog($"Download Clip - Failed\nPath: {downloadPath}", clipData));
+            VLog.E(GetClipLog($"Download Clip - Failed\nPath: {downloadPath}\nError: {error}", clipData));
             Events?.Download?.OnDownloadError?.Invoke(clipData, downloadPath, error);
         }
         #endregion

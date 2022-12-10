@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
 using Meta.WitAi.TTS.Data;
@@ -140,6 +141,7 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
             _tts.Events.OnClipUnloaded.AddListener(OnClipUnload);
+            _tts.Events.Stream.OnStreamClipUpdate.AddListener(OnClipUpdated);
         }
         // Stop speaking & remove listener
         protected virtual void OnDisable()
@@ -150,10 +152,8 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
             _tts.Events.OnClipUnloaded.RemoveListener(OnClipUnload);
+            _tts.Events.Stream.OnStreamClipUpdate.RemoveListener(OnClipUpdated);
         }
-        #endregion
-
-        #region HELPERS
         // Format text
         public string GetFormattedText(string format, params string[] textsToSpeak)
         {
@@ -181,6 +181,25 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 StopSpeaking();
             }
+        }
+        // Clip stream complete
+        protected virtual void OnClipUpdated(TTSClipData clipData)
+        {
+            // Ignore if not speaking clip
+            if (!clipData.Equals(SpeakingClip) || !AudioSource.isPlaying)
+            {
+                return;
+            }
+
+            // Stop previous clip playback
+            int elapsedSamples = AudioSource.timeSamples;
+            AudioSource.Stop();
+
+            // Apply new clip
+            SpeakingClip = clipData;
+            AudioSource.clip = SpeakingClip.clip;
+            AudioSource.timeSamples = elapsedSamples;
+            AudioSource.Play();
         }
         #endregion
 
@@ -510,7 +529,9 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Started speaking
             VLog.D($"Playback Begin\nText: {SpeakingClip.textToSpeak}");
-            AudioSource.PlayOneShot(SpeakingClip.clip);
+            AudioSource.clip = SpeakingClip.clip;
+            AudioSource.timeSamples = 0;
+            AudioSource.Play();
 
             // Callback events
             Events?.OnStartSpeaking?.Invoke(this, SpeakingClip.textToSpeak);
@@ -563,6 +584,7 @@ namespace Meta.WitAi.TTS.Utilities
             if (AudioSource.isPlaying)
             {
                 AudioSource.Stop();
+                AudioSource.timeSamples = 0;
             }
 
             // Completed successfully

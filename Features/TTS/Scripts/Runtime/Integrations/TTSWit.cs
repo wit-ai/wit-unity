@@ -45,6 +45,8 @@ namespace Meta.WitAi.TTS.Integrations
     public struct TTSWitRequestSettings
     {
         public WitConfiguration configuration;
+        public TTSWitAudioType audioType;
+        public bool audioStream;
     }
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler
@@ -80,13 +82,60 @@ namespace Meta.WitAi.TTS.Integrations
             }
         }
         private ITTSDiskCacheHandler _diskCache;
+
+        // Use wit tts vrequest type
+        protected override AudioType GetAudioType()
+        {
+            return WitTTSVRequest.GetAudioType(RequestSettings.audioType);
+        }
+        // Add delegates
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            AudioStreamHandler.OnClipUpdated += OnStreamClipUpdated;
+            AudioStreamHandler.OnStreamComplete += OnStreamClipComplete;
+        }
+        // Remove delegates
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            AudioStreamHandler.OnClipUpdated -= OnStreamClipUpdated;
+            AudioStreamHandler.OnStreamComplete -= OnStreamClipComplete;
+        }
+        // Clip stream updated
+        private void OnStreamClipUpdated(AudioClip oldClip, AudioClip newClip)
+        {
+            foreach (var clipData in GetAllRuntimeCachedClips())
+            {
+                if (oldClip == clipData.clip)
+                {
+                    clipData.clip = newClip;
+                    WebStreamEvents?.OnStreamClipUpdate?.Invoke(clipData);
+                }
+            }
+        }
+        // Clip stream complete
+        private void OnStreamClipComplete(AudioClip clip)
+        {
+            foreach (var clipData in GetAllRuntimeCachedClips())
+            {
+                if (clip == clipData.clip)
+                {
+                    WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
+                }
+            }
+        }
         #endregion
 
         #region ITTSWebHandler Streams
         // Request settings
         [Header("Web Request Settings")]
         [FormerlySerializedAs("_settings")]
-        public TTSWitRequestSettings RequestSettings;
+        public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
+        {
+            audioType = TTSWitAudioType.PCM,
+            audioStream = true
+        };
 
         // Use settings web stream events
         public TTSStreamEvents WebStreamEvents { get; set; } = new TTSStreamEvents();
@@ -138,16 +187,24 @@ namespace Meta.WitAi.TTS.Integrations
                 CancelWebStream(clipData);
             }
 
+            // Whether to stream
+            bool stream = Application.isPlaying && RequestSettings.audioStream;
+
             // Request tts
             WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestStream(clipData.textToSpeak, clipData.queryParameters,
+            request.RequestStream(clipData.textToSpeak, RequestSettings.audioType, stream, clipData.queryParameters,
                 (clip, error) =>
                 {
                     _webStreams.Remove(clipData.clipID);
                     clipData.clip = clip;
                     if (string.IsNullOrEmpty(error))
                     {
+                        clipData.clip.name = clipData.clipID;
                         WebStreamEvents?.OnStreamReady?.Invoke(clipData);
+                        if (!stream)
+                        {
+                            WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
+                        }
                     }
                     else
                     {
@@ -224,7 +281,7 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Request tts
             WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestDownload(downloadPath, clipData.textToSpeak, clipData.queryParameters,
+            request.RequestDownload(downloadPath, clipData.textToSpeak, RequestSettings.audioType, clipData.queryParameters,
                 (success, error) =>
                 {
                     _webDownloads.Remove(clipData.clipID);

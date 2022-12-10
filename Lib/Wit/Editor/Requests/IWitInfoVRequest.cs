@@ -60,11 +60,6 @@ namespace Meta.WitAi.Requests
         bool IsPerforming { get; }
 
         /// <summary>
-        /// Current progress for get requests
-        /// </summary>
-        float Progress { get; }
-
-        /// <summary>
         /// The configuration used for voice requests
         /// </summary>
         IWitRequestConfiguration Configuration { get; }

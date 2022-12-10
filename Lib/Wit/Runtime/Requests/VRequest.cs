@@ -14,6 +14,7 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -22,6 +23,12 @@ using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Requests
 {
+    // VRequest streamable interface
+    public interface IVRequestStreamable
+    {
+        bool IsStreamReady { get; }
+    }
+
     /// <summary>
     /// Class for performing web requests using UnityWebRequest
     /// </summary>
@@ -47,26 +54,30 @@ namespace Meta.WitAi.Requests
         public int Timeout { get; set; } = 5;
 
         /// <summary>
+        /// If request is currently being performed
+        /// </summary>
+        public bool IsPerforming { get; private set; } = false;
+
+        /// <summary>
         /// Whether or not the completion delegate has been called
         /// </summary>
         public bool IsComplete { get; private set; } = false;
 
         /// <summary>
-        /// If request is currently being performed
-        /// </summary>
-        public bool IsPerforming => _performing;
-        private bool _performing = false;
-
-        /// <summary>
         /// Current progress for get requests
         /// </summary>
-        public float Progress => _progress;
-        private float _progress;
+        public float UploadProgress { get; private set; } = 0f;
+        /// <summary>
+        /// Current progress for download
+        /// </summary>
+        public float DownloadProgress { get; private set; } = 0f;
 
         // Actual request
         private UnityWebRequest _request;
+        // Stream handler
+        private IVRequestStreamable _streamHandler;
         // Callbacks for progress & completion
-        private RequestProgressDelegate _onProgress;
+        private RequestProgressDelegate _onDownloadProgress;
         private RequestCompleteDelegate<UnityWebRequest> _onComplete;
 
         // Coroutine running the request
@@ -82,7 +93,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">The callback on get progress</param>
         /// <param name="onComplete">The callback on completion, returns the request & error string</param>
         /// <returns>False if the request cannot be performed</returns>
-        public virtual bool Request(UnityWebRequest unityRequest, RequestCompleteDelegate<UnityWebRequest> onComplete, RequestProgressDelegate onProgress = null)
+        public virtual bool Request(UnityWebRequest unityRequest, RequestCompleteDelegate<UnityWebRequest> onComplete, RequestProgressDelegate onDownloadProgress = null)
         {
             // Already setup
             if (_request != null)
@@ -93,11 +104,13 @@ namespace Meta.WitAi.Requests
 
             // Setup
             _request = unityRequest;
-            _onProgress = onProgress;
+            _streamHandler = unityRequest.downloadHandler as IVRequestStreamable;
+            _onDownloadProgress = onDownloadProgress;
             _onComplete = onComplete;
-            _performing = false;
+            IsPerforming = false;
             IsComplete = false;
-            _progress = 0f;
+            UploadProgress = 0f;
+            DownloadProgress = 0f;
 
             // Add all headers
             Dictionary<string, string> headers = GetHeaders();
@@ -145,7 +158,7 @@ namespace Meta.WitAi.Requests
                 yield return null;
 
                 // Waiting to begin
-                if (!_performing)
+                if (!IsPerforming)
                 {
                     // Can start
                     if (MaxConcurrentRequests <= 0 || _requestCount < MaxConcurrentRequests)
@@ -154,14 +167,29 @@ namespace Meta.WitAi.Requests
                         Begin();
                     }
                 }
-                // Update progress
+                // Update progresses
                 else
                 {
-                    float newProgress = Mathf.Max(_request.downloadProgress, _request.uploadProgress);
-                    if (_progress != newProgress)
+                    // Set upload progress
+                    float newProgress = _request.uploadProgress;
+                    if (!UploadProgress.Equals(newProgress))
                     {
-                        _progress = newProgress;
-                        _onProgress?.Invoke(_progress);
+                        UploadProgress = newProgress;
+                    }
+
+                    // Set download progress
+                    newProgress = _request.downloadProgress;
+                    if (!DownloadProgress.Equals(newProgress))
+                    {
+                        DownloadProgress = newProgress;
+                        _onDownloadProgress?.Invoke(DownloadProgress);
+                    }
+
+                    // Stream is ready
+                    if (_streamHandler != null && _streamHandler.IsStreamReady && _onComplete != null)
+                    {
+                        _onComplete.Invoke(_request, string.Empty);
+                        _onComplete = null;
                     }
                 }
             }
@@ -171,19 +199,20 @@ namespace Meta.WitAi.Requests
         // Begin request
         protected virtual void Begin()
         {
-            _performing = true;
-            _progress = 0f;
-            _onProgress?.Invoke(_progress);
+            IsPerforming = true;
+            UploadProgress = 0f;
+            DownloadProgress = 0f;
+            _onDownloadProgress?.Invoke(DownloadProgress);
             _request.SendWebRequest();
         }
         // Request complete
         protected virtual void Complete()
         {
             // Perform callback
-            if (_performing && _request != null && _request.isDone)
+            if (IsPerforming && _request != null && _request.isDone)
             {
-                _progress = 1f;
-                _onProgress?.Invoke(_progress);
+                DownloadProgress = 1f;
+                _onDownloadProgress?.Invoke(DownloadProgress);
                 _onComplete?.Invoke(_request, _request.error);
             }
 
@@ -196,8 +225,8 @@ namespace Meta.WitAi.Requests
             // Cancel
             if (_onComplete != null && _request != null)
             {
-                _progress = 1f;
-                _onProgress?.Invoke(_progress);
+                DownloadProgress = 1f;
+                _onDownloadProgress?.Invoke(DownloadProgress);
                 _onComplete?.Invoke(_request, CANCEL_ERROR);
             }
 
@@ -215,28 +244,22 @@ namespace Meta.WitAi.Requests
             }
 
             // Complete
-            if (_performing)
+            if (IsPerforming)
             {
-                _performing = false;
+                IsPerforming = false;
                 _requestCount--;
             }
 
             // Remove delegates
-            _onProgress = null;
+            _onDownloadProgress = null;
             _onComplete = null;
 
             // Dispose
             if (_request != null)
             {
                 // Dispose handlers
-                if (_request.uploadHandler != null)
-                {
-                    _request.uploadHandler.Dispose();
-                }
-                if (_request.downloadHandler != null)
-                {
-                    _request.downloadHandler.Dispose();
-                }
+                _request.uploadHandler?.Dispose();
+                _request.downloadHandler?.Dispose();
                 // Dispose request
                 _request.Dispose();
                 _request = null;
@@ -579,30 +602,37 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">Clip progress callback</param>
         public bool RequestAudioClip(UnityWebRequest unityRequest,
             RequestCompleteDelegate<AudioClip> onClipReady,
-            AudioType audioType = AudioType.UNKNOWN, bool audioStream = true,
+            AudioType audioType, bool audioStream = true,
             RequestProgressDelegate onProgress = null)
         {
-            // Attempt to determine audio type if set to unknown
-            if (audioType == AudioType.UNKNOWN)
+            // Audio streaming
+            if (audioStream && audioType != AudioType.OGGVORBIS && audioType != AudioType.UNKNOWN)
             {
-                // Determine audio type from extension
-                string audioExt = Path.GetExtension(unityRequest.uri.ToString()).Replace(".", "");
-                if (!Enum.TryParse(audioExt, true, out audioType))
-                {
-                    onClipReady?.Invoke(null, $"Unknown audio type\nUrl: {unityRequest.uri}");
-                    return false;
-                }
+                VLog.W($"Audio streaming not supported by Unity for {audioType}");
             }
 
             // Add audio download handler
             if (unityRequest.downloadHandler == null)
             {
-                unityRequest.downloadHandler = new DownloadHandlerAudioClip(unityRequest.uri, audioType);
+                // Use default handler
+                if (audioType != AudioType.UNKNOWN)
+                {
+                    unityRequest.downloadHandler = new DownloadHandlerAudioClip(unityRequest.uri, audioType);
+                }
+                // Assumes Raw PCM
+                else if (!audioStream)
+                {
+                    unityRequest.downloadHandler = new DownloadHandlerBuffer();
+                }
+                // Assumes Raw PCM
+                else
+                {
+                    unityRequest.downloadHandler = new AudioStreamHandler(WitConstants.ENDPOINT_TTS_CLIP, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, WitConstants.ENDPOINT_TTS_STREAM_CLIP_BUFFER, WitConstants.ENDPOINT_TTS_STREAM_READY_DURATION);
+                }
             }
 
-            // Set stream settings
-            var audioDownloader = unityRequest.downloadHandler as DownloadHandlerAudioClip;
-            if (audioDownloader != null)
+            // Set stream settings if applicable
+            if (unityRequest.downloadHandler is DownloadHandlerAudioClip audioDownloader)
             {
                 audioDownloader.streamAudio = audioStream;
             }
@@ -622,13 +652,34 @@ namespace Meta.WitAi.Requests
                     AudioClip clip = null;
                     try
                     {
-                        clip = DownloadHandlerAudioClip.GetContent(response);
+                        // Default audio clip handler
+                        if (response.downloadHandler is DownloadHandlerAudioClip)
+                        {
+                            clip = DownloadHandlerAudioClip.GetContent(response);
+                        }
+                        // Custom Raw PCM streaming
+                        else if (unityRequest.downloadHandler is AudioStreamHandler downloadHandlerRaw)
+                        {
+                            clip = downloadHandlerRaw.Clip;
+                        }
+                        // Buffer assumes Raw PCM
+                        else if (response.downloadHandler is DownloadHandlerBuffer)
+                        {
+                            clip = AudioStreamHandler.GetClipFromRawData(response.downloadHandler.data, AudioStreamDecodeType.PCM16);
+                        }
                     }
                     catch (Exception exception)
                     {
                         // Failed to decode audio clip
                         onClipReady?.Invoke(null, $"Failed to decode audio clip\n{exception.ToString()}");
                         return;
+                    }
+
+                    // Invalid clip
+                    if (clip != null && (clip.channels == 0 || clip.length == 0f))
+                    {
+                        MonoBehaviour.DestroyImmediate(clip);
+                        clip = null;
                     }
 
                     // Clip is still missing
@@ -648,6 +699,26 @@ namespace Meta.WitAi.Requests
                     // Return clip
                     onClipReady?.Invoke(clip, string.Empty);
                 }, onProgress);
+        }
+        // Decode raw pcm data
+        private static AudioClip DecodeRawPCM(byte[] data)
+        {
+            // Get channels & sample rate
+            int channels = WitConstants.ENDPOINT_TTS_CHANNELS;
+            int sampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE;
+
+            // Decode data
+            float max = Int16.MaxValue;
+            float[] samples = new float[data.Length / 2];
+            for (int i = 0; i < samples.Length; i++)
+            {
+                samples[i] = Mathf.Clamp(BitConverter.ToInt16(data, i * 2) / max, -1f, 1f);
+            }
+
+            // Generate clip
+            AudioClip result = AudioClip.Create(WitConstants.ENDPOINT_TTS_CLIP, samples.Length, channels, sampleRate, false);
+            result.SetData(samples, 0);
+            return result;
         }
 
         /// <summary>
