@@ -120,7 +120,7 @@ namespace Meta.WitAi.Data.Configuration
             int index = SaveConfiguration(serverToken, configurationAsset);
             if (index == -1)
             {
-                MonoBehaviour.DestroyImmediate(configurationAsset);
+                configurationAsset.DestroySafely();
             }
             // Return new index
             return index;

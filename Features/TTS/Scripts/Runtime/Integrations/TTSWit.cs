@@ -10,13 +10,13 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Meta.WitAi;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Requests;
 using UnityEngine.Serialization;
-using UnityEngine.UI;
 
 namespace Meta.WitAi.TTS.Integrations
 {
@@ -110,7 +110,12 @@ namespace Meta.WitAi.TTS.Integrations
         // Clip stream updated
         private void OnStreamClipUpdated(AudioClip oldClip, AudioClip newClip)
         {
-            foreach (var clipData in GetAllRuntimeCachedClips())
+            TTSClipData[] clips = GetAllRuntimeCachedClips();
+            if (clips == null)
+            {
+                return;
+            }
+            foreach (var clipData in clips)
             {
                 if (oldClip == clipData.clip)
                 {
@@ -122,7 +127,12 @@ namespace Meta.WitAi.TTS.Integrations
         // Clip stream complete
         private void OnStreamClipComplete(AudioClip clip)
         {
-            foreach (var clipData in GetAllRuntimeCachedClips())
+            TTSClipData[] clips = GetAllRuntimeCachedClips();
+            if (clips == null)
+            {
+                return;
+            }
+            foreach (var clipData in clips)
             {
                 if (clip == clipData.clip)
                 {
@@ -202,18 +212,18 @@ namespace Meta.WitAi.TTS.Integrations
             request.RequestStream(clipData.textToSpeak, RequestSettings.audioType, stream, RequestSettings.audioStreamReadyDuration, RequestSettings.audioStreamChunkLength, clipData.queryParameters,
                 (clip, error) =>
                 {
+                    // Apply
                     _webStreams.Remove(clipData.clipID);
                     clipData.clip = clip;
-                    if (string.IsNullOrEmpty(error))
+                    // Unloaded
+                    if (clipData.loadState == TTSClipLoadState.Unloaded)
                     {
-                        clipData.clip.name = clipData.clipID;
-                        WebStreamEvents?.OnStreamReady?.Invoke(clipData);
-                        if (!stream)
-                        {
-                            WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
-                        }
+                        error = VRequest.CANCEL_ERROR;
+                        clip.DestroySafely();
+                        clip = null;
                     }
-                    else
+                    // Error
+                    if (!string.IsNullOrEmpty(error))
                     {
                         if (string.Equals(error, VRequest.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
                         {
@@ -222,6 +232,16 @@ namespace Meta.WitAi.TTS.Integrations
                         else
                         {
                             WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
+                        }
+                    }
+                    // Success
+                    else
+                    {
+                        clipData.clip.name = clipData.clipID;
+                        WebStreamEvents?.OnStreamReady?.Invoke(clipData);
+                        if (!stream)
+                        {
+                            WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
                         }
                     }
                 },

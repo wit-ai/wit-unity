@@ -11,11 +11,11 @@ using System.Collections;
 using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
-using Meta.WitAi;
 
 namespace Meta.WitAi.TTS
 {
@@ -320,9 +320,6 @@ namespace Meta.WitAi.TTS
         #endregion
 
         #region LOAD
-        // Cancel warning
-        public const string CANCEL_WARNING = "Canceled";
-
         // TTS Request options
         public TTSClipData Load(string textToSpeak, Action<TTSClipData, string> onStreamReady = null) => Load(textToSpeak, null, null, null, onStreamReady);
         public TTSClipData Load(string textToSpeak, string presetVoiceId, Action<TTSClipData, string> onStreamReady = null) => Load(textToSpeak, null, GetPresetVoiceSettings(presetVoiceId), null, onStreamReady);
@@ -380,8 +377,21 @@ namespace Meta.WitAi.TTS
             {
                 if (!RuntimeCacheHandler.AddClip(clipData))
                 {
-                    // Call
-                    CoroutineUtility.StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData, "Could not add to runtime cache")));
+                    // Add callback
+                    if (onStreamReady != null)
+                    {
+                        // Call once ready
+                        if (clipData.loadState == TTSClipLoadState.Preparing)
+                        {
+                            clipData.onPlaybackReady += (e) => onStreamReady(clipData, e);
+                        }
+                        // Call after return
+                        else
+                        {
+                            CoroutineUtility.StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData,
+                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error")));
+                        }
+                    }
 
                     // Return clip
                     return clipData;
@@ -425,7 +435,7 @@ namespace Meta.WitAi.TTS
                     DownloadToDiskCache(clipData, (clipData2, downloadPath, error) =>
                     {
                         // Download was canceled before starting
-                        if (string.Equals(error, CANCEL_WARNING))
+                        if (string.Equals(error, VRequest.CANCEL_ERROR))
                         {
                             OnWebStreamBegin(clipData);
                             OnWebStreamCancel(clipData);
@@ -537,7 +547,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Error);
 
             // Invoke
-            clipData.onPlaybackReady?.Invoke(CANCEL_WARNING);
+            clipData.onPlaybackReady?.Invoke(VRequest.CANCEL_ERROR);
             clipData.onPlaybackReady = null;
 
             // Callback delegate
@@ -552,6 +562,13 @@ namespace Meta.WitAi.TTS
         private void OnWebStreamError(TTSClipData clipData, string error) => OnStreamError(clipData, error, false);
         private void OnStreamError(TTSClipData clipData, string error, bool fromDisk)
         {
+            // Cancelled
+            if (error.Equals(VRequest.CANCEL_ERROR))
+            {
+                OnStreamCancel(clipData, fromDisk);
+                return;
+            }
+
             // Error
             SetClipLoadState(clipData, TTSClipLoadState.Error);
 
@@ -634,9 +651,10 @@ namespace Meta.WitAi.TTS
                 DiskCacheHandler?.CancelDiskCacheStream(clipData);
             }
             // Destroy clip
-            else if (clipData.clip != null)
+            if (clipData.clip != null)
             {
-                MonoBehaviour.DestroyImmediate(clipData.clip);
+                clipData.clip.DestroySafely();
+                clipData.clip = null;
             }
 
             // Clip is now unloaded
@@ -779,7 +797,7 @@ namespace Meta.WitAi.TTS
         private void OnWebDownloadCancel(TTSClipData clipData, string downloadPath)
         {
             // Invoke clip callback & clear
-            clipData.onDownloadComplete?.Invoke(CANCEL_WARNING);
+            clipData.onDownloadComplete?.Invoke(VRequest.CANCEL_ERROR);
             clipData.onDownloadComplete = null;
 
             // Log
@@ -789,6 +807,13 @@ namespace Meta.WitAi.TTS
         // On web download complete
         private void OnWebDownloadError(TTSClipData clipData, string downloadPath, string error)
         {
+            // Cancelled
+            if (error.Equals(VRequest.CANCEL_ERROR))
+            {
+                OnWebDownloadCancel(clipData, downloadPath);
+                return;
+            }
+
             // Invoke clip callback & clear
             clipData.onDownloadComplete?.Invoke(error);
             clipData.onDownloadComplete = null;

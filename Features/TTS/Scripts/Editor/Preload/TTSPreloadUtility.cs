@@ -111,7 +111,7 @@ namespace Meta.WitAi.TTS.Editor.Preload
             // Unload previous coroutine performer
             if (_performer != null)
             {
-                MonoBehaviour.DestroyImmediate(_performer.gameObject);
+                _performer.gameObject.DestroySafely();
                 _performer = null;
             }
 

@@ -257,6 +257,11 @@ namespace Meta.WitAi.Requests
             // Dispose
             if (_request != null)
             {
+                // Additional cleanup
+                if (_request.downloadHandler is AudioStreamHandler audioStreamer)
+                {
+                    audioStreamer.CleanUp();
+                }
                 // Dispose handlers
                 _request.uploadHandler?.Dispose();
                 _request.downloadHandler?.Dispose();
@@ -678,24 +683,24 @@ namespace Meta.WitAi.Requests
                             clip = AudioStreamHandler.GetClipFromRawData(response.downloadHandler.data, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CLIP, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
                         }
                     }
-                    catch (Exception exception)
+                    catch (Exception e)
                     {
                         // Failed to decode audio clip
-                        onClipReady?.Invoke(null, $"Failed to decode audio clip\n{exception.ToString()}");
+                        onClipReady?.Invoke(null, $"Failed to decode audio clip\n{e}");
                         return;
                     }
 
                     // Invalid clip
                     if (clip != null && (clip.channels == 0 || clip.length == 0f))
                     {
-                        MonoBehaviour.DestroyImmediate(clip);
+                        clip.DestroySafely();
                         clip = null;
                     }
 
                     // Clip is still missing
                     if (clip == null)
                     {
-                        onClipReady?.Invoke(null, "Failed to decode audio clip");
+                        onClipReady?.Invoke(null, "Failed to decode empty audio clip");
                         return;
                     }
 
@@ -725,8 +730,7 @@ namespace Meta.WitAi.Requests
             float audioStreamReadyDuration, float audioStreamChunkLength,
             RequestProgressDelegate onProgress = null)
         {
-            UnityWebRequest unityRequest = UnityWebRequestMultimedia.GetAudioClip(uri, audioType);
-            return RequestAudioClip(unityRequest, onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
+            return RequestAudioClip(UnityWebRequest.Get(uri), onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
         }
         #endregion
     }

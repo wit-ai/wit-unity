@@ -1122,7 +1122,7 @@ PrefabInstance:
     - target: {fileID: 7586247136290578640, guid: e264fcb4f1c2dc248bacd7a1f80da833,
         type: 3}
       propertyPath: _queuedText.Array.size
-      value: 3
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 7586247136290578640, guid: e264fcb4f1c2dc248bacd7a1f80da833,
         type: 3}
@@ -1141,6 +1141,16 @@ PrefabInstance:
       value: Vivamus commodo purus id eleifend placerat. Donec in lacinia nisi, quis
         maximus augue. Vivamus eget purus arcu. Nunc pretium enim sed tellus pulvinar,
         id tincidunt erat ultrices.
+      objectReference: {fileID: 0}
+    - target: {fileID: 7586247136290578640, guid: e264fcb4f1c2dc248bacd7a1f80da833,
+        type: 3}
+      propertyPath: _queuedText.Array.data[3]
+      value: Donec aliquam tortor at lacus vulputate tempor.
+      objectReference: {fileID: 0}
+    - target: {fileID: 7586247136290578640, guid: e264fcb4f1c2dc248bacd7a1f80da833,
+        type: 3}
+      propertyPath: _queuedText.Array.data[4]
+      value: Vestibulum erat nulla, viverra non ornare id, vehicula a enim
       objectReference: {fileID: 0}
     - target: {fileID: 7586247136290578642, guid: e264fcb4f1c2dc248bacd7a1f80da833,
         type: 3}

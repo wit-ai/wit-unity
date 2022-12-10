@@ -73,16 +73,29 @@ namespace Meta.WitAi.Requests
             _hasLeftover = false;
             IsStreamReady = false;
             IsStreamComplete = false;
-
-            // Generate initial clip
-            GenerateClip(StreamData.ClipChunkSize);
         }
-
+        // If size is provided, generate clip using size
+        protected override void ReceiveContentLengthHeader(ulong contentLength)
+        {
+            // Ignore if already complete
+            if (contentLength == 0 || IsStreamComplete)
+            {
+                return;
+            }
+            // Apply size
+            int newMaxSamples = Mathf.Max(GetClipSamplesFromContentLength(contentLength, StreamData.DecodeType),
+                Clip == null ? 0 : Clip.samples);
+            GenerateClip(newMaxSamples);
+            if (!IsStreamReady)
+            {
+                IsStreamReady = true;
+            }
+        }
         // Receive data
         protected override bool ReceiveData(byte[] receiveData, int dataLength)
         {
             // Exit if desired
-            if (!base.ReceiveData(receiveData, dataLength) || Clip == null)
+            if (!base.ReceiveData(receiveData, dataLength) || IsStreamComplete)
             {
                 return false;
             }
@@ -106,8 +119,15 @@ namespace Meta.WitAi.Requests
                 return false;
             }
 
+            // Generate initial clip
+            if (Clip == null)
+            {
+                int newMaxSamples = Mathf.Max(StreamData.ClipChunkSize,
+                    _sampleCount + newSamples.Length);
+                GenerateClip(newMaxSamples);
+            }
             // Generate larger clip
-            if (_sampleCount + newSamples.Length >= Clip.samples)
+            else if (_sampleCount + newSamples.Length >= Clip.samples)
             {
                 int newMaxSamples = Mathf.Max(Clip.samples + StreamData.ClipChunkSize,
                     _sampleCount + newSamples.Length);
@@ -137,12 +157,29 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // Reduce to actual size
-            GenerateClip(_sampleCount);
+            // Reduce to actual size if needed
+            if (_sampleCount != Clip.samples)
+            {
+                GenerateClip(_sampleCount);
+            }
 
             // Stream complete
             IsStreamComplete = true;
             OnStreamComplete?.Invoke(Clip);
+
+            // Remove clip reference
+            Clip = null;
+        }
+
+        // Destroy old clip
+        public void CleanUp()
+        {
+            if (Clip != null)
+            {
+                Clip.DestroySafely();
+                Clip = null;
+            }
+            IsStreamComplete = true;
         }
 
         // Generate clip
@@ -167,14 +204,8 @@ namespace Meta.WitAi.Requests
                 OnClipUpdated?.Invoke(oldClip, Clip);
 
                 // Destroy previous clip
-                if (Application.isPlaying)
-                {
-                    MonoBehaviour.Destroy(oldClip);
-                }
-                else
-                {
-                    MonoBehaviour.DestroyImmediate(oldClip);
-                }
+                oldClip.DestroySafely();
+                oldClip = null;
             }
         }
 
@@ -203,6 +234,16 @@ namespace Meta.WitAi.Requests
             AudioClip result = AudioClip.Create(clipName, samples.Length, channels, sampleRate, false);
             result.SetData(samples, 0);
             return result;
+        }
+        // Determines clip sample count via content length dependent on file type
+        public static int GetClipSamplesFromContentLength(ulong contentLength, AudioStreamDecodeType decodeType)
+        {
+            switch (decodeType)
+            {
+                    case AudioStreamDecodeType.PCM16:
+                        return Mathf.FloorToInt(contentLength / 2f);
+            }
+            return 0;
         }
         #endregion
 

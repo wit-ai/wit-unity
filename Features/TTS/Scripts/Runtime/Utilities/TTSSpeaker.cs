@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -172,17 +173,19 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnClipUnload(TTSClipData clipData)
         {
             // Cancel load
-            if (_queuedClips.Contains(clipData))
+            if (QueueContainsClip(clipData))
             {
                 // Remove all references of the clip
                 RemoveLoadingClip(clipData, true);
                 // Perform cancell callbacks
                 OnLoadCancel(clipData);
+                return;
             }
             // Cancel playback
-            if (clipData == SpeakingClip)
+            if (clipData.Equals(SpeakingClip))
             {
                 StopSpeaking();
+                return;
             }
         }
         // Clip stream complete
@@ -203,6 +206,21 @@ namespace Meta.WitAi.TTS.Utilities
             AudioSourceOneShot.clip = SpeakingClip.clip;
             AudioSourceOneShot.timeSamples = elapsedSamples;
             AudioSourceOneShot.Play();
+        }
+        // Check queue
+        private bool QueueContainsClip(TTSClipData clipData)
+        {
+            if (_queuedClips != null)
+            {
+                foreach (var clip in _queuedClips)
+                {
+                    if (clip.Equals(clipData))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
         #endregion
 
@@ -391,7 +409,7 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnClipLoadComplete(TTSClipData clipData, string error, bool addToQueue, DateTime startTime)
         {
             // Invalid clip, ignore
-            if (!_queuedClips.Contains(clipData))
+            if (!QueueContainsClip(clipData))
             {
                 return;
             }
@@ -400,17 +418,25 @@ namespace Meta.WitAi.TTS.Utilities
             double loadDuration = (DateTime.Now - startTime).TotalMilliseconds;
 
             // No clip returned
-            if (clipData.clip == null)
+            if (string.IsNullOrEmpty(error) && clipData.clip == null)
             {
                 error = "No clip returned";
             }
             // Load failed
             if (!string.IsNullOrEmpty(error))
             {
-                RemoveLoadingClip(clipData, false);
-                VLog.E($"Load Failed\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms\n{error}");
-                Events?.OnClipDataLoadFailed?.Invoke(clipData);
-                Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
+                if (string.Equals(VRequest.CANCEL_ERROR, error))
+                {
+                    RemoveLoadingClip(clipData, false);
+                    OnLoadCancel(clipData);
+                }
+                else
+                {
+                    RemoveLoadingClip(clipData, false);
+                    VLog.E($"Load Failed\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms\n{error}");
+                    Events?.OnClipDataLoadFailed?.Invoke(clipData);
+                    Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
+                }
                 return;
             }
 
@@ -487,7 +513,7 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnPlaybackReady(TTSClipData clipData)
         {
             // Invalid clip, ignore
-            if (!_queuedClips.Contains(clipData))
+            if (!QueueContainsClip(clipData))
             {
                 return;
             }
@@ -651,7 +677,8 @@ namespace Meta.WitAi.TTS.Utilities
                 {
                     AudioSourceOneShot.Stop();
                 }
-                DestroyImmediate(AudioSourceOneShot.gameObject);
+                AudioSourceOneShot.gameObject.DestroySafely();
+                AudioSourceOneShot = null;
             }
 
             // Completed successfully
