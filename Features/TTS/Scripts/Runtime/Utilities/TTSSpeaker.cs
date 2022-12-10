@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
@@ -92,6 +93,8 @@ namespace Meta.WitAi.TTS.Utilities
         // Audio source
         [SerializeField] [FormerlySerializedAs("_source")]
         public AudioSource AudioSource;
+        // Audio source
+        public AudioSource AudioSourceOneShot { get; private set; }
 
         [Tooltip("Text that is added to the front of any Speech() request")]
         [TextArea]
@@ -186,20 +189,20 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnClipUpdated(TTSClipData clipData)
         {
             // Ignore if not speaking clip
-            if (!clipData.Equals(SpeakingClip) || !AudioSource.isPlaying)
+            if (!clipData.Equals(SpeakingClip) || AudioSourceOneShot == null || !AudioSourceOneShot.isPlaying)
             {
                 return;
             }
 
             // Stop previous clip playback
-            int elapsedSamples = AudioSource.timeSamples;
-            AudioSource.Stop();
+            int elapsedSamples = AudioSourceOneShot.timeSamples;
+            AudioSourceOneShot.Stop();
 
             // Apply new clip
             SpeakingClip = clipData;
-            AudioSource.clip = SpeakingClip.clip;
-            AudioSource.timeSamples = elapsedSamples;
-            AudioSource.Play();
+            AudioSourceOneShot.clip = SpeakingClip.clip;
+            AudioSourceOneShot.timeSamples = elapsedSamples;
+            AudioSourceOneShot.Play();
         }
         #endregion
 
@@ -517,6 +520,11 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 return;
             }
+            // No audio source
+            if (AudioSource == null)
+            {
+                return;
+            }
             // Somehow clip unloaded
             if (clipData.clip == null)
             {
@@ -529,9 +537,7 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Started speaking
             VLog.D($"Playback Begin\nText: {SpeakingClip.textToSpeak}");
-            AudioSource.clip = SpeakingClip.clip;
-            AudioSource.timeSamples = 0;
-            AudioSource.Play();
+            AudioSourceOneShot = PlayOneShot(AudioSource, SpeakingClip.clip);
 
             // Callback events
             Events?.OnStartSpeaking?.Invoke(this, SpeakingClip.textToSpeak);
@@ -546,6 +552,41 @@ namespace Meta.WitAi.TTS.Utilities
                 _waitForCompletion = null;
             }
             _waitForCompletion = StartCoroutine(WaitForCompletion());
+        }
+        // Play a one shot & return the audio source
+        private AudioSource PlayOneShot(AudioSource source, AudioClip clip)
+        {
+            // Generate & set transform
+            AudioSource result = new GameObject("ONE_SHOT").AddComponent<AudioSource>();
+            result.transform.SetParent(source.transform);
+            result.transform.localPosition = Vector3.zero;
+            result.transform.localRotation = Quaternion.identity;
+            result.transform.localScale = Vector3.one;
+
+            // Apply all source data
+            CopyComponent(source, result);
+
+            // Play
+            result.clip = clip;
+            result.timeSamples = 0;
+            result.Play();
+            return result;
+        }
+        // Copies all public/instance fields and properties from one component to another
+        private void CopyComponent<TComponent>(TComponent from, TComponent to) where TComponent : Component
+        {
+            Type componentType = typeof(TComponent);
+            foreach (var componentField in componentType.GetFields(BindingFlags.Instance | BindingFlags.Public))
+            {
+                componentField.SetValue(to, componentField.GetValue(from));
+            }
+            foreach (var componentProperty in componentType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (componentProperty.CanWrite && componentProperty.CanRead && !string.Equals(componentProperty.Name, "name"))
+                {
+                    componentProperty.SetValue(to, componentProperty.GetValue(from));
+                }
+            }
         }
         // Wait for clip completion
         protected virtual IEnumerator WaitForCompletion()
@@ -581,10 +622,13 @@ namespace Meta.WitAi.TTS.Utilities
                 _waitForCompletion = null;
             }
             // Stop audio source playback
-            if (AudioSource.isPlaying)
+            if (AudioSourceOneShot != null)
             {
-                AudioSource.Stop();
-                AudioSource.timeSamples = 0;
+                if (AudioSourceOneShot.isPlaying)
+                {
+                    AudioSourceOneShot.Stop();
+                }
+                DestroyImmediate(AudioSourceOneShot.gameObject);
             }
 
             // Completed successfully
