@@ -178,8 +178,14 @@ namespace Meta.WitAi
         /// </summary>
         public AudioEncoding audioEncoding = new AudioEncoding();
 
-        private int statusCode;
-        public int StatusCode => statusCode;
+        /// <summary>
+        /// The status code returned from the last request
+        /// </summary>
+        public int StatusCode
+        {
+            get;
+            private set;
+        }
 
         private string statusDescription;
         private bool isRequestStreamActive;
@@ -280,7 +286,7 @@ namespace Meta.WitAi
             {
                 statusDescription = "Configuration is not set. Cannot start request.";
                 VLog.E(statusDescription);
-                statusCode = ERROR_CODE_NO_CONFIGURATION;
+                StatusCode = ERROR_CODE_NO_CONFIGURATION;
                 SafeInvoke(onResponse);
                 return;
             }
@@ -289,7 +295,7 @@ namespace Meta.WitAi
             {
                 statusDescription = "Client access token is not defined. Cannot start request.";
                 VLog.E(statusDescription);
-                statusCode = ERROR_CODE_NO_CLIENT_TOKEN;
+                StatusCode = ERROR_CODE_NO_CLIENT_TOKEN;
                 SafeInvoke(onResponse);
                 return;
             }
@@ -375,7 +381,7 @@ namespace Meta.WitAi
 
             requestStartTime = DateTime.UtcNow;
             isActive = true;
-            statusCode = 0;
+            StatusCode = 0;
             statusDescription = "Starting request";
             _request.Timeout = Timeout;
             WatchMainThreadCallbacks();
@@ -429,7 +435,7 @@ namespace Meta.WitAi
 
             requestStartTime = DateTime.UtcNow;
             isActive = true;
-            statusCode = 0;
+            StatusCode = 0;
             statusDescription = "Starting request";
             request.timeout = Timeout;
             request.downloadHandler = new DownloadHandlerBuffer();
@@ -453,7 +459,7 @@ namespace Meta.WitAi
             isActive = false;
             responseStarted = false;
             responseData = WitResponseNode.Parse(response);
-            statusCode = string.IsNullOrEmpty(error) ? 200 : 500;
+            StatusCode = string.IsNullOrEmpty(error) ? 200 : 500;
             statusDescription = error;
             var responseString = response;
             responseData = WitResponseNode.Parse(responseString);
@@ -469,7 +475,7 @@ namespace Meta.WitAi
             catch (Exception e)
             {
                 VLog.E("Error parsing response: " + e + "\n" + responseString);
-                statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                StatusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                 statusDescription = "Error parsing response: " + e + "\n" + responseString;
             }
 
@@ -504,7 +510,7 @@ namespace Meta.WitAi
             CloseRequestStream();
 
             // Update the error state to indicate the request timed out
-            statusCode = ERROR_CODE_TIMEOUT;
+            StatusCode = ERROR_CODE_TIMEOUT;
             statusDescription = "Request timed out.";
 
             SafeInvoke(onResponse);
@@ -517,11 +523,13 @@ namespace Meta.WitAi
             responseStarted = true;
             try
             {
+                CheckStatus();
                 WebResponse response = _request.EndGetResponse(asyncResult);
                 try
                 {
+                    CheckStatus();
                     HttpWebResponse httpResponse = response as HttpWebResponse;
-                    statusCode = (int) httpResponse.StatusCode;
+                    StatusCode = (int) httpResponse.StatusCode;
                     statusDescription = httpResponse.StatusDescription;
                     using (var responseStream = httpResponse.GetResponseStream())
                     {
@@ -547,7 +555,7 @@ namespace Meta.WitAi
                 {
                     VLog.E("Server returned invalid data: " + e.Message + "\n" +
                                    stringResponse);
-                    statusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                    StatusCode = ERROR_CODE_INVALID_DATA_FROM_SERVER;
                     statusDescription = "Server returned invalid data.";
                 }
                 catch (WebException e)
@@ -557,7 +565,7 @@ namespace Meta.WitAi
                     {
                         VLog.E(
                             $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
-                        statusCode = (int) e.Status;
+                        StatusCode = (int) e.Status;
                         statusDescription = e.Message;
                     }
                 }
@@ -565,7 +573,7 @@ namespace Meta.WitAi
                 {
                     VLog.E(
                         $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
-                    statusCode = ERROR_CODE_GENERAL;
+                    StatusCode = ERROR_CODE_GENERAL;
                     statusDescription = e.Message;
                 }
                 finally
@@ -575,10 +583,10 @@ namespace Meta.WitAi
             }
             catch (WebException e)
             {
-                statusCode = (int) e.Status;
+                StatusCode = (int) e.Status;
                 if (e.Response is HttpWebResponse errorResponse)
                 {
-                    statusCode = (int) errorResponse.StatusCode;
+                    StatusCode = (int) errorResponse.StatusCode;
                     try
                     {
                         using (var errorStream = errorResponse.GetResponseStream())
@@ -610,7 +618,7 @@ namespace Meta.WitAi
                 if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
                     VLog.E(
-                        $"Http Request Failed [{statusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
+                        $"Http Request Failed [{StatusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
                 }
                 if (e.Response != null)
                 {
@@ -630,12 +638,12 @@ namespace Meta.WitAi
                 if (!string.IsNullOrEmpty(error))
                 {
                     statusDescription = $"Error: {responseData["code"]}. {error}";
-                    statusCode = statusCode == 200 ? ERROR_CODE_GENERAL : statusCode;
+                    StatusCode = StatusCode == 200 ? ERROR_CODE_GENERAL : StatusCode;
                 }
             }
-            else if (statusCode == 200)
+            else if (StatusCode == 200)
             {
-                statusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
+                StatusCode = ERROR_CODE_NO_DATA_FROM_SERVER;
                 statusDescription = "Server did not return a valid json response.";
                 VLog.W("No valid data was received from the server even though the request was successful. Actual potential response data: \n" +
                     stringResponse);
@@ -657,6 +665,20 @@ namespace Meta.WitAi
             // Complete
             responseStarted = false;
         }
+
+        private void CheckStatus()
+        {
+            if (StatusCode == 0) return;
+
+            switch (StatusCode)
+            {
+                case ERROR_CODE_ABORTED:
+                    throw new WebException("Request was aborted", WebExceptionStatus.RequestCanceled);
+                default:
+                    throw new WebException("Status changed before response was received.", (WebExceptionStatus) StatusCode);
+            }
+        }
+
         private string ReadToDelimiter(StreamReader reader, string delimiter)
         {
             // Allocate all vars
@@ -797,7 +819,7 @@ namespace Meta.WitAi
             {
                 if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
-                    statusCode = (int) e.Status;
+                    StatusCode = (int) e.Status;
                     statusDescription = e.Message;
                     SafeInvoke(onResponse);
                 }
@@ -832,15 +854,18 @@ namespace Meta.WitAi
         public void AbortRequest()
         {
             CloseActiveStream();
+            // If status code has already been set to aborted we don't need to attempt to abort again.
+            if (StatusCode == ERROR_CODE_ABORTED) return;
+
+            if (StatusCode == 0)
+            {
+                StatusCode = ERROR_CODE_ABORTED;
+                statusDescription = "Request was aborted";
+            }
             if (null != _request)
             {
                 _request.Abort();
                 _request = null;
-            }
-            if (statusCode == 0)
-            {
-                statusCode = ERROR_CODE_ABORTED;
-                statusDescription = "Request was aborted";
             }
             isActive = false;
         }
