@@ -208,8 +208,12 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitRequest PostIntentRequest(this WitConfiguration config, string intentName)
         {
-            var postString = "{\"name\":\"" + intentName + "\"}";
-            var postData = Encoding.UTF8.GetBytes(postString);
+            var json = new WitResponseClass()
+            {
+                {"name", intentName} 
+            };
+
+            var postData = Encoding.UTF8.GetBytes(json.ToString());
             var request = new WitRequest(config, WitConstants.ENDPOINT_INTENTS, true)
             {
                 postContentType = "application/json",
@@ -226,12 +230,16 @@ namespace Meta.WitAi
         /// <param name="appName">The name of the app as it is defined in wit.ai</param>
         /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public static WitRequest CreateImportDataRequest(this WitConfiguration config, string appName, string manifestData) {
+        public static WitRequest CreateImportDataRequest(this WitConfiguration config, string appName, string manifestData)
+        {
+            var jsonNode = new WitResponseClass()
+            {
+                { "text", manifestData },
+                { "config_type", "1" },
+                { "config_value", "" } 
+            };
 
-            string encodedImportData = HttpUtility.JavaScriptStringEncode(manifestData);
-            string jsonData = "{\"text\":\"" + encodedImportData + "\",\"config_type\":1,\"config_value\":\"\"}";
-
-            var postData = Encoding.UTF8.GetBytes(jsonData);
+            var postData = Encoding.UTF8.GetBytes(jsonNode.ToString());
             var request = new WitRequest(
                 config,
                 WitConstants.ENDPOINT_IMPORT,
