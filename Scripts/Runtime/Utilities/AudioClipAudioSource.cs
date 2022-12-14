@@ -16,7 +16,7 @@ using UnityEngine;
 public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 {
     [SerializeField] private AudioSource _audioSource;
-    [SerializeField] private AudioClip[] _audioClips;
+    [SerializeField] private List<AudioClip> _audioClips;
     private bool _isRecording;
 
     private Queue<int> _audioQueue = new Queue<int>();
@@ -31,9 +31,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     {
         foreach (var clip in _audioClips)
         {
-            var samples = new float[clip.samples];
-            clip.GetData(samples, 0);
-            clipData.Add(samples);
+            AddClipData(clip);
             Debug.Log($"Added {clip.name} to queue");
         }
     }
@@ -71,7 +69,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     {
         if (_isRecording) return;
         _isRecording = true;
-        if (clipIndex < _audioClips.Length)
+        if (clipIndex < _audioClips.Count)
         {
             activeClip = clipData[clipIndex];
             activeClipIndex = 0;
@@ -123,7 +121,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
     public bool SetActiveClip(string clipName)
     {
-        int index = Array.FindIndex(_audioClips, (AudioClip clip) => {
+        int index = _audioClips.FindIndex(0, (AudioClip clip) => {
             if (clip.name == clipName)
             {
                 return true;
@@ -132,14 +130,27 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             return false;
         });
 
-        if (index < 0 || index >= _audioClips.Length)
+        if (index < 0 || index >= _audioClips.Count)
         {
             Debug.Log($"Couldn't find clip {clipName}");
             return false;
         }
 
-        activeClipIndex = index;
-        activeClip = clipData[index];
+        clipIndex = index;
         return true;
+    }
+
+    public void AddClip(AudioClip clip)
+    {
+        _audioClips.Add(clip);
+        AddClipData(clip);
+        Debug.Log($"Clip added {clip.name}");
+    }
+
+    private void AddClipData(AudioClip clip)
+    {
+        var samples = new float[clip.samples];
+        clip.GetData(samples, 0);
+        clipData.Add(samples);
     }
 }
