@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace Meta.WitAi.Windows
 {
-    public class WitUnderstandingViewerServiceApiFactory
+    public static class WitUnderstandingViewerServiceApiFactory
     {
         public delegate WitUnderstandingViewerServiceAPI Create(MonoBehaviour m);
 
@@ -22,8 +22,6 @@ namespace Meta.WitAi.Windows
         public static void Register(string interfaceName, Create method)
         {
             factoryMethods.Add(interfaceName, method);
-
-            Debug.Log($"Registered {interfaceName}");
         }
 
         public static WitUnderstandingViewerServiceAPI CreateWrapper(MonoBehaviour service)
@@ -40,4 +38,3 @@ namespace Meta.WitAi.Windows
         }
     }
 }
-
