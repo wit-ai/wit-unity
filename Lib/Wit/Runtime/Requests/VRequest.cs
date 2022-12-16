@@ -83,9 +83,6 @@ namespace Meta.WitAi.Requests
         // Coroutine running the request
         private CoroutineUtility.CoroutinePerformer _coroutine;
 
-        // Cancel error
-        public const string CANCEL_ERROR = "Cancelled";
-
         /// <summary>
         /// Initialize with a request and an on completion callback
         /// </summary>
@@ -227,7 +224,7 @@ namespace Meta.WitAi.Requests
             {
                 DownloadProgress = 1f;
                 _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, CANCEL_ERROR);
+                _onComplete?.Invoke(_request, WitConstants.CANCEL_ERROR);
             }
 
             // Unload

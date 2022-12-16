@@ -218,14 +218,14 @@ namespace Meta.WitAi.TTS.Integrations
                     // Unloaded
                     if (clipData.loadState == TTSClipLoadState.Unloaded)
                     {
-                        error = VRequest.CANCEL_ERROR;
+                        error = WitConstants.CANCEL_ERROR;
                         clip.DestroySafely();
                         clip = null;
                     }
                     // Error
                     if (!string.IsNullOrEmpty(error))
                     {
-                        if (string.Equals(error, VRequest.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
+                        if (string.Equals(error, WitConstants.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
                         {
                             WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
                         }

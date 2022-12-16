@@ -425,7 +425,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Load failed
             if (!string.IsNullOrEmpty(error))
             {
-                if (string.Equals(VRequest.CANCEL_ERROR, error))
+                if (string.Equals(WitConstants.CANCEL_ERROR, error))
                 {
                     RemoveLoadingClip(clipData, false);
                     OnLoadCancel(clipData);

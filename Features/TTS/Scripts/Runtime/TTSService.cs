@@ -435,7 +435,7 @@ namespace Meta.WitAi.TTS
                     DownloadToDiskCache(clipData, (clipData2, downloadPath, error) =>
                     {
                         // Download was canceled before starting
-                        if (string.Equals(error, VRequest.CANCEL_ERROR))
+                        if (string.Equals(error, WitConstants.CANCEL_ERROR))
                         {
                             OnWebStreamBegin(clipData);
                             OnWebStreamCancel(clipData);
@@ -547,7 +547,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Error);
 
             // Invoke
-            clipData.onPlaybackReady?.Invoke(VRequest.CANCEL_ERROR);
+            clipData.onPlaybackReady?.Invoke(WitConstants.CANCEL_ERROR);
             clipData.onPlaybackReady = null;
 
             // Callback delegate
@@ -563,7 +563,7 @@ namespace Meta.WitAi.TTS
         private void OnStreamError(TTSClipData clipData, string error, bool fromDisk)
         {
             // Cancelled
-            if (error.Equals(VRequest.CANCEL_ERROR))
+            if (error.Equals(WitConstants.CANCEL_ERROR))
             {
                 OnStreamCancel(clipData, fromDisk);
                 return;
@@ -797,7 +797,7 @@ namespace Meta.WitAi.TTS
         private void OnWebDownloadCancel(TTSClipData clipData, string downloadPath)
         {
             // Invoke clip callback & clear
-            clipData.onDownloadComplete?.Invoke(VRequest.CANCEL_ERROR);
+            clipData.onDownloadComplete?.Invoke(WitConstants.CANCEL_ERROR);
             clipData.onDownloadComplete = null;
 
             // Log
@@ -808,7 +808,7 @@ namespace Meta.WitAi.TTS
         private void OnWebDownloadError(TTSClipData clipData, string downloadPath, string error)
         {
             // Cancelled
-            if (error.Equals(VRequest.CANCEL_ERROR))
+            if (error.Equals(WitConstants.CANCEL_ERROR))
             {
                 OnWebDownloadCancel(clipData, downloadPath);
                 return;
