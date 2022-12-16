@@ -46,6 +46,12 @@ namespace Meta.WitAi
         [Tooltip("Events that will fire before, during and after an activation")] [SerializeField]
         protected VoiceEvents events = new VoiceEvents();
 
+        ///<summary>
+        /// Internal events used to report telemetry. These events are reserved for internal
+        /// use only and should not be used for any other purpose.
+        /// </summary>
+        protected TelemetryEvents telemetryEvents = new TelemetryEvents();
+
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
         /// </summary>
@@ -76,6 +82,12 @@ namespace Meta.WitAi
         {
             get => events;
             set => events = value;
+        }
+
+        public virtual TelemetryEvents TelemetryEvents
+        {
+            get => telemetryEvents;
+            set => telemetryEvents = value;
         }
 
         /// <summary>
@@ -324,7 +336,7 @@ namespace Meta.WitAi
         }
     }
 
-    public interface IVoiceService : IVoiceEventProvider
+    public interface IVoiceService : IVoiceEventProvider, ITelemetryEventsProvider
     {
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
@@ -336,6 +348,8 @@ namespace Meta.WitAi
         bool MicActive { get; }
 
         new VoiceEvents VoiceEvents { get; set; }
+
+        new TelemetryEvents TelemetryEvents { get; set; }
 
         ITranscriptionProvider TranscriptionProvider { get; set; }
 

@@ -98,6 +98,8 @@ namespace Meta.WitAi
         private int bytesWritten;
         private bool requestRequiresBody;
 
+        public AudioDurationTracker audioDurationTracker;
+
         /// <summary>
         /// Callback called when a response is received from the server off a partial transcription
         /// </summary>
@@ -927,6 +929,10 @@ namespace Meta.WitAi
             {
                 _writeStream.Write(data, offset, length);
                 bytesWritten += length;
+                if (audioDurationTracker != null)
+                {
+                    audioDurationTracker.AddBytes(length);
+                }
             }
             catch (ObjectDisposedException e)
             {
@@ -968,7 +974,7 @@ namespace Meta.WitAi
         // While active, perform any sent callbacks
         private void WatchMainThreadCallbacks()
         {
-            // Ifnore if already performing
+            // Ignore if already performing
             if (_performer != null)
             {
                 return;

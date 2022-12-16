@@ -20,7 +20,7 @@ using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
-    public class WitService : MonoBehaviour, IWitRuntimeConfigProvider, IVoiceEventProvider
+    public class WitService : MonoBehaviour, IWitRuntimeConfigProvider, IVoiceEventProvider, ITelemetryEventsProvider
     {
         private WitRequestOptions _currentRequestOptions;
         private float _lastMinVolumeLevelTime;
@@ -33,6 +33,7 @@ namespace Meta.WitAi
         private long _minSampleByteCount = 1024 * 10;
 
         private IVoiceEventProvider _voiceEventProvider;
+        private ITelemetryEventsProvider _telemetryEventsProvider;
         private IWitRuntimeConfigProvider _runtimeConfigProvider;
         private ITranscriptionProvider _activeTranscriptionProvider;
         private Coroutine _timeLimitCoroutine;
@@ -72,6 +73,12 @@ namespace Meta.WitAi
             set => _voiceEventProvider = value;
         }
 
+        public ITelemetryEventsProvider TelemetryEventsProvider
+        {
+            get => _telemetryEventsProvider;
+            set => _telemetryEventsProvider = value;
+        }
+
         public IWitRuntimeConfigProvider ConfigurationProvider
         {
             get => _runtimeConfigProvider;
@@ -82,6 +89,8 @@ namespace Meta.WitAi
             _runtimeConfigProvider.RuntimeConfiguration;
 
         public VoiceEvents VoiceEvents => _voiceEventProvider.VoiceEvents;
+
+        public TelemetryEvents TelemetryEvents => _telemetryEventsProvider.TelemetryEvents;
 
         /// <summary>
         /// Gets/Sets a custom transcription provider. This can be used to replace any built in asr
@@ -270,6 +279,8 @@ namespace Meta.WitAi
                 _recordingRequest = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, _dynamicEntityProviders)
                     : RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, _dynamicEntityProviders);
                 _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
+                _recordingRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.requestIdOverride,
+                    _recordingRequest.audioEncoding);
                 _recordingRequest.onPartialTranscription = OnPartialTranscription;
                 _recordingRequest.onFullTranscription = OnFullTranscription;
                 _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
@@ -482,6 +493,20 @@ namespace Meta.WitAi
                 OnMicLevelChanged(level);
             }
         }
+
+        // AudioDurationTracker
+        private void FinalizeAudioDurationTracker()
+        {
+            AudioDurationTracker audioDurationTracker = _recordingRequest.audioDurationTracker;
+            if (!_recordingRequest.requestIdOverride.Equals(audioDurationTracker.GetRequestId()))
+            {
+                VLog.W($"Mismatch in request IDs when finalizing AudioDurationTracker. " +
+                       $"Expected {_recordingRequest.requestIdOverride} but got {audioDurationTracker.GetRequestId()}");
+                return;
+            }
+            audioDurationTracker.FinalizeAudio();
+            TelemetryEvents.OnAudioTrackerFinished?.Invoke(audioDurationTracker.GetFinalizeTimeStamp(), audioDurationTracker.GetAudioDuration());
+        }
         #endregion
 
         #region DEACTIVATION
@@ -521,6 +546,7 @@ namespace Meta.WitAi
 
             // Stop recording
             StopRecording();
+            FinalizeAudioDurationTracker();
 
             // Deactivate transcription provider
             _activeTranscriptionProvider?.Deactivate();
@@ -736,5 +762,10 @@ namespace Meta.WitAi
     public interface IVoiceEventProvider
     {
         VoiceEvents VoiceEvents { get; }
+    }
+
+    public interface ITelemetryEventsProvider
+    {
+        TelemetryEvents TelemetryEvents { get; }
     }
 }
