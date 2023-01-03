@@ -16,6 +16,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS.Utilities
 {
@@ -123,6 +124,9 @@ namespace Meta.WitAi.TTS.Utilities
         // Current tts service
         private TTSService _tts;
 
+        private ISpeakerTextPreprocessor[] _textPreprocessors;
+        private ISpeakerTextPostprocessor[] _textPostprocessors;
+
         // Automatically generate source if needed
         protected virtual void Awake()
         {
@@ -136,6 +140,9 @@ namespace Meta.WitAi.TTS.Utilities
             }
             AudioSource.playOnAwake = false;
             _tts = TTSService.Instance;
+
+            _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
+            _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
         }
         // Add listener for clip unload
         protected virtual void OnEnable()
@@ -299,15 +306,27 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the speak queue</param>
         protected virtual void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
+            foreach (var pre in _textPreprocessors)
+            {
+                if (!pre.OnPreprocessTTS(this, ref textToSpeak)) return;
+            }
+            
             if (prependedText.Length > 0 && !prependedText.EndsWith(" "))
             {
                 prependedText += " ";
             }
+            
             if (appendedText.Length > 0 && !appendedText.StartsWith(" "))
             {
                 appendedText = " " + appendedText;
             }
+            
             textToSpeak = prependedText + textToSpeak + appendedText;
+            
+            foreach (var post in _textPostprocessors)
+            {
+                if (!post.OnPostprocessTTS(this, ref textToSpeak)) return;
+            }
 
             // Ensure voice settings exist
             TTSVoiceSettings voiceSettings = VoiceSettings;
