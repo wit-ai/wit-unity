@@ -326,9 +326,16 @@ namespace Meta.WitAi
                 onPreSendRequest(ref uri, out headers);
             }
 
-            #if UNITY_WEBGL
+            #if UNITY_WEBGL && !UNITY_EDITOR
             StartUnityRequest(uri, headers);
             #else
+            #if UNITY_WEBGL && UNITY_EDITOR
+            if (shouldPost)
+            {
+                VLog.W(
+                    "Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
+            }
+#endif
             StartThreadedRequest(uri, headers);
             #endif
         }
