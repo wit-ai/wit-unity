@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -40,7 +41,7 @@ namespace Meta.WitAi.Requests
     public class AudioStreamHandler : DownloadHandlerScript, IVRequestStreamable
     {
         // Audio stream data
-        public AudioStreamData StreamData { get; }
+        public AudioStreamData StreamData { get; private set; }
 
         // Current audio clip
         public AudioClip Clip { get; private set; }
@@ -49,8 +50,10 @@ namespace Meta.WitAi.Requests
         // Ready to stream
         public bool IsStreamComplete { get; private set; }
 
+        // Current number of samples in clip
+        private int _clipSamples = 0;
         // Current total samples loaded
-        private int _sampleCount = 0;
+        private int _loadedSamples = 0;
         // Leftover byte
         private bool _hasLeftover = false;
         private byte[] _leftovers = new byte[2];
@@ -69,10 +72,12 @@ namespace Meta.WitAi.Requests
             StreamData = streamData;
 
             // Setup data
-            _sampleCount = 0;
+            _clipSamples = 0;
+            _loadedSamples = 0;
             _hasLeftover = false;
             IsStreamReady = false;
             IsStreamComplete = false;
+            VLog.D($"Clip Stream - Began\nStream Data:\n{JsonConvert.SerializeObject(streamData)}");
         }
         // If size is provided, generate clip using size
         protected override void ReceiveContentLengthHeader(ulong contentLength)
@@ -83,13 +88,9 @@ namespace Meta.WitAi.Requests
                 return;
             }
             // Apply size
-            int newMaxSamples = Mathf.Max(GetClipSamplesFromContentLength(contentLength, StreamData.DecodeType),
-                Clip == null ? 0 : Clip.samples);
+            int newMaxSamples = Mathf.Max(GetClipSamplesFromContentLength(contentLength, StreamData.DecodeType), _clipSamples);
+            VLog.D($"Clip Stream - Received Size\nTotal Samples: {newMaxSamples}");
             GenerateClip(newMaxSamples);
-            if (!IsStreamReady)
-            {
-                IsStreamReady = true;
-            }
         }
         // Receive data
         protected override bool ReceiveData(byte[] receiveData, int dataLength)
@@ -123,25 +124,26 @@ namespace Meta.WitAi.Requests
             if (Clip == null)
             {
                 int newMaxSamples = Mathf.Max(StreamData.ClipChunkSize,
-                    _sampleCount + newSamples.Length);
+                    _loadedSamples + newSamples.Length);
                 GenerateClip(newMaxSamples);
             }
-            // Generate larger clip
-            else if (_sampleCount + newSamples.Length >= Clip.samples)
+            // Generate larger clip if needed
+            else if (_loadedSamples + newSamples.Length > _clipSamples)
             {
-                int newMaxSamples = Mathf.Max(Clip.samples + StreamData.ClipChunkSize,
-                    _sampleCount + newSamples.Length);
+                int newMaxSamples = Mathf.Max(_clipSamples + StreamData.ClipChunkSize,
+                    _loadedSamples + newSamples.Length);
                 GenerateClip(newMaxSamples);
             }
 
             // Apply to clip
-            Clip.SetData(newSamples, _sampleCount);
-            _sampleCount += newSamples.Length;
+            Clip.SetData(newSamples, _loadedSamples);
+            _loadedSamples += newSamples.Length;
 
             // Stream is now ready
-            if (!IsStreamReady && (float)_sampleCount / StreamData.DecodeSampleRate >= StreamData.ClipReadyLength)
+            if (!IsStreamReady && (float)_loadedSamples / StreamData.DecodeSampleRate >= StreamData.ClipReadyLength)
             {
                 IsStreamReady = true;
+                VLog.D($"Clip Stream - Stream Ready");
             }
 
             // Return data
@@ -158,17 +160,15 @@ namespace Meta.WitAi.Requests
             }
 
             // Reduce to actual size if needed
-            if (_sampleCount != Clip.samples)
+            if (_loadedSamples != _clipSamples)
             {
-                GenerateClip(_sampleCount);
+                GenerateClip(_loadedSamples);
             }
 
             // Stream complete
             IsStreamComplete = true;
             OnStreamComplete?.Invoke(Clip);
-
-            // Remove clip reference
-            Clip = null;
+            VLog.D($"Clip Stream - Complete\nSamples: {_loadedSamples}");
         }
 
         // Destroy old clip
@@ -176,32 +176,47 @@ namespace Meta.WitAi.Requests
         {
             if (Clip != null)
             {
-                Clip.DestroySafely();
+                // If successfully completed, destroy elsewhere
+                if (!IsStreamComplete)
+                {
+                    Clip.DestroySafely();
+                }
                 Clip = null;
             }
             IsStreamComplete = true;
+            VLog.D($"Clip Stream - Cleanup");
         }
 
         // Generate clip
         private void GenerateClip(int samples)
         {
+            // Already generated
+            if (Clip != null && _clipSamples == samples)
+            {
+                return;
+            }
+
             // Get old clip if applicable
             AudioClip oldClip = Clip;
+            int oldClipSamples = _clipSamples;
 
             // Generate new clip
+            _clipSamples = samples;
             Clip = AudioClip.Create(StreamData.ClipName, samples, StreamData.DecodeChannels, StreamData.DecodeSampleRate, false);
+            VLog.D($"Clip Stream - Clip Generated\nSamples: {samples}");
 
             // If previous clip existed, get previous data
             if (oldClip != null)
             {
                 // Apply existing data
-                int oldSampleCount = Mathf.Min(oldClip.samples, samples);
-                float[] oldSamples = new float[oldSampleCount];
+                oldClipSamples = Mathf.Min(oldClipSamples, samples);
+                float[] oldSamples = new float[oldClipSamples];
                 oldClip.GetData(oldSamples, 0);
                 Clip.SetData(oldSamples, 0);
 
                 // Invoke clip updated callback
                 OnClipUpdated?.Invoke(oldClip, Clip);
+                VLog.D($"Clip Stream - Clip Updated\nSamples: {samples}\nOld Samples: {oldClipSamples}");
 
                 // Destroy previous clip
                 oldClip.DestroySafely();
