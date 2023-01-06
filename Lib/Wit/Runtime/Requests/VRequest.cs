@@ -38,7 +38,7 @@ namespace Meta.WitAi.Requests
         /// Will only start new requests if there are less than this number
         /// If <= 0, then all requests will run immediately
         /// </summary>
-        private static int MaxConcurrentRequests = 2;
+        public static int MaxConcurrentRequests = 2;
         // Currently transmitting requests
         private static int _requestCount = 0;
 
@@ -609,9 +609,14 @@ namespace Meta.WitAi.Requests
             RequestProgressDelegate onProgress = null)
         {
             // Audio streaming
+#if UNITY_WEBGL
+            if (audioStream && audioType != AudioType.OGGVORBIS)
+#else
             if (audioStream && audioType != AudioType.OGGVORBIS && audioType != AudioType.UNKNOWN)
+#endif
             {
-                VLog.W($"Audio streaming not supported by Unity for {audioType}");
+                VLog.W($"Audio streaming not supported by Unity for {(audioType == AudioType.UNKNOWN ? "PCM" : audioType.ToString())}");
+                audioStream = false;
             }
 
             // Add audio download handler

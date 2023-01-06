@@ -395,7 +395,7 @@ namespace Meta.WitAi.TTS.Integrations
             {
                 foreach (FieldInfo field in voiceSettings.GetType().GetFields())
                 {
-                    if (!string.Equals(field.Name, SETTINGS_KEY, StringComparison.CurrentCultureIgnoreCase))
+                    if (!field.IsStatic && !string.Equals(field.Name, SETTINGS_KEY, StringComparison.CurrentCultureIgnoreCase))
                     {
                         // Get field value
                         object fieldVal = field.GetValue(voiceSettings);
