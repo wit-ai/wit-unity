@@ -29,6 +29,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -85,7 +86,7 @@ MonoBehaviour:
         m_PersistentCalls:
           m_Calls: []
   RequestSettings:
-    configuration: {fileID: 0}
+    configuration: {fileID: 11400000, guid: 8ca721df475c92e4ca9167b74de4b2f6, type: 2}
     audioType: 0
     audioStream: 1
     audioStreamReadyDuration: 0.1
@@ -105,6 +106,18 @@ MonoBehaviour:
     gain: 50
   - settingsID: COOPER
     voice: Cooper
+    style: default
+    speed: 100
+    pitch: 100
+    gain: 50
+  - settingsID: VAMPIRE
+    voice: Vampire
+    style: default
+    speed: 100
+    pitch: 100
+    gain: 50
+  - settingsID: PROSPECTOR
+    voice: Prospector
     style: default
     speed: 100
     pitch: 100
