@@ -84,6 +84,12 @@ namespace Meta.WitAi.TTS.Utilities
         public TTSSpeakerEvent OnClipLoadSuccess;
         [Tooltip("Called when TTS audio clip load is cancelled")]
         public TTSSpeakerEvent OnClipLoadAbort;
+
+        [Header("Queue Events")]
+        [Tooltip("Called when a tts request is added to an empty queue")]
+        public UnityEvent OnPlaybackQueueBegin;
+        [Tooltip("Called the final request is removed from a queue")]
+        public UnityEvent OnPlaybackQueueComplete;
     }
 
     public class TTSSpeaker : MonoBehaviour
@@ -123,6 +129,9 @@ namespace Meta.WitAi.TTS.Utilities
 
         // Current tts service
         private TTSService _tts;
+        // Check if queued
+        private bool _hasQueue = false;
+        private bool _willHaveQueue = false;
 
         private ISpeakerTextPreprocessor[] _textPreprocessors;
         private ISpeakerTextPostprocessor[] _textPostprocessors;
@@ -229,6 +238,23 @@ namespace Meta.WitAi.TTS.Utilities
             }
             return false;
         }
+        // Refresh queue
+        private void RefreshQueued()
+        {
+            bool newHasQueueStatus = IsLoading || IsSpeaking || _willHaveQueue;
+            if (_hasQueue != newHasQueueStatus)
+            {
+                _hasQueue = newHasQueueStatus;
+                if (_hasQueue)
+                {
+                    Events?.OnPlaybackQueueBegin?.Invoke();
+                }
+                else
+                {
+                    Events?.OnPlaybackQueueComplete?.Invoke();
+                }
+            }
+        }
         #endregion
 
         #region INTERACTIONS
@@ -271,7 +297,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings)
         {
+            _willHaveQueue = true;
             Stop();
+            _willHaveQueue = false;
             yield return SpeakQueuedAsync(new string[] {textToSpeak}, diskCacheSettings);
         }
         public IEnumerator SpeakAsync(string textToSpeak)
@@ -310,19 +338,19 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 if (!pre.OnPreprocessTTS(this, ref textToSpeak)) return;
             }
-            
+
             if (prependedText.Length > 0 && !prependedText.EndsWith(" "))
             {
                 prependedText += " ";
             }
-            
+
             if (appendedText.Length > 0 && !appendedText.StartsWith(" "))
             {
                 appendedText = " " + appendedText;
             }
-            
+
             textToSpeak = prependedText + textToSpeak + appendedText;
-            
+
             foreach (var post in _textPostprocessors)
             {
                 if (!post.OnPostprocessTTS(this, ref textToSpeak)) return;
@@ -349,7 +377,9 @@ namespace Meta.WitAi.TTS.Utilities
             // Cancel previous loading queue
             if (!addToQueue)
             {
+                _willHaveQueue = true;
                 StopLoading();
+                _willHaveQueue = false;
             }
 
             // Begin playback
@@ -363,6 +393,7 @@ namespace Meta.WitAi.TTS.Utilities
 
                 // Add to queue
                 _queuedClips.Enqueue(newClipData);
+                RefreshQueued();
                 Events?.OnClipDataQueued?.Invoke(newClipData);
 
                 // Begin playback
@@ -388,6 +419,9 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 OnLoadCancel(_queuedClips.Dequeue());
             }
+
+            // Refresh in queue check
+            RefreshQueued();
         }
         // Stop playback if possible
         public virtual void StopSpeaking()
@@ -420,6 +454,7 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Load begin
             VLog.D($"Load Begin\nText: {textToSpeak}");
+            RefreshQueued();
             Events?.OnClipDataQueued?.Invoke(newClip);
             Events?.OnClipDataLoadBegin?.Invoke(newClip);
             Events?.OnClipLoadBegin?.Invoke(this, newClip.textToSpeak);
@@ -487,6 +522,7 @@ namespace Meta.WitAi.TTS.Utilities
             if (!allInstances && _queuedClips.Peek().Equals(clipData))
             {
                 _queuedClips.Dequeue();
+                RefreshQueued();
                 return;
             }
 
@@ -521,6 +557,9 @@ namespace Meta.WitAi.TTS.Utilities
                     _queuedClips.Enqueue(check);
                 }
             }
+
+            // Refresh in queue check
+            RefreshQueued();
         }
         #endregion
 
@@ -718,6 +757,9 @@ namespace Meta.WitAi.TTS.Utilities
                 Events?.OnAudioClipPlaybackCancelled?.Invoke(lastClipData.clip);
                 Events?.OnClipDataPlaybackCancelled?.Invoke(lastClipData);
             }
+
+            // Refresh in queue check
+            RefreshQueued();
 
             // Attempt to play next in queue
             OnPlaybackBegin();
