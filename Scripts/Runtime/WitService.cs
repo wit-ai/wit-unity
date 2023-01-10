@@ -544,6 +544,9 @@ namespace Meta.WitAi
                 _timeLimitCoroutine = null;
             }
 
+            // No longer active
+            _isActive = false;
+
             // Stop recording
             StopRecording();
             FinalizeAudioDurationTracker();
@@ -572,12 +575,8 @@ namespace Meta.WitAi
                 _recordingRequest = null;
                 VoiceEvents?.OnMicDataSent?.Invoke();
             }
-
             // Disable below event
             _minKeepAliveWasHit = false;
-
-            // No longer active
-            _isActive = false;
 
             // Perform on complete event
             onComplete?.Invoke();
