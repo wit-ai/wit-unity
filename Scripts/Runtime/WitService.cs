@@ -227,6 +227,9 @@ namespace Meta.WitAi
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
         public void Activate() => Activate(new WitRequestOptions());
+        /// <summary>
+        /// Activate the microphone and send data to Wit for NLU processing.
+        /// </summary>
         public void Activate(WitRequestOptions requestOptions)
         {
             if (!IsConfigurationValid())
