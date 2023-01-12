@@ -209,7 +209,7 @@ namespace Meta.WitAi.Windows
                     if (isServerTokenValid && _isAutoTrainAvailable)
                     {
                         GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                        if (WitEditorUI.LayoutTextButton("Auto train") && _manifestAvailable)
+                        if (WitEditorUI.LayoutTextButton("Auto Train") && _manifestAvailable)
                         {
                             SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
                         }
