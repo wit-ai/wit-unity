@@ -284,6 +284,7 @@ namespace Meta.WitAi.Data.Configuration
             VLog.SuppressErrors = suppressErrors;
             PerformRequest(request, (error) =>
             {
+                VLog.SuppressErrors = false;
                 if (!string.IsNullOrEmpty(error))
                 {
                     onComplete?.Invoke(false, error);
