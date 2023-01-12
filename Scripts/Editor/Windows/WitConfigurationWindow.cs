@@ -51,6 +51,16 @@ namespace Meta.WitAi.Windows
                 SetConfiguration(newConfigIndex);
             }
         }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (witConfiguration == null)
+            {
+                WitConfigurationUtility.ReloadConfigurationData();
+                SetConfiguration(WitConfigurationUtility.WitConfigs.Length > 0 ? 0 : -1);
+            }
+        }
         protected override void LayoutContent()
         {
             // Reload if config is removed
