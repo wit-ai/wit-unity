@@ -561,9 +561,10 @@ namespace Meta.WitAi.Windows
 
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void OnScriptsReloaded() {
-            foreach (var witConfig in WitConfigurationUtility.WitConfigs)
+            foreach (var voiceService in FindObjectsOfType<VoiceService>())
             {
-                if (witConfig.useConduit)
+                var witConfig = voiceService.witConfiguration;
+                if (witConfig != null && witConfig.useConduit)
                 {
                     GenerateManifest(witConfig, false);
                 }

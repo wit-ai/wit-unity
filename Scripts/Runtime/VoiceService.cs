@@ -35,6 +35,14 @@ namespace Meta.WitAi
         private WitConfiguration _witConfiguration;
 
         /// <summary>
+        /// making withConfiguration accessible as read only.
+        /// </summary>
+        public WitConfiguration witConfiguration
+        {
+            get { return _witConfiguration; }
+        }
+        
+        /// <summary>
         /// The Conduit parameter provider.
         /// </summary>
         private readonly IParameterProvider _conduitParameterProvider = new ParameterProvider();
