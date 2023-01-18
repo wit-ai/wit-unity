@@ -50,7 +50,9 @@ Samples using `wit-unity` can be found in the Samples directory or in the packag
 The license for wit-unity can be found in [LICENSE](https://github.com/wit-ai/wit-unity/blob/main/LICENSE) file in the root directory of this source tree.
 
 ## Terms of Use
-Our terms of use can be found at https://opensource.facebook.com/legal/terms.
+Our terms of use can be found at https://opensource.fb.com/legal/terms.
 
 ## Privacy Policy
-Our privacy policy can be found at https://opensource.facebook.com/legal/privacy.
+Our privacy policy can be found at https://opensource.fb.com/legal/privacy.
+
+Copyright © Meta Platforms, Inc
