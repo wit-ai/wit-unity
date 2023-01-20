@@ -44,7 +44,7 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_STREAM_CLIP_BUFFER = 5; // In Seconds
         public const float ENDPOINT_TTS_STREAM_READY_DURATION = 0.1f; // In Seconds
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
-        public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 140;
+        public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
 
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";
