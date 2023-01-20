@@ -110,11 +110,12 @@ namespace Meta.WitAi.Windows
                 {
                     WitAuthUtility.ServerToken = serverToken;
                 }
-                // Generate new configuration
-                OpenConfigGenerationWindow();
-                // Generate new & Close
+                // Open New & Close
                 if (closeIfInvalid)
                 {
+                    // Generate new configuration
+                    OpenConfigGenerationWindow();
+                    // Close
                     Close();
                 }
                 return;
