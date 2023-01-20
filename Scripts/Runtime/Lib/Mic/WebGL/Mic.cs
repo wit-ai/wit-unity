@@ -21,11 +21,8 @@
 
 using System;
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
-using Meta.WitAi;
 
 namespace Meta.WitAi.Lib
 {
@@ -35,19 +32,21 @@ namespace Meta.WitAi.Lib
     public class Mic : MonoBehaviour, IAudioInputSource
     #endif
     {
-
+#pragma warning disable 0067
         public event Action OnStartRecording;
         public event Action OnStartRecordingFailed;
+#pragma warning disable 0067
         public event Action<int, float[], float> OnSampleReady;
         public event Action OnStopRecording;
         public void StartRecording(int sampleLen)
         {
             VLog.E("Direct microphone use is not currently supported in WebGL.");
+            OnStartRecordingFailed?.Invoke();
         }
 
         public void StopRecording()
         {
-
+            OnStopRecording?.Invoke();
         }
 
         public bool IsRecording => false;

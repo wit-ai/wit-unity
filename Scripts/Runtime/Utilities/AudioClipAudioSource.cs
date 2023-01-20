@@ -68,7 +68,11 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     public event Action OnStopRecording;
     public void StartRecording(int sampleLen)
     {
-        if (_isRecording) return;
+        if (_isRecording)
+        {
+            OnStartRecordingFailed?.Invoke();
+            return;
+        }
         _isRecording = true;
         if (clipIndex < _audioClips.Count)
         {
@@ -79,6 +83,11 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             VLog.D($"Playing {_audioClips[clipIndex].name}");
             _audioSource.PlayOneShot(_audioClips[clipIndex]);
             StartCoroutine(ProcessClip(_audioClips[clipIndex], clipData[clipIndex]));
+            OnStartRecording?.Invoke();
+        }
+        else
+        {
+            OnStartRecordingFailed?.Invoke();
         }
     }
 
@@ -109,6 +118,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     public void StopRecording()
     {
         _isRecording = false;
+        OnStopRecording?.Invoke();
     }
 
     public bool IsRecording => _isRecording;
