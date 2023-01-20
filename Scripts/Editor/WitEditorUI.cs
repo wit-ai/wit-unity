@@ -69,7 +69,10 @@ namespace Meta.WitAi
             EditorGUI.indentLevel++;
             foreach (var field in obj.GetType().GetFields())
             {
-                LayoutKeyLabel(field.Name, field.GetValue(obj).ToString());
+                if (field.IsPublic && !field.IsStatic)
+                {
+                    LayoutKeyLabel(field.Name, field.GetValue(obj).ToString());
+                }
             }
             EditorGUI.indentLevel--;
         }
