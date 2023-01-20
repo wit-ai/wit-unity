@@ -98,9 +98,6 @@ namespace Meta.WitAi.Windows
                 {
                     // Apply configuration
                     SetConfiguration(newIndex);
-
-                    // Refresh app info
-                    newConfiguration.RefreshAppInfo();
                 }
             }
 
