@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
+using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using UnityEngine.Events;
@@ -20,7 +21,7 @@ using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
-    public class WitService : MonoBehaviour, IWitRuntimeConfigProvider, IVoiceEventProvider, ITelemetryEventsProvider
+    public class WitService : MonoBehaviour, IVoiceEventProvider, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
         private WitRequestOptions _currentRequestOptions;
         private float _lastMinVolumeLevelTime;
@@ -47,6 +48,9 @@ namespace Meta.WitAi
         private HashSet<WitRequest> _transmitRequests = new HashSet<WitRequest>();
         private HashSet<WitRequest> _queuedRequests = new HashSet<WitRequest>();
         private Coroutine _queueHandler;
+
+        // Wit configuration provider
+        public WitConfiguration Configuration => RuntimeConfiguration?.witConfiguration;
 
         #region Interfaces
         private IWitByteDataReadyHandler[] _dataReadyHandlers;

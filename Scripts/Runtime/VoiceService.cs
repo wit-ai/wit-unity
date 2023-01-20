@@ -18,7 +18,6 @@ using Meta.WitAi.Events.UnityEventListeners;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using UnityEngine;
-using Meta.WitAi;
 
 namespace Meta.WitAi
 {
@@ -27,21 +26,24 @@ namespace Meta.WitAi
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private bool UseConduit => _witConfiguration && _witConfiguration.useConduit;
+        private bool UseConduit => WitConfiguration && WitConfiguration.useConduit;
 
         /// <summary>
-        /// The wit configuration.
+        /// Wit configuration accessor via IWitConfigurationProvider
         /// </summary>
+        public WitConfiguration WitConfiguration
+        {
+            get
+            {
+                if (_witConfiguration == null)
+                {
+                    _witConfiguration = GetComponent<IWitConfigurationProvider>()?.Configuration;
+                }
+                return _witConfiguration;
+            }
+        }
         private WitConfiguration _witConfiguration;
 
-        /// <summary>
-        /// making withConfiguration accessible as read only.
-        /// </summary>
-        public WitConfiguration witConfiguration
-        {
-            get { return _witConfiguration; }
-        }
-        
         /// <summary>
         /// The Conduit parameter provider.
         /// </summary>
@@ -180,9 +182,6 @@ namespace Meta.WitAi
 
         protected virtual void Awake()
         {
-            var witConfigProvider = this.GetComponent<IWitRuntimeConfigProvider>();
-            _witConfiguration = witConfigProvider?.RuntimeConfiguration?.witConfiguration;
-
             InitializeEventListeners();
 
             if (!UseConduit)

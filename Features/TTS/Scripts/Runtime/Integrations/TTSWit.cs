@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using Meta.WitAi;
+using Meta.WitAi.Interfaces;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
@@ -54,7 +54,7 @@ namespace Meta.WitAi.TTS.Integrations
         public float audioStreamChunkLength;
     }
 
-    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler
+    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
     {
         #region TTSService
         // Voice provider
@@ -87,6 +87,9 @@ namespace Meta.WitAi.TTS.Integrations
             }
         }
         private ITTSDiskCacheHandler _diskCache;
+
+        // Configuration provider
+        public WitConfiguration Configuration => RequestSettings.configuration;
 
         // Use wit tts vrequest type
         protected override AudioType GetAudioType()

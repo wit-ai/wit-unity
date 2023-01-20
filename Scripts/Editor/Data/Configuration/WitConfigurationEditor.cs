@@ -568,12 +568,11 @@ namespace Meta.WitAi.Windows
 
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void OnScriptsReloaded() {
-            foreach (var voiceService in FindObjectsOfType<VoiceService>())
+            foreach (var configuration in WitConfigurationUtility.GetLoadedConfigurations())
             {
-                var witConfig = voiceService.witConfiguration;
-                if (witConfig != null && witConfig.useConduit)
+                if (configuration != null && configuration.useConduit)
                 {
-                    GenerateManifest(witConfig, false);
+                    GenerateManifest(configuration, false);
                 }
             }
         }
