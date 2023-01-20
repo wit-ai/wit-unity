@@ -28,7 +28,7 @@ namespace Meta.WitAi.Samples.Shapes
 
                 if (colorString.Length != shapeString.Length)
                 {
-                    Debug.LogWarning("Mismatched entity pairings.");
+                    VLog.W("Mismatched entity pairings.");
                     return;
                 }
                 else

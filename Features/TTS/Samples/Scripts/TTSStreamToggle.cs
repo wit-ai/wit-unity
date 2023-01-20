@@ -33,7 +33,7 @@ namespace Meta.WitAi.TTS.Samples
             // Log for missing service
             if (_service == null)
             {
-                Debug.LogError("TTS Stream Toggle - Cannot work without a TTSWit reference");
+                VLog.E("TTS Stream Toggle - Cannot work without a TTSWit reference");
             }
             // Reset
             RefreshStreaming();

@@ -652,7 +652,7 @@ namespace Meta.WitAi.Windows
         {
             if (!EditorUtility.DisplayDialog("Synchronizing with Wit.Ai entities", "This will synchronize local enums with Wit.Ai entities. Part of this process involves generating code locally and may result in overwriting existing code. Please make sure to backup your work before proceeding.", "Proceed", "Cancel", DialogOptOutDecisionType.ForThisSession, ENTITY_SYNC_CONSENT_KEY))
             {
-                Debug.Log("Entity Sync cancelled");
+                VLog.D("Entity Sync cancelled");
                 return;
             }
 
@@ -677,7 +677,7 @@ namespace Meta.WitAi.Windows
             var manifest = ManifestLoader.LoadManifest(Configuration.ManifestLocalPath);
             const float initializationProgress = 0.1f;
             EditorUtility.DisplayProgressBar("Conduit Entity Sync", "Synchronizing entities. Please wait...", initializationProgress);
-            Debug.Log("Synchronizing enums with Wit.Ai entities");
+            VLog.D("Synchronizing enums with Wit.Ai entities");
             CoroutineUtility.StartCoroutine(_enumSynchronizer.SyncWitEntities(manifest, (success, data) =>
                 {
                     _syncInProgress = false;
@@ -688,7 +688,7 @@ namespace Meta.WitAi.Windows
                     }
                     else
                     {
-                        Debug.Log("Conduit successfully synchronized entities");
+                        VLog.D("Conduit successfully synchronized entities");
                         successCallback?.Invoke();
                     }
                 },

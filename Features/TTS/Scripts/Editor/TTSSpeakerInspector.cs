@@ -82,7 +82,7 @@ namespace Meta.WitAi.TTS.Editor
             TTSVoiceSettings[] settings = tts?.GetAllPresetVoiceSettings();
             if (settings == null)
             {
-                Debug.LogError("No Preset Voice Settings Found!");
+                VLog.E("No Preset Voice Settings Found!");
                 return;
             }
 

@@ -42,12 +42,12 @@ namespace Meta.WitAi.Lib
         public event Action OnStopRecording;
         public void StartRecording(int sampleLen)
         {
-            Debug.LogError("Direct microphone use is not currently supported in WebGL.");
+            VLog.E("Direct microphone use is not currently supported in WebGL.");
         }
 
         public void StopRecording()
         {
-            
+
         }
 
         public bool IsRecording => false;
@@ -55,7 +55,7 @@ namespace Meta.WitAi.Lib
         public bool IsInputAvailable => false;
         public void CheckForInput()
         {
-            
+
         }
         private bool MicrophoneIsRecording(string device)
         {
@@ -64,7 +64,7 @@ namespace Meta.WitAi.Lib
 
         private string[] MicrophoneGetDevices()
         {
-            Debug.LogError("Direct microphone use is not currently supported in WebGL.");
+            VLog.E("Direct microphone use is not currently supported in WebGL.");
             return new string[] {};
         }
 

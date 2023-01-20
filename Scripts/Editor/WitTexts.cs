@@ -146,7 +146,7 @@ namespace Meta.WitAi
             TextAsset textAsset = Resources.Load<TextAsset>(textFilePath);
             if (textAsset == null)
             {
-                Debug.LogError($"WitStyles - Add localization to Resources/{textFilePath}\nLanguage: {languageID}");
+                VLog.E($"WitStyles - Add localization to Resources/{textFilePath}\nLanguage: {languageID}");
                 return;
             }
             Texts = JsonUtility.FromJson<WitText>(textAsset.text);

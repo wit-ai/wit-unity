@@ -94,7 +94,7 @@ namespace Meta.WitAi.Windows
                         // If no Witconfig is set for the component we get a NullPointerException here
                         if (configProvider.RuntimeConfiguration.witConfiguration == null)
                         {
-                            Debug.LogError($"No Wit configuration found for {_serviceComponent.gameObject.name}");
+                            VLog.E($"No Wit configuration found for {_serviceComponent.gameObject.name}");
 
                             return "";
                         }

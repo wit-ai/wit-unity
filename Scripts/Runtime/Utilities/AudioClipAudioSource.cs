@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Meta.WitAi;
 using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
 using UnityEngine;
@@ -32,7 +33,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         foreach (var clip in _audioClips)
         {
             AddClipData(clip);
-            Debug.Log($"Added {clip.name} to queue");
+            VLog.D($"Added {clip.name} to queue");
         }
     }
 
@@ -42,14 +43,14 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
         try
         {
-            Debug.Log("Sending length: " + len);
+            VLog.D("Sending length: " + len);
             activeClipBuffer = new float[len];
             Array.Copy(activeClip, activeClipIndex, activeClipBuffer, 0, len);
             activeClipIndex += len;
         }
         catch (ArgumentException e)
         {
-            Debug.Log(e);
+            VLog.D(e);
         }
 
         var max = float.MinValue;
@@ -73,9 +74,9 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         {
             activeClip = clipData[clipIndex];
             activeClipIndex = 0;
-            Debug.Log($"Starting clip {clipIndex}");
+            VLog.D($"Starting clip {clipIndex}");
             _isRecording = true;
-            Debug.Log($"Playing {_audioClips[clipIndex].name}");
+            VLog.D($"Playing {_audioClips[clipIndex].name}");
             _audioSource.PlayOneShot(_audioClips[clipIndex]);
             StartCoroutine(ProcessClip(_audioClips[clipIndex], clipData[clipIndex]));
         }
@@ -97,7 +98,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
                 max = Mathf.Max(f, max);
             }
 
-            Debug.Log($"Sending {index}/{clipData.Length} [{data.Length}] samples with a max volume of {max}");
+            VLog.D($"Sending {index}/{clipData.Length} [{data.Length}] samples with a max volume of {max}");
             OnSampleReady?.Invoke(data.Length, data, max);
             yield return null;
         }
@@ -132,7 +133,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
         if (index < 0 || index >= _audioClips.Count)
         {
-            Debug.Log($"Couldn't find clip {clipName}");
+            VLog.D($"Couldn't find clip {clipName}");
             return false;
         }
 
@@ -144,7 +145,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     {
         _audioClips.Add(clip);
         AddClipData(clip);
-        Debug.Log($"Clip added {clip.name}");
+        VLog.D($"Clip added {clip.name}");
     }
 
     private void AddClipData(AudioClip clip)
