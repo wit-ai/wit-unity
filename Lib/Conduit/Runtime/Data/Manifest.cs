@@ -143,7 +143,12 @@ namespace Meta.Conduit
                     continue;
                 }
                 var actionAttribute = attributes.First() as ConduitActionAttribute;
-
+                if (actionAttribute == null)
+                {
+                    VLog.E("Found null attribute when one was expected");
+                    continue;
+                }
+                
                 var invocationContext = new InvocationContext()
                 {
                     Type = targetType,

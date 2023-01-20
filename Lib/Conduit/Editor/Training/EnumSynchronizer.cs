@@ -315,6 +315,12 @@ namespace Meta.Conduit.Editor
 
             foreach (var keyword in witEntity.keywords)
             {
+                if (witEntityKeywords.ContainsKey(keyword.keyword))
+                {
+                    VLog.W($"Duplicate keyword {keyword.keyword} was found in entity {incomingEntity.Value.name}. Verify entities on Wit.Ai");
+                    continue;
+                }
+                
                 witEntityKeywords.Add(keyword.keyword, new WitKeyword(keyword));
             }
 

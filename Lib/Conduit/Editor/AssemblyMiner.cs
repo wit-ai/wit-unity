@@ -41,7 +41,6 @@ namespace Meta.Conduit.Editor
         /// Initializes the class with a target assembly.
         /// </summary>
         /// <param name="parameterValidator">The parameter validator.</param>
-        /// <param name="parameterFilter">The parameter filter.</param>
         public AssemblyMiner(IParameterValidator parameterValidator)
         {
             this._parameterValidator = parameterValidator;
@@ -154,6 +153,19 @@ namespace Meta.Conduit.Editor
 
             foreach (var method in methods)
             {
+                if (method == null)
+                {
+                    VLog.E($"Found a null method in assembly: {assembly.FullName}");
+                    continue;
+                }
+
+                if (method.DeclaringType == null)
+                {
+                    VLog.E($"Method {method.Name} in assembly {assembly.FullName} had null declaring type");
+                    continue;
+                }
+                
+                
                 var attributes = method.GetCustomAttributes(typeof(ConduitActionAttribute), false);
                 if (attributes.Length == 0)
                 {
@@ -161,7 +173,7 @@ namespace Meta.Conduit.Editor
                 }
 
                 var actionAttribute = attributes.First() as ConduitActionAttribute;
-                var actionName = actionAttribute.Intent;
+                var actionName = actionAttribute?.Intent;
                 if (string.IsNullOrEmpty(actionName))
                 {
                     actionName = $"{method.Name}";
@@ -202,8 +214,8 @@ namespace Meta.Conduit.Editor
                         var parameterAttribute =
                             parameter.GetCustomAttributes(typeof(ConduitParameterAttribute), false).First() as
                                 ConduitParameterAttribute;
-                        aliases = parameterAttribute.Aliases;
-                        examples = parameterAttribute.Examples;
+                        aliases = parameterAttribute?.Aliases;
+                        examples = parameterAttribute?.Examples;
                     }
                     else
                     {

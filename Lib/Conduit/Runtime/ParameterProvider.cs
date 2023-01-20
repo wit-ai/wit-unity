@@ -49,7 +49,7 @@ namespace Meta.Conduit
         /// <summary>
         /// Maps Wit.Ai type names to native types that support them starting with the preferred data type.
         /// </summary>
-        private static readonly Dictionary<string, List<Type>> _builtInTypes = new Dictionary<string, List<Type>>()
+        private static readonly Dictionary<string, List<Type>> BuiltInTypes = new Dictionary<string, List<Type>>()
         {
             { "wit$age_of_person", new List<Type>{typeof(int), typeof(short), typeof(long), typeof(float), typeof(double), typeof(decimal) }},
             { "wit$amount_of_money", new List<Type>{typeof(decimal), typeof(float), typeof(double), typeof(int)}},
@@ -108,7 +108,7 @@ namespace Meta.Conduit
             {
                 var parameterName = entity[0]["role"].Value;
                 var parameterValue = entity[0]["value"].Value;
-                var parameterTypes = GetParameterTypes(entity[0]["name"].Value, parameterValue);
+                var parameterTypes = GetParameterTypes(entity[0]["name"].Value, parameterValue).ToList();
 
                 foreach (var parameterType in parameterTypes)
                 {
@@ -171,6 +171,7 @@ namespace Meta.Conduit
         /// Returns true if a parameter with the specified name can be provided.
         /// </summary>
         /// <param name="parameter">The name of the parameter.</param>
+        /// <param name="log">The log to write to.</param>
         /// <returns>True if a parameter with the specified name can be provided.</returns>
         public bool ContainsParameter(ParameterInfo parameter, StringBuilder log)
         {
@@ -304,14 +305,14 @@ namespace Meta.Conduit
             }
             
             // Log warning when not found
-            StringBuilder error = new StringBuilder();
+            var error = new StringBuilder();
             error.AppendLine("Specialized parameter not found");
             error.AppendLine($"Parameter Type: {formalParameter.ParameterType}");
             error.AppendLine($"Parameter Name: {formalParameter.Name}");
             error.AppendLine($"Actual Parameters: {ActualParameters.Keys.Count}");
             foreach (var key in ActualParameters.Keys)
             {
-                string val = ActualParameters[key] == null ? "NULL" : ActualParameters[key].GetType().ToString();
+                var val = ActualParameters[key] == null ? "NULL" : ActualParameters[key].GetType().ToString();
                 error.AppendLine($"\t{key}: {val}");
             }
             VLog.W(error.ToString());
@@ -333,12 +334,12 @@ namespace Meta.Conduit
                 return new List<Type>() { _customTypes[typeString] };
             }
 
-            if (!_builtInTypes.ContainsKey(typeString) || _builtInTypes[typeString].Count == 0)
+            if (!BuiltInTypes.ContainsKey(typeString) || BuiltInTypes[typeString].Count == 0)
             {
                 return new List<Type>() { typeof(string) };
             }
 
-            return _builtInTypes[typeString].Where(type => PerfectTypeMatch(type, value)).ToList();
+            return BuiltInTypes[typeString].Where(type => PerfectTypeMatch(type, value)).ToList();
         }
 
         private bool PerfectTypeMatch(Type targetType, string value)

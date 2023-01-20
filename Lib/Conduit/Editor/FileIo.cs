@@ -44,7 +44,7 @@ namespace Meta.Conduit
         {
             try
             {
-                string directory = Path.GetDirectoryName(path);
+                var directory = Path.GetDirectoryName(path);
                 if (!Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);

@@ -245,6 +245,7 @@ namespace Meta.Conduit
             /// </summary>
             /// <param name="actionId">The action ID.</param>
             /// <param name="confidence">The confidence level between 0 and 1.</param>
+            /// <param name="partial">Whether this is a partial invocation.</param>
             /// <returns></returns>
             public List<InvocationContext> ResolveInvocationContexts(string actionId, float confidence, bool partial)
             {
@@ -265,7 +266,7 @@ namespace Meta.Conduit
             private bool CompatibleInvocationContext(InvocationContext invocationContext, float confidence,
                 bool partial)
             {
-                Dictionary<string, string> parameterMap = new Dictionary<string, string>();
+                var parameterMap = new Dictionary<string, string>();
                 
                 var parameters = invocationContext.MethodInfo.GetParameters();
                 if (invocationContext.ValidatePartial != partial)
