@@ -39,6 +39,12 @@ namespace Meta.WitAi.Windows
         private bool _didCheckAutoTrainAvailability = false;
         private bool _isAutoTrainAvailable = false;
 
+        /// <summary>
+        /// Whether or not server specific functionality like sync
+        /// should be disabled for this configuration
+        /// </summary>
+        protected virtual bool _disableServerPost => false;
+
         internal static readonly AssemblyWalker AssemblyWalker = new AssemblyWalker();
         private static ConduitStatistics _statistics;
         private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
@@ -151,7 +157,7 @@ namespace Meta.WitAi.Windows
         private void LayoutConduitContent()
         {
             var isServerTokenValid = WitConfigurationUtility.IsServerTokenValid(_serverToken);
-            if (!isServerTokenValid)
+            if (!isServerTokenValid && !_disableServerPost)
             {
                 GUILayout.TextArea(WitTexts.Texts.ConfigurationConduitMissingTokenLabel, WitStyles.LabelError);
             }
@@ -198,23 +204,24 @@ namespace Meta.WitAi.Windows
                         PresentAssemblySelectionDialog();
                     }
 
-                    GUILayout.FlexibleSpace();
-                    GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                    if (isServerTokenValid && WitEditorUI.LayoutTextButton("Sync Entities"))
+                    if (isServerTokenValid && !_disableServerPost)
                     {
-                        SyncEntities();
-                        GUIUtility.ExitGUI();
-                    }
-
-                    if (isServerTokenValid && _isAutoTrainAvailable)
-                    {
+                        GUILayout.FlexibleSpace();
                         GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                        if (WitEditorUI.LayoutTextButton("Auto Train") && _manifestAvailable)
+                        if (WitEditorUI.LayoutTextButton("Sync Entities"))
                         {
-                            SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
+                            SyncEntities();
+                            GUIUtility.ExitGUI();
+                            return;
+                        }
+                        if (_isAutoTrainAvailable)
+                        {
+                            if (WitEditorUI.LayoutTextButton("Auto Train") && _manifestAvailable)
+                            {
+                                SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
+                            }
                         }
                     }
-
                     GUI.enabled = true;
                 }
                 GUILayout.EndHorizontal();
