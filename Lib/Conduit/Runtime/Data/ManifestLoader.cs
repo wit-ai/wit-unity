@@ -36,7 +36,7 @@ namespace Meta.Conduit
         /// <inheritdoc/>
         public Manifest LoadManifestFromString(string manifestText)
         {
-            var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText);
+            var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText, null, true);
             if (manifest.ResolveActions())
             {
                 VLog.D($"Successfully Loaded Conduit manifest");

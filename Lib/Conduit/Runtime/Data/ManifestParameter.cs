@@ -46,7 +46,6 @@ namespace Meta.Conduit
         /// <summary>
         /// This is the data type of the parameter, exposed as an entity type.
         /// </summary>
-        [JsonIgnore]
         public string EntityType
         {
             get
