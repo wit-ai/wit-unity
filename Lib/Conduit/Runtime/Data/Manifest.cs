@@ -67,6 +67,11 @@ namespace Meta.Conduit
         [JsonIgnore]
         public Dictionary<string, Type> CustomEntityTypes { get; } = new Dictionary<string, Type>();
 
+        /// <summary>
+        /// A list of registered callbacks 
+        /// </summary>
+        [JsonIgnore]
+        public static List<string> WitResponseMatcherIntents = new List<string>();
         public bool ResolveEntities()
         {
             bool allResolved = true;

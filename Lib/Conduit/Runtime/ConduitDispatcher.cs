@@ -95,7 +95,7 @@ namespace Meta.Conduit
         /// <returns>True if all invocations succeeded. False if at least one failed or no callbacks were found.</returns>
         public bool InvokeAction(IParameterProvider parameterProvider, string actionId, bool relaxed, float confidence = 1f, bool partial = false)
         {
-            if (!Manifest.ContainsAction(actionId))
+            if (!Manifest.ContainsAction(actionId) && !Manifest.WitResponseMatcherIntents.Contains(actionId))
             {
                 if (!_ignoredActionIds.Contains(actionId))
                 {
