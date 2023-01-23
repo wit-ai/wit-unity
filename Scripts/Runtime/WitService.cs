@@ -504,7 +504,7 @@ namespace Meta.WitAi
         // AudioDurationTracker
         private void FinalizeAudioDurationTracker()
         {
-            AudioDurationTracker audioDurationTracker = _recordingRequest.audioDurationTracker;
+            AudioDurationTracker audioDurationTracker = _recordingRequest?.audioDurationTracker;
             if (!_recordingRequest.requestIdOverride.Equals(audioDurationTracker.GetRequestId()))
             {
                 VLog.W($"Mismatch in request IDs when finalizing AudioDurationTracker. " +
