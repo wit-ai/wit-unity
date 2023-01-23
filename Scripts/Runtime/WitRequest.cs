@@ -860,16 +860,16 @@ namespace Meta.WitAi
             });
         }
 
-        public void AbortRequest()
+        public void AbortRequest(string reason = "Request was aborted")
         {
             CloseActiveStream();
             // If status code has already been set to aborted we don't need to attempt to abort again.
             if (StatusCode == ERROR_CODE_ABORTED) return;
-
+            
             if (StatusCode == 0)
             {
                 StatusCode = ERROR_CODE_ABORTED;
-                statusDescription = "Request was aborted";
+                statusDescription = reason;
             }
             if (null != _request)
             {
@@ -888,7 +888,7 @@ namespace Meta.WitAi
         {
             if (requestRequiresBody && bytesWritten == 0)
             {
-                AbortRequest();
+                AbortRequest("Request was closed with no audio captured.");
             }
             else
             {
@@ -963,7 +963,7 @@ namespace Meta.WitAi
             if (requestRequiresBody && bytesWritten == 0)
             {
                 VLog.W("Stream was closed with no data written. Aborting request.");
-                AbortRequest();
+                AbortRequest("Stream was closed with no data written.");
             }
         }
 

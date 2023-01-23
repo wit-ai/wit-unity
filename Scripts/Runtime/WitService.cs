@@ -595,7 +595,7 @@ namespace Meta.WitAi
             {
                 if (abort)
                 {
-                    request.AbortRequest();
+                    request.AbortRequest("Request was aborted by user.");
                 }
                 else
                 {
