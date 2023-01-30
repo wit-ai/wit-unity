@@ -549,6 +549,12 @@ namespace Meta.WitAi.Json
         // Convert data to node
         private static WitResponseNode SerializeToken(Type inType, object inObject, StringBuilder log, JsonConverter[] customConverters)
         {
+            // Use object type instead if possible
+            if (inObject != null && inType == typeof(object))
+            {
+                inType = inObject.GetType();
+            }
+
             // Iterate custom converters
             if (customConverters != null)
             {
@@ -613,7 +619,14 @@ namespace Meta.WitAi.Json
                     object newObj = oldDictionary[key];
                     if (newObj == null)
                     {
-                        newObj = Activator.CreateInstance(valType);
+                        if (valType == typeof(string))
+                        {
+                            newObj = string.Empty;
+                        }
+                        else
+                        {
+                            newObj = Activator.CreateInstance(valType);
+                        }
                     }
                     newDictionary.Add(key.ToString(), SerializeToken(valType, newObj, log, customConverters));
                 }
