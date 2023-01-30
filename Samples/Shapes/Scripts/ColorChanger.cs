@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -55,6 +56,11 @@ namespace Meta.WitAi.Samples.Shapes
             }
         }
 
+        [Conduit.OnConduitFailedParameterResolution()]
+        public void OnConduitFailed(string intent, Exception ex)
+        {
+            VLog.E(ex.Message);
+        }
         [MatchIntent("change_color")]
         public void OnColorIntent()
         {

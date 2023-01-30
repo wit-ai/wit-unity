@@ -8,20 +8,19 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Meta.WitAi.Json;
 
 namespace Meta.Conduit
 {
     /// <summary>
     /// An action entry in the manifest.
     /// </summary>
-    internal class ManifestAction: IManifestMethod
+    internal class ManifestErrorHandler : IManifestMethod
     {
         /// <summary>
         /// Called via JSON reflection, need preserver or it will be stripped on compile
         /// </summary>
         [UnityEngine.Scripting.Preserve]
-        public ManifestAction() { }
+        public ManifestErrorHandler() { }
 
         /// <summary>
         /// This is the internal fully qualified name of the method in the codebase.
@@ -46,13 +45,11 @@ namespace Meta.Conduit
         /// <summary>
         /// Returns the fully qualified name of the declaring type of the action.
         /// </summary>
-        [JsonIgnore]
         public string DeclaringTypeName => ID.Substring(0, ID.LastIndexOf('.'));
 
         /// <summary>
         /// Additional names by which the backend can refer to this action.
         /// </summary>
-        public List<string> Aliases { get; set; } = new List<string>();
 
         public override bool Equals(object obj)
         {
@@ -66,13 +63,12 @@ namespace Meta.Conduit
             hash = hash * 31 + Assembly.GetHashCode();
             hash = hash * 31 + Name.GetHashCode();
             hash = hash * 31 + Parameters.GetHashCode();
-            hash = hash * 31 + Aliases.GetHashCode();
             return hash;
         }
 
         private bool Equals(ManifestAction other)
         {
-            return this.ID == other.ID && this.Assembly == other.Assembly && this.Name == other.Name && this.Parameters.SequenceEqual(other.Parameters) && this.Aliases.SequenceEqual(other.Aliases);
+            return this.ID == other.ID && this.Assembly == other.Assembly && this.Name == other.Name && this.Parameters.SequenceEqual(other.Parameters) ;
         }
     }
 }

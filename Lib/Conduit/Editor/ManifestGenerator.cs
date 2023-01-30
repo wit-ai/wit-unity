@@ -78,7 +78,7 @@ namespace Meta.Conduit.Editor
         {
             VLog.D("Extracting manifest actions and entities.");
 
-            var (entities, actions) = ExtractAssemblyData(_assemblyWalker.GetTargetAssemblies());
+            var (entities, actions, errorHandlers) = ExtractAssemblyData(_assemblyWalker.GetTargetAssemblies());
             VLog.D($"Extracted {actions.Count} actions and {entities.Count} entities.");
 
             List<string> transformedActions = new HashSet<string>(actions.Select(v => v.Name).Where(v => !string.IsNullOrEmpty(v))).ToList();
@@ -99,7 +99,7 @@ namespace Meta.Conduit.Editor
         {
             VLog.D($"Generating manifest.");
 
-            var (entities, actions) = ExtractAssemblyData(assemblies);
+            var (entities, actions, errorHandlers) = ExtractAssemblyData(assemblies);
 
             var manifest = new Manifest()
             {
@@ -107,26 +107,36 @@ namespace Meta.Conduit.Editor
                 Version = CurrentVersion,
                 Domain = domain,
                 Entities = entities,
-                Actions = actions
+                Actions = actions,
+                ErrorHandlers = errorHandlers
             };
 
             return JsonConvert.SerializeObject(manifest);
         }
-
-        private (List<ManifestEntity>, List<ManifestAction>) ExtractAssemblyData(IEnumerable<IConduitAssembly> assemblies)
+ 
+        private (List<ManifestEntity>, List<ManifestAction>, List<ManifestErrorHandler>) ExtractAssemblyData(IEnumerable<IConduitAssembly> assemblies)
         {
             var entities = new List<ManifestEntity>();
             var actions = new List<ManifestAction>();
+            var errorHandlers = new List<ManifestErrorHandler>();
             _assemblyMiner.Initialize();
             foreach (var assembly in assemblies)
             {
                 actions.AddRange(this._assemblyMiner.ExtractActions(assembly));
                 entities.AddRange(this._assemblyMiner.ExtractEntities(assembly));
+                try
+                {
+                    errorHandlers.AddRange(this._assemblyMiner.ExtractErrorHandlers(assembly));
+                }
+                catch (Exception)
+                {
+                    VLog.W("Conduit App found no error handlers");
+                }
             }
 
             this.PruneUnreferencedEntities(ref entities, actions);
 
-            return (entities, actions);
+            return (entities, actions, errorHandlers);
         }
 
         /// <summary>

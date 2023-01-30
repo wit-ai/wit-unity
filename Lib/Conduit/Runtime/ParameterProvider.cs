@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.Conduit;
 
 namespace Meta.Conduit
 {
@@ -192,6 +193,7 @@ namespace Meta.Conduit
             return true;
         }
 
+
         /// <summary>
         /// Provides the actual parameter value matching the supplied formal parameter.
         /// </summary>
@@ -223,6 +225,7 @@ namespace Meta.Conduit
                 }
                 else if (formalParameter.ParameterType.IsEnum)
                 {
+
                     try
                     {
                         return Enum.Parse(formalParameter.ParameterType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
@@ -230,7 +233,7 @@ namespace Meta.Conduit
                     catch (Exception e)
                     {
                         VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
-                        return null;
+                        throw;
                     }
                 }
                 else
@@ -427,4 +430,5 @@ namespace Meta.Conduit
             return string.Join("',", AllParameterNames);
         }
     }
+
 }
