@@ -69,7 +69,25 @@ namespace Meta.WitAi
         /// </summary>
         public bool Active => _isActive || IsRequestActive;
 
-        public bool IsRequestActive => null != _recordingRequest && _recordingRequest.IsActive;
+        public bool IsRequestActive
+        {
+            get
+            {
+                if (null != _recordingRequest && _recordingRequest.IsActive)
+                {
+                    return true;
+                }
+                if (null != _transmitRequests && _transmitRequests.Count > 0)
+                {
+                    return true;
+                }
+                if (null != _queuedRequests && _queuedRequests.Count > 0)
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
 
         public IVoiceEventProvider VoiceEventProvider
         {
@@ -505,7 +523,11 @@ namespace Meta.WitAi
         private void FinalizeAudioDurationTracker()
         {
             AudioDurationTracker audioDurationTracker = _recordingRequest?.audioDurationTracker;
-            if (!_recordingRequest.requestIdOverride.Equals(audioDurationTracker.GetRequestId()))
+            if (audioDurationTracker == null)
+            {
+                return;
+            }
+            if (!string.Equals(_recordingRequest.requestIdOverride, audioDurationTracker.GetRequestId()))
             {
                 VLog.W($"Mismatch in request IDs when finalizing AudioDurationTracker. " +
                        $"Expected {_recordingRequest.requestIdOverride} but got {audioDurationTracker.GetRequestId()}");

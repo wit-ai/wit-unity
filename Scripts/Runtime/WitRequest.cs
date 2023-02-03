@@ -521,13 +521,11 @@ namespace Meta.WitAi
             // Update the error state to indicate the request timed out
             StatusCode = ERROR_CODE_TIMEOUT;
             statusDescription = "Request timed out.";
-
             SafeInvoke(onResponse);
         }
 
         private void HandleResponse(IAsyncResult asyncResult)
         {
-            bool sentResponse = false;
             string stringResponse = "";
             responseStarted = true;
             try
@@ -548,7 +546,7 @@ namespace Meta.WitAi
                             while ((chunk = ReadToDelimiter(reader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
                             {
                                 stringResponse = chunk;
-                                sentResponse |= ProcessStringResponse(stringResponse);
+                                ProcessStringResponse(stringResponse);
                             }
                             reader.Close();
                         }
@@ -605,8 +603,11 @@ namespace Meta.WitAi
                                 using (StreamReader errorReader = new StreamReader(errorStream))
                                 {
                                     stringResponse = errorReader.ReadToEnd();
-                                    MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                    sentResponse = ProcessStringResponses(stringResponse);
+                                    if (!string.IsNullOrEmpty(stringResponse))
+                                    {
+                                        MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
+                                        ProcessStringResponses(stringResponse);
+                                    }
                                 }
                             }
                         }
@@ -658,14 +659,19 @@ namespace Meta.WitAi
                     stringResponse);
             }
 
-            // Send final response if have not yet
-            if (!sentResponse)
+            // Timeout response called separately
+            if (StatusCode != ERROR_CODE_TIMEOUT)
             {
                 // Final transcription if not already sent
                 string transcription = responseData.GetTranscription();
                 if (!string.IsNullOrEmpty(transcription) && !responseData.GetIsFinal())
                 {
                     MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
+                }
+                // Send partial if not previously sent
+                if (!responseData.HasResponse())
+                {
+                    SafeInvoke(onPartialResponse);
                 }
                 // Final response
                 SafeInvoke(onResponse);
@@ -739,20 +745,16 @@ namespace Meta.WitAi
             return results.Length == 0 ? null : results.ToString();
         }
         // Process individual piece
-        private bool ProcessStringResponses(string stringResponse)
+        private void ProcessStringResponses(string stringResponse)
         {
             // Split by delimiter
             foreach (var stringPart in stringResponse.Split(new string[]{WitConstants.ENDPOINT_JSON_DELIMITER}, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (ProcessStringResponse(stringPart))
-                {
-                    return true;
-                }
+                ProcessStringResponse(stringPart);
             }
-            return false;
         }
         // Safely handles
-        private bool ProcessStringResponse(string stringResponse)
+        private void ProcessStringResponse(string stringResponse)
         {
             // Decode full response
             responseData = WitResponseNode.Parse(stringResponse);
@@ -780,20 +782,11 @@ namespace Meta.WitAi
             // No response
             if (!hasResponse)
             {
-                return false;
+                return;
             }
 
             // Call partial response
             SafeInvoke(onPartialResponse);
-
-            // Call final response
-            if (final)
-            {
-                SafeInvoke(onResponse);
-            }
-
-            // Return final
-            return final;
         }
         private void HandleRequestStream(IAsyncResult ar)
         {
@@ -865,7 +858,7 @@ namespace Meta.WitAi
             CloseActiveStream();
             // If status code has already been set to aborted we don't need to attempt to abort again.
             if (StatusCode == ERROR_CODE_ABORTED) return;
-            
+
             if (StatusCode == 0)
             {
                 StatusCode = ERROR_CODE_ABORTED;
