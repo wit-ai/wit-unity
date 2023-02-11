@@ -586,16 +586,17 @@ namespace Meta.WitAi
             // Deactivate recording request
             bool isRecordingRequestActive = IsRequestActive;
             DeactivateWitRequest(_recordingRequest, abort);
+            AbortQueue();
 
             // Abort transmitting requests
             if (abort)
             {
-                AbortQueue();
-                foreach (var request in _transmitRequests)
+                HashSet<WitRequest> requests = _transmitRequests;
+                _transmitRequests = new HashSet<WitRequest>();
+                foreach (var request in requests)
                 {
                     DeactivateWitRequest(request, true);
                 }
-                _transmitRequests.Clear();
             }
             // Transmit recording request
             else if (isRecordingRequestActive && _minKeepAliveWasHit)
@@ -613,16 +614,23 @@ namespace Meta.WitAi
         // Deactivate wit request
         private void DeactivateWitRequest(WitRequest request, bool abort)
         {
-            if (request != null && request.IsActive)
+            if (request == null)
             {
-                if (abort)
-                {
-                    request.AbortRequest("Request was aborted by user.");
-                }
-                else
-                {
-                    request.CloseRequestStream();
-                }
+                return;
+            }
+            bool wasRunning = request.IsActive;
+            if (abort)
+            {
+                request.AbortRequest("Request was aborted by user.");
+            }
+            else
+            {
+                request.CloseRequestStream();
+            }
+            if (wasRunning && request.StatusCode == WitRequest.ERROR_CODE_ABORTED)
+            {
+                HandleResult(request);
+                request.onResponse -= HandleResult;
             }
         }
         #endregion
@@ -690,11 +698,13 @@ namespace Meta.WitAi
                 StopCoroutine(_queueHandler);
                 _queueHandler = null;
             }
-            foreach (var request in _queuedRequests)
+            HashSet<WitRequest> requests = _queuedRequests;
+            _queuedRequests = new HashSet<WitRequest>();
+            foreach (var request in requests)
             {
                 DeactivateWitRequest(request, true);
+                HandleResult(request);
             }
-            _queuedRequests.Clear();
         }
         // Coroutine used to send transcriptions when possible
         private IEnumerator PerformDequeue()

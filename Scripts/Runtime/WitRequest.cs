@@ -521,7 +521,11 @@ namespace Meta.WitAi
             // Update the error state to indicate the request timed out
             StatusCode = ERROR_CODE_TIMEOUT;
             statusDescription = "Request timed out.";
-            SafeInvoke(onResponse);
+            SafeInvoke((w) =>
+            {
+                onResponse?.Invoke(w);
+                onResponse = null;
+            });
         }
 
         private void HandleResponse(IAsyncResult asyncResult)
