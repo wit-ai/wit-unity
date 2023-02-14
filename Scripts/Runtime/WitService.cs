@@ -297,7 +297,10 @@ namespace Meta.WitAi
             _receivedTranscription = false;
 
             // Handle option setup
-            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
+            if (!_isActive)
+            {
+                VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
+            }
 
             if (ShouldSendMicData)
             {
@@ -712,11 +715,14 @@ namespace Meta.WitAi
             // Perform until no requests remain
             while (_queuedRequests.Count > 0)
             {
-                // Wait a frame to space out requests
-                yield return new WaitForEndOfFrame();
+                // Wait a frame if requests are running
+                if (_transmitRequests.Count > 0)
+                {
+                    yield return new WaitForEndOfFrame();
+                }
 
                 // If space, dequeue & request
-                if (_transmitRequests.Count < RuntimeConfiguration.maxConcurrentRequests)
+                if (_transmitRequests.Count < RuntimeConfiguration.maxConcurrentRequests || RuntimeConfiguration.maxConcurrentRequests <= 0)
                 {
                     // Dequeue
                     WitRequest request = _queuedRequests.First();
