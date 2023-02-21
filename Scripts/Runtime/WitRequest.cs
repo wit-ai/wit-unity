@@ -90,8 +90,9 @@ namespace Meta.WitAi
 
         public byte[] postData;
         public string postContentType;
-        public string requestIdOverride;
         public string forcedHttpMethodType = null;
+
+        public WitRequestOptions Options { get; private set; }
 
         private object streamLock = new object();
 
@@ -255,6 +256,28 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Set options directly & setup response callback
+        /// </summary>
+        /// <param name="newOptions">New response options</param>
+        public void SetOptions(WitRequestOptions newOptions)
+        {
+            // Ignore once started
+            if (responseStarted)
+            {
+                return;
+            }
+
+            // Set options
+            Options = newOptions;
+
+            // Apply on response if possible
+            if (Options != null && Options.onResponse != null)
+            {
+                onResponse += Options.onResponse;
+            }
+        }
+
+        /// <summary>
         /// Key value pair that is sent as a query param in the Wit.ai uri
         /// </summary>
         public class QueryParam
@@ -304,9 +327,9 @@ namespace Meta.WitAi
 
             // Get headers
             Dictionary<string, string> headers = WitVRequest.GetWitHeaders(configuration, isServerAuthRequired);
-            if (!string.IsNullOrEmpty(requestIdOverride))
+            if (!string.IsNullOrEmpty(Options?.RequestId))
             {
-                headers[WitConstants.HEADER_REQUEST_ID] = requestIdOverride;
+                headers[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
             }
             // Append additional headers
             if (onProvideCustomHeaders != null)

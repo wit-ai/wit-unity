@@ -306,7 +306,7 @@ namespace Meta.WitAi
                 _recordingRequest = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, _dynamicEntityProviders)
                     : RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, _dynamicEntityProviders);
                 _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
-                _recordingRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.requestIdOverride,
+                _recordingRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
                     _recordingRequest.audioEncoding);
                 _recordingRequest.onPartialTranscription = OnPartialTranscription;
                 _recordingRequest.onFullTranscription = OnFullTranscription;
@@ -516,10 +516,12 @@ namespace Meta.WitAi
             {
                 return;
             }
-            if (!string.Equals(_recordingRequest.requestIdOverride, audioDurationTracker.GetRequestId()))
+
+            string requestId = _recordingRequest.Options?.RequestId;
+            if (!string.Equals(requestId, audioDurationTracker.GetRequestId()))
             {
                 VLog.W($"Mismatch in request IDs when finalizing AudioDurationTracker. " +
-                       $"Expected {_recordingRequest.requestIdOverride} but got {audioDurationTracker.GetRequestId()}");
+                       $"Expected {requestId} but got {audioDurationTracker.GetRequestId()}");
                 return;
             }
             audioDurationTracker.FinalizeAudio();
