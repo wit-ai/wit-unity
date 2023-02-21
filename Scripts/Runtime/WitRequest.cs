@@ -467,7 +467,6 @@ namespace Meta.WitAi
         {
             isActive = false;
             responseStarted = false;
-            responseData = WitResponseNode.Parse(response);
             StatusCode = string.IsNullOrEmpty(error) ? 200 : 500;
             statusDescription = error;
             var responseString = response;
@@ -509,14 +508,14 @@ namespace Meta.WitAi
             // Clean up the current request if it is still going
             if (null != _request)
             {
-                VLog.D("Request timed out after " + (DateTime.UtcNow - requestStartTime));
+                VLog.W("Request timed out after " + (DateTime.UtcNow - requestStartTime));
                 _request.Abort();
             }
 
             isActive = false;
 
             // Close any open stream resources and clean up streaming state flags
-            CloseRequestStream();
+            CloseActiveStream();
 
             // Update the error state to indicate the request timed out
             StatusCode = ERROR_CODE_TIMEOUT;
@@ -527,7 +526,6 @@ namespace Meta.WitAi
                 onResponse = null;
             });
         }
-
         private void HandleResponse(IAsyncResult asyncResult)
         {
             string stringResponse = "";
@@ -571,8 +569,13 @@ namespace Meta.WitAi
                 }
                 catch (WebException e)
                 {
-                    // Ensure was not cancelled
-                    if (e.Status != WebExceptionStatus.RequestCanceled)
+                    // Set to abort code if cancelled
+                    if (e.Status == WebExceptionStatus.RequestCanceled)
+                    {
+                        StatusCode = ERROR_CODE_ABORTED;
+                    }
+                    // Otherwise an error
+                    else
                     {
                         VLog.E(
                             $"{e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
@@ -594,49 +597,49 @@ namespace Meta.WitAi
             }
             catch (WebException e)
             {
-                StatusCode = (int) e.Status;
-                if (e.Response is HttpWebResponse errorResponse)
+                if (e.Status != WebExceptionStatus.RequestCanceled)
                 {
-                    StatusCode = (int) errorResponse.StatusCode;
-                    try
+                    StatusCode = (int) e.Status;
+                    if (e.Response is HttpWebResponse errorResponse)
                     {
-                        using (var errorStream = errorResponse.GetResponseStream())
+                        StatusCode = (int) errorResponse.StatusCode;
+                        try
                         {
-                            if (errorStream != null)
+                            using (var errorStream = errorResponse.GetResponseStream())
                             {
-                                using (StreamReader errorReader = new StreamReader(errorStream))
+                                if (errorStream != null)
                                 {
-                                    stringResponse = errorReader.ReadToEnd();
-                                    if (!string.IsNullOrEmpty(stringResponse))
+                                    using (StreamReader errorReader = new StreamReader(errorStream))
                                     {
-                                        MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                                        ProcessStringResponses(stringResponse);
+                                        stringResponse = errorReader.ReadToEnd();
+                                        if (!string.IsNullOrEmpty(stringResponse))
+                                        {
+                                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
+                                            ProcessStringResponses(stringResponse);
+                                        }
                                     }
                                 }
                             }
                         }
+                        catch (JSONParseException)
+                        {
+                            // Response wasn't encoded error, ignore it.
+                        }
+                        catch (Exception errorResponseError)
+                        {
+                            // We've already caught that there is an error, we'll ignore any errors
+                            // reading error response data and use the status/original error for validation
+                            VLog.W(errorResponseError);
+                        }
                     }
-                    catch (JSONParseException)
-                    {
-                        // Response wasn't encoded error, ignore it.
-                    }
-                    catch (Exception errorResponseError)
-                    {
-                        // We've already caught that there is an error, we'll ignore any errors
-                        // reading error response data and use the status/original error for validation
-                        VLog.W(errorResponseError);
-                    }
-                }
 
-                statusDescription = e.Message;
-                if (e.Status != WebExceptionStatus.RequestCanceled)
-                {
+                    statusDescription = e.Message;
                     VLog.E(
                         $"Http Request Failed [{StatusCode}]: {e.Message}\nRequest Stack Trace:\n{callingStackTrace}\nResponse Stack Trace:\n{e.StackTrace}");
-                }
-                if (e.Response != null)
-                {
-                    e.Response.Close();
+                    if (e.Response != null)
+                    {
+                        e.Response.Close();
+                    }
                 }
             }
             finally
@@ -663,26 +666,29 @@ namespace Meta.WitAi
                     stringResponse);
             }
 
-            // Timeout response called separately
-            if (StatusCode != ERROR_CODE_TIMEOUT)
+            // Complete
+            responseStarted = false;
+
+            // Final response
+            string transcription = responseData?.GetTranscription();
+            SafeInvoke((r) =>
             {
                 // Final transcription if not already sent
-                string transcription = responseData.GetTranscription();
                 if (!string.IsNullOrEmpty(transcription) && !responseData.GetIsFinal())
                 {
-                    MainThreadCallback(() => onFullTranscription?.Invoke(transcription));
+                    onFullTranscription?.Invoke(transcription);
                 }
+                // Get results
                 // Send partial if not previously sent
                 if (!responseData.HasResponse())
                 {
-                    SafeInvoke(onPartialResponse);
+                    onPartialResponse?.Invoke(this);
                 }
-                // Final response
-                SafeInvoke(onResponse);
-            }
 
-            // Complete
-            responseStarted = false;
+                // Call response
+                onResponse?.Invoke(r);
+                onResponse = null;
+            });
         }
 
         private void CheckStatus()
@@ -827,7 +833,11 @@ namespace Meta.WitAi
                 {
                     StatusCode = (int) e.Status;
                     statusDescription = e.Message;
-                    SafeInvoke(onResponse);
+                    SafeInvoke((r) =>
+                    {
+                        onResponse?.Invoke(r);
+                        onResponse = null;
+                    });
                 }
             }
         }
@@ -863,6 +873,7 @@ namespace Meta.WitAi
             // If status code has already been set to aborted we don't need to attempt to abort again.
             if (StatusCode == ERROR_CODE_ABORTED) return;
 
+            isActive = false;
             if (StatusCode == 0)
             {
                 StatusCode = ERROR_CODE_ABORTED;
@@ -873,7 +884,14 @@ namespace Meta.WitAi
                 _request.Abort();
                 _request = null;
             }
-            isActive = false;
+
+            // Call abort response
+            if (StatusCode == ERROR_CODE_ABORTED)
+            {
+                VLog.D($"WitRequest Aborted\nReason: {reason}\nHas Response: {(onResponse != null)}");
+                onResponse?.Invoke(this);
+                onResponse = null;
+            }
         }
 
         /// <summary>
