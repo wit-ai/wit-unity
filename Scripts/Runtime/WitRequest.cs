@@ -929,6 +929,14 @@ namespace Meta.WitAi
             {
                 return;
             }
+
+            // Ignore with no data writing to Post stream
+            if (length == 0)
+            {
+                VLog.D($"No data write to post stream.");
+                return;
+            }
+
             try
             {
                 _writeStream.Write(data, offset, length);
