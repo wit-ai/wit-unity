@@ -9,6 +9,9 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+#if DEBUG_SAMPLE
+using System.IO;
+#endif
 using System.Linq;
 using System.Net;
 using Meta.WitAi.Configuration;
@@ -303,19 +306,9 @@ namespace Meta.WitAi
 
             if (ShouldSendMicData)
             {
-                _recordingRequest = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, _dynamicEntityProviders)
+                var request = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, _dynamicEntityProviders)
                     : RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, _dynamicEntityProviders);
-                _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
-                _recordingRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
-                    _recordingRequest.audioEncoding);
-                _recordingRequest.onPartialTranscription = OnPartialTranscription;
-                _recordingRequest.onFullTranscription = OnFullTranscription;
-                _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
-                _recordingRequest.onPartialResponse += HandlePartialResult;
-                _recordingRequest.onResponse += HandleResult;
-                VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
-                _recordingRequest.Request();
-                _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
+                ExecuteRequest(request);
             }
 
             if (!_isActive)
@@ -335,6 +328,23 @@ namespace Meta.WitAi
             _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider
                 .RuntimeConfiguration.preferredActivationOffset);
         }
+
+        public void ExecuteRequest(WitRequest recordingRequest)
+        {
+            _recordingRequest = recordingRequest;
+            _recordingRequest.audioEncoding = AudioBuffer.Instance.AudioEncoding;
+            _recordingRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
+                _recordingRequest.audioEncoding);
+            _recordingRequest.onPartialTranscription = OnPartialTranscription;
+            _recordingRequest.onFullTranscription = OnFullTranscription;
+            _recordingRequest.onInputStreamReady = r => OnWitReadyForData();
+            _recordingRequest.onPartialResponse += HandlePartialResult;
+            _recordingRequest.onResponse += HandleResult;
+            VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
+            _recordingRequest.Request();
+            _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
+        }
+
         /// <summary>
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
