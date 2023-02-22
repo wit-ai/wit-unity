@@ -789,6 +789,8 @@ namespace Meta.WitAi
         // Safely handles
         private void ProcessStringResponse(string stringResponse)
         {
+            onRawResponse?.Invoke(stringResponse);
+
             // Decode full response
             responseData = WitResponseNode.Parse(stringResponse);
 
