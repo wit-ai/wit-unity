@@ -312,9 +312,9 @@ namespace Meta.WitAi.Data.Configuration
         internal static void ImportData(this WitConfiguration configuration, Manifest manifest, VRequest.RequestCompleteDelegate<bool> onComplete = null, bool suppressErrors = false)
         {
             var manifestData = GetSanitizedManifestString(manifest);
-            var request = configuration.CreateImportDataRequest(GetAppName(configuration), manifestData);
+            var request = new WitSyncVRequest(configuration);
             VLog.SuppressErrors = suppressErrors;
-            PerformRequest(request, (error) =>
+            request.RequestImportData(manifestData, (error, responseData) =>
             {
                 VLog.SuppressErrors = false;
                 if (!string.IsNullOrEmpty(error))
