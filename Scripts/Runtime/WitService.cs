@@ -527,6 +527,12 @@ namespace Meta.WitAi
                 return;
             }
 
+            if (null == _recordingRequest)
+            {
+                VLog.W($"Missing request for recording.");
+                return;
+            }
+
             string requestId = _recordingRequest.Options?.RequestId;
             if (!string.Equals(requestId, audioDurationTracker.GetRequestId()))
             {
