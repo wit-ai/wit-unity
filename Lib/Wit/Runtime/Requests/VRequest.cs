@@ -548,7 +548,7 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         /// <returns></returns>
-        public bool RequestJson<TData>(Uri uri,
+        public bool RequestJsonGet<TData>(Uri uri,
             RequestCompleteDelegate<TData> onComplete,
             RequestProgressDelegate onProgress = null)
         {
@@ -564,7 +564,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJson<TData>(Uri uri, byte[] postData,
+        public bool RequestJsonPost<TData>(Uri uri, byte[] postData,
             RequestCompleteDelegate<TData> onComplete,
             RequestProgressDelegate onProgress = null)
         {
@@ -575,9 +575,8 @@ namespace Meta.WitAi.Requests
             unityRequest.disposeDownloadHandlerOnDispose = true;
             return RequestJson(unityRequest, onComplete, onProgress);
         }
-
         /// <summary>
-        /// Performs a json request by posting byte data
+        /// Performs a json request by posting a string
         /// </summary>
         /// <param name="uri">The uri to be requested</param>
         /// <param name="postText">The string to be uploaded</param>
@@ -585,11 +584,47 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJson<TData>(Uri uri, string postText,
+        public bool RequestJsonPost<TData>(Uri uri, string postText,
             RequestCompleteDelegate<TData> onComplete,
             RequestProgressDelegate onProgress = null)
         {
-            return RequestJson(uri, Encoding.UTF8.GetBytes(postText), onComplete, onProgress);
+            return RequestJsonPost(uri, Encoding.UTF8.GetBytes(postText), onComplete, onProgress);
+        }
+
+        /// <summary>
+        /// Performs a json put request with byte data
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="putData">The data to be uploaded</param>
+        /// <param name="onComplete">The delegate upon completion</param>
+        /// <param name="onProgress">The data upload progress</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>False if the request cannot be performed</returns>
+        public bool RequestJsonPut<TData>(Uri uri, byte[] putData,
+            RequestCompleteDelegate<TData> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
+            unityRequest.uploadHandler = new UploadHandlerRaw(putData);
+            unityRequest.disposeUploadHandlerOnDispose = true;
+            unityRequest.downloadHandler = new DownloadHandlerBuffer();
+            unityRequest.disposeDownloadHandlerOnDispose = true;
+            return RequestJson(unityRequest, onComplete, onProgress);
+        }
+        /// <summary>
+        /// Performs a json put request with a string
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="putText">The string to be uploaded</param>
+        /// <param name="onComplete">The delegate upon completion</param>
+        /// <param name="onProgress">The data upload progress</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>False if the request cannot be performed</returns>
+        public bool RequestJsonPut<TData>(Uri uri, string putText,
+            RequestCompleteDelegate<TData> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            return RequestJsonPut(uri, Encoding.UTF8.GetBytes(putText), onComplete, onProgress);
         }
         #endregion
 

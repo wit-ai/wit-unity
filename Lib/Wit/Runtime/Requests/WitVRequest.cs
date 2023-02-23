@@ -92,13 +92,12 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <param name="onProgress">The download progress</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestWit<TData>(string uriEndpoint,
+        public bool RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams,
             RequestCompleteDelegate<TData> onComplete,
             RequestProgressDelegate onProgress = null)
         {
-            Uri uri = GetUri(uriEndpoint, uriParams);
-            return RequestJson(uri, onComplete, onProgress);
+            return RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete, onProgress);
         }
 
         /// <summary>
@@ -110,13 +109,29 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <param name="onProgress">The upload progress</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestWit<TData>(string uriEndpoint,
+        public bool RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
             RequestCompleteDelegate<TData> onComplete,
             RequestProgressDelegate onProgress = null)
         {
-            Uri uri = GetUri(uriEndpoint, uriParams);
-            return RequestJson(uri, postText, onComplete, onProgress);
+            return RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete, onProgress);
+        }
+
+        /// <summary>
+        /// Put text request to a wit endpoint
+        /// </summary>
+        /// <param name="uriEndpoint">Endpoint name</param>
+        /// <param name="uriParams">Endpoint url parameters</param>
+        /// <param name="putText">Text to be sent to endpoint</param>
+        /// <param name="onComplete">The delegate upon completion</param>
+        /// <param name="onProgress">The upload progress</param>
+        /// <returns>False if the request cannot be performed</returns>
+        public bool RequestWitPut<TData>(string uriEndpoint,
+            Dictionary<string, string> uriParams, string putText,
+            RequestCompleteDelegate<TData> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            return RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete, onProgress);
         }
         #endregion
 

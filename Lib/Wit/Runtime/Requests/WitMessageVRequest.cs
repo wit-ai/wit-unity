@@ -42,8 +42,8 @@ namespace Meta.WitAi.Requests
             Dictionary<string, string> uriParams = new Dictionary<string, string>();
             uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = text;
 
-            // Perform json request
-            return RequestWit(WitConstants.ENDPOINT_MESSAGE, uriParams, onComplete, onProgress);
+            // Perform get request
+            return RequestWitGet(WitConstants.ENDPOINT_MESSAGE, uriParams, onComplete, onProgress);
         }
     }
 }

@@ -693,7 +693,7 @@ namespace Meta.WitAi.Json
 
             // Warn & incode to string
             log.AppendLine($"\tJson Serializer cannot serialize: {inType}");
-            return new WitResponseData(inObject.ToString());
+            return inObject == null ? null : new WitResponseData(inObject.ToString());
         }
         // Serialize a property using property attributes
         private static void SerializeProperty(WitResponseClass newClass, Type propertyType, string propertyName,
