@@ -575,11 +575,6 @@ namespace Meta.WitAi
                             }
                             reader.Close();
                         }
-                        // Call raw response for final
-                        if (stringResponse.Length > 0 && null != responseData)
-                        {
-                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-                        }
                         responseStream.Close();
                     }
                 }
@@ -637,7 +632,6 @@ namespace Meta.WitAi
                                         stringResponse = errorReader.ReadToEnd();
                                         if (!string.IsNullOrEmpty(stringResponse))
                                         {
-                                            MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
                                             ProcessStringResponses(stringResponse);
                                         }
                                     }
@@ -701,7 +695,6 @@ namespace Meta.WitAi
                 {
                     onFullTranscription?.Invoke(transcription);
                 }
-                // Get results
                 // Send partial if not previously sent
                 if (!responseData.HasResponse())
                 {
@@ -789,7 +782,11 @@ namespace Meta.WitAi
         // Safely handles
         private void ProcessStringResponse(string stringResponse)
         {
-            onRawResponse?.Invoke(stringResponse);
+            // Call raw response for every received response
+            if (!string.IsNullOrEmpty(stringResponse))
+            {
+                MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
+            }
 
             // Decode full response
             responseData = WitResponseNode.Parse(stringResponse);
