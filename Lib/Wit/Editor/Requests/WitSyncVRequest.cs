@@ -148,7 +148,7 @@ namespace Meta.WitAi.Requests
             queryParams["name"] = Configuration.GetApplicationId();
             queryParams["private"] = "true";
             queryParams["action_graph"] = "true";
-            return RequestWitPost(WitConstants.ENDPOINT_IMPORT, queryParams, json, onComplete);
+            return RequestWitPost(WitEditorConstants.ENDPOINT_IMPORT, queryParams, json, onComplete);
         }
     }
 }

@@ -26,6 +26,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS_VOICES = "voices";
 
         // Add endpoints
+        public const string ENDPOINT_IMPORT = "import";
         public const string ENDPOINT_ADD_INTENT = "intents";
         public const string ENDPOINT_ADD_ENTITY = "entities";
         public const string ENDPOINT_ADD_ENTITY_KEYWORD = "keywords";

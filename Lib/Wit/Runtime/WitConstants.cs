@@ -49,10 +49,6 @@ namespace Meta.WitAi
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";
 
-        // Runtime Sync Endpoints
-        public const string ENDPOINT_IMPORT = "import";
-        public const string ENDPOINT_INTENTS = "intents";
-
         // Reusable constants
         public const string CANCEL_ERROR = "Cancelled";
     }
