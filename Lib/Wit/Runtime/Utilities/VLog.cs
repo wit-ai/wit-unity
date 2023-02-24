@@ -161,22 +161,10 @@ namespace Meta.WitAi
         private static string GetCallingCategory()
         {
             // Get stack trace method
-            string path = new StackTrace()?.GetFrame(3)?.GetMethod().DeclaringType.FullName;
+            string path = new StackTrace()?.GetFrame(3)?.GetMethod().DeclaringType.Name;
             if (string.IsNullOrEmpty(path))
             {
-                return "VLog";
-            }
-            // Remove additional data
-            int index = path.LastIndexOf(".");
-            if (index != -1)
-            {
-                path = path.Substring(index + 1);
-            }
-            // Remove additional data
-            index = path.IndexOf("+<");
-            if (index != -1)
-            {
-                path = path.Substring(0, index);
+                return "NoStacktrace";
             }
             // Return path
             return path;
