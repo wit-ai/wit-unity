@@ -41,24 +41,18 @@ namespace Meta.WitAi.Requests
         {
             switch (witAudioType)
             {
-                // PCM
-                case TTSWitAudioType.PCM:
-                    return AudioType.UNKNOWN;
                 #if OGG_SUPPORT
-                // OGG
                 case TTSWitAudioType.OGG:
                     return AudioType.OGGVORBIS;
                 #endif
-                // MP3 & WAV
                 case TTSWitAudioType.MPEG:
+                    return AudioType.MPEG;
                 case TTSWitAudioType.WAV:
+                    return AudioType.WAV;
+                // Custom implementation
+                case TTSWitAudioType.PCM:
                 default:
-                    AudioType result = AudioType.UNKNOWN;
-                    if (!AudioType.TryParse(witAudioType.ToString().ToUpper(), out result))
-                    {
-                        VLog.W($"Cannot parse audio type\nAudio Type: {witAudioType}");
-                    }
-                    return result;
+                    return AudioType.UNKNOWN;
             }
         }
         // Get audio type

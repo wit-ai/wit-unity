@@ -160,7 +160,7 @@ namespace Meta.WitAi.TTS.Integrations
                 clipData.clip = clip;
                 // Call on complete
                 OnStreamComplete(clipData, error);
-            }, clipData.audioType, false, 0f, 0f, (progress) => clipData.loadProgress = progress);
+            }, clipData.audioType, true, 0f, 0, (progress) => clipData.loadProgress = progress);
             if (canPerform)
             {
                 _streamRequests[clipData.clipID] = request;

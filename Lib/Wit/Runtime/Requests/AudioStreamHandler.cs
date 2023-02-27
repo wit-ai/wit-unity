@@ -68,6 +68,9 @@ namespace Meta.WitAi.Requests
         // Generate
         public AudioStreamHandler(AudioStreamData streamData) : base()
         {
+            // Ensure size is > 0
+            streamData.ClipChunkSize = Mathf.Max(1, streamData.ClipChunkSize);
+
             // Apply parameters
             StreamData = streamData;
 

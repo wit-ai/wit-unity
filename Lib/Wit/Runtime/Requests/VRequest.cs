@@ -38,7 +38,7 @@ namespace Meta.WitAi.Requests
         /// Will only start new requests if there are less than this number
         /// If <= 0, then all requests will run immediately
         /// </summary>
-        public static int MaxConcurrentRequests = 2;
+        public static int MaxConcurrentRequests = 3;
         // Currently transmitting requests
         private static int _requestCount = 0;
 
@@ -767,7 +767,16 @@ namespace Meta.WitAi.Requests
             float audioStreamReadyDuration, float audioStreamChunkLength,
             RequestProgressDelegate onProgress = null)
         {
-            return RequestAudioClip(UnityWebRequest.Get(uri), onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
+            UnityWebRequest audioRequest;
+            if (audioType == AudioType.UNKNOWN)
+            {
+                audioRequest = UnityWebRequest.Get(uri);
+            }
+            else
+            {
+                audioRequest = UnityWebRequestMultimedia.GetAudioClip(uri, audioType);
+            }
+            return RequestAudioClip(audioRequest, onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
         }
         #endregion
     }
