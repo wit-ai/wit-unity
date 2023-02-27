@@ -303,9 +303,9 @@ namespace Meta.WitAi.Requests
             }
 
             // Decode remaining samples
-            for (int i = startOffset; i < newSamples.Length - startOffset; i++)
+            for (int i = 0; i < newSamples.Length - startOffset; i++)
             {
-                newSamples[i] = DecodeSamplePCM16(chunkData, startOffset + i * 2);
+                newSamples[startOffset + i] = DecodeSamplePCM16(chunkData, startOffset + i * 2);
             }
 
             // Return samples
@@ -314,7 +314,7 @@ namespace Meta.WitAi.Requests
         // Decode a single sample
         private static float DecodeSamplePCM16(byte[] rawData, int index)
         {
-            return Mathf.Clamp((float)BitConverter.ToInt16(rawData, index) / Int16.MaxValue, -1f, 1f);
+            return (float)BitConverter.ToInt16(rawData, index) / (float)Int16.MaxValue;
         }
         #endregion
     }
