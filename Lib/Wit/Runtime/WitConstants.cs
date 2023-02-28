@@ -51,5 +51,38 @@ namespace Meta.WitAi
 
         // Reusable constants
         public const string CANCEL_ERROR = "Cancelled";
+        public const string CANCEL_MESSAGE_DEFAULT = "Request was cancelled.";
+        public const string CANCEL_MESSAGE_PRE_SEND = "Request cancelled prior to transmission";
+
+        /// <summary>
+        /// Error code thrown when an exception is caught during processing or
+        /// some other general error happens that is not an error from the server
+        /// </summary>
+        public const int ERROR_CODE_GENERAL = -1;
+        /// <summary>
+        /// Error code returned when no configuration is defined
+        /// </summary>
+        public const int ERROR_CODE_NO_CONFIGURATION = -2;
+        /// <summary>
+        /// Error code returned when the client token has not been set in the
+        /// Wit configuration.
+        /// </summary>
+        public const int ERROR_CODE_NO_CLIENT_TOKEN = -3;
+        /// <summary>
+        /// No data was returned from the server.
+        /// </summary>
+        public const int ERROR_CODE_NO_DATA_FROM_SERVER = -4;
+        /// <summary>
+        /// Invalid data was returned from the server.
+        /// </summary>
+        public const int ERROR_CODE_INVALID_DATA_FROM_SERVER = -5;
+        /// <summary>
+        /// Request was aborted
+        /// </summary>
+        public const int ERROR_CODE_ABORTED = -6;
+        /// <summary>
+        /// Request to the server timeed out
+        /// </summary>
+        public const int ERROR_CODE_TIMEOUT = -7;
     }
 }
