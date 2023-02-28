@@ -27,13 +27,6 @@ namespace Meta.WitAi.Requests
             RequestCompleteDelegate<WitResponseNode> onComplete,
             RequestProgressDelegate onProgress = null)
         {
-            // Error without text
-            if (string.IsNullOrEmpty(text))
-            {
-                onComplete?.Invoke(null, "Cannot perform message request without text");
-                return false;
-            }
-
             // Add text to uri parameters
             Dictionary<string, string> uriParams = new Dictionary<string, string>();
             uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = text;

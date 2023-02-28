@@ -8,12 +8,16 @@
 
 using System;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Events
 {
+    [Serializable]
+    public class VoiceServiceRequestEvent : UnityEvent<VoiceServiceRequest> { }
+
     [Serializable]
     public class VoiceEvents : EventRegistry, ITranscriptionEvent, IAudioInputEvents
     {
@@ -63,6 +67,14 @@ namespace Meta.WitAi.Events
         [EventCategory(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
         [Tooltip("Called on initial wit request option set for custom overrides")]
         public WitRequestOptionsEvent OnRequestOptionSetup = new WitRequestOptionsEvent();
+
+        /// <summary>
+        /// "Called when a text request is created.  This occurs as soon
+        /// as a text activation is called successfully.
+        /// </summary>
+        [EventCategory(EVENT_CATEGORY_ACTIVATION_DEACTIVATION_EVENTS)]
+        [Tooltip("Called when a text request is created.  This occurs as soon as a text activation is called successfully.")]
+        public VoiceServiceRequestEvent OnTextRequestInitialized = new VoiceServiceRequestEvent();
 
         /// <summary>
         /// Called when a request is created. This happens at the beginning of

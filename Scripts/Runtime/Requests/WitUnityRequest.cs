@@ -43,7 +43,7 @@ namespace Meta.WitAi.Requests
             // Generate a message WitVRequest
             if (InputType == NLPRequestInputType.Text)
             {
-                _request = new WitMessageVRequest(Configuration);
+                _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
             }
             // Generate an audio WitVRequest
             else if (InputType == NLPRequestInputType.Audio)

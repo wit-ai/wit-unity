@@ -14,11 +14,13 @@ using System.IO;
 #endif
 using System.Linq;
 using System.Net;
+using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Requests;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
@@ -49,7 +51,6 @@ namespace Meta.WitAi
 
         // Parallel Requests
         private HashSet<WitRequest> _transmitRequests = new HashSet<WitRequest>();
-        private HashSet<WitRequest> _queuedRequests = new HashSet<WitRequest>();
         private Coroutine _queueHandler;
 
         // Wit configuration provider
@@ -80,10 +81,6 @@ namespace Meta.WitAi
                     return true;
                 }
                 if (null != _transmitRequests && _transmitRequests.Count > 0)
-                {
-                    return true;
-                }
-                if (null != _queuedRequests && _queuedRequests.Count > 0)
                 {
                     return true;
                 }
@@ -167,6 +164,15 @@ namespace Meta.WitAi
 
         protected bool ShouldSendMicData => RuntimeConfiguration.sendAudioToWit ||
                                                   null == _activeTranscriptionProvider;
+
+        /// <summary>
+        /// Check configuration, client access token & app id
+        /// </summary>
+        public virtual bool IsConfigurationValid()
+        {
+            return RuntimeConfiguration.witConfiguration != null &&
+                   !string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.GetClientAccessToken());
+        }
 
         #region LIFECYCLE
         // Find transcription provider & Mic
@@ -344,36 +350,28 @@ namespace Meta.WitAi
             _recordingRequest.Request();
             _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
         }
+        #endregion
 
+        #region TEXT REQUESTS
         /// <summary>
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
-        /// <param name="text">Text to be processed</param>
-        /// <param name="requestOptions">Additional options</param>
-        public void Activate(string text) => Activate(text, new WitRequestOptions());
-        public void Activate(string text, WitRequestOptions requestOptions)
+        /// <param name="text">Text to be used for NLU processing</param>
+        /// <param name="requestOptions">Additional options such as dynamic entities</param>
+        /// <param name="requestEvents">Events specific to the request's lifecycle</param>
+        public VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
+            // Call an error without a valid configuration
             if (!IsConfigurationValid())
             {
                 VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
-                return;
+                return null;
             }
 
-            // Handle option setup
-            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
-
-            // Send transcription
-            SendTranscription(text, requestOptions);
+            // Return request
+            return new WitUnityRequest(Configuration, NLPRequestInputType.Text, requestOptions, requestEvents);
         }
-        /// <summary>
-        /// Check configuration, client access token & app id
-        /// </summary>
-        public virtual bool IsConfigurationValid()
-        {
-            return RuntimeConfiguration.witConfiguration != null &&
-                   !string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.GetClientAccessToken());
-        }
-        #endregion
+        #endregion TEXT REQUESTS
 
         #region RECORDING
         // Stop any recording
@@ -558,7 +556,6 @@ namespace Meta.WitAi
         /// </summary>
         public void DeactivateAndAbortRequest()
         {
-            VoiceEvents?.OnAborting.Invoke();
             DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, true);
         }
         // Stop listening if time expires
@@ -598,7 +595,6 @@ namespace Meta.WitAi
             // Abort transmitting requests
             if (abort)
             {
-                AbortQueue();
                 HashSet<WitRequest> requests = _transmitRequests;
                 _transmitRequests = new HashSet<WitRequest>();
                 foreach (var request in requests)
@@ -653,88 +649,9 @@ namespace Meta.WitAi
             // Send transcription
             if (RuntimeConfiguration.customTranscriptionProvider)
             {
-                SendTranscription(transcription, new WitRequestOptions());
+                // TODO: Fix analysis with transcription provider
+                //Activate(transcription);
             }
-        }
-        private void SendTranscription(string transcription, WitRequestOptions requestOptions)
-        {
-            // Create request & add response delegate
-            WitRequest request = RuntimeConfiguration.witConfiguration.CreateMessageRequest(transcription, requestOptions, _dynamicEntityProviders);
-            request.onResponse += HandleResult;
-            request.onPartialResponse += HandlePartialResult;
-
-            // Call on create delegate
-            VoiceEvents?.OnRequestCreated?.Invoke(request);
-
-            // Add to queue
-            AddToQueue(request);
-        }
-        #endregion
-
-        #region QUEUE
-        // Add request to wait queue
-        private void AddToQueue(WitRequest request)
-        {
-            // In editor or disabled, do not queue
-            if (!Application.isPlaying || RuntimeConfiguration.maxConcurrentRequests <= 0)
-            {
-                _transmitRequests.Add(request);
-                request.Request();
-                return;
-            }
-
-            // Add to queue
-            _queuedRequests.Add(request);
-
-            // If not running, begin
-            if (_queueHandler == null)
-            {
-                _queueHandler = StartCoroutine(PerformDequeue());
-            }
-        }
-        // Abort request
-        private void AbortQueue()
-        {
-            if (_queueHandler != null)
-            {
-                StopCoroutine(_queueHandler);
-                _queueHandler = null;
-            }
-            HashSet<WitRequest> requests = _queuedRequests;
-            _queuedRequests = new HashSet<WitRequest>();
-            foreach (var request in requests)
-            {
-                DeactivateWitRequest(request, true);
-                HandleResult(request);
-            }
-        }
-        // Coroutine used to send transcriptions when possible
-        private IEnumerator PerformDequeue()
-        {
-            // Perform until no requests remain
-            while (_queuedRequests.Count > 0)
-            {
-                // Wait a frame to space out requests if multiple requests exist
-                if (_transmitRequests.Count > 0)
-                {
-                    yield return new WaitForEndOfFrame();
-                }
-
-                // If space, dequeue & request
-                if (_transmitRequests.Count < RuntimeConfiguration.maxConcurrentRequests || RuntimeConfiguration.maxConcurrentRequests <= 0)
-                {
-                    // Dequeue
-                    WitRequest request = _queuedRequests.First();
-                    _queuedRequests.Remove(request);
-
-                    // Transmit
-                    _transmitRequests.Add(request);
-                    request.Request();
-                }
-            }
-
-            // Kill coroutine
-            _queueHandler = null;
         }
         #endregion
 

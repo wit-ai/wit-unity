@@ -7,7 +7,9 @@
  */
 
 using Meta.WitAi.Configuration;
+using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Requests;
 using UnityEngine;
 
 namespace Meta.WitAi
@@ -25,8 +27,8 @@ namespace Meta.WitAi
         private WitService witService;
 
         #region Voice Service Properties
-        public override bool Active => null != witService && witService.Active;
-        public override bool IsRequestActive => null != witService && witService.IsRequestActive;
+        public override bool Active => base.Active || (null != witService && witService.Active);
+        public override bool IsRequestActive => base.IsRequestActive || (null != witService && witService.IsRequestActive);
         public override ITranscriptionProvider TranscriptionProvider
         {
             get => witService.TranscriptionProvider;
@@ -39,9 +41,32 @@ namespace Meta.WitAi
 
         #region Voice Service Methods
 
-        public override void Activate(string text, WitRequestOptions requestOptions)
+        protected override string GetSendError()
         {
-            witService.Activate(text, requestOptions);
+            if (!RuntimeConfiguration?.witConfiguration)
+            {
+                return $"Your {GetType().Name} \"{gameObject.name}\" does not have a wit configuration assigned.   Voice interactions are not possible without the configuration.";
+            }
+            if (string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.GetClientAccessToken()))
+            {
+                return $"The configuration \"{RuntimeConfiguration.witConfiguration.name}\" is not setup with a valid client access token.   Voice interactions are not possible without the token.";
+            }
+            return base.GetSendError();
+        }
+
+        protected override string GetActivateAudioError()
+        {
+            if (!AudioBuffer.Instance.IsInputAvailable)
+            {
+                return "No Microphone(s)/recording devices found.  You will be unable to capture audio on this device.";
+            }
+            return string.Empty;
+        }
+
+        protected override VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions,
+            VoiceServiceRequestEvents requestEvents)
+        {
+            return witService.GetTextRequest(requestOptions, requestEvents);
         }
 
         public override void Activate(WitRequestOptions options)
@@ -61,6 +86,7 @@ namespace Meta.WitAi
 
         public override void DeactivateAndAbortRequest()
         {
+            base.DeactivateAndAbortRequest();
             witService.DeactivateAndAbortRequest();
         }
 
