@@ -9,24 +9,25 @@
 using System.Text;
 using System.Collections.Generic;
 using System.Web;
+using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Data.Entities;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 
 namespace Meta.WitAi
 {
     public static class WitRequestFactory
     {
-        private static WitRequest.QueryParam QueryParam(string key, string value)
+        private static VoiceServiceRequestOptions.QueryParam QueryParam(string key, string value)
         {
-            return new WitRequest.QueryParam() { key = key, value = value };
+            return new VoiceServiceRequestOptions.QueryParam() { key = key, value = value };
         }
 
         private static void HandleWitRequestOptions(WitRequestOptions requestOptions,
-            IDynamicEntitiesProvider[] additionalEntityProviders,
-            List<WitRequest.QueryParam> queryParams)
+            IDynamicEntitiesProvider[] additionalEntityProviders)
         {
             WitResponseClass entities = new WitResponseClass();
             bool hasEntities = false;
@@ -56,7 +57,7 @@ namespace Meta.WitAi
             {
                 if (!string.IsNullOrEmpty(requestOptions.tag))
                 {
-                    queryParams.Add(QueryParam("tag", requestOptions.tag));
+                    requestOptions.QueryParams["tag"] = requestOptions.tag;
                 }
 
                 if (null != requestOptions.dynamicEntities)
@@ -71,7 +72,7 @@ namespace Meta.WitAi
 
             if (hasEntities)
             {
-                queryParams.Add(QueryParam("entities", entities.ToString()));
+                requestOptions.QueryParams["entities"] = entities.ToString();
             }
         }
 
@@ -112,35 +113,36 @@ namespace Meta.WitAi
             }
         }
 
+        private static WitRequestOptions GetSetupOptions(WitRequestOptions newOptions,
+            IDynamicEntitiesProvider[] additionalDynamicEntities)
+        {
+            // Generate options exist
+            WitRequestOptions options = newOptions != null ? newOptions : new WitRequestOptions();
+            // Set intents
+            if (-1 != options.nBestIntents)
+            {
+                options.QueryParams["n"] = options.nBestIntents.ToString();
+            }
+            // Set dynamic entities
+            HandleWitRequestOptions(options, additionalDynamicEntities);
+            // Set tag
+            if (!string.IsNullOrEmpty(options.tag))
+            {
+                options.QueryParams["tag"] = options.tag;
+            }
+            return options;
+        }
+
         /// <summary>
         /// Creates a message request that will process a query string with NLU
         /// </summary>
         /// <param name="config"></param>
         /// <param name="query">Text string to process with the NLU</param>
         /// <returns></returns>
-        public static WitRequest CreateMessageRequest(this WitConfiguration config, string query, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalDynamicEntities = null)
+        public static VoiceServiceRequest CreateMessageRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
-            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>
-            {
-                QueryParam("q", query)
-            };
-
-            if (null != requestOptions && -1 != requestOptions.nBestIntents)
-            {
-                queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
-            }
-
-            HandleWitRequestOptions(requestOptions, additionalDynamicEntities, queryParams);
-
-            if (null != requestOptions && !string.IsNullOrEmpty(requestOptions.tag))
-            {
-                queryParams.Add(QueryParam("tag", requestOptions.tag));
-            }
-
-            var path = WitEndpointConfig.GetEndpointConfig(config).Message;
-            WitRequest request = new WitRequest(config, path, queryParams.ToArray());
-            request.SetOptions(requestOptions);
-            return request;
+            var options = GetSetupOptions(requestOptions, additionalEntityProviders);
+            return new WitUnityRequest(config, NLPRequestInputType.Text, options, requestEvents);
         }
 
         /// <summary>
@@ -148,21 +150,11 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static WitRequest CreateSpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, IDynamicEntitiesProvider[] additionalEntityProviders = null)
+        public static WitRequest CreateSpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
-            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
-
-            if (null != requestOptions && -1 != requestOptions.nBestIntents)
-            {
-                queryParams.Add(QueryParam("n", requestOptions.nBestIntents.ToString()));
-            }
-
-            HandleWitRequestOptions(requestOptions, additionalEntityProviders, queryParams);
-
+            var options = GetSetupOptions(requestOptions, additionalEntityProviders);
             var path = WitEndpointConfig.GetEndpointConfig(config).Speech;
-            WitRequest request = new WitRequest(config, path, queryParams.ToArray());
-            request.SetOptions(requestOptions);
-            return request;
+            return new WitRequest(config, path, options, requestEvents);
         }
 
         /// <summary>
@@ -171,13 +163,11 @@ namespace Meta.WitAi
         ///<param name="config"></param>
         /// <param name="requestOptions"></param>
         /// <returns>WitRequest</returns>
-        public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions)
+        public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents = null)
         {
-            List<WitRequest.QueryParam> queryParams = new List<WitRequest.QueryParam>();
-            var path = WitEndpointConfig.GetEndpointConfig(config).Dictation;
-            WitRequest request = new WitRequest(config, path, queryParams.ToArray());
-            request.SetOptions(requestOptions);
-            return request;
+            var options = GetSetupOptions(requestOptions, null);
+            var path = WitEndpointConfig.GetEndpointConfig(config).dictation;
+            return new WitRequest(config, path, options, requestEvents);
         }
     }
 }

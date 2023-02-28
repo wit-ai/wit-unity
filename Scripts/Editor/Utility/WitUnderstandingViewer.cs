@@ -13,6 +13,7 @@ using Meta.WitAi.CallbackHandlers;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -38,7 +39,7 @@ namespace Meta.WitAi.Windows
         private TimeSpan _requestLength;
         private string _status;
         private int _responseCode;
-        private WitRequest _request;
+        private VoiceServiceRequest _request;
         private int _savePopup;
         private GUIStyle _hamburgerButton;
 
@@ -342,9 +343,9 @@ namespace Meta.WitAi.Windows
                 _status = WitTexts.Texts.UnderstandingViewerLoadingLabel;
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
-                _request = witConfiguration.CreateMessageRequest(_utterance, new WitRequestOptions());
-                _request.onResponse += (r) => OnResponse(r?.ResponseData);
-                _request.Request();
+                _request = witConfiguration.CreateMessageRequest(new WitRequestOptions(), new VoiceServiceRequestEvents());
+                _request.Events.OnComplete.AddListener(OnRequestComplete);
+                _request.Send(_utterance);
             }
         }
 
@@ -357,20 +358,27 @@ namespace Meta.WitAi.Windows
             }
         }
 
-        private void OnResponse(WitResponseNode ResponseData)
+        private void OnResponse(WitResponseNode responseNode)
         {
-            _responseCode = _request.StatusCode;
-            if (null != ResponseData)
+            if (responseNode != null)
             {
-                ShowResponse(ResponseData, false);
+                ShowResponse(responseNode, false);
             }
-            else if (!string.IsNullOrEmpty(_request.StatusDescription))
+        }
+        private void OnRequestComplete(VoiceServiceRequest request)
+        {
+            _responseCode = request.StatusCode;
+            if (null != request.ResponseData)
             {
-                _responseText = _request.StatusDescription;
+                ShowResponse(request.ResponseData, false);
+            }
+            else if (!string.IsNullOrEmpty(request.Results.Message))
+            {
+                _responseText = request.Results.Message;
             }
             else
             {
-                _responseText = "No response. Status: " + _request.StatusCode;
+                _responseText = "No response. Status: " + request.StatusCode;
             }
         }
 

@@ -366,41 +366,6 @@ namespace Meta.WitAi.Data.Configuration
                 onRefreshComplete?.Invoke(s);
             });
         }
-
-        // Get application name
-        private static string GetAppName(WitConfiguration configuration)
-        {
-            if (configuration != null)
-            {
-                return configuration.GetApplicationInfo().name;
-            }
-            return string.Empty;
-        }
-
-        private static void PerformRequest(WitRequest request, Action<string> onComplete)
-        {
-            // Add response delegate
-            request.onResponse += (response) =>
-            {
-                // Get status
-                int status = response.StatusCode;
-                // HTTP failed
-                if (status != 200)
-                {
-                    onComplete($"Request Failed [{status}]: {response.StatusDescription}\nPath: {request}");
-                }
-                // Success
-                else
-                {
-                    VLog.D($"Request Success\nType: {request}");
-                    onComplete?.Invoke("");
-                }
-            };
-
-            // Perform
-            VLog.D($"Request Begin\nType: {request}");
-            request.Request();
-        }
         #endregion
     }
 }

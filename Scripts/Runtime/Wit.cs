@@ -69,14 +69,18 @@ namespace Meta.WitAi
             return witService.GetTextRequest(requestOptions, requestEvents);
         }
 
-        public override void Activate(WitRequestOptions options)
+        public override VoiceServiceRequest Activate(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            witService.Activate(options);
+            VoiceServiceRequest request = witService.Activate(requestOptions, requestEvents);
+            OnAudioRequestCreated(request);
+            return request;
         }
 
-        public override void ActivateImmediately(WitRequestOptions options)
+        public override VoiceServiceRequest ActivateImmediately(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            witService.ActivateImmediately(options);
+            VoiceServiceRequest request = witService.ActivateImmediately(requestOptions, requestEvents);
+            OnAudioRequestCreated(request);
+            return request;
         }
 
         public override void Deactivate()
