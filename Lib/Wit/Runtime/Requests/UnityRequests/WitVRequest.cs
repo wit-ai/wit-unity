@@ -30,10 +30,14 @@ namespace Meta.WitAi.Requests
         public static event Action<StringBuilder> OnProvideCustomUserAgent;
 
         /// <summary>
+        /// The unique identifier used by Wit to track requests
+        /// </summary>
+        public string RequestId { get; private set; }
+
+        /// <summary>
         /// The configuration used for voice requests
         /// </summary>
-        public IWitRequestConfiguration Configuration => _configuration;
-        private IWitRequestConfiguration _configuration;
+        public IWitRequestConfiguration Configuration { get; private set; }
 
         // Whether or not the configuration's server token should be used
         private bool _useServerToken;
@@ -42,23 +46,29 @@ namespace Meta.WitAi.Requests
         /// Constructor that takes in a configuration interface
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
+        /// <param name="requestId">A unique identifier that can be used to track the request</param>
         /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
-        public WitVRequest(IWitRequestConfiguration configuration, bool useServerToken = false)
+        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false)
         {
-            _configuration = configuration;
+            Configuration = configuration;
+            RequestId = requestId;
+            if (string.IsNullOrEmpty(RequestId))
+            {
+                RequestId = Guid.NewGuid().ToString();
+            }
             _useServerToken = useServerToken;
         }
 
         // Return uri
         public Uri GetUri(string path, Dictionary<string, string> queryParams = null)
         {
-            return GetWitUri(_configuration, path, queryParams);
+            return GetWitUri(Configuration, path, queryParams);
         }
 
         // Gets wit headers using static header generation
         protected override Dictionary<string, string> GetHeaders()
         {
-            return GetWitHeaders(_configuration, _useServerToken);
+            return GetWitHeaders(Configuration, RequestId, _useServerToken);
         }
 
         #region REQUESTS
@@ -74,7 +84,7 @@ namespace Meta.WitAi.Requests
             RequestProgressDelegate onProgress = null)
         {
             // Ensure configuration is set
-            if (_configuration == null)
+            if (Configuration == null)
             {
                 onComplete?.Invoke(unityRequest, "Cannot perform a request without a Wit configuration");
                 return false;
@@ -179,13 +189,13 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Obtain headers to be used with every wit service
         /// </summary>
-        public static Dictionary<string, string> GetWitHeaders(IWitRequestConfiguration configuration, bool useServerToken)
+        public static Dictionary<string, string> GetWitHeaders(IWitRequestConfiguration configuration, string requestId, bool useServerToken)
         {
             // Get headers
             Dictionary<string, string> headers = new Dictionary<string, string>();
 
             // Set request id
-            headers[WitConstants.HEADER_REQUEST_ID] = Guid.NewGuid().ToString();
+            headers[WitConstants.HEADER_REQUEST_ID] = string.IsNullOrEmpty(requestId) ? Guid.NewGuid().ToString() : requestId;
             // Set User-Agent
             headers[WitConstants.HEADER_USERAGENT] = GetUserAgentHeader(configuration);
             // Set authorization

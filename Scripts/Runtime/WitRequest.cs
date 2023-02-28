@@ -326,11 +326,7 @@ namespace Meta.WitAi
             }
 
             // Get headers
-            Dictionary<string, string> headers = WitVRequest.GetWitHeaders(configuration, isServerAuthRequired);
-            if (!string.IsNullOrEmpty(Options?.RequestId))
-            {
-                headers[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
-            }
+            Dictionary<string, string> headers = WitVRequest.GetWitHeaders(configuration, Options?.RequestId, isServerAuthRequired);
             // Append additional headers
             if (onProvideCustomHeaders != null)
             {

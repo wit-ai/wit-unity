@@ -31,7 +31,7 @@ namespace Meta.WitAi.Requests
     public class WitTTSVRequest : WitVRequest
     {
         // Constructor
-        public WitTTSVRequest(IWitRequestConfiguration configuration) : base(configuration, false)
+        public WitTTSVRequest(IWitRequestConfiguration configuration) : base(configuration, null, false)
         {
             Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
         }

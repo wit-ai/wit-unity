@@ -16,7 +16,7 @@ namespace Meta.WitAi.Requests
     internal class WitInfoVRequest : WitVRequest, IWitInfoVRequest
     {
         // Constructor
-        public WitInfoVRequest(IWitRequestConfiguration configuration, bool useServerToken = true) : base(configuration, useServerToken) {}
+        public WitInfoVRequest(IWitRequestConfiguration configuration, bool useServerToken = true) : base(configuration, null, useServerToken) {}
 
         // Get all apps & return the current app info
         public bool RequestAppId(RequestCompleteDelegate<string> onComplete,

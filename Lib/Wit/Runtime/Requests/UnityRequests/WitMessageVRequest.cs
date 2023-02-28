@@ -6,19 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using System.Text;
 using System.Collections.Generic;
 using Meta.WitAi.Json;
-using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
 {
     internal class WitMessageVRequest : WitVRequest
     {
         // Constructor
-        public WitMessageVRequest(IWitRequestConfiguration configuration) : base(configuration, false) {}
+        public WitMessageVRequest(IWitRequestConfiguration configuration, string requestId) : base(configuration, requestId, false) {}
 
         /// <summary>
         /// Voice message request

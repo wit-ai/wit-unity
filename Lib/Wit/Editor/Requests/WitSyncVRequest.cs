@@ -7,19 +7,16 @@
  */
 
 using System;
-using System.Text;
 using System.Collections.Generic;
-using System.Linq;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
-using UnityEditor;
 
 namespace Meta.WitAi.Requests
 {
     internal class WitSyncVRequest : WitVRequest, IWitSyncVRequest
     {
         // Constructor
-        public WitSyncVRequest(IWitRequestConfiguration configuration) : base(configuration, true) {}
+        public WitSyncVRequest(IWitRequestConfiguration configuration) : base(configuration, null, true) {}
 
         /// <summary>
         /// Submits an intent to be added to the current wit app
