@@ -27,6 +27,7 @@ namespace Meta.WitAi.Requests
     public interface IVRequestStreamable
     {
         bool IsStreamReady { get; }
+        bool IsStreamComplete { get; }
     }
 
     /// <summary>
@@ -148,8 +149,8 @@ namespace Meta.WitAi.Requests
         // Perform update
         protected virtual IEnumerator PerformUpdate()
         {
-            // Continue while request exists
-            while (_request != null && !_request.isDone)
+            // Continue while request exists & is not complete
+            while (_request != null && (!_request.isDone || (_streamHandler != null && !_streamHandler.IsStreamComplete && string.IsNullOrEmpty(_request.error))))
             {
                 // Wait
                 yield return null;
@@ -690,67 +691,78 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform default request operation
-            return Request(unityRequest,
-                (response, error) =>
+            return Request(unityRequest, (response, error) => OnRequestAudioReady(response, error, onClipReady), onProgress);
+        }
+        // Called on audio ready to be decoded
+        private void OnRequestAudioReady(UnityWebRequest request, string error,
+            RequestCompleteDelegate<AudioClip> onClipReady)
+        {
+            // Check error
+            if (!string.IsNullOrEmpty(error))
+            {
+                onClipReady?.Invoke(null, error);
+                return;
+            }
+
+            // Get clip
+            AudioClip clip = null;
+            try
+            {
+                // Default audio clip handler
+                if (request.downloadHandler is DownloadHandlerAudioClip)
                 {
-                    // Request error
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        onClipReady?.Invoke(null, error);
-                        return;
-                    }
+                    clip = DownloadHandlerAudioClip.GetContent(request);
+                }
+                // Custom Raw PCM streaming
+                else if (request.downloadHandler is AudioStreamHandler downloadHandlerRaw)
+                {
+                    clip = downloadHandlerRaw.Clip;
+                }
+                // Buffer assumes Raw PCM
+                else if (request.downloadHandler is DownloadHandlerBuffer)
+                {
+                    AudioStreamHandler.GetClipFromRawDataAsync(request.downloadHandler.data, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CLIP,
+                        WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, (c, e) => OnRequestAudioDecoded(c, e, onClipReady));
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                // Failed to decode audio clip
+                onClipReady?.Invoke(null, $"Failed to decode audio clip\n{e}");
+                return;
+            }
 
-                    // Get clip
-                    AudioClip clip = null;
-                    try
-                    {
-                        // Default audio clip handler
-                        if (response.downloadHandler is DownloadHandlerAudioClip)
-                        {
-                            clip = DownloadHandlerAudioClip.GetContent(response);
-                        }
-                        // Custom Raw PCM streaming
-                        else if (unityRequest.downloadHandler is AudioStreamHandler downloadHandlerRaw)
-                        {
-                            clip = downloadHandlerRaw.Clip;
-                        }
-                        // Buffer assumes Raw PCM
-                        else if (response.downloadHandler is DownloadHandlerBuffer)
-                        {
-                            clip = AudioStreamHandler.GetClipFromRawData(response.downloadHandler.data, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CLIP, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        // Failed to decode audio clip
-                        onClipReady?.Invoke(null, $"Failed to decode audio clip\n{e}");
-                        return;
-                    }
+            // Finalize decode
+            OnRequestAudioDecoded(clip, error, onClipReady);
+        }
+        // Callback on audio decode completion
+        private void OnRequestAudioDecoded(AudioClip clip, string error,
+            RequestCompleteDelegate<AudioClip> onClipReady)
+        {
+            // Check error
+            if (!string.IsNullOrEmpty(error))
+            {
+                onClipReady?.Invoke(null, error);
+                return;
+            }
 
-                    // Invalid clip
-                    if (clip != null && (clip.channels == 0 || clip.length == 0f))
-                    {
-                        clip.DestroySafely();
-                        clip = null;
-                    }
+            // Invalid clip
+            if (clip != null && (clip.channels == 0 || clip.length == 0f))
+            {
+                clip.DestroySafely();
+                clip = null;
+            }
 
-                    // Clip is still missing
-                    if (clip == null)
-                    {
-                        onClipReady?.Invoke(null, "Failed to decode empty audio clip");
-                        return;
-                    }
+            // Clip is still missing
+            if (clip == null)
+            {
+                onClipReady?.Invoke(null, "Failed to decode empty audio clip");
+                return;
+            }
 
-                    // Set clip name to audio url name
-                    string newName = Path.GetFileNameWithoutExtension(unityRequest.uri.ToString());
-                    if (!string.IsNullOrEmpty(newName))
-                    {
-                        clip.name = newName;
-                    }
-
-                    // Return clip
-                    onClipReady?.Invoke(clip, string.Empty);
-                }, onProgress);
+            // Return clip
+            onClipReady?.Invoke(clip, string.Empty);
         }
 
         /// <summary>

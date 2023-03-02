@@ -81,7 +81,7 @@ namespace Meta.WitAi.Json
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
             ThreadUtility.PerformInBackground(
                 () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonString, customConverters, suppressWarnings),
-                (success) => onComplete?.Invoke(instance, success));
+                (success, error) => onComplete?.Invoke(instance, success));
         }
         /// <summary>
         /// Generate a default instance, deserialize and return async
@@ -91,7 +91,7 @@ namespace Meta.WitAi.Json
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
             ThreadUtility.PerformInBackground(
                 () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonToken, customConverters, suppressWarnings),
-                (success) => onComplete?.Invoke(instance, success));
+                (success, error) => onComplete?.Invoke(instance, success));
         }
         /// <summary>
         /// Generate a default instance, deserialize and return
