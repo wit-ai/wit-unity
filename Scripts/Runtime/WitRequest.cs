@@ -100,12 +100,15 @@ namespace Meta.WitAi
         /// <summary>
         /// Returns true if the request is being performed
         /// </summary>
-        public bool IsRequestStreamActive => IsActive && _isRequestStreamActive;
-        private bool _isRequestStreamActive;
+        public bool IsRequestStreamActive => IsActive || IsInputStreamReady;
         /// <summary>
         /// Returns true if the response had begun
         /// </summary>
         public bool HasResponseStarted { get; private set; }
+        /// <summary>
+        /// Returns true if the response had begun
+        /// </summary>
+        public bool IsInputStreamReady { get; private set; }
 
         public AudioDurationTracker audioDurationTracker;
         private HttpWebRequest _request;
@@ -373,10 +376,8 @@ namespace Meta.WitAi
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
 
-#if UNITY_EDITOR
-            // Required for batch mode & to ensure connections close properly
+            // Off to not wait for a response indefinitely
             _request.KeepAlive = false;
-#endif
 
             // Configure request method, content type & chunked
             if (forcedHttpMethodType != null)
@@ -474,24 +475,30 @@ namespace Meta.WitAi
                 // Get write stream
                 var stream = _request.EndGetRequestStream(ar);
 
-                // No input stream callback found
-                if (null == onInputStreamReady)
-                {
-                    MainThreadCallback(() =>
-                    {
-                        StatusCode = WitConstants.ERROR_CODE_GENERAL;
-                        StatusDescription = "No input stream delegate found";
-                        HandleNlpResponse(null, StatusDescription);
-                    });
-                    return;
-                }
-
                 // Got write stream
-                _isRequestStreamActive = true;
-                _writeStream = stream;
+                _bytesWritten = 0;
 
-                // Request stream is ready to go
-                MainThreadCallback(() => onInputStreamReady(this));
+                // Immediate post
+                if (postData != null && postData.Length > 0)
+                {
+                    Debug.Log("Wrote directly");
+                    _bytesWritten += postData.Length;
+                    stream.Write(postData, 0, postData.Length);
+                    stream.Close();
+                }
+                // Wait for input stream
+                else
+                {
+                    // Request stream is ready to go
+                    IsInputStreamReady = true;
+                    _writeStream = stream;
+
+                    // Call input stream ready delegate
+                    if (onInputStreamReady != null)
+                    {
+                        MainThreadCallback(() => onInputStreamReady(this));
+                    }
+                }
             }
             catch (WebException e)
             {
@@ -502,12 +509,17 @@ namespace Meta.WitAi
                 }
                 // Write stream error
                 _stackTrace = e.StackTrace;
+                StatusCode = (int) e.Status;
+                StatusDescription = e.Message;
+                VLog.W(e);
                 MainThreadCallback(() =>
                 {
-                    StatusCode = (int) e.Status;
-                    StatusDescription = e.Message;
                     HandleNlpResponse(null, StatusDescription);
                 });
+            }
+            catch (Exception e)
+            {
+                VLog.E(e);
             }
         }
 
@@ -523,7 +535,7 @@ namespace Meta.WitAi
         public void Write(byte[] data, int offset, int length)
         {
             // Ignore without write stream
-            if (_writeStream == null || State != VoiceRequestState.Transmitting)
+            if (!IsInputStreamReady || data == null || length == 0)
             {
                 return;
             }
@@ -586,10 +598,10 @@ namespace Meta.WitAi
                     // Get stream
                     using (var responseStream = httpResponse.GetResponseStream())
                     {
-                        using (StreamReader reader = new StreamReader(responseStream))
+                        using (var responseReader = new StreamReader(responseStream))
                         {
                             string chunk;
-                            while ((chunk = ReadToDelimiter(reader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
+                            while ((chunk = ReadToDelimiter(responseReader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
                             {
                                 stringResponse = chunk;
                                 ProcessStringResponse(stringResponse);
@@ -603,6 +615,7 @@ namespace Meta.WitAi
                 _stackTrace = e.StackTrace;
                 StatusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
                 StatusDescription = "Server returned invalid data.";
+                VLog.W(e);
             }
             catch (WebException e)
             {
@@ -612,6 +625,7 @@ namespace Meta.WitAi
                     _stackTrace = e.StackTrace;
                     StatusCode = (int) e.Status;
                     StatusDescription = e.Message;
+                    VLog.W(e);
 
                     // Attempt additional parse
                     if (e.Response is HttpWebResponse errorResponse)
@@ -653,6 +667,7 @@ namespace Meta.WitAi
                 _stackTrace = e.StackTrace;
                 StatusCode = WitConstants.ERROR_CODE_GENERAL;
                 StatusDescription = e.Message;
+                VLog.W(e);
             }
 
             // Close request stream if possible
@@ -676,40 +691,40 @@ namespace Meta.WitAi
                         StatusCode = WitConstants.ERROR_CODE_GENERAL;
                     }
                     // Set error & description
-                    StatusDescription = $"Error: {code}\n{error}";
+                    if (string.IsNullOrEmpty(StatusDescription))
+                    {
+                        StatusDescription = $"Error: {code}\n{error}";
+                    }
                 }
             }
             // Invalid response
             else if (StatusCode == (int)HttpStatusCode.OK)
             {
                 StatusCode = WitConstants.ERROR_CODE_NO_DATA_FROM_SERVER;
-                StatusDescription = "Server did not return a valid json response.";
+                StatusDescription = $"Server did not return a valid json response.";
                 #if UNITY_EDITOR
                 StatusDescription += $"\nActual Response\n{stringResponse}";
                 #endif
             }
 
-            // Complete
+            // Done
+            HasResponseStarted = false;
+
             MainThreadCallback(() =>
             {
-                // Done
-                HasResponseStarted = false;
-
-                // Final transcription if not already sent
-                string transcription = _lastResponseData.GetTranscription();
-                if (!string.IsNullOrEmpty(transcription) && !_lastResponseData.GetIsFinal())
+                // Call final transcription
+                if (!string.IsNullOrEmpty(Transcription) && !_lastResponseData.GetIsFinal())
                 {
-                    onFullTranscription?.Invoke(transcription);
+                    onFullTranscription?.Invoke(Transcription);
                 }
                 // Send partial if not previously sent
                 if (!_lastResponseData.HasResponse())
                 {
                     ResponseData = _lastResponseData;
-                    onPartialResponse?.Invoke(this);
                 }
 
                 // Call completion delegate
-                HandleNlpResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : StatusDescription);
+                HandleNlpResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : $"{StatusDescription}\n\nStackTrace:\n{_stackTrace}\n\n");
             });
         }
         // Check status
@@ -808,11 +823,7 @@ namespace Meta.WitAi
                 if (!string.IsNullOrEmpty(transcription) && (!hasResponse || isFinal))
                 {
                     Transcription = transcription;
-                    if (!isFinal)
-                    {
-                        onPartialTranscription?.Invoke(transcription);
-                    }
-                    else
+                    if (isFinal)
                     {
                         onFullTranscription?.Invoke(transcription);
                     }
@@ -822,7 +833,6 @@ namespace Meta.WitAi
                 if (hasResponse)
                 {
                     ResponseData = responseNode;
-                    onPartialResponse?.Invoke(this);
                 }
             });
         }
@@ -855,13 +865,9 @@ namespace Meta.WitAi
         // Close stream
         private void CloseActiveStream()
         {
-            if (!_isRequestStreamActive)
-            {
-                return;
-            }
+            IsInputStreamReady = false;
             lock (_streamLock)
             {
-                _isRequestStreamActive = false;
                 if (null != _writeStream)
                 {
                     try
@@ -957,14 +963,12 @@ namespace Meta.WitAi
                     result();
                 }
             }
-
-            // Done performing
             _performer = null;
         }
-        // Check actions
+        // If active or performing callbacks
         private bool HasMainThreadCallbacks()
         {
-            return IsActive || _isRequestStreamActive || HasResponseStarted || _mainThreadCallbacks.Count > 0;
+            return IsActive || _mainThreadCallbacks.Count > 0;
         }
         #endregion
     }

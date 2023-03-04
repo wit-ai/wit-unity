@@ -469,7 +469,7 @@ namespace Meta.WitAi
                 _minSampleByteCount = _lastSampleMarker.RingBuffer.Capacity;
             }
 
-            if (IsRequestActive && _recordingRequest.State == VoiceRequestState.Transmitting && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
+            if (_recordingRequest.State == VoiceRequestState.Transmitting && _recordingRequest.IsInputStreamReady && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
             {
                 // Flush the marker since the last read and send it to Wit
                 _lastSampleMarker.ReadIntoWriters(

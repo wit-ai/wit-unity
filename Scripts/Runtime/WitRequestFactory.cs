@@ -166,7 +166,7 @@ namespace Meta.WitAi
         public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents = null)
         {
             var options = GetSetupOptions(requestOptions, null);
-            var path = WitEndpointConfig.GetEndpointConfig(config).dictation;
+            var path = WitEndpointConfig.GetEndpointConfig(config).Dictation;
             return new WitRequest(config, path, options, requestEvents);
         }
     }
