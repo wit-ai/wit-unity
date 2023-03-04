@@ -92,7 +92,8 @@ namespace Meta.WitAi.Requests
             // Send message request
             if (_request is WitMessageVRequest messageRequest)
             {
-                messageRequest.MessageRequest(Options.Text, HandleNlpResponse, SetDownloadProgress);
+                var endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Message;
+                messageRequest.MessageRequest(endpoint, Options.Text, HandleNlpResponse, SetDownloadProgress);
             }
         }
         /// <summary>

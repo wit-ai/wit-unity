@@ -25,6 +25,18 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool MessageRequest(string text,
             RequestCompleteDelegate<WitResponseNode> onComplete,
+            RequestProgressDelegate onProgress = null) =>
+            MessageRequest(WitConstants.ENDPOINT_MESSAGE, text, onComplete, onProgress);
+        /// <summary>
+        /// Voice message request
+        /// </summary>
+        /// <param name="endpoint">Endpoint to be used for possible overrides</param>
+        /// <param name="text">Text to be sent to message endpoint</param>
+        /// <param name="onComplete">The delegate upon completion</param>
+        /// <param name="onProgress">The text download progress</param>
+        /// <returns>False if the request cannot be performed</returns>
+        public bool MessageRequest(string endpoint, string text,
+            RequestCompleteDelegate<WitResponseNode> onComplete,
             RequestProgressDelegate onProgress = null)
         {
             // Add text to uri parameters
@@ -32,7 +44,7 @@ namespace Meta.WitAi.Requests
             uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = text;
 
             // Perform get request
-            return RequestWitGet(WitConstants.ENDPOINT_MESSAGE, uriParams, onComplete, onProgress);
+            return RequestWitGet(endpoint, uriParams, onComplete, onProgress);
         }
     }
 }
