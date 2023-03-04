@@ -297,10 +297,11 @@ namespace Meta.WitAi
             Dictionary<string, string> queryParams = new Dictionary<string, string>(Options.QueryParams);
 
             // Get uri using override
-            Func<UriBuilder, Uri> provideUri = (uriBuilder) => onCustomizeUri == null ? uriBuilder.Uri : onCustomizeUri(uriBuilder);
-            WitVRequest.OnProvideCustomUri += provideUri;
             var uri = WitVRequest.GetWitUri(Configuration, Path, queryParams);
-            WitVRequest.OnProvideCustomUri -= provideUri;
+            if (onCustomizeUri != null)
+            {
+                uri = onCustomizeUri(new UriBuilder(uri));
+            }
 
             // Return uri
             return uri;

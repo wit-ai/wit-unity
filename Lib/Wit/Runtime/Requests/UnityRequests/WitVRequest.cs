@@ -19,7 +19,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Uri customization delegate
         /// </summary>
-        public static event Func<UriBuilder, Uri> OnProvideCustomUri;
+        public static event Func<UriBuilder, UriBuilder> OnProvideCustomUri;
         /// <summary>
         /// Header customization delegate
         /// </summary>
@@ -177,9 +177,9 @@ namespace Meta.WitAi.Requests
             // Return custom uri
             if (OnProvideCustomUri != null)
             {
-                foreach (Func<UriBuilder, Uri> del in OnProvideCustomUri.GetInvocationList())
+                foreach (Func<UriBuilder, UriBuilder> del in OnProvideCustomUri.GetInvocationList())
                 {
-                    uriBuilder = new UriBuilder(del(uriBuilder));
+                    uriBuilder = del(uriBuilder);
                 }
             }
 
