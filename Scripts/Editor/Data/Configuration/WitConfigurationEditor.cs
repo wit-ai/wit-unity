@@ -206,7 +206,6 @@ namespace Meta.WitAi.Windows
 
                     if (isServerTokenValid && !_disableServerPost)
                     {
-                        GUILayout.FlexibleSpace();
                         GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
                         if (WitEditorUI.LayoutTextButton("Sync Entities"))
                         {
