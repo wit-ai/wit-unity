@@ -33,5 +33,8 @@ namespace Meta.WitAi
         public const string ENDPOINT_ADD_ENTITY_KEYWORD_SYNONYMS = "synonyms";
         public const string ENDPOINT_ADD_TRAIT = "traits";
         public const string ENDPOINT_ADD_TRAIT_VALUE = "values";
+
+        // Export endpoints
+        public const string ENDPOINT_EXPORT = "export";
     }
 }

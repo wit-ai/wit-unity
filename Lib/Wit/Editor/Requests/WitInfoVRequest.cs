@@ -6,7 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using UnityEngine;
 using Meta.WitAi.Json;
 using Meta.WitAi.Data.Info;
@@ -66,6 +69,30 @@ namespace Meta.WitAi.Requests
         {
             return RequestWitGet<WitAppInfo>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}", null,
                 onComplete, onProgress);
+        }
+
+        // Get the export url to download
+        public bool RequestAppExportInfo(string applicationId,
+            RequestCompleteDelegate<WitExportInfo> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            return RequestWitGet<WitExportInfo>(WitEditorConstants.ENDPOINT_EXPORT, null,
+                onComplete, onProgress);
+        }
+        // Download the export zip from provided url
+        public bool RequestAppExportZip(string downloadUri,
+            RequestCompleteDelegate<ZipArchive> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            var uri = new Uri(downloadUri);
+            var request = new VRequest();
+            request.RequestFile(uri, (result,error) =>
+            {
+                var zip = new ZipArchive(new MemoryStream(result));
+                onComplete(zip, null);
+
+            }, null);
+            return true;
         }
 
         // Obtain client app token
