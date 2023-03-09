@@ -116,6 +116,9 @@ namespace Meta.WitAi
             [Header("Configuration Voice Texts")]
             public string ConfigurationVoicesTabLabel;
             public string ConfigurationVoicesMissingLabel;
+            [Header("Configuration Composer Texts")]
+            public string ConfigurationComposerTabLabel;
+            public string ConfigurationComposerMissingLabel;
         }
 
         // Wit
