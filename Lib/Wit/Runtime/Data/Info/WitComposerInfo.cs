@@ -17,6 +17,7 @@ namespace Meta.WitAi.Data.Info
         /// <summary>
         /// List of canvases in the app
         /// </summary>
+        [Tooltip("Represents the canvas of the given name.")]
         public ComposerGraph[] canvases;
     }
 
@@ -25,22 +26,24 @@ namespace Meta.WitAi.Data.Info
     {
         [HideInInspector]
         public string canvasName;
-        public ContextMapVariables contextMapVariables;
+        [Tooltip("The Context Map is a JSON object passed between the the server and the client. \n" +
+            "These are the JSON paths and values present in the Context Map on the server")]
+        public ContextMapPaths contextMap;
     }
 
     /// <summary>
-    /// Names and values of variables referenced in a context map.
+    /// Path names and values of variables referenced in a context map.
     /// </summary>
     [Serializable]
-    public struct ContextMapVariables
+    public struct ContextMapPaths
     {
-        [Tooltip("The variable names and their values which are written by the Composer graph for the client to read. Composer does not read these values.")]
+        [Tooltip("The path names and values which are written by the Composer graph for the client to read. Composer does not read these values.")]
         public ComposerGraphValues[] server;
 
-        [Tooltip("The variable names which the Composer graph references but does not modify. The values of these must be supplied by the client.")]
+        [Tooltip("The path names which the Composer graph references but does not modify. The values of these must be supplied by the client.")]
         public string[] client;
 
-        [Tooltip("The variables which the Composer graph both modifies and references. The client read or modify these.")]
+        [Tooltip("The paths which the Composer graph both modifies and references. The client read or modify these.")]
         public ComposerGraphValues[] shared;
     }
 
@@ -49,7 +52,7 @@ namespace Meta.WitAi.Data.Info
     {
         [Tooltip("The path name referenced in Composer")]
         public string path;
-        [Tooltip("The values statically assigned to this path in Composer")]
+        [Tooltip("The values assigned to this path in Composer")]
         public string[] values;
     }
 }

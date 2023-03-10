@@ -77,7 +77,7 @@ namespace Meta.WitAi.Lib
             for (var i = 0; i < jsonCanvases.Count; i++)
             {
                 var jsonNode = ExtractCanvasJson(_zip, jsonCanvases[i].Name);
-                info.canvases[i].contextMapVariables = ParseModules(jsonNode);
+                info.canvases[i].contextMap = ParseModules(jsonNode);
                 var name = Path.GetFileNameWithoutExtension(jsonCanvases[i].Name);
                 name = name.Substring(0, 1).ToUpper() + name.Substring(1, name.Length - 1); //capitalize 1st letter
                 info.canvases[i].canvasName = name;
@@ -137,7 +137,7 @@ namespace Meta.WitAi.Lib
         /// <summary>
         /// Parses the Composer Map for context map variables
         /// </summary>
-        private ContextMapVariables ParseModules(WitResponseNode json)
+        private ContextMapPaths ParseModules(WitResponseNode json)
         {
             foreach (var module in json["modules"].Childs)
             {
@@ -156,7 +156,7 @@ namespace Meta.WitAi.Lib
                         continue;
                 }
             }
-            ContextMapVariables result = ConvertToContextMapValues();
+            ContextMapPaths result = ConvertToContextMapValues();
             return result;
         }
 
@@ -279,9 +279,9 @@ namespace Meta.WitAi.Lib
         /// <summary>
         /// Takes all three lists of variables and aggregate them into a single object
         /// </summary>
-        private ContextMapVariables ConvertToContextMapValues()
+        private ContextMapPaths ConvertToContextMapValues()
         {
-            var result = new ContextMapVariables();
+            var result = new ContextMapPaths();
             result.client = (string[])_clientVariables.ToArray(typeof(string));
 
             result.server = new ComposerGraphValues[_serverVariables.Count];
