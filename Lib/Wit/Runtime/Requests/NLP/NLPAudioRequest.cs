@@ -62,12 +62,11 @@ namespace Meta.Voice
         protected abstract void ApplyResultResponseData(WitResponseNode newData);
 
         /// <summary>
-        /// Called when response data has been set
+        /// Called when response data has been updated
         /// </summary>
         protected virtual void OnResponseDataChanged()
         {
-            // Callback for response
-            RaiseEvent(Events?.OnEarlyResponse);
+            Events?.OnPartialResponse?.Invoke(ResponseData);
         }
 
         /// <summary>
@@ -91,6 +90,7 @@ namespace Meta.Voice
             else
             {
                 ResponseData = responseData;
+                Events?.OnFullResponse?.Invoke(ResponseData);
                 HandleSuccess(Results);
             }
         }

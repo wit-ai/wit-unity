@@ -6,10 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using UnityEngine.Events;
 
 namespace Meta.Voice
 {
+    [Serializable]
+    public class TranscriptionRequestEvent : UnityEvent<string> {}
+
     /// <summary>
     /// Interface for all specific audio transcription request events
     /// </summary>
@@ -44,10 +48,10 @@ namespace Meta.Voice
         /// <summary>
         /// Called on request transcription while audio is still being analyzed
         /// </summary>
-        TUnityEvent OnEarlyTranscription { get; }
+        TranscriptionRequestEvent OnPartialTranscription { get; }
         /// <summary>
         /// Called on request transcription when audio has been completely transferred
         /// </summary>
-        TUnityEvent OnFinalTranscription { get; }
+        TranscriptionRequestEvent OnFullTranscription { get; }
     }
 }

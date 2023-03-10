@@ -142,7 +142,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnTranscriptionChanged()
         {
-            RaiseEvent(Events?.OnEarlyTranscription);
+            Events?.OnPartialTranscription?.Invoke(Transcription);
         }
         #endregion TRANSCRIPTION
 
@@ -273,7 +273,7 @@ namespace Meta.Voice
         protected override void OnSuccess()
         {
             // Handle final transcription callback
-            RaiseEvent(Events?.OnFinalTranscription);
+            Events?.OnFullTranscription?.Invoke(Transcription);
             // Call success events
             base.OnSuccess();
         }

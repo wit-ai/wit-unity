@@ -7,6 +7,7 @@
  */
 
 using System;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -20,6 +21,15 @@ namespace Meta.Voice
         /// <summary>
         /// Called on request language processing while audio is still being analyzed
         /// </summary>
-        public TUnityEvent OnEarlyResponse { get; private set; } = Activator.CreateInstance<TUnityEvent>();
+        public NLPRequestResponseEvent OnPartialResponse => _onPartialResponse;
+        [Header("NLP Events")] [Tooltip("Called every time audio input changes states.")]
+        [SerializeField] private NLPRequestResponseEvent _onPartialResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
+
+        /// <summary>
+        /// Called on request language processing once completely analyzed
+        /// </summary>
+        public NLPRequestResponseEvent OnFullResponse => _onFullResponse;
+        [Tooltip("Called on request language processing once completely analyzed.")]
+        [SerializeField] private NLPRequestResponseEvent _onFullResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
     }
 }

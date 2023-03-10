@@ -298,8 +298,10 @@ namespace Meta.WitAi
 
             // Get uri using override
             var uri = WitVRequest.GetWitUri(Configuration, Path, queryParams);
+            #pragma warning disable CS0618
             if (onCustomizeUri != null)
             {
+                #pragma warning disable CS0618
                 uri = onCustomizeUri(new UriBuilder(uri));
             }
 

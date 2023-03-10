@@ -20,6 +20,6 @@ namespace Meta.Voice
         /// <summary>
         /// Called on request language processing while audio is still being analyzed
         /// </summary>
-        TUnityEvent OnEarlyResponse { get; }
+        NLPRequestResponseEvent OnPartialResponse { get; }
     }
 }

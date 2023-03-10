@@ -20,6 +20,7 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
@@ -370,9 +371,9 @@ namespace Meta.WitAi
             newRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
                 newRequest.AudioEncoding);
             newRequest.onInputStreamReady += r => OnWitReadyForData();
-            _recordingRequest.Events.OnEarlyTranscription.AddListener((r) => OnPartialTranscription(r.Transcription));
-            _recordingRequest.Events.OnFinalTranscription.AddListener((r) => OnFullTranscription(r.Transcription));
-            _recordingRequest.Events.OnEarlyResponse.AddListener(HandlePartialResult);
+            _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
+            _recordingRequest.Events.OnFullTranscription.AddListener(OnFullTranscription);
+            _recordingRequest.Events.OnPartialResponse.AddListener(HandlePartialResult);
             VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
             _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             _recordingRequest.Send();
@@ -677,11 +678,11 @@ namespace Meta.WitAi
         /// <summary>
         /// Main thread call to handle partial response callbacks
         /// </summary>
-        private void HandlePartialResult(VoiceServiceRequest request)
+        private void HandlePartialResult(WitResponseNode response)
         {
-            if (request != null && request.ResponseData != null)
+            if (response != null)
             {
-                VoiceEvents?.OnPartialResponse?.Invoke(request.ResponseData);
+                VoiceEvents?.OnPartialResponse?.Invoke(response);
             }
         }
         /// <summary>
