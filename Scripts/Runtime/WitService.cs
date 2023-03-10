@@ -695,6 +695,32 @@ namespace Meta.WitAi
             {
                 DeactivateRequest(null, false);
             }
+
+            // Handle Success
+            if (request.State == VoiceRequestState.Successful)
+            {
+                VLog.D("Request Success");
+                VoiceEvents?.OnResponse?.Invoke(request.Results.ResponseData);
+                VoiceEvents?.OnRequestCompleted?.Invoke();
+            }
+            // Handle Cancellation
+            else if (request.State == VoiceRequestState.Canceled)
+            {
+                VLog.D($"Request Canceled\nReason: {request.Results.Message}");
+                VoiceEvents?.OnCanceled?.Invoke(request.Results.Message);
+                if (!string.Equals(request.Results.Message, WitConstants.CANCEL_MESSAGE_PRE_SEND))
+                {
+                    VoiceEvents?.OnAborted?.Invoke();
+                }
+            }
+            // Handle Failure
+            else if (request.State == VoiceRequestState.Failed)
+            {
+                VLog.D($"Request Failed\nError: {request.Results.Message}");
+                VoiceEvents?.OnError?.Invoke("HTTP Error " + request.Results.StatusCode, request.Results.Message);
+                VoiceEvents?.OnRequestCompleted?.Invoke();
+            }
+
             // Remove from transmit list, missing if aborted
             if ( _transmitRequests.Contains(request))
             {

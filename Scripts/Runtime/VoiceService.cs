@@ -250,6 +250,11 @@ namespace Meta.WitAi
         /// </summary>
         protected virtual void HandleRequestResults(VoiceServiceRequest request)
         {
+            // Must perform in WitService due to Dictation
+            if (request.InputType == NLPRequestInputType.Audio)
+            {
+                return;
+            }
             // Handle Success
             if (request.State == VoiceRequestState.Successful)
             {

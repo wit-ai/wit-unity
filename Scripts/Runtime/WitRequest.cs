@@ -437,6 +437,16 @@ namespace Meta.WitAi
         // Start response
         private void StartResponse()
         {
+            if (_request == null)
+            {
+                if (StatusCode == 0)
+                {
+                    StatusCode = WitConstants.ERROR_CODE_GENERAL;
+                    StatusDescription = $"Request canceled prior to start";
+                }
+                HandleNlpResponse(null, StatusDescription);
+                return;
+            }
             var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
             ThreadPool.RegisterWaitForSingleObject(asyncResult.AsyncWaitHandle, HandleTimeoutTimer, _request, Timeout, true);
         }
