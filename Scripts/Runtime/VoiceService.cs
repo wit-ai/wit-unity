@@ -258,11 +258,13 @@ namespace Meta.WitAi
             {
                 VLog.D("Request Success");
                 VoiceEvents?.OnResponse?.Invoke(request.Results.ResponseData);
+                VoiceEvents?.OnRequestCompleted?.Invoke();
             }
             // Handle Cancellation
             else if (request.State == VoiceRequestState.Canceled)
             {
                 VLog.D($"Request Canceled\nReason: {request.Results.Message}");
+                VoiceEvents?.OnCanceled?.Invoke(request.Results.Message);
                 if (!string.Equals(request.Results.Message, WitConstants.CANCEL_MESSAGE_PRE_SEND))
                 {
                     VoiceEvents?.OnAborted?.Invoke();
@@ -273,16 +275,11 @@ namespace Meta.WitAi
             {
                 VLog.D($"Request Failed\nError: {request.Results.Message}");
                 VoiceEvents?.OnError?.Invoke("HTTP Error " + request.Results.StatusCode, request.Results.Message);
-            }
-            // Handle other
-            else
-            {
-                VLog.W($"Request Unhandled State\nState: {request.State}");
-                VoiceEvents?.OnError?.Invoke("No Data", "No data was returned from the server.");
+                VoiceEvents?.OnRequestCompleted?.Invoke();
             }
 
             // Completion delegate
-            VoiceEvents?.OnRequestCompleted?.Invoke();
+            VoiceEvents?.OnComplete?.Invoke(request);
         }
         #endregion SHARED
 

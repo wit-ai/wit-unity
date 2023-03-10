@@ -46,19 +46,24 @@ namespace Meta.WitAi.Events
         public WitErrorEvent OnError = new WitErrorEvent();
 
         [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
-        [Tooltip(
-            "Called when the activation is about to be aborted by a direct user interaction.")]
+        [Tooltip("Called when the activation is about to be aborted by a direct user interaction via DeactivateAndAbort.")]
         public UnityEvent OnAborting = new UnityEvent();
 
         [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
-        [Tooltip(
-            "Called when the activation stopped because the network request was aborted. This can be via a timeout or call to AbortActivation.")]
+        [Tooltip("Called when the activation stopped because the network request was aborted. This can be via a timeout or call to DeactivateAndAbort.")]
         public UnityEvent OnAborted = new UnityEvent();
 
         [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
-        [Tooltip(
-            "Called when a a request has completed and all response and error callbacks have fired.")]
+        [Tooltip("Called when a request has completed and all response and error callbacks have fired.  This is not called if the request was aborted.")]
         public UnityEvent OnRequestCompleted = new UnityEvent();
+
+        [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
+        [Tooltip("Called when a request has been canceled either prior to or after a request has begun transmission")]
+        public WitTranscriptionEvent OnCanceled = new WitTranscriptionEvent();
+
+        [EventCategory(EVENT_CATEGORY_ACTIVATION_RESULT_EVENTS)]
+        [Tooltip("Called when a request has been canceled, failed, or successfully completed")]
+        public VoiceServiceRequestEvent OnComplete = new VoiceServiceRequestEvent();
 
         [EventCategory(EVENT_CATEGORY_MIC_EVENTS)]
         [Tooltip("Called when the volume level of the mic input has changed")]
