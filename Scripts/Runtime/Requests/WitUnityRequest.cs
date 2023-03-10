@@ -28,6 +28,14 @@ namespace Meta.WitAi.Requests
         /// Unity request wrapper for Wit
         /// </summary>
         private readonly WitVRequest _request;
+        /// <summary>
+        /// Endpoint to be used
+        /// </summary>
+        public string Endpoint { get; set; }
+        /// <summary>
+        /// Endpoint to be used
+        /// </summary>
+        public bool ShouldPost { get; set; }
 
         /// <summary>
         /// Apply configuration
@@ -44,11 +52,15 @@ namespace Meta.WitAi.Requests
             if (InputType == NLPRequestInputType.Text)
             {
                 _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
+                Endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Message;
+                ShouldPost = false;
             }
             // Generate an audio WitVRequest
             else if (InputType == NLPRequestInputType.Audio)
             {
                 // TODO: T121060485: Add audio support to WitVRequest
+                Endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Speech;
+                ShouldPost = true;
             }
 
             // Initialized
@@ -92,8 +104,9 @@ namespace Meta.WitAi.Requests
             // Send message request
             if (_request is WitMessageVRequest messageRequest)
             {
-                var endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Message;
-                messageRequest.MessageRequest(endpoint, Options.Text, HandleNlpResponse, SetDownloadProgress);
+                messageRequest.MessageRequest(Endpoint, ShouldPost,
+                    Options.Text, Options.QueryParams,
+                    HandleNlpResponse, SetDownloadProgress);
             }
         }
         /// <summary>
