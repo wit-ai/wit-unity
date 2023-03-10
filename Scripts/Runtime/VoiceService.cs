@@ -188,6 +188,9 @@ namespace Meta.WitAi
             }
 
             // Add on completion delegates
+            textRequest.Events.OnCancel.AddListener(OnTextRequestCancel);
+            textRequest.Events.OnFailed.AddListener(OnTextRequestFailed);
+            textRequest.Events.OnSuccess.AddListener(OnTextRequestSuccess);
             textRequest.Events.OnComplete.AddListener(OnTextRequestComplete);
 
             // Add to text request queue
@@ -211,21 +214,15 @@ namespace Meta.WitAi
         protected abstract VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions,
             VoiceServiceRequestEvents requestEvents);
 
-        /// <summary>
-        /// Request completion callback used to handle cancellation, failure or success
-        /// </summary>
-        /// <param name="textRequest">The request itself</param>
-        protected virtual void OnTextRequestComplete(VoiceServiceRequest textRequest)
-        {
-            // Remove request if possible
-            if (_requests.Contains(textRequest))
-            {
-                _requests.Remove(textRequest);
-            }
-
-            // Handle results
+        // Custom methods that can be overriden for text requests & keep ordering of callbacks
+        protected virtual void OnTextRequestCancel(VoiceServiceRequest textRequest) =>
             HandleRequestResults(textRequest);
-        }
+        protected virtual void OnTextRequestFailed(VoiceServiceRequest textRequest) =>
+            HandleRequestResults(textRequest);
+        protected virtual void OnTextRequestSuccess(VoiceServiceRequest textRequest) =>
+            HandleRequestResults(textRequest);
+        protected virtual void OnTextRequestComplete(VoiceServiceRequest textRequest) =>
+            HandleRequestComplete(textRequest);
         #endregion TEXT REQUESTS
 
         #region SHARED
@@ -276,6 +273,17 @@ namespace Meta.WitAi
                 VLog.D($"Request Failed\nError: {request.Results.Message}");
                 VoiceEvents?.OnError?.Invoke("HTTP Error " + request.Results.StatusCode, request.Results.Message);
                 VoiceEvents?.OnRequestCompleted?.Invoke();
+            }
+        }
+        /// <summary>
+        /// Called after request cancellation, failure or success
+        /// </summary>
+        protected virtual void HandleRequestComplete(VoiceServiceRequest request)
+        {
+            // Remove request from requests list
+            if (_requests.Contains(request))
+            {
+                _requests.Remove(request);
             }
 
             // Completion delegate
@@ -356,23 +364,21 @@ namespace Meta.WitAi
                 OnAudioRequestComplete(audioRequest);
                 return;
             }
+            audioRequest.Events.OnCancel.AddListener(OnAudioRequestCancel);
+            audioRequest.Events.OnFailed.AddListener(OnAudioRequestFailed);
+            audioRequest.Events.OnSuccess.AddListener(OnAudioRequestSuccess);
             audioRequest.Events.OnComplete.AddListener(OnAudioRequestComplete);
             _requests.Add(audioRequest);
         }
-        /// <summary>
-        /// Request completion callback used to handle cancellation, failure or success
-        /// </summary>
-        protected virtual void OnAudioRequestComplete(VoiceServiceRequest audioRequest)
-        {
-            // Remove request if possible
-            if (_requests.Contains(audioRequest))
-            {
-                _requests.Remove(audioRequest);
-            }
-
-            // Handle results
+        // Callbacks for custom audio request handling
+        protected virtual void OnAudioRequestCancel(VoiceServiceRequest audioRequest) =>
             HandleRequestResults(audioRequest);
-        }
+        protected virtual void OnAudioRequestFailed(VoiceServiceRequest audioRequest) =>
+            HandleRequestResults(audioRequest);
+        protected virtual void OnAudioRequestSuccess(VoiceServiceRequest audioRequest) =>
+            HandleRequestResults(audioRequest);
+        protected virtual void OnAudioRequestComplete(VoiceServiceRequest audioRequest) =>
+            HandleRequestComplete(audioRequest);
         #endregion AUDIO REQUESTS
 
         /// <summary>
