@@ -205,7 +205,7 @@ namespace Meta.WitAi
                     hex = "00FF00";
                     break;
             }
-            builder.Insert(startIndex, $"<color=\"#{hex}\">");
+            builder.Insert(startIndex, $"<color=#{hex}>");
             builder.Append("</color>");
             #endif
         }
