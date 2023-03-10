@@ -118,7 +118,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             OnSampleReady?.Invoke(data.Length, data, max);
             yield return null;
         }
-        _isRecording = false;
+        StopRecording();
         clipIndex++;
     }
 
