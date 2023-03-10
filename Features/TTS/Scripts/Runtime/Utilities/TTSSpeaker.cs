@@ -143,6 +143,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Generate audio source instance
             AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
             instance.PreloadCopyData();
+            VLog.D($"Preload AudioSources: {DateTime.Now.ToLongTimeString()}");
             // Move under this speaker
             if (AudioSource == null)
             {
