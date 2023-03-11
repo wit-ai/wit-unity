@@ -216,14 +216,14 @@ namespace Meta.Conduit
                     continue;
                 }
 
-                var attributes = targetMethod.GetCustomAttributes(typeof(OnConduitFailedParameterResolutionAttribute), false);
+                var attributes = targetMethod.GetCustomAttributes(typeof(HandleEntityResolutionFailureAttribute), false);
                 if (attributes.Length == 0)
                 {
                     VLog.E($"{targetMethod} - Did not have expected Conduit attribute");
                     resolvedAll = false;
                     continue;
                 }
-                var actionAttribute = attributes.First() as OnConduitFailedParameterResolutionAttribute;
+                var actionAttribute = attributes.First() as HandleEntityResolutionFailureAttribute;
                 if (actionAttribute == null)
                 {
                     VLog.E("Found null attribute when one was expected");
@@ -234,7 +234,8 @@ namespace Meta.Conduit
                 {
                     Type = targetType,
                     MethodInfo = targetMethod,
-                    CustomAttributeType = typeof(OnConduitFailedParameterResolutionAttribute)
+                    CustomAttributeType = typeof(HandleEntityResolutionFailureAttribute)
+                    
                 };
 
                 if (!_methodLookup.ContainsKey(action.Name))
@@ -305,7 +306,7 @@ namespace Meta.Conduit
             {
                 foreach (var invocationContext in methodLookupValue)
                 {
-                    if (invocationContext.CustomAttributeType == typeof(OnConduitFailedParameterResolutionAttribute))
+                    if (invocationContext.CustomAttributeType == typeof(HandleEntityResolutionFailureAttribute))
                     {
                         contexts.Add(invocationContext);
                     }

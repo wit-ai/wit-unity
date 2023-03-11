@@ -353,7 +353,7 @@ namespace Meta.Conduit.Editor
 
         public List<ManifestErrorHandler> ExtractErrorHandlers(IConduitAssembly assembly)
         {
-            return ExtractErrorHandlersInternal(typeof(OnConduitFailedParameterResolutionAttribute), assembly);
+            return ExtractErrorHandlersInternal(typeof(HandleEntityResolutionFailureAttribute), assembly);
         }
 
         /// <summary>

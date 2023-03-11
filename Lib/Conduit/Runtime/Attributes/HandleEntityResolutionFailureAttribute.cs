@@ -14,12 +14,12 @@ namespace Meta.Conduit
     /// Triggers a method to be executed if it error happens
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class OnConduitFailedParameterResolutionAttribute : Attribute
+    public class HandleEntityResolutionFailureAttribute : Attribute
     {
         /// <summary>
         /// Triggers a method to be executed if an error is thrown
         /// </summary>
-        public OnConduitFailedParameterResolutionAttribute() 
+        public HandleEntityResolutionFailureAttribute() 
         {
             
         }

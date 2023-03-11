@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.Conduit;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -56,7 +57,7 @@ namespace Meta.WitAi.Samples.Shapes
             }
         }
 
-        [Conduit.OnConduitFailedParameterResolution()]
+        [HandleEntityResolutionFailure]
         public void OnConduitFailed(string intent, Exception ex)
         {
             VLog.E(ex.Message);
