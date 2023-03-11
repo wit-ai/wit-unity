@@ -515,24 +515,33 @@ namespace Meta.WitAi
             }
             catch (WebException e)
             {
-                // Ignore cancelation errors
-                if (e.Status == WebExceptionStatus.RequestCanceled)
+                // Ignore cancelation errors & if error already occured
+                if (e.Status == WebExceptionStatus.RequestCanceled || StatusCode != 0)
                 {
                     return;
                 }
+
                 // Write stream error
                 _stackTrace = e.StackTrace;
                 StatusCode = (int) e.Status;
                 StatusDescription = e.Message;
                 VLog.W(e);
-                MainThreadCallback(() =>
-                {
-                    HandleNlpResponse(null, StatusDescription);
-                });
+                MainThreadCallback(() => HandleNlpResponse(null, StatusDescription));
             }
             catch (Exception e)
             {
-                VLog.E(e);
+                // Call an error if have not done so yet
+                if (StatusCode != 0)
+                {
+                    return;
+                }
+
+                // Non web error occured
+                _stackTrace = e.StackTrace;
+                StatusCode = WitConstants.ERROR_CODE_GENERAL;
+                StatusDescription = e.Message;
+                VLog.W(e);
+                MainThreadCallback(() => HandleNlpResponse(null, StatusDescription));
             }
         }
 
@@ -580,8 +589,8 @@ namespace Meta.WitAi
                 VLog.E(e);
             }
 
-            // Perform a cancellation
-            if (IsPost && _bytesWritten == 0)
+            // Perform a cancellation if still waiting for a post
+            if (WaitingForPost())
             {
                 MainThreadCallback(() => Cancel("Stream was closed with no data written."));
             }
@@ -861,11 +870,16 @@ namespace Meta.WitAi
             onPartialResponse?.Invoke(this);
             base.OnResponseDataChanged();
         }
+        // Check if data has been written to post stream while still receiving data
+        private bool WaitingForPost()
+        {
+            return IsPost && _bytesWritten == 0 && StatusCode == 0;
+        }
         // Close active stream & then abort if possible
         private void CloseRequestStream()
         {
             // Cancel due to no audio if not an error
-            if (IsPost && _bytesWritten == 0 && StatusCode == 0)
+            if (WaitingForPost())
             {
                 Cancel("Request was closed with no audio captured.");
             }
