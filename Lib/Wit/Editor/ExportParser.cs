@@ -27,7 +27,7 @@ namespace Meta.WitAi.Lib
         private readonly List<PathValues> _sharedVariables = new List<PathValues>();
         private readonly List<PathValues> _serverVariables = new List<PathValues>();
         private readonly ArrayList _clientVariables = new ArrayList();
-        private const string COMPOSER_FOLDER_NAME = "composer";
+        private const string ComposerFolderName = "/composer/";
 
         private static class ModuleType
         {
@@ -58,7 +58,7 @@ namespace Meta.WitAi.Lib
             var jsonCanvases = new List<ZipArchiveEntry>();
             foreach (var entry in _zip.Entries)
             {
-                if (entry.FullName.Contains(COMPOSER_FOLDER_NAME))
+                if (entry.FullName.Contains(ComposerFolderName))
                 {
                     jsonCanvases.Add(entry);
                 }
@@ -139,6 +139,7 @@ namespace Meta.WitAi.Lib
         /// </summary>
         private ContextMapPaths ParseModules(WitResponseNode json)
         {
+
             foreach (var module in json["modules"].Childs)
             {
                 switch (module["type"].Value)
@@ -289,6 +290,10 @@ namespace Meta.WitAi.Lib
 
             result.shared = new ComposerGraphValues[_sharedVariables.Count];
             for (var i = 0; i < _sharedVariables.Count; i++) result.shared[i] = _sharedVariables[i].ConvertToStruct();
+
+            _sharedVariables.Clear();
+            _serverVariables.Clear();
+            _clientVariables.Clear();
 
             return result;
         }
