@@ -88,9 +88,15 @@ namespace Meta.WitAi.Requests
             var request = new VRequest();
             request.RequestFile(uri, (result,error) =>
             {
-                var zip = new ZipArchive(new MemoryStream(result));
-                onComplete(zip, null);
-
+                try
+                {
+                    var zip = new ZipArchive(new MemoryStream(result));
+                    onComplete(zip, null);
+                }
+                catch (Exception e)
+                {
+                    onComplete(null, e.ToString());
+                }
             }, null);
             return true;
         }

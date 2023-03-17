@@ -181,6 +181,7 @@ namespace Meta.WitAi.Lib
                 if (!String.IsNullOrEmpty(error))
                 {
                     warnings.AppendLine($"Could not determine export URI for {appInfo.id}.");
+                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
                     return;
                 }
                 GetRequest(configuration).RequestAppExportZip(exportInfo.uri, (exportZip, downloadError) =>
