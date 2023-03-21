@@ -309,14 +309,14 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Import supplied Manifest into WIT.ai.
         /// </summary>
-        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, VRequest.RequestCompleteDelegate<bool> onComplete = null, bool suppressErrors = false)
+        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, VRequest.RequestCompleteDelegate<bool> onComplete = null, bool suppressLogs = false)
         {
             var manifestData = GetSanitizedManifestString(manifest);
             var request = new WitSyncVRequest(configuration);
-            VLog.SuppressErrors = suppressErrors;
+            VLog.SuppressLogs = suppressLogs;
             request.RequestImportData(manifestData, (error, responseData) =>
             {
-                VLog.SuppressErrors = false;
+                VLog.SuppressLogs = false;
                 if (!string.IsNullOrEmpty(error))
                 {
                     onComplete?.Invoke(false, error);

@@ -42,12 +42,12 @@ namespace Meta.WitAi
         private static LogType _editorLogLevel = (LogType)(-1);
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const LogType EDITOR_LOG_LEVEL_DEFAULT = LogType.Warning;
+        #endif
 
         /// <summary>
         /// Hides all errors from the console
         /// </summary>
-        public static bool SuppressErrors { get; set; } = false;
-        #endif
+        public static bool SuppressLogs { get; set; } = false;
 
         /// <summary>
         /// Event for appending custom data to a log before logging to console
@@ -93,12 +93,12 @@ namespace Meta.WitAi
             {
                 return;
             }
-            // Suppress errors in editor
-            if (SuppressErrors)
+            #endif
+            // Suppress logs if desired
+            if (SuppressLogs)
             {
                 return;
             }
-            #endif
 
             // Use calling category if null
             string category = logCategory;
