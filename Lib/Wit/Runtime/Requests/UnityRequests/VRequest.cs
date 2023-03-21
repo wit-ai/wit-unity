@@ -150,7 +150,7 @@ namespace Meta.WitAi.Requests
         protected virtual IEnumerator PerformUpdate()
         {
             // Continue while request exists & is not complete
-            while (_request != null && (!_request.isDone || (_streamHandler != null && !_streamHandler.IsStreamComplete && string.IsNullOrEmpty(_request.error))))
+            while (!IsRequestComplete())
             {
                 // Wait
                 yield return null;
@@ -202,6 +202,31 @@ namespace Meta.WitAi.Requests
             DownloadProgress = 0f;
             _onDownloadProgress?.Invoke(DownloadProgress);
             _request.SendWebRequest();
+        }
+        // Check for whether request is complete
+        protected virtual bool IsRequestComplete()
+        {
+            // Request still in progress
+            if (_request != null && !_request.isDone)
+            {
+                return false;
+            }
+            // Check additional handlers if error is null
+            if (string.IsNullOrEmpty(_request.error))
+            {
+                // Download handler still in progress
+                if (_request.downloadHandler != null && !_request.downloadHandler.isDone)
+                {
+                    return false;
+                }
+                // Stream handler still in progress
+                if (_streamHandler != null && !_streamHandler.IsStreamComplete)
+                {
+                    return false;
+                }
+            }
+            // Complete
+            return true;
         }
         // Request complete
         protected virtual void Complete()
