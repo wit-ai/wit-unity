@@ -404,7 +404,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Add on ready delegate
-            clipData.onPlaybackReady += (error) => onStreamReady(clipData, error);
+            clipData.onPlaybackReady += (error) => onStreamReady?.Invoke(clipData, error);
 
             // Wait a moment and load
             CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
@@ -770,7 +770,7 @@ namespace Meta.WitAi.TTS
                 }
 
                 // Add download completion callback
-                clipData.onDownloadComplete += (error) => onDownloadComplete(clipData, downloadPath, error);
+                clipData.onDownloadComplete += (error) => onDownloadComplete?.Invoke(clipData, downloadPath, error);
 
                 // Download to cache
                 WebHandler.RequestDownloadFromWeb(clipData, downloadPath);

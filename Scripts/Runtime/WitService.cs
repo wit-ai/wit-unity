@@ -477,9 +477,6 @@ namespace Meta.WitAi
                     (buffer, offset, length) =>
                     {
                         _recordingRequest.Write(buffer, offset, length);
-                        #if DEBUG_SAMPLE
-                        sampleFile?.Write(buffer, offset, length);
-                        #endif
                     },
                     (buffer, offset, length) => VoiceEvents?.OnByteDataSent?.Invoke(buffer, offset, length),
                     (buffer, offset, length) =>
