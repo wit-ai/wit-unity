@@ -16,6 +16,8 @@ using Meta.WitAi;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
+using Meta.WitAi.TTS.Utilities;
+using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi.TTS.Editor.Preload
 {
@@ -414,6 +416,56 @@ namespace Meta.WitAi.TTS.Editor.Preload
                 textsByVoice[voiceName] = texts;
             }
             // Import
+            return ImportData(preloadSettings, textsByVoice);
+        }
+        /// <summary>
+        /// Find all TTSSpeakerPreloader scripts loaded in scenes & generate
+        /// data file to import all phrases associated with the files.
+        /// </summary>
+        public static bool ImportAutoLoaderData(TTSPreloadSettings preloadSettings)
+        {
+            // Find preloaders in all scenes
+            List<TTSSpeakerAutoLoader> autoloaders = new List<TTSSpeakerAutoLoader>();
+            for (int s = 0; s < SceneManager.sceneCount; s++)
+            {
+                Scene scene = SceneManager.GetSceneAt(s);
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    TTSSpeakerAutoLoader[] found = root.GetComponentsInChildren<TTSSpeakerAutoLoader>(true);
+                    if (found != null)
+                    {
+                        autoloaders.AddRange(found);
+                    }
+                }
+            }
+            // Get all texts by voice
+            Dictionary<string, List<string>> textsByVoice = new Dictionary<string, List<string>>();
+            foreach (var autoloader in autoloaders)
+            {
+                string[] phrases = autoloader.GetAllPhrases();
+                string voiceId = autoloader.Speaker.presetVoiceID; // Only exists after previous method
+                if (!string.IsNullOrEmpty(voiceId))
+                {
+                    List<string> voicePhrases;
+                    if (textsByVoice.ContainsKey(voiceId))
+                    {
+                        voicePhrases = textsByVoice[voiceId];
+                    }
+                    else
+                    {
+                        voicePhrases = new List<string>();
+                    }
+                    foreach (var phrase in phrases)
+                    {
+                        if (!string.IsNullOrEmpty(phrase) && !voicePhrases.Contains(phrase))
+                        {
+                            voicePhrases.Add(phrase);
+                        }
+                    }
+                    textsByVoice[voiceId] = voicePhrases;
+                }
+            }
+            // Import with data
             return ImportData(preloadSettings, textsByVoice);
         }
         /// <summary>

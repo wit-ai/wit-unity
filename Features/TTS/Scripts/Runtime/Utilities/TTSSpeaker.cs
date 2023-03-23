@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -350,26 +351,19 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the speak queue</param>
         protected virtual void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
+            // Pre process which could end this speak request
             foreach (var pre in _textPreprocessors)
             {
                 if (!pre.OnPreprocessTTS(this, ref textToSpeak)) return;
             }
 
-            if (prependedText.Length > 0 && !prependedText.EndsWith(" "))
-            {
-                prependedText += " ";
-            }
+            // Get final text to be spoken
+            textToSpeak = GetFinalText(textToSpeak);
 
-            if (appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            // Post process which could end this speak request
+            foreach (var pre in _textPostprocessors)
             {
-                appendedText = " " + appendedText;
-            }
-
-            textToSpeak = prependedText + textToSpeak + appendedText;
-
-            foreach (var post in _textPostprocessors)
-            {
-                if (!post.OnPostprocessTTS(this, ref textToSpeak)) return;
+                if (!pre.OnPostprocessTTS(this, ref textToSpeak)) return;
             }
 
             // Ensure voice settings exist
@@ -420,6 +414,19 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 OnLoadBegin(textToSpeak, newClipID, voiceSettings, diskCacheSettings, addToQueue);
             }
+        }
+        // Get final text to be spoken by this speaker
+        public virtual string GetFinalText(string textToSpeak)
+        {
+            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            {
+                prependedText += " ";
+            }
+            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            {
+                appendedText = " " + appendedText;
+            }
+            return $"{prependedText}{textToSpeak}{appendedText}";
         }
         // Stop loading all items in the queue
         public virtual void StopLoading()
