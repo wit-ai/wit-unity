@@ -73,12 +73,12 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Get all final phrases
+            // Set phrase list
             _phrases = GetAllPhrases();
 
             // Load all clips
             List<TTSClipData> list = new List<TTSClipData>();
-            foreach (var phrase in GetAllPhrases())
+            foreach (var phrase in _phrases)
             {
                 _clipsLoading++;
                 TTSClipData clip = TTSService.Instance.Load(phrase, Speaker.presetVoiceID, null, OnClipReady);
@@ -94,14 +94,11 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Get all phrases
             List<string> phrases = new List<string>();
-            if (PhraseFile != null)
-            {
-                phrases.AddRange(PhraseFile.text.Split('\n'));
-            }
-            if (Phrases != null && Phrases.Length > 0)
-            {
-                phrases.AddRange(Phrases);
-            }
+
+            // Add phrases split from phrase file
+            AddUniquePhrases(phrases, PhraseFile?.text.Split('\n'));
+            // Add phrases serialized in phrase array
+            AddUniquePhrases(phrases, Phrases);
 
             // Get final text
             for (int i = 0; i < phrases.Count; i++)
@@ -111,6 +108,20 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Return array
             return phrases.ToArray();
+        }
+        // Add unique, non-null phrases
+        private void AddUniquePhrases(List<string> list, string[] newPhrases)
+        {
+            if (newPhrases != null)
+            {
+                foreach (var phrase in newPhrases)
+                {
+                    if (!string.IsNullOrEmpty(phrase) && !list.Contains(phrase))
+                    {
+                        list.Add(phrase);
+                    }
+                }
+            }
         }
         // Setup speaker
         protected virtual void SetupSpeaker()
@@ -144,7 +155,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
             foreach (var clip in _clips)
             {
-                TTSService.Instance.Unload(clip);
+                TTSService.Instance?.Unload(clip);
             }
             _clips = null;
             _phrases = null;
