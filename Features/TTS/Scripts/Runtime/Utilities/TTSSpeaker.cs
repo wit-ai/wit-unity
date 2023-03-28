@@ -9,88 +9,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using Meta.WitAi.Speech;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS.Utilities
 {
-    [Serializable]
-    public class TTSSpeakerEvent : UnityEvent<TTSSpeaker, string> { }
-    [Serializable]
-    public class TTSSpeakerTextEvent : UnityEvent<string> { }
-    [Serializable]
-    public class TTSSpeakerClipEvent : UnityEvent<AudioClip> { }
-    [Serializable]
-    public class TTSSpeakerClipDataEvent : UnityEvent<TTSClipData> { }
-    [Serializable]
-    public class TTSSpeakerEvents
-    {
-        [Header("Text Events")]
-        [Tooltip("Called when a audio clip playback begins")]
-        public TTSSpeakerTextEvent OnTextPlaybackStart;
-        [Tooltip("Called when a audio clip playback completes or is cancelled")]
-        public TTSSpeakerTextEvent OnTextPlaybackFinished;
-        [Tooltip("Called when a audio clip playback completes or is cancelled")]
-        public TTSSpeakerTextEvent OnTextPlaybackCancelled;
-
-        [Header("Audio Clip Events")]
-        [Tooltip("Called when a clip is ready for playback")]
-        public TTSSpeakerClipEvent OnAudioClipPlaybackReady;
-        [Tooltip("Called when a clip playback has begun")]
-        public TTSSpeakerClipEvent OnAudioClipPlaybackStart;
-        [Tooltip("Called when a clip playback has completed successfully")]
-        public TTSSpeakerClipEvent OnAudioClipPlaybackFinished;
-        [Tooltip("Called when a clip playback has been cancelled")]
-        public TTSSpeakerClipEvent OnAudioClipPlaybackCancelled;
-
-        [Header("TTSClip Data Events")]
-        [Tooltip("Called when a new clip is added to the playback queue")]
-        public TTSSpeakerClipDataEvent OnClipDataQueued;
-        [Tooltip("Called when TTS audio clip load begins")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadBegin;
-        [Tooltip("Called when TTS audio clip load fails")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadFailed;
-        [Tooltip("Called when TTS audio clip load successfully")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadSuccess;
-        [Tooltip("Called when TTS audio clip load is cancelled")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadAbort;
-        [Tooltip("Called when a clip is ready for playback")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackReady;
-        [Tooltip("Called when a clip playback has begun")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackStart;
-        [Tooltip("Called when a clip playback has completed successfully")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackFinished;
-        [Tooltip("Called when a clip playback has been cancelled")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackCancelled;
-
-        [Header("Speaker Events")]
-        [Tooltip("Called when a speaking begins")]
-        public TTSSpeakerEvent OnStartSpeaking;
-        [Tooltip("Called when a speaking finishes")]
-        public TTSSpeakerEvent OnFinishedSpeaking;
-        [Tooltip("Called when a speaking is cancelled")]
-        public TTSSpeakerEvent OnCancelledSpeaking;
-        [Tooltip("Called when TTS audio clip load begins")]
-        public TTSSpeakerEvent OnClipLoadBegin;
-        [Tooltip("Called when TTS audio clip load fails")]
-        public TTSSpeakerEvent OnClipLoadFailed;
-        [Tooltip("Called when TTS audio clip load successfully")]
-        public TTSSpeakerEvent OnClipLoadSuccess;
-        [Tooltip("Called when TTS audio clip load is cancelled")]
-        public TTSSpeakerEvent OnClipLoadAbort;
-
-        [Header("Queue Events")]
-        [Tooltip("Called when a tts request is added to an empty queue")]
-        public UnityEvent OnPlaybackQueueBegin;
-        [Tooltip("Called the final request is removed from a queue")]
-        public UnityEvent OnPlaybackQueueComplete;
-    }
-
-    public class TTSSpeaker : MonoBehaviour
+    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider
     {
         #region LIFECYCLE
         // Preset voice id
@@ -110,6 +37,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Events
         [SerializeField] private TTSSpeakerEvents _events;
         public TTSSpeakerEvents Events => _events;
+        public VoiceSpeechEvents SpeechEvents => _events;
 
         // Current clip to be played
         public TTSClipData SpeakingClip { get; private set; }
