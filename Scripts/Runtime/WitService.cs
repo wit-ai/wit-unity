@@ -9,11 +9,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-#if DEBUG_SAMPLE
-using System.IO;
-#endif
-using System.Linq;
-using System.Net;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
@@ -27,7 +22,7 @@ using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
-    public class WitService : MonoBehaviour, IVoiceEventProvider, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
+    public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
         private float _lastMinVolumeLevelTime;
         private WitRequest _recordingRequest;
@@ -382,6 +377,27 @@ namespace Meta.WitAi
 
         #region TEXT REQUESTS
         /// <summary>
+        /// Activate the microphone and send data to Wit for NLU processing.
+        /// </summary>
+        public void Activate(string text) => Activate(text, new WitRequestOptions());
+        public void Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
+        public VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
+        {
+            // Not valid
+            if (!IsConfigurationValid())
+            {
+                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                return null;
+            }
+
+            // Generate request
+            VoiceServiceRequest request = GetTextRequest(requestOptions, requestEvents);
+
+            // Send & return
+            request.Send(text);
+            return request;
+        }
+        /// <summary>
         /// Send text data to Wit.ai for NLU processing
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
@@ -576,6 +592,10 @@ namespace Meta.WitAi
         {
             DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, false);
         }
+        /// <summary>
+        /// Stop listening and cancel a specific report
+        /// </summary>
+        public void DeactivateAndAbortRequest(VoiceServiceRequest request) => request?.Cancel();
         /// <summary>
         /// Stop listening and abort any requests that may be active without waiting for a response.
         /// </summary>

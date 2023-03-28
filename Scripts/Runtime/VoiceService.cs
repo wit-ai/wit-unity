@@ -598,7 +598,7 @@ namespace Meta.WitAi
         }
     }
 
-    public interface IVoiceService : IVoiceEventProvider, ITelemetryEventsProvider
+    public interface IVoiceService : IVoiceEventProvider, ITelemetryEventsProvider, IVoiceActivationHandler
     {
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
@@ -636,14 +636,18 @@ namespace Meta.WitAi
         /// </summary>
         /// <returns>True if a request can be sent</returns>
         bool CanSend();
+    }
 
+    public interface IVoiceActivationHandler
+    {
         /// <summary>
         /// Send text data for NLU processing with custom request options & events.
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents);
+        VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions,
+            VoiceServiceRequestEvents requestEvents);
 
         /// <summary>
         /// Activate the microphone and wait for threshold and then send data
@@ -657,7 +661,8 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        VoiceServiceRequest ActivateImmediately(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents);
+        VoiceServiceRequest ActivateImmediately(WitRequestOptions requestOptions,
+            VoiceServiceRequestEvents requestEvents);
 
         /// <summary>
         /// Stop listening and submit the collected microphone data for processing.
@@ -668,6 +673,7 @@ namespace Meta.WitAi
         /// Stop listening and abort any requests that may be active without waiting for a response.
         /// </summary>
         void DeactivateAndAbortRequest();
+
         /// <summary>
         /// Deactivate mic & abort a specific request
         /// </summary>
