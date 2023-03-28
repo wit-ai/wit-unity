@@ -123,6 +123,10 @@ namespace Meta.WitAi.Requests
             // Use request's timeout value
             _request.timeout = Timeout;
 
+            // Dispose handlers automatically
+            _request.disposeUploadHandlerOnDispose = true;
+            _request.disposeDownloadHandlerOnDispose = true;
+
             // Begin
             _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
 
@@ -212,7 +216,7 @@ namespace Meta.WitAi.Requests
                 return false;
             }
             // Check additional handlers if error is null
-            if (string.IsNullOrEmpty(_request.error))
+            if (_request != null && string.IsNullOrEmpty(_request.error))
             {
                 // Download handler still in progress
                 if (_request.downloadHandler != null && !_request.downloadHandler.isDone)
@@ -596,9 +600,7 @@ namespace Meta.WitAi.Requests
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            unityRequest.disposeUploadHandlerOnDispose = true;
             unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            unityRequest.disposeDownloadHandlerOnDispose = true;
             return RequestJson(unityRequest, onComplete, onProgress);
         }
         /// <summary>
@@ -632,9 +634,7 @@ namespace Meta.WitAi.Requests
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
             unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            unityRequest.disposeUploadHandlerOnDispose = true;
             unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            unityRequest.disposeDownloadHandlerOnDispose = true;
             return RequestJson(unityRequest, onComplete, onProgress);
         }
         /// <summary>
