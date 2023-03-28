@@ -12,8 +12,21 @@ using Meta.WitAi.TTS.Data;
 
 namespace Meta.WitAi.TTS.Utilities
 {
+    public interface ITTSPhraseProvider
+    {
+        /// <summary>
+        /// The supported voice ids
+        /// </summary>
+        string[] GetVoiceIds();
+
+        /// <summary>
+        /// Get specific phrases per voice
+        /// </summary>
+        string[] GetVoicePhrases(string voiceId);
+    }
+
     [RequireComponent(typeof(TTSSpeaker))]
-    public class TTSSpeakerAutoLoader : MonoBehaviour
+    public class TTSSpeakerAutoLoader : MonoBehaviour, ITTSPhraseProvider
     {
         /// <summary>
         /// TTSSpeaker to be used
@@ -136,5 +149,28 @@ namespace Meta.WitAi.TTS.Utilities
             _clips = null;
             _phrases = null;
         }
+
+        #region ITTSVoicePhraseProvider
+        /// <summary>
+        /// Returns the supported voice ids (Only this speaker)
+        /// </summary>
+        public virtual string[] GetVoiceIds()
+        {
+            SetupSpeaker();
+            string voiceId = Speaker?.presetVoiceID;
+            if (string.IsNullOrEmpty(voiceId))
+            {
+                return null;
+            }
+            return new string[] {voiceId};
+        }
+        /// <summary>
+        /// Returns the supported phrases per voice
+        /// </summary>
+        public virtual string[] GetVoicePhrases(string voiceId)
+        {
+            return GetAllPhrases();
+        }
+        #endregion ITTSVoicePhraseProvider
     }
 }

@@ -112,7 +112,7 @@ namespace Meta.WitAi.TTS.Editor
             if (WitEditorUI.LayoutTextButton("Import AutoLoader Data"))
             {
                 EditorUtility.ClearProgressBar();
-                if (TTSPreloadUtility.ImportAutoLoaderData(Settings))
+                if (TTSPreloadUtility.ImportPhrases(Settings))
                 {
                     RefreshData();
                 }

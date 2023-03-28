@@ -419,33 +419,53 @@ namespace Meta.WitAi.TTS.Editor.Preload
             return ImportData(preloadSettings, textsByVoice);
         }
         /// <summary>
-        /// Find all TTSSpeakerPreloader scripts loaded in scenes & generate
+        /// Find all ITTSPhraseProviders loaded in scenes & generate
         /// data file to import all phrases associated with the files.
         /// </summary>
-        public static bool ImportAutoLoaderData(TTSPreloadSettings preloadSettings)
+        public static bool ImportPhrases(TTSPreloadSettings preloadSettings)
         {
-            // Find preloaders in all scenes
-            List<TTSSpeakerAutoLoader> autoloaders = new List<TTSSpeakerAutoLoader>();
+            // Find phrase providers in all scenes
+            List<ITTSPhraseProvider> phraseProviders = new List<ITTSPhraseProvider>();
             for (int s = 0; s < SceneManager.sceneCount; s++)
             {
                 Scene scene = SceneManager.GetSceneAt(s);
                 foreach (var root in scene.GetRootGameObjects())
                 {
-                    TTSSpeakerAutoLoader[] found = root.GetComponentsInChildren<TTSSpeakerAutoLoader>(true);
+                    ITTSPhraseProvider[] found = root.GetComponentsInChildren<ITTSPhraseProvider>(true);
                     if (found != null)
                     {
-                        autoloaders.AddRange(found);
+                        phraseProviders.AddRange(found);
                     }
                 }
             }
-            // Get all texts by voice
+            // Get all phrases by voice id
             Dictionary<string, List<string>> textsByVoice = new Dictionary<string, List<string>>();
-            foreach (var autoloader in autoloaders)
+            foreach (var phraseProvider in phraseProviders)
             {
-                string[] phrases = autoloader.GetAllPhrases();
-                string voiceId = autoloader.Speaker.presetVoiceID; // Only exists after previous method
-                if (!string.IsNullOrEmpty(voiceId))
+                // Ignore if no voices are found
+                string[] voiceIds = phraseProvider.GetVoiceIds();
+                if (voiceIds == null || voiceIds.Length == 0)
                 {
+                    continue;
+                }
+
+                // Iterate voice ids
+                foreach (var voiceId in voiceIds)
+                {
+                    // Ignore empty voice id
+                    if (string.IsNullOrEmpty(voiceId))
+                    {
+                        continue;
+                    }
+
+                    // Ignore if phrases are null
+                    string[] phrases = phraseProvider.GetVoicePhrases(voiceId);
+                    if (phrases == null || phrases.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    // Get phrase list
                     List<string> voicePhrases;
                     if (textsByVoice.ContainsKey(voiceId))
                     {
@@ -455,6 +475,8 @@ namespace Meta.WitAi.TTS.Editor.Preload
                     {
                         voicePhrases = new List<string>();
                     }
+
+                    // Append unique phrases
                     foreach (var phrase in phrases)
                     {
                         if (!string.IsNullOrEmpty(phrase) && !voicePhrases.Contains(phrase))
@@ -462,6 +484,8 @@ namespace Meta.WitAi.TTS.Editor.Preload
                             voicePhrases.Add(phrase);
                         }
                     }
+
+                    // Apply phrase list
                     textsByVoice[voiceId] = voicePhrases;
                 }
             }
