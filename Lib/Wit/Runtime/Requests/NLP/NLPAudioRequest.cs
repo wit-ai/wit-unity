@@ -76,6 +76,12 @@ namespace Meta.Voice
         /// <param name="error">Error returned from a request</param>
         protected virtual void HandleNlpResponse(WitResponseNode responseData, string error)
         {
+            // Ignore if not in correct state
+            if (State != VoiceRequestState.Initialized && State != VoiceRequestState.Transmitting)
+            {
+                return;
+            }
+
             // Error returned
             if (!string.IsNullOrEmpty(error))
             {
@@ -92,6 +98,29 @@ namespace Meta.Voice
                 ResponseData = responseData;
                 Events?.OnFullResponse?.Invoke(ResponseData);
                 HandleSuccess(Results);
+            }
+        }
+
+        /// <summary>
+        /// Cancels the current request but handles success immediately if possible
+        /// </summary>
+        public virtual void CompleteEarly()
+        {
+            // Ignore if not in correct state
+            if (State != VoiceRequestState.Initialized && State != VoiceRequestState.Transmitting)
+            {
+                return;
+            }
+
+            // Cancel instead
+            if (ResponseData == null)
+            {
+                Cancel("Cannot complete early without response data");
+            }
+            // Handle success
+            else
+            {
+                HandleNlpResponse(ResponseData, string.Empty);
             }
         }
     }

@@ -369,11 +369,50 @@ namespace Meta.WitAi
                 OnAudioRequestComplete(audioRequest);
                 return;
             }
+            audioRequest.Events.OnPartialResponse.AddListener((response) => OnAudioPartialResponse(audioRequest));
             audioRequest.Events.OnCancel.AddListener(OnAudioRequestCancel);
             audioRequest.Events.OnFailed.AddListener(OnAudioRequestFailed);
             audioRequest.Events.OnSuccess.AddListener(OnAudioRequestSuccess);
             audioRequest.Events.OnComplete.AddListener(OnAudioRequestComplete);
             _requests.Add(audioRequest);
+        }
+        // Callback for early validation
+        protected virtual void OnAudioPartialResponse(VoiceServiceRequest audioRequest)
+        {
+            // Ignore unless can be validated
+            if (VoiceEvents.OnValidatePartialResponse == null || audioRequest == null || audioRequest.State != VoiceRequestState.Transmitting)
+            {
+                return;
+            }
+
+            // Create short response data
+            WitResponseNode response = audioRequest?.Results?.ResponseData;
+            VoiceSession validationData = GetVoiceSession(response);
+
+            // Call short response
+            VoiceEvents.OnValidatePartialResponse.Invoke(validationData);
+
+            // Invoke
+            if (UseConduit)
+            {
+                // Ignore without an intent
+                WitIntentData intent = response.GetFirstIntentData();
+                if (intent != null)
+                {
+                    _conduitParameterProvider.PopulateParametersFromNode(response);
+                    _conduitParameterProvider.AddParameter(ParameterProvider.VoiceSessionReservedName,
+                        validationData);
+                    _conduitParameterProvider.AddParameter(ParameterProvider.WitResponseNodeReservedName, response);
+                    ConduitDispatcher.InvokeAction(_conduitParameterProvider, intent.name, _witConfiguration.relaxedResolution, intent.confidence, true);
+                }
+            }
+
+            // Deactivate & abort immediately but use the response data as results
+            if (validationData.validResponse)
+            {
+                VLog.D("Validated Early");
+                audioRequest.CompleteEarly();
+            }
         }
         // Callbacks for custom audio request handling
         protected virtual void OnAudioRequestCancel(VoiceServiceRequest audioRequest) =>
@@ -466,14 +505,12 @@ namespace Meta.WitAi
                 }
             }
             TranscriptionProvider?.OnFullTranscription.AddListener(OnFinalTranscription);
-            VoiceEvents.OnPartialResponse.AddListener(ValidateShortResponse);
             VoiceEvents.OnResponse.AddListener(HandleResponse);
         }
 
         protected virtual void OnDisable()
         {
             TranscriptionProvider?.OnFullTranscription.RemoveListener(OnFinalTranscription);
-            VoiceEvents.OnPartialResponse.RemoveListener(ValidateShortResponse);
             VoiceEvents.OnResponse.RemoveListener(HandleResponse);
         }
 
@@ -496,43 +533,6 @@ namespace Meta.WitAi
                 response = response,
                 validResponse = false
             };
-        }
-
-        protected virtual void ValidateShortResponse(WitResponseNode response)
-        {
-            if (VoiceEvents.OnValidatePartialResponse != null)
-            {
-                // Create short response data
-                VoiceSession validationData = GetVoiceSession(response);
-
-                // Call short response
-                VoiceEvents.OnValidatePartialResponse.Invoke(validationData);
-
-                // Invoke
-                if (UseConduit)
-                {
-                    // Ignore without an intent
-                    WitIntentData intent = response.GetFirstIntentData();
-                    if (intent != null)
-                    {
-                        _conduitParameterProvider.PopulateParametersFromNode(response);
-                        _conduitParameterProvider.AddParameter(ParameterProvider.VoiceSessionReservedName,
-                            validationData);
-                        _conduitParameterProvider.AddParameter(ParameterProvider.WitResponseNodeReservedName, response);
-                        ConduitDispatcher.InvokeAction(_conduitParameterProvider, intent.name, _witConfiguration.relaxedResolution, intent.confidence, true);
-                    }
-                }
-
-                // Deactivate
-                if (validationData.validResponse)
-                {
-                    // Call response
-                    VoiceEvents.OnResponse?.Invoke(response);
-
-                    // Deactivate immediately
-                    DeactivateAndAbortRequest();
-                }
-            }
         }
 
         protected virtual void HandleResponse(WitResponseNode response)

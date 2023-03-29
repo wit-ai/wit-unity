@@ -935,6 +935,20 @@ namespace Meta.WitAi
         protected override void OnComplete()
         {
             base.OnComplete();
+
+            // Close write stream if still existing
+            if (null != _writeStream)
+            {
+                CloseActiveStream();
+            }
+            // Abort request if still existing
+            if (null != _request)
+            {
+                _request.Abort();
+                _request = null;
+            }
+
+            // Finalize response
             onResponse?.Invoke(this);
             onResponse = null;
         }
