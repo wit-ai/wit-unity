@@ -98,15 +98,15 @@ namespace Meta.Conduit
         public bool InvokeAction(IParameterProvider parameterProvider, string actionId, bool relaxed,
             float confidence = 1f, bool partial = false)
         {
-            if (!Manifest.ContainsAction(actionId) && !Manifest.WitResponseMatcherIntents.Contains(actionId))
+            if (!Manifest.ContainsAction(actionId))
             {
-                if (!_ignoredActionIds.Contains(actionId))
+                var hasBeenHandledWithoutConduit = Manifest.WitResponseMatcherIntents.Contains(actionId);
+                if (!_ignoredActionIds.Contains(actionId) && !hasBeenHandledWithoutConduit)
                 {
                     _ignoredActionIds.Add(actionId);
                     InvokeError(actionId, new Exception($"Conduit did not find intent '{actionId}' in manifest."));
                     VLog.W($"Conduit did not find intent '{actionId}' in manifest.");
                 }
-
                 return false;
             }
 
