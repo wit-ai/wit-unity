@@ -9,23 +9,44 @@
 using System;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Utilities
 {
+    [AddComponentMenu("Wit.ai/Utilities/Conversions/Float to String")]
     public class FloatToStringEvent : MonoBehaviour
     {
-        [SerializeField] private string format;
+        [FormerlySerializedAs("format")]
+        [Tooltip("The format value to be used on the float")]
+        [SerializeField] private string _floatFormat;
+        [Tooltip("The format of the string itself. {0} will represent the float value provided")]
+        [SerializeField] private string _stringFormat;
+
         [SerializeField] private StringEvent onFloatToString = new StringEvent();
 
+        /// <summary>
+        /// Converts a float to a string using the component format values and emits an onFloatToString event.
+        /// </summary>
+        /// <param name="value"></param>
         public void ConvertFloatToString(float value)
         {
-            if (string.IsNullOrEmpty(format))
+            string floatStringValue;
+            if (string.IsNullOrEmpty(_floatFormat))
             {
-                onFloatToString?.Invoke(value.ToString());
+                floatStringValue = value.ToString();
             }
             else
             {
-                onFloatToString?.Invoke(value.ToString(format));
+                floatStringValue = value.ToString(_floatFormat);
+            }
+
+            if (string.IsNullOrEmpty(_stringFormat))
+            {
+                onFloatToString?.Invoke(floatStringValue);
+            }
+            else
+            {
+                onFloatToString?.Invoke(string.Format(_stringFormat, floatStringValue));
             }
         }
     }

@@ -7,8 +7,8 @@
  */
 
 using Meta.WitAi.Json;
+using Meta.WitAi.Utilities;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Meta.WitAi.CallbackHandlers
 {
@@ -18,7 +18,7 @@ namespace Meta.WitAi.CallbackHandlers
     [AddComponentMenu("Wit.ai/Response Matchers/Out Of Domain")]
     public class OutOfScopeUtteranceHandler : WitResponseHandler
     {
-        [SerializeField] private UnityEvent onOutOfDomain = new UnityEvent();
+        [SerializeField] private StringEvent onOutOfDomain = new StringEvent();
 
         protected override string OnValidateResponse(WitResponseNode response, bool isEarlyResponse)
         {
@@ -35,7 +35,7 @@ namespace Meta.WitAi.CallbackHandlers
         protected override void OnResponseInvalid(WitResponseNode response, string error) {}
         protected override void OnResponseSuccess(WitResponseNode response)
         {
-            onOutOfDomain?.Invoke();
+            onOutOfDomain?.Invoke(response.GetTranscription());
         }
     }
 }
