@@ -80,5 +80,6 @@
   "ConfigurationVoicesTabLabel": "Voices",
   "ConfigurationVoicesMissingLabel": "No TTS voices found.",
   "ConfigurationComposerTabLabel": "Composer",
-  "ConfigurationComposerMissingLabel": "No Composer graphs found."
+  "ConfigurationComposerMissingLabel": "No Composer graphs found.",
+  "ShowTooltipsLabel": "Show Tooltips"
 }

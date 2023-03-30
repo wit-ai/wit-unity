@@ -119,6 +119,8 @@ namespace Meta.WitAi
             [Header("Configuration Composer Texts")]
             public string ConfigurationComposerTabLabel;
             public string ConfigurationComposerMissingLabel;
+            [Header("Tooltip Texts")]
+            public string ShowTooltipsLabel;
         }
 
         // Wit

@@ -25,6 +25,12 @@ namespace Meta.WitAi.Windows
         private static string[] _logLevelNames;
         private static LogType[] _logLevels = new LogType[] { LogType.Log, LogType.Warning, LogType.Error };
 
+        public static bool ShowTooltips
+        {
+            get => EditorPrefs.GetBool("VSDK::Settings::Tooltips", true);
+            set => EditorPrefs.SetBool("VSDK::Settings::Tooltips", value);
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -64,6 +70,10 @@ namespace Meta.WitAi.Windows
             {
                 SetLogLevel(logLevel);
             }
+
+            var showTooltips = ShowTooltips;
+            WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.ShowTooltipsLabel), ref showTooltips, ref updated);
+            if (updated) ShowTooltips = showTooltips;
 
             // Server access token
             GUILayout.BeginHorizontal();

@@ -194,6 +194,16 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Returns the total number of entities
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns></returns>
+        public static int EntityCount(this WitResponseNode response)
+        {
+            return response?[WIT_KEY_ENTITIES]?.AsArray?.Count ?? 0;
+        }
+
+        /// <summary>
         /// Gets all float entity values in the given response with the specified entity name
         /// </summary>
         /// <param name="witResponse">The root response node of an VoiceService.events.OnResponse event</param>
