@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
+using Meta.WitAi.Attributes;
 using UnityEngine;
-using UnityEngine.Events;
+using Utilities;
 
 namespace Meta.WitAi.Utilities
 {
@@ -17,6 +17,9 @@ namespace Meta.WitAi.Utilities
     {
         [Tooltip("The string format string that will be used to reformat input strings. Ex: I don't know how to respond to {0}")]
         [SerializeField] private string _format;
+
+        [Space(WitRuntimeStyles.HeaderPaddingTop)]
+        [TooltipBox("Triggered when FormatString(float) is called. The string in this event will be formatted based on the format field.")]
         [SerializeField] public StringEvent onStringEvent = new StringEvent();
 
         /// <summary>

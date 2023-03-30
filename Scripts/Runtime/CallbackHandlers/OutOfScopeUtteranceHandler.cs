@@ -6,9 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi.Attributes;
 using Meta.WitAi.Json;
 using Meta.WitAi.Utilities;
 using UnityEngine;
+using Utilities;
 
 namespace Meta.WitAi.CallbackHandlers
 {
@@ -18,6 +20,8 @@ namespace Meta.WitAi.CallbackHandlers
     [AddComponentMenu("Wit.ai/Response Matchers/Out Of Domain")]
     public class OutOfScopeUtteranceHandler : WitResponseHandler
     {
+        [Space(WitRuntimeStyles.HeaderPaddingTop)]
+        [TooltipBox("Triggered when a activation on the associated AppVoiceExperience does not return any intents.")]
         [SerializeField] private StringEvent onOutOfDomain = new StringEvent();
 
         protected override string OnValidateResponse(WitResponseNode response, bool isEarlyResponse)

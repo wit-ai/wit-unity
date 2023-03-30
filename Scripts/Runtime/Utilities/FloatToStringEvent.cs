@@ -7,9 +7,11 @@
  */
 
 using System;
+using Meta.WitAi.Attributes;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
+using Utilities;
 
 namespace Meta.WitAi.Utilities
 {
@@ -22,6 +24,8 @@ namespace Meta.WitAi.Utilities
         [Tooltip("The format of the string itself. {0} will represent the float value provided")]
         [SerializeField] private string _stringFormat;
 
+        [Space(WitRuntimeStyles.HeaderPaddingTop)]
+        [TooltipBox("Triggered when ConvertFloatToString(float) is called. The string in this event will be formatted based on the format fields.")]
         [SerializeField] private StringEvent onFloatToString = new StringEvent();
 
         /// <summary>
