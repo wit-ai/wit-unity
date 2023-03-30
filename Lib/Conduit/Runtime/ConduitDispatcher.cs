@@ -123,9 +123,10 @@ namespace Meta.Conduit
                 {
                    VLog.W(
                         $"Failed to resolve {(partial ? "partial" : "final")} method for {actionId} with supplied context");
+                   InvokeError(actionId, new Exception($"Failed to resolve {(partial ? "partial" : "final")} method for {actionId} with supplied context")
+                   );
                 }
-                InvokeError(actionId, new Exception($"Failed to resolve {(partial ? "partial" : "final")} method for {actionId} with supplied context")
-                    );
+
                 return false;
             }
 
