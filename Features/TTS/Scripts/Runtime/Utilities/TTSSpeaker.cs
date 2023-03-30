@@ -98,6 +98,14 @@ namespace Meta.WitAi.TTS.Utilities
             _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
             _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
         }
+        // Stop
+        protected virtual void OnDestroy()
+        {
+            Stop();
+            _tts = null;
+            _queuedClips = null;
+            SpeakingClip = null;
+        }
         // Add listener for clip unload
         protected virtual void OnEnable()
         {

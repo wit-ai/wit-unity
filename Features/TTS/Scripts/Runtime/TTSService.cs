@@ -611,11 +611,10 @@ namespace Meta.WitAi.TTS
             }
 
             // Copy array
-            TTSClipData[] copy = new TTSClipData[clips.Length];
-            clips.CopyTo(copy, 0);
+            HashSet<TTSClipData> remaining = new HashSet<TTSClipData>(clips);
 
             // Unload all clips
-            foreach (var clip in copy)
+            foreach (var clip in remaining)
             {
                 Unload(clip);
             }
