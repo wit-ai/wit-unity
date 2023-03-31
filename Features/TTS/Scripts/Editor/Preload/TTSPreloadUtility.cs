@@ -88,25 +88,52 @@ namespace Meta.WitAi.TTS.Editor.Preload
         {
             return _performer != null;
         }
-        // Iterate phrases
-        private static void IteratePhrases(TTSService service, TTSPreloadData preloadData, TTSPreloadIterateDelegate onIterate, Action<float> onProgress, Action<string> onComplete)
+        // Perform a check of all data
+        private static bool CheckIterateData(TTSService service, TTSPreloadData preloadData, TTSPreloadIterateDelegate onIterate, Action<float> onProgress, Action<string> onComplete)
         {
             // No service
             if (service == null)
             {
+                onProgress?.Invoke(1f);
                 onComplete?.Invoke("\nNo TTSService found in current scene");
-                return;
+                return false;
             }
             // No preload data
             if (preloadData == null)
             {
+                onProgress?.Invoke(1f);
                 onComplete?.Invoke("\nTTS Preload Data Not Found");
-                return;
+                return false;
+            }
+            // No preload data
+            if (preloadData.voices == null)
+            {
+                onProgress?.Invoke(1f);
+                onComplete?.Invoke("\nTTS Preload Data Voices Not Found");
+                return false;
             }
             // Ignore if running
             if (Application.isPlaying)
             {
+                onProgress?.Invoke(1f);
                 onComplete?.Invoke("Cannot preload while running");
+                return false;
+            }
+            // Ignore if running
+            if (onIterate == null)
+            {
+                onProgress?.Invoke(1f);
+                onComplete?.Invoke("Code recompiled mid update");
+                return false;
+            }
+            return true;
+        }
+        // Iterate phrases
+        private static void IteratePhrases(TTSService service, TTSPreloadData preloadData, TTSPreloadIterateDelegate onIterate, Action<float> onProgress, Action<string> onComplete)
+        {
+            // Skip if check fails
+            if (!CheckIterateData(service, preloadData, onIterate, onProgress, onComplete))
+            {
                 return;
             }
 
@@ -128,6 +155,7 @@ namespace Meta.WitAi.TTS.Editor.Preload
             {
                 DiskCacheLocation = TTSDiskCacheLocation.Preload
             };
+
             // Get total phrases
             int phraseTotal = 0;
             foreach (var voice in preloadData.voices)
@@ -171,9 +199,15 @@ namespace Meta.WitAi.TTS.Editor.Preload
                     onProgress?.Invoke(progress);
                     phraseCount++;
 
-                    // Iterate
+                    // Iterate Load
                     yield return onIterate(service, cacheSettings, voiceSettings, voiceData.phrases[p],
                         (p2) => onProgress?.Invoke(progress + p2 * phraseInc), (l) => log += l);
+
+                    // Skip if check fails
+                    if (!CheckIterateData(service, preloadData, onIterate, onProgress, onComplete))
+                    {
+                        yield break;
+                    }
                 }
             }
 
