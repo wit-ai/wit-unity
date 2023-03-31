@@ -75,8 +75,6 @@ namespace Meta.WitAi.Requests
 
         // Actual request
         private UnityWebRequest _request;
-        // Stream handler
-        private IVRequestStreamable _streamHandler;
         // Callbacks for progress & completion
         private RequestProgressDelegate _onDownloadProgress;
         private RequestCompleteDelegate<UnityWebRequest> _onComplete;
@@ -102,7 +100,6 @@ namespace Meta.WitAi.Requests
 
             // Setup
             _request = unityRequest;
-            _streamHandler = unityRequest.downloadHandler as IVRequestStreamable;
             _onDownloadProgress = onDownloadProgress;
             _onComplete = onComplete;
             IsPerforming = false;
@@ -188,10 +185,13 @@ namespace Meta.WitAi.Requests
                     }
 
                     // Stream is ready
-                    if (_streamHandler != null && _streamHandler.IsStreamReady && _onComplete != null)
+                    if (_onComplete != null && _request.downloadHandler is IVRequestStreamable streamHandler)
                     {
-                        _onComplete.Invoke(_request, string.Empty);
-                        _onComplete = null;
+                        if (streamHandler.IsStreamReady)
+                        {
+                            _onComplete.Invoke(_request, string.Empty);
+                            _onComplete = null;
+                        }
                     }
                 }
             }
@@ -210,21 +210,29 @@ namespace Meta.WitAi.Requests
         // Check for whether request is complete
         protected virtual bool IsRequestComplete()
         {
+            // No request
+            if (_request == null)
+            {
+                return true;
+            }
             // Request still in progress
-            if (_request != null && !_request.isDone)
+            if (!_request.isDone)
             {
                 return false;
             }
-            // Check additional handlers if error is null
-            if (_request != null && string.IsNullOrEmpty(_request.error))
+            // No error & download handler
+            if (string.IsNullOrEmpty(_request.error) && _request.downloadHandler != null)
             {
-                // Download handler still in progress
-                if (_request.downloadHandler != null && !_request.downloadHandler.isDone)
+                // Stream is still finishing
+                if (_request.downloadHandler is IVRequestStreamable streamHandler)
                 {
-                    return false;
+                    if (!streamHandler.IsStreamComplete)
+                    {
+                        return false;
+                    }
                 }
-                // Stream handler still in progress
-                if (_streamHandler != null && !_streamHandler.IsStreamComplete)
+                // Download handler not complete
+                else if (!_request.downloadHandler.isDone)
                 {
                     return false;
                 }
@@ -236,7 +244,7 @@ namespace Meta.WitAi.Requests
         protected virtual void Complete()
         {
             // Perform callback
-            if (IsPerforming && _request != null && _request.isDone)
+            if (IsPerforming && IsRequestComplete())
             {
                 DownloadProgress = 1f;
                 _onDownloadProgress?.Invoke(DownloadProgress);

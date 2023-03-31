@@ -221,22 +221,35 @@ namespace Meta.WitAi.Requests
             IsStreamComplete = true;
             OnStreamComplete?.Invoke(Clip);
             VLog.D($"Clip Stream - Complete\nSamples: {_clipSetSamples}");
+
+            // Dispose
+            Dispose();
         }
 
         // Destroy old clip
         public void CleanUp()
         {
+            // Already complete
+            if (IsStreamComplete)
+            {
+                Clip = null;
+                OnStreamComplete = null;
+                return;
+            }
+
+            // Destroy clip
             if (Clip != null)
             {
-                // If successfully completed, destroy elsewhere
-                if (!IsStreamComplete)
-                {
-                    Clip.DestroySafely();
-                }
+                Clip.DestroySafely();
                 Clip = null;
             }
+
+            // Dispose handler
+            Dispose();
+
+            // Complete
             IsStreamComplete = true;
-            VLog.D($"Clip Stream - Cleanup");
+            VLog.D($"Clip Stream - Cleaned Up");
         }
 
         // Generate clip
