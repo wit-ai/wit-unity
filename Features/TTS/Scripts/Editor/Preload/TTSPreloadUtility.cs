@@ -181,6 +181,10 @@ namespace Meta.WitAi.TTS.Editor.Preload
             {
                 // Get voice data
                 TTSPreloadVoiceData voiceData = preloadData.voices[v];
+                if (voiceData.phrases == null)
+                {
+                    continue;
+                }
 
                 // Get voice
                 TTSVoiceSettings voiceSettings = service.GetPresetVoiceSettings(voiceData.presetVoiceID);
