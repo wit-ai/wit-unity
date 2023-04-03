@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -62,6 +63,9 @@ namespace Meta.WitAi.Requests
         private int _decodingChunks = 0;
         private bool _requestComplete = false;
 
+        // Error handling
+        private byte[] _errorBytes;
+
         // Delegate that accepts an old clip and a new clip
         public delegate void AudioStreamClipUpdateDelegate(AudioClip oldClip, AudioClip newClip);
         // Callback for audio clip update during stream
@@ -89,6 +93,7 @@ namespace Meta.WitAi.Requests
             _requestComplete = false;
             IsStreamReady = false;
             IsStreamComplete = false;
+            _errorBytes = null;
 
             // Generate clip immediately
             GenerateClip(StreamData.ClipChunkSize);
@@ -104,6 +109,15 @@ namespace Meta.WitAi.Requests
             {
                 return;
             }
+
+            // Assume text if less than min chunk size
+            int minChunkSize = Mathf.Max(100, Mathf.CeilToInt(StreamData.ClipReadyLength * StreamData.DecodeChannels * StreamData.DecodeSampleRate));
+            if (contentLength < (ulong)minChunkSize)
+            {
+                _errorBytes = new byte[minChunkSize];
+                return;
+            }
+
             // Apply size
             int newMaxSamples = Mathf.Max(GetClipSamplesFromContentLength(contentLength, StreamData.DecodeType), _clipMaxSamples);
             VLog.D($"Clip Stream - Received Size\nTotal Samples: {newMaxSamples}");
@@ -116,6 +130,17 @@ namespace Meta.WitAi.Requests
             if (!base.ReceiveData(receiveData, dataLength) || IsStreamComplete)
             {
                 return false;
+            }
+
+            // Append to error
+            if (_errorBytes != null)
+            {
+                for (int i = 0; i < Mathf.Min(dataLength, _errorBytes.Length - _clipSetSamples); i++)
+                {
+                    _errorBytes[_clipSetSamples + i] = receiveData[i];
+                }
+                _clipSetSamples += dataLength;
+                return true;
             }
 
             // Decode data async
@@ -191,6 +216,11 @@ namespace Meta.WitAi.Requests
             TryToFinalize();
         }
 
+        // Used for error handling
+        protected override string GetText()
+        {
+            return _errorBytes != null ? Encoding.UTF8.GetString(_errorBytes) : string.Empty;
+        }
         // Clean up clip with final sample count
         protected override void CompleteContent()
         {
@@ -232,6 +262,8 @@ namespace Meta.WitAi.Requests
             // Already complete
             if (IsStreamComplete)
             {
+                _leftovers = null;
+                _errorBytes = null;
                 Clip = null;
                 OnStreamComplete = null;
                 return;

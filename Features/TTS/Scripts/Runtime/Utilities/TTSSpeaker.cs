@@ -446,7 +446,7 @@ namespace Meta.WitAi.TTS.Utilities
                 else
                 {
                     RemoveLoadingClip(clipData, false);
-                    VLog.E($"Load Failed\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms\n{error}");
+                    VLog.E($"Load Failed\nError: {error}\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms");
                     Events?.OnClipDataLoadFailed?.Invoke(clipData);
                     Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
                 }
