@@ -20,6 +20,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
+using Unity.Collections;
 
 namespace Meta.WitAi.Requests
 {
@@ -248,7 +249,7 @@ namespace Meta.WitAi.Requests
             {
                 DownloadProgress = 1f;
                 _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, _request.error);
+                _onComplete?.Invoke(_request, GetSpecificRequestError(_request));
             }
 
             // Unload
@@ -307,6 +308,50 @@ namespace Meta.WitAi.Requests
 
             // Officially complete
             IsComplete = true;
+        }
+        // Returns more specific request error
+        public static string GetSpecificRequestError(UnityWebRequest request)
+        {
+            // Get error & return if empty
+            string error = request.error;
+            string result = error;
+            if (string.IsNullOrEmpty(result))
+            {
+                return result;
+            }
+
+            // Ignore without download handler
+            if (request.downloadHandler == null)
+            {
+                return result;
+            }
+
+            // Ignore without downloaded json
+            string downloadedJson = request.downloadHandler.text;
+            if (string.IsNullOrEmpty(downloadedJson))
+            {
+                return result;
+            }
+
+            // Set error to json
+            result = $"{error}\nServer Response: {downloadedJson}";
+
+            // Decode
+            WitResponseNode downloadedNode = WitResponseNode.Parse(downloadedJson);
+            if (downloadedNode == null)
+            {
+                return result;
+            }
+
+            // Check for error
+            WitResponseClass downloadedClass = downloadedNode.AsObject;
+            if (!downloadedClass.HasChild(WitConstants.ENDPOINT_ERROR_PARAM))
+            {
+                return result;
+            }
+
+            // Get final result
+            return $"{request.error}\nServer Error: {downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value}";
         }
         #endregion
 

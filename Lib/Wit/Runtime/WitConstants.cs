@@ -33,6 +33,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_MESSAGE = "message";
         public const string ENDPOINT_MESSAGE_PARAM = "q";
         public const string ENDPOINT_JSON_DELIMITER = "\r\n";
+        public const string ENDPOINT_ERROR_PARAM = "error";
 
         // TTS Endpoint
         public const string ENDPOINT_TTS = "synthesize";
