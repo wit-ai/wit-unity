@@ -745,6 +745,15 @@ namespace Meta.WitAi
                     ResponseData = _lastResponseData;
                 }
 
+                if (null != _lastResponseData)
+                {
+                    var error = _lastResponseData["error"];
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        StatusDescription += $"\n{error}";
+                    }
+                }
+
                 // Call completion delegate
                 HandleNlpResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : $"{StatusDescription}\n\nStackTrace:\n{_stackTrace}\n\n");
             });
