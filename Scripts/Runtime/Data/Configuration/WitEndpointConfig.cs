@@ -77,6 +77,20 @@ namespace Meta.WitAi.Configuration
         private string _synthesize;
         public string Synthesize => string.IsNullOrEmpty(_synthesize) ? WitConstants.ENDPOINT_TTS : _synthesize;
 
+        /// <summary>
+        /// Endpoint used for Composer text requests.  Defaults to 'event'
+        /// </summary>
+        [SerializeField]
+        private string _event;
+        public string Event => string.IsNullOrEmpty(_event) ? WitConstants.ENDPOINT_COMPOSER_MESSAGE : _event;
+
+        /// <summary>
+        /// Endpoint used for Composer audio requests.  Defaults to 'converse'
+        /// </summary>
+        [SerializeField]
+        private string _converse;
+        public string Converse => string.IsNullOrEmpty(_converse) ? WitConstants.ENDPOINT_COMPOSER_SPEECH : _converse;
+
         // Default endpoint data
         private static WitEndpointConfig defaultEndpointConfig = new WitEndpointConfig();
 

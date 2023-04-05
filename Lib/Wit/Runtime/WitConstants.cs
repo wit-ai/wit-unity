@@ -50,6 +50,10 @@ namespace Meta.WitAi
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";
 
+        // Composer Endpoints
+        public const string ENDPOINT_COMPOSER_SPEECH = "converse";
+        public const string ENDPOINT_COMPOSER_MESSAGE = "event";
+
         // Reusable constants
         public const string CANCEL_ERROR = "Cancelled";
         public const string CANCEL_MESSAGE_DEFAULT = "Request was cancelled.";

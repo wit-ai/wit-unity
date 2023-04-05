@@ -48,6 +48,10 @@ namespace Meta.WitAi.Windows
                     return WitConstants.ENDPOINT_DICTATION;
                 case FIELD_SYNTHESIZE:
                     return WitConstants.ENDPOINT_TTS;
+                case "_event":
+                    return WitConstants.ENDPOINT_COMPOSER_MESSAGE;
+                case "_converse":
+                    return WitConstants.ENDPOINT_COMPOSER_SPEECH;
             }
 
             // Return base
@@ -77,6 +81,10 @@ namespace Meta.WitAi.Windows
                     return WitTexts.Texts.ConfigurationEndpointDictationLabel;
                 case FIELD_SYNTHESIZE:
                     return WitTexts.Texts.ConfigurationEndpointSynthesizeLabel;
+                case "_event":
+                    return WitTexts.Texts.ConfigurationEndpointComposerEventLabel;
+                case "_converse":
+                    return WitTexts.Texts.ConfigurationEndpointComposerConverseLabel;
             }
             // Default to base
             return base.GetLocalizedText(property, key);

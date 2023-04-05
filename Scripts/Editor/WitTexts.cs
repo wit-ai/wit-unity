@@ -80,6 +80,8 @@ namespace Meta.WitAi
             public string ConfigurationEndpointMessageLabel;
             public string ConfigurationEndpointDictationLabel;
             public string ConfigurationEndpointSynthesizeLabel;
+            public string ConfigurationEndpointComposerEventLabel;
+            public string ConfigurationEndpointComposerConverseLabel;
             [Header("Configuration Application Texts")]
             public string ConfigurationApplicationTabLabel;
             public string ConfigurationApplicationMissingLabel;

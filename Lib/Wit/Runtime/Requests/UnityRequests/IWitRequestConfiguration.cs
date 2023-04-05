@@ -29,6 +29,9 @@ namespace Meta.WitAi
         string Dictation { get; }
         // TTS Endpoint
         string Synthesize { get; }
+        // Composer Endpoints
+        string Event { get; }
+        string Converse { get; }
     }
 
     /// <summary>
@@ -84,6 +87,8 @@ namespace Meta.WitAi
         public string Speech => WitConstants.ENDPOINT_SPEECH;
         public string Dictation => WitConstants.ENDPOINT_DICTATION;
         public string Synthesize => WitConstants.ENDPOINT_TTS;
+        public string Event => WitConstants.ENDPOINT_COMPOSER_MESSAGE;
+        public string Converse => WitConstants.ENDPOINT_COMPOSER_SPEECH;
     }
 #endif
 }
