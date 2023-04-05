@@ -30,6 +30,9 @@ namespace Meta.WitAi.Events.Editor
 
         private static Dictionary<string, List<string>> eventCategories;
 
+        public virtual string DocumentationUrl => string.Empty;
+        public virtual string DocumentationTooltip => string.Empty;
+
         private void InitializeEventCategories(Type eventsType)
         {
             EventCategoryAttribute[] eventCategoryAttributes;
@@ -97,6 +100,28 @@ namespace Meta.WitAi.Events.Editor
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             showEvents = EditorGUI.Foldout(new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight), showEvents, "Events");
+
+            string url = DocumentationUrl;
+            if (!string.IsNullOrEmpty(url))
+            {
+                Texture texture = WitStyles.HelpIcon.image;
+                if (texture != null)
+                {
+                    // Add a ? button
+                    Vector2 textureSize = WitStyles.IconButton.CalcSize(WitStyles.HelpIcon);
+                    Rect buttonRect = new Rect(position.x + position.width - textureSize.x, position.y, textureSize.x, textureSize.y);
+                    if (GUI.Button(buttonRect,
+                        new GUIContent(WitStyles.HelpIcon.image, DocumentationTooltip), WitStyles.IconButton))
+                    {
+                        Application.OpenURL(url);
+                    }
+                    // Add a tooltip
+                    if (!string.IsNullOrEmpty(DocumentationTooltip))
+                    {
+                        GUI.Label(buttonRect, GUI.tooltip);
+                    }
+                }
+            }
 
             if (showEvents && Selection.activeTransform)
             {
