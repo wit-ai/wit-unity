@@ -541,6 +541,7 @@ namespace Meta.WitAi.Windows
             try
             {
                 var writer = new StreamWriter(fullPath);
+                writer.NewLine = "\n";
                 writer.WriteLine(manifest);
                 writer.Close();
             }
