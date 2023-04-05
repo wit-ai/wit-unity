@@ -52,14 +52,14 @@ namespace Meta.WitAi.Requests
             if (InputType == NLPRequestInputType.Text)
             {
                 _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
-                Endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Message;
+                Endpoint = Configuration.GetEndpointInfo().Message;
                 ShouldPost = false;
             }
             // Generate an audio WitVRequest
             else if (InputType == NLPRequestInputType.Audio)
             {
                 // TODO: T121060485: Add audio support to WitVRequest
-                Endpoint = WitEndpointConfig.GetEndpointConfig(Configuration).Speech;
+                Endpoint = Configuration.GetEndpointInfo().Speech;
                 ShouldPost = true;
             }
 

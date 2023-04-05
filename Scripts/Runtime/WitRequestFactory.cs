@@ -153,7 +153,7 @@ namespace Meta.WitAi
         public static WitRequest CreateSpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
             var options = GetSetupOptions(requestOptions, additionalEntityProviders);
-            var path = WitEndpointConfig.GetEndpointConfig(config).Speech;
+            var path = config.GetEndpointInfo().Speech;
             return new WitRequest(config, path, options, requestEvents);
         }
 
@@ -166,7 +166,7 @@ namespace Meta.WitAi
         public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents = null)
         {
             var options = GetSetupOptions(requestOptions, null);
-            var path = WitEndpointConfig.GetEndpointConfig(config).Dictation;
+            var path = config.GetEndpointInfo().Dictation;
             return new WitRequest(config, path, options, requestEvents);
         }
     }

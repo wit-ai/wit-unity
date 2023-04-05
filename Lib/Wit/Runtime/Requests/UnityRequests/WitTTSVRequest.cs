@@ -215,7 +215,7 @@ namespace Meta.WitAi.Requests
         private UnityWebRequest GetUnityRequest(TTSWitAudioType audioType, byte[] postData)
         {
             // Get uri
-            Uri uri = GetUri(WitConstants.ENDPOINT_TTS);
+            Uri uri = GetUri(Configuration.GetEndpointInfo().Synthesize);
 
             // Generate request
             UnityWebRequest unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);

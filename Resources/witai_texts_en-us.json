@@ -51,6 +51,7 @@
   "ConfigurationEndpointSpeechLabel": "Speech",
   "ConfigurationEndpointMessageLabel": "Message",
   "ConfigurationEndpointDictationLabel": "Dictation",
+  "ConfigurationEndpointSynthesizeLabel": "TTS",
   "ConfigurationApplicationTabLabel": "Application",
   "ConfigurationApplicationMissingLabel": "Loading Application Data",
   "ConfigurationApplicationNameLabel": "Name",

@@ -155,16 +155,16 @@ namespace Meta.WitAi.Requests
             UriBuilder uriBuilder = new UriBuilder();
 
             // Append endpoint data
-            WitRequestEndpointOverride endpoint = configuration.GetEndpointOverrides();
-            uriBuilder.Scheme = string.IsNullOrEmpty(endpoint.uriScheme) ? WitConstants.URI_SCHEME : endpoint.uriScheme;
-            uriBuilder.Host = string.IsNullOrEmpty(endpoint.authority) ? WitConstants.URI_AUTHORITY : endpoint.authority;
-            uriBuilder.Port = endpoint.port <= 0 ?  WitConstants.URI_DEFAULT_PORT : endpoint.port;
-            string apiVersion = string.IsNullOrEmpty(endpoint.witApiVersion) ? WitConstants.API_VERSION : endpoint.witApiVersion;
+            IWitRequestEndpointInfo endpoint = configuration.GetEndpointInfo();
+            uriBuilder.Scheme = endpoint.UriScheme;
+            uriBuilder.Host = endpoint.Authority;
+            uriBuilder.Port = endpoint.Port;
 
             // Set path
             uriBuilder.Path = path;
 
             // Build query
+            string apiVersion = endpoint.WitApiVersion;
             uriBuilder.Query = $"v={apiVersion}";
             if (queryParams != null)
             {
