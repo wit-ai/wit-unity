@@ -277,6 +277,11 @@ namespace Meta.WitAi.Windows
             {
                 return false;
             }
+            // Hidden
+            if (Attribute.IsDefined(subfield, typeof(HideInInspector)))
+            {
+                return false;
+            }
             // Success
             return true;
         }

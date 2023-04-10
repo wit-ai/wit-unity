@@ -197,8 +197,10 @@ namespace Meta.WitAi
             _requests.Add(textRequest);
 
             // Call on create delegates
-            VoiceEvents?.OnRequestCreated?.Invoke(null);
             VoiceEvents?.OnRequestInitialized?.Invoke(textRequest);
+            #pragma warning disable CS0618
+            VoiceEvents?.OnRequestCreated?.Invoke(null);
+            VoiceEvents?.OnSend?.Invoke(textRequest);
 
             // Send text request
             textRequest.Send(text);

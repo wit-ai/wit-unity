@@ -7,7 +7,9 @@
  */
 
 using System.Net;
+using Meta.Voice;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using TMPro;
 using UnityEngine;
 
@@ -41,30 +43,40 @@ namespace Meta.WitAi.Samples.ResponseDebugger
 
         private void OnEnable()
         {
-            wit.VoiceEvents.OnRequestCreated.AddListener(OnRequestStarted);
+            wit.VoiceEvents.OnSend.AddListener(OnSend);
+            wit.VoiceEvents.OnComplete.AddListener(OnComplete);
         }
 
         private void OnDisable()
         {
-            wit.VoiceEvents.OnRequestCreated.RemoveListener(OnRequestStarted);
+            wit.VoiceEvents.OnSend.RemoveListener(OnSend);
+            wit.VoiceEvents.OnComplete.AddListener(OnComplete);
         }
 
-        private void OnRequestStarted(WitRequest request)
+        private void OnSend(VoiceServiceRequest request)
         {
             // The raw response comes back on a different thread. We store the
             // message received for display on the next frame.
-            if (showJson) request.onRawResponse += (response) => pendingText = response;
-            request.onResponse += (r) =>
+            if (showJson && request is WitRequest witRequest)
             {
-                if (r.StatusCode == (int) HttpStatusCode.OK)
-                {
-                    OnResponse(r.ResponseData);
-                }
-                else
-                {
-                    OnError($"Error {r.StatusCode}", r.StatusDescription);
-                }
-            };
+                witRequest.onRawResponse += (response) => pendingText = response;
+            }
+        }
+
+        private void OnComplete(VoiceServiceRequest request)
+        {
+            if (request.State == VoiceRequestState.Successful)
+            {
+                OnResponse(request.Results.ResponseData);
+            }
+            else if (request.State == VoiceRequestState.Failed)
+            {
+                OnError($"Error {request.Results.StatusCode}", request.Results.Message);
+            }
+            else if (request.State == VoiceRequestState.Canceled)
+            {
+                textArea.text = request.Results.Message;
+            }
         }
 
         public void OnResponse(WitResponseNode response)

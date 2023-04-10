@@ -26,14 +26,14 @@ namespace Meta.WitAi.Requests
 
         public VoiceEventToRequestEventMapper()
         {
-            
+
         }
-        
+
         public VoiceEventToRequestEventMapper(VoiceEvents voiceEvents)
         {
             _voiceEvents = voiceEvents;
         }
-        
+
         protected override void OnStateChange(VoiceServiceRequest request)
         {
         }
@@ -50,7 +50,7 @@ namespace Meta.WitAi.Requests
 
         protected override void OnFullTranscription(string transcription)
         {
-            _voiceEvents.onFullTranscription.Invoke(transcription);
+            _voiceEvents.OnFullTranscription.Invoke(transcription);
         }
 
         protected override void OnPartialTranscription(string transcription)
@@ -70,12 +70,12 @@ namespace Meta.WitAi.Requests
 
         protected override void OnSuccess(VoiceServiceRequest request)
         {
-            
+
         }
 
         protected override void OnSend(VoiceServiceRequest request)
         {
-            
+
         }
 
         protected override void OnInit(VoiceServiceRequest request)

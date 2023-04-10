@@ -98,7 +98,7 @@ namespace Meta.WitAi
         }
 
         public WitRuntimeConfiguration RuntimeConfiguration =>
-            _runtimeConfigProvider.RuntimeConfiguration;
+            _runtimeConfigProvider?.RuntimeConfiguration;
 
         public VoiceEvents VoiceEvents => _voiceEventProvider.VoiceEvents;
 
@@ -369,7 +369,9 @@ namespace Meta.WitAi
             _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
             _recordingRequest.Events.OnFullTranscription.AddListener(OnFullTranscription);
             _recordingRequest.Events.OnPartialResponse.AddListener(HandlePartialResult);
+            #pragma warning disable CS0618
             VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
+            VoiceEvents.OnSend?.Invoke(_recordingRequest);
             _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             _recordingRequest.Send();
         }

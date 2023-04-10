@@ -7,6 +7,7 @@
  */
 
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using TMPro;
 using UnityEngine;
 
@@ -22,19 +23,19 @@ namespace Meta.WitAi.Samples.Shapes
 
         private void OnEnable()
         {
-            wit.VoiceEvents.OnRequestCreated.AddListener(OnRequestStarted);
+            wit.VoiceEvents.OnSend.AddListener(OnRequestStarted);
         }
 
         private void OnDisable()
         {
-            wit.VoiceEvents.OnRequestCreated.RemoveListener(OnRequestStarted);
+            wit.VoiceEvents.OnSend.RemoveListener(OnRequestStarted);
         }
 
-        private void OnRequestStarted(WitRequest r)
+        private void OnRequestStarted(VoiceServiceRequest request)
         {
             // The raw response comes back on a different thread. We store the
             // message received for display on the next frame.
-            if (showJson) r.onRawResponse = (response) => pendingText = response;
+            if (showJson && request is WitRequest r) r.onRawResponse = (response) => pendingText = response;
         }
 
         private void Update()

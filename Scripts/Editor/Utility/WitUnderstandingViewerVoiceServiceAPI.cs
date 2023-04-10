@@ -84,7 +84,7 @@ namespace Meta.WitAi.Windows
 
         public override WitTranscriptionEvent OnFullTranscription
         {
-            get => _service.VoiceEvents.onFullTranscription;
+            get => _service.VoiceEvents.OnFullTranscription;
         }
 
         public override WitTranscriptionEvent OnPartialTranscription
