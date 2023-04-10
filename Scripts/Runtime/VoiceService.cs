@@ -161,70 +161,30 @@ namespace Meta.WitAi
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        public virtual VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions,
-            VoiceServiceRequestEvents requestEvents)
-        {
-            // Check if send is possible
-            string sendError = GetSendError();
-            if (!string.IsNullOrEmpty(sendError))
-            {
-                VLog.W($"Text Request Send Error\n{sendError}");
-                VoiceEvents.OnError?.Invoke("Text Request Send Failed", sendError);
-                return null;
-            }
-
-            // Handle option setup
-            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
-
-            // Generate request
-            VoiceServiceRequest textRequest = GetTextRequest(requestOptions, requestEvents);
-            if (textRequest.State != VoiceRequestState.Initialized)
-            {
-                sendError = $"Failed to init text request\nState: {textRequest.State}";
-                VLog.W($"Text Request Send Error\n{sendError}");
-                textRequest.Cancel(sendError);
-                VoiceEvents.OnError?.Invoke("Text Request Send Failed", sendError);
-                return null;
-            }
-
-            // Add on completion delegates
-            textRequest.Events.OnCancel.AddListener(OnTextRequestCancel);
-            textRequest.Events.OnFailed.AddListener(OnTextRequestFailed);
-            textRequest.Events.OnSuccess.AddListener(OnTextRequestSuccess);
-            textRequest.Events.OnComplete.AddListener(OnTextRequestComplete);
-
-            // Add to text request queue
-            _requests.Add(textRequest);
-
-            // Call on create delegates
-            VoiceEvents?.OnRequestInitialized?.Invoke(textRequest);
-            #pragma warning disable CS0618
-            VoiceEvents?.OnRequestCreated?.Invoke(null);
-            VoiceEvents?.OnSend?.Invoke(textRequest);
-
-            // Send text request
-            textRequest.Send(text);
-
-            // Return request data
-            return textRequest;
-        }
-        /// <summary>
-        /// Obtain a service specific text request
-        /// </summary>
-        /// <param name="requestOptions">Additional options such as dynamic entities</param>
-        /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        protected abstract VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions,
+        public abstract VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions,
             VoiceServiceRequestEvents requestEvents);
 
-        // Custom methods that can be overriden for text requests & keep ordering of callbacks
-        protected virtual void OnTextRequestCancel(VoiceServiceRequest textRequest) =>
-            HandleRequestResults(textRequest);
-        protected virtual void OnTextRequestFailed(VoiceServiceRequest textRequest) =>
-            HandleRequestResults(textRequest);
-        protected virtual void OnTextRequestSuccess(VoiceServiceRequest textRequest) =>
-            HandleRequestResults(textRequest);
-        protected virtual void OnTextRequestComplete(VoiceServiceRequest textRequest) =>
-            HandleRequestComplete(textRequest);
+
+        /// <summary>
+        /// Called on text request creation
+        /// </summary>
+        /// <param name="request"></param>
+        protected virtual void OnTextRequestCreated(VoiceServiceRequest textRequest)
+        {
+            if (textRequest == null)
+            {
+                return;
+            }
+            if (!textRequest.IsActive)
+            {
+                HandleRequestResults(textRequest);
+                return;
+            }
+            textRequest.Events.OnCancel.AddListener(HandleRequestResults);
+            textRequest.Events.OnFailed.AddListener(HandleRequestResults);
+            textRequest.Events.OnSuccess.AddListener(HandleRequestResults);
+            _requests.Add(textRequest);
+        }
         #endregion TEXT REQUESTS
 
         #region SHARED
@@ -252,49 +212,11 @@ namespace Meta.WitAi
         /// </summary>
         protected virtual void HandleRequestResults(VoiceServiceRequest request)
         {
-            // Must perform in WitService due to Dictation
-            if (request.InputType == NLPRequestInputType.Audio)
-            {
-                return;
-            }
-            // Handle Success
-            if (request.State == VoiceRequestState.Successful)
-            {
-                VLog.D("Request Success");
-                VoiceEvents?.OnResponse?.Invoke(request.Results.ResponseData);
-                VoiceEvents?.OnRequestCompleted?.Invoke();
-            }
-            // Handle Cancellation
-            else if (request.State == VoiceRequestState.Canceled)
-            {
-                VLog.D($"Request Canceled\nReason: {request.Results.Message}");
-                VoiceEvents?.OnCanceled?.Invoke(request.Results.Message);
-                if (!string.Equals(request.Results.Message, WitConstants.CANCEL_MESSAGE_PRE_SEND))
-                {
-                    VoiceEvents?.OnAborted?.Invoke();
-                }
-            }
-            // Handle Failure
-            else if (request.State == VoiceRequestState.Failed)
-            {
-                VLog.D($"Request Failed\nError: {request.Results.Message}");
-                VoiceEvents?.OnError?.Invoke("HTTP Error " + request.Results.StatusCode, request.Results.Message);
-                VoiceEvents?.OnRequestCompleted?.Invoke();
-            }
-        }
-        /// <summary>
-        /// Called after request cancellation, failure or success
-        /// </summary>
-        protected virtual void HandleRequestComplete(VoiceServiceRequest request)
-        {
             // Remove request from requests list
             if (_requests.Contains(request))
             {
                 _requests.Remove(request);
             }
-
-            // Completion delegate
-            VoiceEvents?.OnComplete?.Invoke(request);
         }
         #endregion SHARED
 
@@ -368,14 +290,13 @@ namespace Meta.WitAi
             }
             if (!audioRequest.IsActive)
             {
-                OnAudioRequestComplete(audioRequest);
+                HandleRequestResults(audioRequest);
                 return;
             }
             audioRequest.Events.OnPartialResponse.AddListener((response) => OnAudioPartialResponse(audioRequest));
-            audioRequest.Events.OnCancel.AddListener(OnAudioRequestCancel);
-            audioRequest.Events.OnFailed.AddListener(OnAudioRequestFailed);
-            audioRequest.Events.OnSuccess.AddListener(OnAudioRequestSuccess);
-            audioRequest.Events.OnComplete.AddListener(OnAudioRequestComplete);
+            audioRequest.Events.OnCancel.AddListener(HandleRequestResults);
+            audioRequest.Events.OnFailed.AddListener(HandleRequestResults);
+            audioRequest.Events.OnSuccess.AddListener(HandleRequestResults);
             _requests.Add(audioRequest);
         }
         // Callback for early validation
@@ -416,15 +337,6 @@ namespace Meta.WitAi
                 audioRequest.CompleteEarly();
             }
         }
-        // Callbacks for custom audio request handling
-        protected virtual void OnAudioRequestCancel(VoiceServiceRequest audioRequest) =>
-            HandleRequestResults(audioRequest);
-        protected virtual void OnAudioRequestFailed(VoiceServiceRequest audioRequest) =>
-            HandleRequestResults(audioRequest);
-        protected virtual void OnAudioRequestSuccess(VoiceServiceRequest audioRequest) =>
-            HandleRequestResults(audioRequest);
-        protected virtual void OnAudioRequestComplete(VoiceServiceRequest audioRequest) =>
-            HandleRequestComplete(audioRequest);
         #endregion AUDIO REQUESTS
 
         /// <summary>
@@ -435,19 +347,7 @@ namespace Meta.WitAi
         /// <summary>
         /// Stop listening and abort any requests that may be active without waiting for a response.
         /// </summary>
-        public virtual void DeactivateAndAbortRequest()
-        {
-            // Call pre abort method
-            VoiceEvents?.OnAborting.Invoke();
-
-            // Cancel all text requests
-            HashSet<VoiceServiceRequest> requests = _requests;
-            _requests = new HashSet<VoiceServiceRequest>();
-            foreach (var request in requests)
-            {
-                DeactivateAndAbortRequest(request);
-            }
-        }
+        public abstract void DeactivateAndAbortRequest();
         /// <summary>
         /// Abort a specific request
         /// </summary>

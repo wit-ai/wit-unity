@@ -63,10 +63,11 @@ namespace Meta.WitAi
             return string.Empty;
         }
 
-        protected override VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions,
-            VoiceServiceRequestEvents requestEvents)
+        public override VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            return witService.GetTextRequest(requestOptions, requestEvents);
+            VoiceServiceRequest request = witService.Activate(text, requestOptions, requestEvents);
+            OnTextRequestCreated(request);
+            return request;
         }
 
         public override VoiceServiceRequest Activate(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
@@ -90,7 +91,6 @@ namespace Meta.WitAi
 
         public override void DeactivateAndAbortRequest()
         {
-            base.DeactivateAndAbortRequest();
             witService.DeactivateAndAbortRequest();
         }
 
