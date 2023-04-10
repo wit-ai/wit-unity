@@ -64,6 +64,10 @@ namespace Meta.WitAi.Requests
         /// Whether or not the completion delegate has been called
         /// </summary>
         public bool IsComplete { get; private set; } = false;
+        /// <summary>
+        /// Response Code if applicable
+        /// </summary>
+        public int ResponseCode { get; set; } = 0;
 
         /// <summary>
         /// Current progress for get requests
@@ -248,6 +252,7 @@ namespace Meta.WitAi.Requests
             if (IsPerforming && IsRequestComplete())
             {
                 DownloadProgress = 1f;
+                ResponseCode = (int)_request.responseCode;
                 _onDownloadProgress?.Invoke(DownloadProgress);
                 _onComplete?.Invoke(_request, GetSpecificRequestError(_request));
             }
@@ -561,13 +566,13 @@ namespace Meta.WitAi.Requests
             return Request(unityRequest, (response, error) =>
             {
                 // Request error
+                string text = response?.downloadHandler?.text;
                 if (!string.IsNullOrEmpty(error))
                 {
-                    onComplete?.Invoke(string.Empty, error);
+                    onComplete?.Invoke(text, error);
                     return;
                 }
                 // No text returned
-                string text = response.downloadHandler.text;
                 if (string.IsNullOrEmpty(text))
                 {
                     onComplete?.Invoke(string.Empty, "No response contents found");
@@ -599,7 +604,7 @@ namespace Meta.WitAi.Requests
             return RequestText(unityRequest, (text, error) =>
             {
                 // Request error
-                if (!string.IsNullOrEmpty(error))
+                if (!string.IsNullOrEmpty(error) && string.IsNullOrEmpty(text))
                 {
                     onComplete?.Invoke(default(TData), error);
                     return;
@@ -608,8 +613,13 @@ namespace Meta.WitAi.Requests
                 // Deserialize
                 JsonConvert.DeserializeObjectAsync<TData>(text, (result, deserializeSuccess) =>
                 {
-                    // Failed
-                    if (!deserializeSuccess)
+                    // Return parsed error
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        onComplete?.Invoke(result, error);
+                    }
+                    // Parse failed
+                    else if (!deserializeSuccess)
                     {
                         onComplete?.Invoke(result, $"Failed to parse json\n{text}");
                     }
