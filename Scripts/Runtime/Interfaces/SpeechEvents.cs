@@ -7,6 +7,10 @@
  */
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Meta.WitAi.Configuration;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -183,5 +187,138 @@ namespace Meta.WitAi.Events
         [Obsolete("Deprecated for 'OnPartialTranscription' event")]
         public WitTranscriptionEvent onFullTranscription => OnFullTranscription;
         #endregion Transcription Events
+
+        #region Listen Wrapping
+        // Listeners
+        private HashSet<SpeechEvents> _listeners = new HashSet<SpeechEvents>();
+
+        // Adds all listener events
+        public void AddListener(SpeechEvents listener)
+        {
+            // Ignore if null or already set
+            if (listener == null || _listeners.Contains(listener))
+            {
+                return;
+            }
+
+            // Add all events
+            if (_listeners.Count == 0)
+            {
+                SetEvents(true);
+            }
+
+            // Add listener
+            _listeners.Add(listener);
+        }
+        // Removes all listener events
+        public void RemoveListener(SpeechEvents listener)
+        {
+            // Ignore if null or not already set
+            if (listener == null || !_listeners.Contains(listener))
+            {
+                return;
+            }
+
+            // Remove listener
+            _listeners.Remove(listener);
+
+            // Remove all events
+            if (_listeners.Count == 0)
+            {
+                SetEvents(false);
+            }
+        }
+        // Set events
+        protected virtual void SetEvents(bool add)
+        {
+            SetEvent((events) => events?._onRequestOptionSetup, add);
+            SetEvent((events) => events?._onRequestInitialized, add);
+            SetEvent((events) => events?._onRequestCreated, add);
+            SetEvent((events) => events?._onSend, add);
+            SetEvent((events) => events?._onMinimumWakeThresholdHit, add);
+            SetEvent((events) => events?._onMicDataSent, add);
+            SetEvent((events) => events?._onStoppedListeningDueToDeactivation, add);
+            SetEvent((events) => events?._onStoppedListeningDueToInactivity, add);
+            SetEvent((events) => events?._onAborting, add);
+            SetEvent((events) => events?._onAborted, add);
+            SetEvent((events) => events?._onCanceled, add);
+            SetEvent((events) => events?._onPartialResponse, add);
+            SetEvent((events) => events?._onResponse, add);
+            SetEvent((events) => events?._onError, add);
+            SetEvent((events) => events?._onRequestCompleted, add);
+            SetEvent((events) => events?._onComplete, add);
+            SetEvent((events) => events?._onStartListening, add);
+            SetEvent((events) => events?._onStoppedListening, add);
+            SetEvent((events) => events?._onMicLevelChanged, add);
+            SetEvent((events) => events?._onPartialTranscription, add);
+            SetEvent((events) => events?._onFullTranscription, add);
+        }
+        // Set UnityEvent with no parameter
+        protected void SetEvent(Func<SpeechEvents, UnityEvent> getEvent, bool add)
+        {
+            // Get source event
+            UnityEvent sourceEvent = getEvent(this);
+
+            // Add event
+            if (!add)
+            {
+                sourceEvent?.RemoveAllListeners();
+                return;
+            }
+
+            // Add listener
+            sourceEvent?.AddListener(() =>
+            {
+                foreach (var listener in _listeners)
+                {
+                    getEvent(listener)?.Invoke();
+                }
+            });
+        }
+        // Set UnityEvent with parameter
+        protected void SetEvent<T>(Func<SpeechEvents, UnityEvent<T>> getEvent, bool add)
+        {
+            // Get source event
+            UnityEvent<T> sourceEvent = getEvent(this);
+
+            // Add event
+            if (!add)
+            {
+                sourceEvent?.RemoveAllListeners();
+                return;
+            }
+
+            // Add listener
+            sourceEvent?.AddListener((param) =>
+            {
+                foreach (var listener in _listeners)
+                {
+                    getEvent(listener)?.Invoke(param);
+                }
+            });
+        }
+        // Set UnityEvent with 2 parameters
+        protected void SetEvent<T, U>(Func<SpeechEvents, UnityEvent<T, U>> getEvent, bool add)
+        {
+            // Get source event
+            UnityEvent<T, U> sourceEvent = getEvent(this);
+
+            // Add event
+            if (!add)
+            {
+                sourceEvent?.RemoveAllListeners();
+                return;
+            }
+
+            // Add listener
+            sourceEvent?.AddListener((param1, param2) =>
+            {
+                foreach (var listener in _listeners)
+                {
+                    getEvent(listener)?.Invoke(param1, param2);
+                }
+            });
+        }
+        #endregion Listen Wrapping
     }
 }
