@@ -43,7 +43,6 @@ namespace Meta.WitAi.Windows
         private int _savePopup;
         private GUIStyle _hamburgerButton;
 
-
         class Content
         {
             public static GUIContent CopyPath;
@@ -104,14 +103,9 @@ namespace Meta.WitAi.Windows
             _submitStart = System.DateTime.Now;
         }
 
-        private void OnError(string title, string message)
+        private void OnSend(VoiceServiceRequest request)
         {
-            _status = message;
-        }
-
-        private void OnRequestCreated(WitRequest request)
-        {
-            this._request = request;
+            _request = request;
             ResetStartTime();
         }
 
@@ -344,7 +338,8 @@ namespace Meta.WitAi.Windows
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
                 _request = witConfiguration.CreateMessageRequest(new WitRequestOptions(), new VoiceServiceRequestEvents());
-                _request.Events.OnComplete.AddListener(OnRequestComplete);
+                _request.Events.OnSend.AddListener(OnSend);
+                _request.Events.OnComplete.AddListener(OnComplete);
                 _request.Send(_utterance);
             }
         }
@@ -358,14 +353,7 @@ namespace Meta.WitAi.Windows
             }
         }
 
-        private void OnResponse(WitResponseNode responseNode)
-        {
-            if (responseNode != null)
-            {
-                ShowResponse(responseNode, false);
-            }
-        }
-        private void OnRequestComplete(VoiceServiceRequest request)
+        private void OnComplete(VoiceServiceRequest request)
         {
             _responseCode = request.StatusCode;
             if (null != request.ResponseData)
@@ -655,22 +643,6 @@ namespace Meta.WitAi.Windows
             // Add listeners to current service
             AddVoiceListeners(service);
         }
-        // Remove listeners
-        private void RemoveVoiceListeners(VoiceService voiceService)
-        {
-            // Ignore
-            if (voiceService == null)
-            {
-                return;
-            }
-            // Remove delegates
-            voiceService.VoiceEvents.OnRequestCreated.RemoveListener(OnRequestCreated);
-            voiceService.VoiceEvents.OnError.RemoveListener(OnError);
-            voiceService.VoiceEvents.OnResponse.RemoveListener(OnResponse);
-            voiceService.VoiceEvents.OnFullTranscription.RemoveListener(ShowTranscription);
-            voiceService.VoiceEvents.OnPartialTranscription.RemoveListener(ShowTranscription);
-            voiceService.VoiceEvents.OnStoppedListening.RemoveListener(ResetStartTime);
-        }
         // Add listeners
         private void AddVoiceListeners(VoiceService voiceService)
         {
@@ -680,12 +652,26 @@ namespace Meta.WitAi.Windows
                 return;
             }
             // Add delegates
-            voiceService.VoiceEvents.OnRequestCreated.AddListener(OnRequestCreated);
-            voiceService.VoiceEvents.OnError.AddListener(OnError);
-            voiceService.VoiceEvents.OnResponse.AddListener(OnResponse);
+            voiceService.VoiceEvents.OnSend.AddListener(OnSend);
+            voiceService.VoiceEvents.OnComplete.AddListener(OnComplete);
             voiceService.VoiceEvents.OnPartialTranscription.AddListener(ShowTranscription);
             voiceService.VoiceEvents.OnFullTranscription.AddListener(ShowTranscription);
             voiceService.VoiceEvents.OnStoppedListening.AddListener(ResetStartTime);
+        }
+        // Remove listeners
+        private void RemoveVoiceListeners(VoiceService voiceService)
+        {
+            // Ignore
+            if (voiceService == null)
+            {
+                return;
+            }
+            // Remove delegates
+            voiceService.VoiceEvents.OnSend.RemoveListener(OnSend);
+            voiceService.VoiceEvents.OnComplete.RemoveListener(OnComplete);
+            voiceService.VoiceEvents.OnFullTranscription.RemoveListener(ShowTranscription);
+            voiceService.VoiceEvents.OnPartialTranscription.RemoveListener(ShowTranscription);
+            voiceService.VoiceEvents.OnStoppedListening.RemoveListener(ResetStartTime);
         }
         #endregion
     }
