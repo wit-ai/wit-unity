@@ -18,5 +18,14 @@ namespace Meta.Voice
         /// Should only be set by TranscriptionRequests
         /// </summary>
         string Transcription { get; }
+
+        /// <summary>
+        /// Whether the current transcription is a final transcription or not
+        /// </summary>
+        bool IsFinalTranscription { get; }
+        /// <summary>
+        /// An array of all finalized transcriptions
+        /// </summary>
+        string[] FinalTranscriptions { get; }
     }
 }

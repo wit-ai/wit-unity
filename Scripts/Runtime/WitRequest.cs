@@ -185,7 +185,7 @@ namespace Meta.WitAi
         ///
         /// NOTE: This response comes back on a different thread.
         /// </summary>
-        [Obsolete("Deprecated for Events.OnFinalTranscription")]
+        [Obsolete("Deprecated for Events.OnFullTranscription")]
         public event Action<string> onFullTranscription;
 
         /// <summary>
@@ -734,17 +734,13 @@ namespace Meta.WitAi
 
             MainThreadCallback(() =>
             {
-                // Call final transcription
-                if (!string.IsNullOrEmpty(Transcription) && !_lastResponseData.GetIsFinal())
-                {
-                    onFullTranscription?.Invoke(Transcription);
-                }
-                // Send partial if not previously sent
+                // Send partial data if not previously sent
                 if (!_lastResponseData.HasResponse())
                 {
                     ResponseData = _lastResponseData;
                 }
 
+                // Apply error if needed
                 if (null != _lastResponseData)
                 {
                     var error = _lastResponseData["error"];
@@ -853,11 +849,7 @@ namespace Meta.WitAi
                 // Set transcription
                 if (!string.IsNullOrEmpty(transcription) && (!hasResponse || isFinal))
                 {
-                    Transcription = transcription;
-                    if (isFinal)
-                    {
-                        onFullTranscription?.Invoke(transcription);
-                    }
+                    ApplyTranscription(transcription, isFinal);
                 }
 
                 // Set response
@@ -870,7 +862,14 @@ namespace Meta.WitAi
         // On text change callback
         protected override void OnTranscriptionChanged()
         {
-            onPartialTranscription?.Invoke(Results?.Transcription);
+            if (!IsFinalTranscription)
+            {
+                onPartialTranscription?.Invoke(Transcription);
+            }
+            else
+            {
+                onFullTranscription?.Invoke(Transcription);
+            }
             base.OnTranscriptionChanged();
         }
         // On response data change callback

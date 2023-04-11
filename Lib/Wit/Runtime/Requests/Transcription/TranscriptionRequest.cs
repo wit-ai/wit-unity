@@ -112,37 +112,45 @@ namespace Meta.Voice
 
         #region TRANSCRIPTION
         /// <summary>
-        /// Set response data early if possible
+        /// Transcription data
         /// </summary>
         public string Transcription
         {
             get => Results?.Transcription;
-            protected set
-            {
-                // Ignore if same
-                string newTranscription = value;
-                if (string.Equals(newTranscription, Results?.Transcription, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return;
-                }
-
-                // Apply transcription
-                ApplyResultTranscription(newTranscription);
-                OnTranscriptionChanged();
-            }
+        }
+        /// <summary>
+        /// Whether the current transcription is a final transcription or not
+        /// </summary>
+        public bool IsFinalTranscription
+        {
+            get => Results != null && Results.IsFinalTranscription;
+        }
+        /// <summary>
+        /// An array of all finalized transcriptions
+        /// </summary>
+        public string[] FinalTranscriptions
+        {
+            get => Results?.FinalTranscriptions;
         }
         /// <summary>
         /// Applies a transcription to the current results
         /// </summary>
         /// <param name="newTranscription">The transcription returned</param>
-        protected abstract void ApplyResultTranscription(string newTranscription);
+        protected abstract void ApplyTranscription(string newTranscription, bool newIsFinal);
 
         /// <summary>
         /// Called when transcription has been set
         /// </summary>
         protected virtual void OnTranscriptionChanged()
         {
-            Events?.OnPartialTranscription?.Invoke(Transcription);
+            if (!IsFinalTranscription)
+            {
+                Events?.OnPartialTranscription?.Invoke(Transcription);
+            }
+            else
+            {
+                Events?.OnFullTranscription?.Invoke(Transcription);
+            }
         }
         #endregion TRANSCRIPTION
 
@@ -272,8 +280,11 @@ namespace Meta.Voice
         /// </summary>
         protected override void OnSuccess()
         {
-            // Handle final transcription callback
-            Events?.OnFullTranscription?.Invoke(Transcription);
+            // Handle transcription as though it is final
+            if (!IsFinalTranscription && !string.IsNullOrEmpty(Transcription))
+            {
+                ApplyTranscription(Transcription, true);
+            }
             // Call success events
             base.OnSuccess();
         }

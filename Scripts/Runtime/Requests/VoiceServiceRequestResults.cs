@@ -28,6 +28,14 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public string Transcription { get; internal set; }
         /// <summary>
+        /// Response transcription
+        /// </summary>
+        public bool IsFinalTranscription { get; internal set; }
+        /// <summary>
+        /// Response transcription
+        /// </summary>
+        public string[] FinalTranscriptions { get; internal set; }
+        /// <summary>
         /// Parsed json response data
         /// </summary>
         public WitResponseNode ResponseData { get; internal set; }

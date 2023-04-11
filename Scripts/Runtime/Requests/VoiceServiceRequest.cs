@@ -7,6 +7,8 @@
  */
 
 using System;
+using System.Collections.Generic;
+using GluonGui.Dialog;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
@@ -61,13 +63,26 @@ namespace Meta.WitAi.Requests
         /// Applies a transcription to the current results
         /// </summary>
         /// <param name="newTranscription">The transcription returned</param>
-        protected override void ApplyResultTranscription(string newTranscription)
+        /// <param name="newIsFinal">Whether the transcription has completed building</param>
+        protected override void ApplyTranscription(string newTranscription, bool newIsFinal)
         {
             if (Results == null)
             {
                 Results = new VoiceServiceRequestResults();
             }
             Results.Transcription = newTranscription;
+            Results.IsFinalTranscription = newIsFinal;
+            if (Results.IsFinalTranscription)
+            {
+                List<string> transcriptions = new List<string>();
+                if (Results.FinalTranscriptions != null)
+                {
+                    transcriptions.AddRange(Results.FinalTranscriptions);
+                }
+                transcriptions.Add(Results.Transcription);
+                Results.FinalTranscriptions = transcriptions.ToArray();
+            }
+            OnTranscriptionChanged();
         }
 
         /// <summary>
