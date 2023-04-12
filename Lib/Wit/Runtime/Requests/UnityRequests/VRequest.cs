@@ -332,7 +332,15 @@ namespace Meta.WitAi.Requests
             }
 
             // Ignore without downloaded json
-            string downloadedJson = request.downloadHandler.text;
+            string downloadedJson = string.Empty;
+            try
+            {
+                downloadedJson = request.downloadHandler.text;
+            }
+            catch (Exception e)
+            {
+                VLog.W($"VRequest failed to parse downloaded text\n{e}");
+            }
             if (string.IsNullOrEmpty(downloadedJson))
             {
                 return result;
