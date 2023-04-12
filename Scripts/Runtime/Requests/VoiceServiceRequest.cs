@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using GluonGui.Dialog;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
