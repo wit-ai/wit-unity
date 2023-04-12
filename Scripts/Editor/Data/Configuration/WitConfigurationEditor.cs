@@ -121,21 +121,11 @@ namespace Meta.WitAi.Windows
             }
 
             // Draw header
-            if (drawHeader)
-            {
-                WitEditorUI.LayoutHeaderButton(HeaderIcon, HeaderUrl, DocsUrl);
-                GUILayout.Space(WitStyles.HeaderPaddingBottom);
-                EditorGUI.indentLevel++;
-            }
+            WitEditorUI.LayoutHeaderText(target.name, HeaderUrl, DocsUrl);
+            
 
             // Layout content
             LayoutContent();
-
-            // Undent
-            if (drawHeader)
-            {
-                EditorGUI.indentLevel--;
-            }
         }
 
         private void GenerateManifestIfNeeded()
