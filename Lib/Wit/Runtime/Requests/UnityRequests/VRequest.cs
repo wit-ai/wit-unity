@@ -335,7 +335,8 @@ namespace Meta.WitAi.Requests
             string downloadedJson = string.Empty;
             try
             {
-                downloadedJson = request.downloadHandler.text;
+                byte[] downloadedBytes = request.downloadHandler.data;
+                downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
             }
             catch (Exception e)
             {
@@ -364,7 +365,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Get final result
-            return $"{request.error}\nServer Error: {downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value}";
+            return $"{request.error}\nServer Response Message: {downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value}";
         }
         #endregion
 

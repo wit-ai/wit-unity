@@ -220,7 +220,7 @@ namespace Meta.WitAi.Requests
             // Generate request
             UnityWebRequest unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.SetRequestHeader(WitConstants.HEADER_POST_CONTENT, "application/json");
-            unityRequest.SetRequestHeader(WitConstants.HEADER_GET_CONTENT, $"{GetAudioMimeType(audioType)};application/json");
+            unityRequest.SetRequestHeader(WitConstants.HEADER_GET_CONTENT, GetAudioMimeType(audioType));
 
             // Add upload handler
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
