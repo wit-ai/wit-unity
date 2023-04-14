@@ -26,6 +26,9 @@ namespace Meta.WitAi.TTS.Utilities
         // Audio source
         [SerializeField] [FormerlySerializedAs("_source")]
         public AudioSource AudioSource;
+        [Tooltip("Duplicates audio source reference on awake instead of using it directly.")]
+        [SerializeField] private bool _cloneAudioSource = false;
+        public bool CloneAudioSource => _cloneAudioSource;
 
         [Tooltip("Text that is added to the front of any Speech() request")]
         [TextArea]
@@ -52,7 +55,7 @@ namespace Meta.WitAi.TTS.Utilities
         public bool IsLoading => _queuedClips.Count > 0;
 
         // Current tts service
-        private TTSService _tts;
+        private TTSService _tts => TTSService.Instance;
         // Check if queued
         private bool _hasQueue = false;
         private bool _willHaveQueue = false;
@@ -69,30 +72,38 @@ namespace Meta.WitAi.TTS.Utilities
                 AudioSource = gameObject.GetComponentInChildren<AudioSource>();
             }
 
-            // Generate audio source instance
-            AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
-            instance.PreloadCopyData();
-            VLog.D($"Preload AudioSources: {DateTime.Now.ToLongTimeString()}");
-            // Move under this speaker
-            if (AudioSource == null)
+            // Duplicate audio source
+            if (CloneAudioSource)
             {
-                instance.transform.SetParent(transform, false);
-                instance.spread = 1f;
-            }
-            // Move into audio source & copy source values
-            else
-            {
-                instance.transform.SetParent(AudioSource.transform, false);
-                instance.Copy(AudioSource);
+                // Create new audio source
+                AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
+                instance.PreloadCopyData();
+
+                // Move into this transform & default to 3D audio
+                if (AudioSource == null)
+                {
+                    instance.transform.SetParent(transform, false);
+                    instance.spread = 1f;
+                }
+
+                // Move into audio source & copy source values
+                else
+                {
+                    instance.transform.SetParent(AudioSource.transform, false);
+                    instance.Copy(AudioSource);
+                }
+
+                // Reset instance's transform
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one;
+
+                // Apply
+                AudioSource = instance;
             }
 
-            // Apply & setup new audio source
-            AudioSource = instance;
+            // Setup audio source settings
             AudioSource.playOnAwake = false;
-            AudioSource.transform.localPosition = Vector3.zero;
-            AudioSource.transform.localRotation = Quaternion.identity;
-            AudioSource.transform.localScale = Vector3.one;
-            _tts = TTSService.Instance;
 
             // Get text processors
             _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
@@ -102,7 +113,6 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnDestroy()
         {
             Stop();
-            _tts = null;
             _queuedClips = null;
             SpeakingClip = null;
         }
