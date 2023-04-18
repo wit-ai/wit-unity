@@ -13,6 +13,7 @@ using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS.Utilities
@@ -22,7 +23,7 @@ namespace Meta.WitAi.TTS.Utilities
         #region LIFECYCLE
         // Preset voice id
         [HideInInspector] [SerializeField] public string presetVoiceID;
-        public TTSVoiceSettings VoiceSettings => _tts.GetPresetVoiceSettings(presetVoiceID);
+        public TTSVoiceSettings VoiceSettings => TTSService.GetPresetVoiceSettings(presetVoiceID);
         // Audio source
         [SerializeField] [FormerlySerializedAs("_source")]
         public AudioSource AudioSource;
@@ -55,7 +56,22 @@ namespace Meta.WitAi.TTS.Utilities
         public bool IsLoading => _queuedClips.Count > 0;
 
         // Current tts service
-        private TTSService _tts => TTSService.Instance;
+        private TTSService _tts;
+
+        public TTSService TTSService
+        {
+            get
+            {
+                _tts = GetComponent<TTSService>();
+                if (!_tts)
+                {
+                    _tts = TTSService.Instance;
+                }
+
+                return _tts;
+            }
+        }
+
         // Check if queued
         private bool _hasQueue = false;
         private bool _willHaveQueue = false;
@@ -119,23 +135,23 @@ namespace Meta.WitAi.TTS.Utilities
         // Add listener for clip unload
         protected virtual void OnEnable()
         {
-            if (_tts == null)
+            if (!TTSService)
             {
                 return;
             }
-            _tts.Events.OnClipUnloaded.AddListener(OnClipUnload);
-            _tts.Events.Stream.OnStreamClipUpdate.AddListener(OnClipUpdated);
+            TTSService.Events.OnClipUnloaded.AddListener(OnClipUnload);
+            TTSService.Events.Stream.OnStreamClipUpdate.AddListener(OnClipUpdated);
         }
         // Stop speaking & remove listener
         protected virtual void OnDisable()
         {
             Stop();
-            if (_tts == null)
+            if (!TTSService)
             {
                 return;
             }
-            _tts.Events.OnClipUnloaded.RemoveListener(OnClipUnload);
-            _tts.Events.Stream.OnStreamClipUpdate.RemoveListener(OnClipUpdated);
+            TTSService.Events.OnClipUnloaded.RemoveListener(OnClipUnload);
+            TTSService.Events.Stream.OnStreamClipUpdate.RemoveListener(OnClipUpdated);
         }
         // Format text
         public string GetFormattedText(string format, params string[] textsToSpeak)
@@ -327,8 +343,8 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Get new clip if possible
-            string newClipID = _tts.GetClipID(textToSpeak, voiceSettings);
-            TTSClipData newClipData = _tts.GetRuntimeCachedClip(newClipID);
+            string newClipID = TTSService.GetClipID(textToSpeak, voiceSettings);
+            TTSClipData newClipData = TTSService.GetRuntimeCachedClip(newClipID);
 
             // Cancel previous loading queue
             if (!addToQueue)
@@ -418,7 +434,7 @@ namespace Meta.WitAi.TTS.Utilities
         {
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             DateTime startTime = DateTime.Now;
-            TTSClipData newClip = _tts.Load(textToSpeak, clipID, voiceSettings, diskCacheSettings, (clipData, error) => OnClipLoadComplete(clipData, error, addToQueue, startTime));
+            TTSClipData newClip = TTSService.Load(textToSpeak, clipID, voiceSettings, diskCacheSettings, (clipData, error) => OnClipLoadComplete(clipData, error, addToQueue, startTime));
             _queuedClips.Enqueue(newClip);
 
             // Load begin

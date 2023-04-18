@@ -12,7 +12,7 @@ using UnityEngine;
 using Meta.WitAi.TTS.Utilities;
 using Meta.WitAi.TTS.Data;
 
-namespace Meta.WitAi.TTS.Editor
+namespace Meta.WitAi.TTS
 {
     [CustomEditor(typeof(TTSSpeaker), true)]
     public class TTSSpeakerInspector : UnityEditor.Editor
@@ -148,7 +148,7 @@ namespace Meta.WitAi.TTS.Editor
             _voices = null;
 
             // Get settings
-            TTSService tts = TTSService.Instance;
+            TTSService tts = _speaker.TTSService;
             TTSVoiceSettings[] settings = tts?.GetAllPresetVoiceSettings();
             if (settings == null)
             {

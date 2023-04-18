@@ -12,14 +12,13 @@ using System.IO;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using Meta.WitAi;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using Meta.WitAi.TTS.Utilities;
 using UnityEngine.SceneManagement;
 
-namespace Meta.WitAi.TTS.Editor.Preload
+namespace Meta.WitAi.TTS.Preload
 {
     public static class TTSPreloadUtility
     {

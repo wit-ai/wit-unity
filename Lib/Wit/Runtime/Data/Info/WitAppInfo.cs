@@ -90,6 +90,7 @@ namespace Meta.WitAi.Data.Info
         #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
         [NonReorderable]
         #endif
+        
         public WitVoiceInfo[] voices;
 
         /// <summary>

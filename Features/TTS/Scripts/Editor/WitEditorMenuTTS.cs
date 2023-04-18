@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.WitAi.TTS.Editor.Preload;
+using Meta.WitAi.TTS.Preload;
 using UnityEditor;
 
 namespace Meta.WitAi.TTS.Editor.Windows

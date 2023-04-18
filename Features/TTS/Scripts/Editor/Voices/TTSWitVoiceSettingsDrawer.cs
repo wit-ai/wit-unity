@@ -17,7 +17,7 @@ using Meta.WitAi.Lib;
 using Meta.WitAi.Data.Configuration;
 using UnityEngine;
 
-namespace Meta.WitAi.TTS.Editor.Voices
+namespace Meta.WitAi.TTS.Voices
 {
     [CustomPropertyDrawer(typeof( TTSWitVoiceSettings))]
     public class TTSWitVoiceSettingsDrawer : PropertyDrawer

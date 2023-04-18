@@ -8,14 +8,12 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
-using Meta.WitAi.TTS.Editor.Preload;
 using Meta.WitAi.Utilities;
 using UnityEditor;
 using UnityEngine;
 
-namespace Meta.WitAi.TTS.Editor
+namespace Meta.WitAi.TTS.Preload
 {
     [CustomEditor(typeof(TTSPreloadSettings), true)]
     public class TTSPreloadSettingsInspector : UnityEditor.Editor
