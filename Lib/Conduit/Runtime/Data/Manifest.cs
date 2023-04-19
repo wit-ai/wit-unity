@@ -268,7 +268,7 @@ namespace Meta.Conduit
         private MethodInfo GetBestMethodMatch(Type targetType, string method, Type[] parameterTypes)
         {
             var exactMatch = targetType.GetMethod(method,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic, null, CallingConventions.Any,
                 parameterTypes, null);
 
             return exactMatch;
