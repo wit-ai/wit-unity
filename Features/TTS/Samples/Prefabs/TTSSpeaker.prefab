@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3550832292187419420}
   - component: {fileID: 3550832292187419423}
+  - component: {fileID: 1295848615748463565}
   m_Layer: 0
   m_Name: TTSSpeaker
   m_TagString: Untagged
@@ -27,7 +28,6 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3550832292895390900}
   m_Father: {fileID: 0}
@@ -47,16 +47,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   presetVoiceID: CHARLIE
   AudioSource: {fileID: 3550832292895390901}
+  _cloneAudioSource: 0
   prependedText: 
   appendedText: 
   _events:
     OnTextPlaybackStart:
       m_PersistentCalls:
         m_Calls: []
-    OnTextPlaybackFinished:
+    OnTextPlaybackCancelled:
       m_PersistentCalls:
         m_Calls: []
-    OnTextPlaybackCancelled:
+    OnTextPlaybackFinished:
       m_PersistentCalls:
         m_Calls: []
     OnAudioClipPlaybackReady:
@@ -65,10 +66,31 @@ MonoBehaviour:
     OnAudioClipPlaybackStart:
       m_PersistentCalls:
         m_Calls: []
+    OnAudioClipPlaybackCancelled:
+      m_PersistentCalls:
+        m_Calls: []
     OnAudioClipPlaybackFinished:
       m_PersistentCalls:
         m_Calls: []
-    OnAudioClipPlaybackCancelled:
+    OnStartSpeaking:
+      m_PersistentCalls:
+        m_Calls: []
+    OnFinishedSpeaking:
+      m_PersistentCalls:
+        m_Calls: []
+    OnCancelledSpeaking:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipLoadBegin:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipLoadFailed:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipLoadSuccess:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipLoadAbort:
       m_PersistentCalls:
         m_Calls: []
     OnClipDataQueued:
@@ -98,33 +120,26 @@ MonoBehaviour:
     OnClipDataPlaybackCancelled:
       m_PersistentCalls:
         m_Calls: []
-    OnStartSpeaking:
-      m_PersistentCalls:
-        m_Calls: []
-    OnFinishedSpeaking:
-      m_PersistentCalls:
-        m_Calls: []
-    OnCancelledSpeaking:
-      m_PersistentCalls:
-        m_Calls: []
-    OnClipLoadBegin:
-      m_PersistentCalls:
-        m_Calls: []
-    OnClipLoadFailed:
-      m_PersistentCalls:
-        m_Calls: []
-    OnClipLoadSuccess:
-      m_PersistentCalls:
-        m_Calls: []
-    OnClipLoadAbort:
-      m_PersistentCalls:
-        m_Calls: []
     OnPlaybackQueueBegin:
       m_PersistentCalls:
         m_Calls: []
     OnPlaybackQueueComplete:
       m_PersistentCalls:
         m_Calls: []
+  _ttsService: {fileID: 0}
+--- !u!114 &1295848615748463565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3550832292187419422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f17bb00ee9f68428d962165826f2fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxTextLength: 250
 --- !u!1 &3550832292895390903
 GameObject:
   m_ObjectHideFlags: 0
@@ -152,7 +167,6 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 2, y: 1.665, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3550832292187419420}
   m_RootOrder: 0

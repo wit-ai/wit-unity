@@ -77,6 +77,7 @@ namespace Meta.WitAi.TTS.Utilities
         private bool _hasQueue = false;
         private bool _willHaveQueue = false;
 
+        // Text processors
         private ISpeakerTextPreprocessor[] _textPreprocessors;
         private ISpeakerTextPostprocessor[] _textPostprocessors;
 
@@ -123,8 +124,31 @@ namespace Meta.WitAi.TTS.Utilities
             AudioSource.playOnAwake = false;
 
             // Get text processors
-            _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
-            _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
+            RefreshProcessors();
+        }
+        // Refresh processors
+        protected virtual void RefreshProcessors()
+        {
+            // Get preprocessors
+            if (_textPreprocessors == null)
+            {
+                _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
+            }
+            // Get postprocessors
+            if (_textPostprocessors == null)
+            {
+                _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
+            }
+            // Fix prepend text to ensure it has a space
+            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            {
+                prependedText = prependedText + " ";
+            }
+            // Fix append text to ensure it is spaced correctly
+            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            {
+                appendedText = " " + appendedText;
+            }
         }
         // Stop
         protected virtual void OnDestroy()
@@ -230,30 +254,52 @@ namespace Meta.WitAi.TTS.Utilities
         /// Gets final text following prepending/appending & any special formatting
         /// </summary>
         /// <param name="textToSpeak">The base text to be spoken</param>
-        /// <returns>Returns the text to be spoken</returns>
-        public virtual string GetFinalText(string textToSpeak)
+        /// <returns>Returns an array of split texts to be spoken</returns>
+        public virtual string[] GetFinalText(string textToSpeak)
         {
-            // Fix prepend text to ensure it has a space
-            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            // Get processors
+            RefreshProcessors();
+
+            // Get results
+            List<string> phrases = new List<string>();
+            phrases.Add(textToSpeak);
+
+            // Pre-processor
+            if (_textPreprocessors != null)
             {
-                prependedText = prependedText + " ";
+                foreach (var preprocessor in _textPreprocessors)
+                {
+                    preprocessor.OnPreprocessTTS(this, phrases);
+                }
             }
-            // Fix append text to ensure it is spaced correctly
-            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
+
+            // Add prepend & appended text to each item
+            for (int i = 0; i < phrases.Count; i++)
             {
-                appendedText = " " + appendedText;
+                string phrase = phrases[i];
+                phrase = $"{prependedText}{phrase}{appendedText}".Trim();
+                phrases[i] = phrase;
+            }
+
+            // Post-processors
+            if (_textPostprocessors != null)
+            {
+                foreach (var postprocessor in _textPostprocessors)
+                {
+                    postprocessor.OnPostprocessTTS(this, phrases);
+                }
             }
 
             // Return all text items
-            return $"{prependedText}{textToSpeak}{appendedText}".Trim();
+            return phrases.ToArray();
         }
         /// <summary>
         /// Obtain final text list from format & text list
         /// </summary>
         /// <param name="format">The format to be used</param>
         /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
-        /// <returns>Returns the text to be spoken</returns>
-        public virtual string GetFinalTextFormatted(string format, params string[] textsToSpeak)
+        /// <returns>Returns a list of formatted texts</returns>
+        public virtual string[] GetFinalTextFormatted(string format, params string[] textsToSpeak)
         {
             return GetFinalText(GetFormattedText(format, textsToSpeak));
         }
@@ -361,19 +407,12 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Pre process which could end this speak request
-            foreach (var pre in _textPreprocessors)
+            // Get final text phrases to be spoken
+            string[] phrases = GetFinalText(textToSpeak);
+            if (phrases == null || phrases.Length == 0)
             {
-                if (!pre.OnPreprocessTTS(this, ref textToSpeak)) return;
-            }
-
-            // Get final text to be spoken
-            textToSpeak = GetFinalText(textToSpeak);
-
-            // Post process which could end this speak request
-            foreach (var pre in _textPostprocessors)
-            {
-                if (!pre.OnPostprocessTTS(this, ref textToSpeak)) return;
+                VLog.W($"All phrases removed\nSource Phrase: {textToSpeak}");
+                return;
             }
 
             // Cancel previous loading queue
@@ -384,8 +423,18 @@ namespace Meta.WitAi.TTS.Utilities
                 _willHaveQueue = false;
             }
 
-            // Load
-            HandleLoad(textToSpeak, voiceSettings, diskCacheSettings, addToQueue);
+            // Iterate voices
+            foreach (var phrase in phrases)
+            {
+                // Handle load
+                HandleLoad(phrase, voiceSettings, diskCacheSettings, addToQueue);
+
+                // Add additional to queue
+                if (!addToQueue)
+                {
+                    addToQueue = true;
+                }
+            }
         }
         // Stop loading all items in the queue
         public virtual void StopLoading()

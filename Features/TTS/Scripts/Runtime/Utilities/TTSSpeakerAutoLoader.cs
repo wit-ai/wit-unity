@@ -101,9 +101,15 @@ namespace Meta.WitAi.TTS.Utilities
             AddUniquePhrases(phrases, Phrases);
 
             // Get final text
-            for (int i = 0; i < phrases.Count; i++)
+            string[] oldPhrases = phrases.ToArray();
+            phrases.Clear();
+            for (int i = 0; i < oldPhrases.Length; i++)
             {
-                phrases[i] = Speaker.GetFinalText(phrases[i]);
+                string[] newPhrases = Speaker.GetFinalText(oldPhrases[i]);
+                if (newPhrases != null && newPhrases.Length > 0)
+                {
+                    phrases.AddRange(newPhrases);
+                }
             }
 
             // Return array
