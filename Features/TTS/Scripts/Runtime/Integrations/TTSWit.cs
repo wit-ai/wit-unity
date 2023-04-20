@@ -37,10 +37,8 @@ namespace Meta.WitAi.TTS.Integrations
         public string style = DEFAULT_STYLE;
         [Range(50, 200)]
         public int speed = 100;
-        [Range(25, 400)]
+        [Range(25, 200)]
         public int pitch = 100;
-        [Range(1, 100)]
-        public int gain = 50;
     }
     [Serializable]
     public struct TTSWitRequestSettings
