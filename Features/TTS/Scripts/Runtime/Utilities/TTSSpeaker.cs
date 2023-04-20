@@ -56,19 +56,20 @@ namespace Meta.WitAi.TTS.Utilities
         public bool IsLoading => _queuedClips.Count > 0;
 
         // Current tts service
-        private TTSService _tts;
-
+        [SerializeField] private TTSService _ttsService;
         public TTSService TTSService
         {
             get
             {
-                _tts = GetComponent<TTSService>();
-                if (!_tts)
+                if (!_ttsService)
                 {
-                    _tts = TTSService.Instance;
+                    _ttsService = GetComponent<TTSService>();
+                    if (!_ttsService)
+                    {
+                        _ttsService = TTSService.Instance;
+                    }
                 }
-
-                return _tts;
+                return _ttsService;
             }
         }
 
@@ -153,17 +154,6 @@ namespace Meta.WitAi.TTS.Utilities
             TTSService.Events.OnClipUnloaded.RemoveListener(OnClipUnload);
             TTSService.Events.Stream.OnStreamClipUpdate.RemoveListener(OnClipUpdated);
         }
-        // Format text
-        public string GetFormattedText(string format, params string[] textsToSpeak)
-        {
-            if (textsToSpeak != null && !string.IsNullOrEmpty(format))
-            {
-                object[] objects = new object[textsToSpeak.Length];
-                textsToSpeak.CopyTo(objects, 0);
-                return string.Format(format, objects);
-            }
-            return null;
-        }
         // Clip unloaded externally
         protected virtual void OnClipUnload(TTSClipData clipData)
         {
@@ -172,15 +162,14 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 // Remove all references of the clip
                 RemoveLoadingClip(clipData, true);
-                // Perform cancell callbacks
-                OnLoadCancel(clipData);
+                // Cancel
+                OnLoadCancelled(clipData);
                 return;
             }
             // Cancel playback
             if (clipData.Equals(SpeakingClip))
             {
                 StopSpeaking();
-                return;
             }
         }
         // Clip stream complete
@@ -236,7 +225,58 @@ namespace Meta.WitAi.TTS.Utilities
         }
         #endregion
 
-        #region INTERACTIONS
+        #region TEXT
+        /// <summary>
+        /// Gets final text following prepending/appending & any special formatting
+        /// </summary>
+        /// <param name="textToSpeak">The base text to be spoken</param>
+        /// <returns>Returns the text to be spoken</returns>
+        public virtual string GetFinalText(string textToSpeak)
+        {
+            // Fix prepend text to ensure it has a space
+            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            {
+                prependedText = prependedText + " ";
+            }
+            // Fix append text to ensure it is spaced correctly
+            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            {
+                appendedText = " " + appendedText;
+            }
+
+            // Return all text items
+            return $"{prependedText}{textToSpeak}{appendedText}".Trim();
+        }
+        /// <summary>
+        /// Obtain final text list from format & text list
+        /// </summary>
+        /// <param name="format">The format to be used</param>
+        /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
+        /// <returns>Returns the text to be spoken</returns>
+        public virtual string GetFinalTextFormatted(string format, params string[] textsToSpeak)
+        {
+            return GetFinalText(GetFormattedText(format, textsToSpeak));
+        }
+        /// <summary>
+        /// Formats text using an initial format string parameter and additional text items to
+        /// be inserted into the format
+        /// </summary>
+        /// <param name="format">The format to be used</param>
+        /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
+        /// <returns>A formatted text string</returns>
+        public string GetFormattedText(string format, params string[] textsToSpeak)
+        {
+            if (textsToSpeak != null && !string.IsNullOrEmpty(format))
+            {
+                object[] objects = new object[textsToSpeak.Length];
+                textsToSpeak.CopyTo(objects, 0);
+                return string.Format(format, objects);
+            }
+            return null;
+        }
+        #endregion
+
+        #region REQUESTS
         /// <summary>
         /// Load a tts clip using the specified text & cache settings.
         /// Plays clip immediately upon load & will cancel all previously loading/spoken phrases.
@@ -311,8 +351,16 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the speak queue</param>
-        protected virtual void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
+        private void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
+            // Ensure voice settings exist
+            TTSVoiceSettings voiceSettings = VoiceSettings;
+            if (voiceSettings == null)
+            {
+                VLog.E($"No voice found with preset id: {presetVoiceID}");
+                return;
+            }
+
             // Pre process which could end this speak request
             foreach (var pre in _textPreprocessors)
             {
@@ -328,24 +376,6 @@ namespace Meta.WitAi.TTS.Utilities
                 if (!pre.OnPostprocessTTS(this, ref textToSpeak)) return;
             }
 
-            // Ensure voice settings exist
-            TTSVoiceSettings voiceSettings = VoiceSettings;
-            if (voiceSettings == null)
-            {
-                VLog.E($"No voice found with preset id: {presetVoiceID}");
-                return;
-            }
-            // Log if empty text
-            if (string.IsNullOrEmpty(textToSpeak))
-            {
-                VLog.E("No text to speak provided");
-                return;
-            }
-
-            // Get new clip if possible
-            string newClipID = TTSService.GetClipID(textToSpeak, voiceSettings);
-            TTSClipData newClipData = TTSService.GetRuntimeCachedClip(newClipID);
-
             // Cancel previous loading queue
             if (!addToQueue)
             {
@@ -354,41 +384,8 @@ namespace Meta.WitAi.TTS.Utilities
                 _willHaveQueue = false;
             }
 
-            // Begin playback
-            if (newClipData != null && newClipData.loadState == TTSClipLoadState.Loaded)
-            {
-                // Cancel all playing clips
-                if (!addToQueue)
-                {
-                    StopSpeaking();
-                }
-
-                // Add to queue
-                _queuedClips.Enqueue(newClipData);
-                RefreshQueued();
-                Events?.OnClipDataQueued?.Invoke(newClipData);
-
-                // Begin playback
-                OnPlaybackReady(newClipData);
-            }
-            // Begin load/add load completion callback
-            else
-            {
-                OnLoadBegin(textToSpeak, newClipID, voiceSettings, diskCacheSettings, addToQueue);
-            }
-        }
-        // Get final text to be spoken by this speaker
-        public virtual string GetFinalText(string textToSpeak)
-        {
-            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
-            {
-                prependedText += " ";
-            }
-            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
-            {
-                appendedText = " " + appendedText;
-            }
-            return $"{prependedText}{textToSpeak}{appendedText}";
+            // Load
+            HandleLoad(textToSpeak, voiceSettings, diskCacheSettings, addToQueue);
         }
         // Stop loading all items in the queue
         public virtual void StopLoading()
@@ -402,7 +399,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Cancel each clip from loading
             while (_queuedClips.Count > 0)
             {
-                OnLoadCancel(_queuedClips.Dequeue());
+                OnLoadCancelled(_queuedClips.Dequeue());
             }
 
             // Refresh in queue check
@@ -418,7 +415,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Cancel playback
-            OnPlaybackComplete(true);
+            HandlePlaybackComplete(true);
         }
         // Stops loading & speaking immediately
         public virtual void Stop()
@@ -429,23 +426,39 @@ namespace Meta.WitAi.TTS.Utilities
         #endregion
 
         #region LOAD
-        // Begin a load
-        protected virtual void OnLoadBegin(string textToSpeak, string clipID, TTSVoiceSettings voiceSettings, TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
+        // Handles speaking depending on the state of the specified audio
+        private void HandleLoad(string textToSpeak, TTSVoiceSettings voiceSettings,
+            TTSDiskCacheSettings diskCacheSettings, bool addToQueue)
         {
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             DateTime startTime = DateTime.Now;
-            TTSClipData newClip = TTSService.Load(textToSpeak, clipID, voiceSettings, diskCacheSettings, (clipData, error) => OnClipLoadComplete(clipData, error, addToQueue, startTime));
-            _queuedClips.Enqueue(newClip);
+            string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
+            TTSClipData clipData = TTSService.Load(textToSpeak, clipId, voiceSettings, diskCacheSettings,
+                (clipData2, error) => HandleLoadComplete(clipData2, error, addToQueue, startTime));
+
+            // Ignore without clip
+            if (clipData == null)
+            {
+                return;
+            }
+
+            // Enqueue
+            _queuedClips.Enqueue(clipData);
+            RefreshQueued();
 
             // Load begin
-            VLog.D($"Load Begin\nText: {textToSpeak}");
-            RefreshQueued();
-            Events?.OnClipDataQueued?.Invoke(newClip);
-            Events?.OnClipDataLoadBegin?.Invoke(newClip);
-            Events?.OnClipLoadBegin?.Invoke(this, newClip.textToSpeak);
+            OnLoadBegin(clipData);
+        }
+        // Load begin
+        protected virtual void OnLoadBegin(TTSClipData clipData)
+        {
+            VLog.D($"Load Begin\nText: {clipData?.textToSpeak}");
+            Events?.OnClipDataLoadBegin?.Invoke(clipData);
+            Events?.OnClipLoadBegin?.Invoke(this, clipData?.textToSpeak);
+            Events?.OnClipDataQueued?.Invoke(clipData);
         }
         // Load complete
-        protected virtual void OnClipLoadComplete(TTSClipData clipData, string error, bool addToQueue, DateTime startTime)
+        private void HandleLoadComplete(TTSClipData clipData, string error, bool addToQueue, DateTime startTime)
         {
             // Invalid clip, ignore
             if (!QueueContainsClip(clipData))
@@ -453,36 +466,45 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Get duration
-            double loadDuration = (DateTime.Now - startTime).TotalMilliseconds;
-
-            // No clip returned
-            if (string.IsNullOrEmpty(error) && clipData.clip == null)
+            // Check for other errors
+            if (string.IsNullOrEmpty(error))
             {
-                error = "No clip returned";
+                if (clipData.clip == null)
+                {
+                    error = "No clip returned";
+                }
+                else if (clipData.loadState == TTSClipLoadState.Error)
+                {
+                    error = "Error";
+                }
+                else if (clipData.loadState == TTSClipLoadState.Unloaded)
+                {
+                    error = WitConstants.CANCEL_ERROR;
+                }
             }
+
             // Load failed
             if (!string.IsNullOrEmpty(error))
             {
+                // Remove clip
+                RemoveLoadingClip(clipData, false);
+
+                // Cancelled
                 if (string.Equals(WitConstants.CANCEL_ERROR, error))
                 {
-                    RemoveLoadingClip(clipData, false);
-                    OnLoadCancel(clipData);
+                    OnLoadCancelled(clipData);
                 }
+                // Failed
                 else
                 {
-                    RemoveLoadingClip(clipData, false);
-                    VLog.E($"Load Failed\nError: {error}\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms");
-                    Events?.OnClipDataLoadFailed?.Invoke(clipData);
-                    Events?.OnClipLoadFailed?.Invoke(this, clipData.textToSpeak);
+                    OnLoadFailed(clipData, error);
                 }
                 return;
             }
 
             // Load success event
-            VLog.D($"Load Success\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms");
-            Events?.OnClipDataLoadSuccess?.Invoke(clipData);
-            Events?.OnClipLoadSuccess?.Invoke(this, clipData.textToSpeak);
+            double loadDuration = (DateTime.Now - startTime).TotalMilliseconds;
+            OnLoadSuccess(clipData, loadDuration);
 
             // Stop speaking except for this clip
             if (!addToQueue)
@@ -491,14 +513,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Playback ready
-            OnPlaybackReady(clipData);
-        }
-        // Load cancelled
-        protected virtual void OnLoadCancel(TTSClipData clipData)
-        {
-            VLog.D($"Load Cancelled\nText: {clipData?.textToSpeak}");
-            Events?.OnClipDataLoadAbort?.Invoke(clipData);
-            Events?.OnClipLoadAbort?.Invoke(this, clipData.textToSpeak);
+            HandlePlaybackReady(clipData);
         }
         // Remove first instance or all instances of clip
         private void RemoveLoadingClip(TTSClipData clipData, bool allInstances)
@@ -546,14 +561,32 @@ namespace Meta.WitAi.TTS.Utilities
             // Refresh in queue check
             RefreshQueued();
         }
+        // Load cancelled
+        protected virtual void OnLoadCancelled(TTSClipData clipData)
+        {
+            VLog.D($"Load Cancelled\nText: {clipData?.textToSpeak}");
+            Events?.OnClipDataLoadAbort?.Invoke(clipData);
+            Events?.OnClipLoadAbort?.Invoke(this, clipData?.textToSpeak);
+        }
+        // Load failed
+        protected virtual void OnLoadFailed(TTSClipData clipData, string error)
+        {
+            VLog.E($"Load Failed\nText: {clipData?.textToSpeak}");
+            Events?.OnClipDataLoadFailed?.Invoke(clipData);
+            Events?.OnClipLoadFailed?.Invoke(this, clipData?.textToSpeak);
+        }
+        // Load success
+        protected virtual void OnLoadSuccess(TTSClipData clipData, double loadDuration)
+        {
+            VLog.D($"Load Success\nText: {clipData?.textToSpeak}\nDuration: {loadDuration:0.00}ms");
+            Events?.OnClipDataLoadSuccess?.Invoke(clipData);
+            Events?.OnClipLoadSuccess?.Invoke(this, clipData?.textToSpeak);
+        }
         #endregion
 
-        #region PLAY
-        // Wait for playback completion
-        private Coroutine _waitForCompletion;
-
+        #region READY
         // Playback ready
-        protected virtual void OnPlaybackReady(TTSClipData clipData)
+        private void HandlePlaybackReady(TTSClipData clipData)
         {
             // Invalid clip, ignore
             if (!QueueContainsClip(clipData))
@@ -561,16 +594,29 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Playback ready
-            VLog.D($"Playback Queued\nText: {clipData.textToSpeak}");
-            Events?.OnAudioClipPlaybackReady?.Invoke(clipData.clip);
-            Events?.OnClipDataPlaybackReady?.Invoke(clipData);
+            // Callback delegate
+            OnPlaybackReady(clipData);
 
             // Attempt to play next in queue
-            OnPlaybackBegin();
+            RefreshPlayback();
         }
-        // Play next
-        protected virtual void OnPlaybackBegin()
+        // Ready
+        protected virtual void OnPlaybackReady(TTSClipData clipData)
+        {
+            VLog.D($"Playback Ready\nText: {clipData.textToSpeak}");
+            Events?.OnAudioClipPlaybackReady?.Invoke(clipData.clip);
+            Events?.OnClipDataPlaybackReady?.Invoke(clipData);
+        }
+        #endregion
+
+        #region PLAYBACK
+        // Wait for playback completion
+        private Coroutine _waitForCompletion;
+
+        /// <summary>
+        /// Refreshes playback queue to play next available clip if possible
+        /// </summary>
+        private void RefreshPlayback()
         {
             // Ignore if currently playing or nothing in uque
             if (SpeakingClip != null ||  _queuedClips.Count == 0)
@@ -579,25 +625,31 @@ namespace Meta.WitAi.TTS.Utilities
             }
             // Peek next clip
             TTSClipData clipData = _queuedClips.Peek();
-            if (clipData == null || clipData.loadState == TTSClipLoadState.Error || clipData.loadState == TTSClipLoadState.Unloaded)
+            if (clipData == null)
             {
-                OnLoadCancel(clipData);
+                HandlePlaybackFailure(null, "TTSClipData no longer exists");
                 return;
             }
             // Still preparing
+            if (clipData.loadState == TTSClipLoadState.Preparing)
+            {
+                return;
+            }
             if (clipData.loadState != TTSClipLoadState.Loaded)
             {
+                HandlePlaybackFailure(clipData, $"TTSClipData is {clipData.loadState}");
                 return;
             }
             // No audio source
             if (AudioSource == null)
             {
+                HandlePlaybackFailure(clipData, "AudioSource not found");
                 return;
             }
             // Somehow clip unloaded
             if (clipData.clip == null)
             {
-                OnLoadCancel(clipData);
+                HandlePlaybackFailure(clipData, "AudioClip no longer exists");
                 return;
             }
 
@@ -605,16 +657,12 @@ namespace Meta.WitAi.TTS.Utilities
             SpeakingClip = _queuedClips.Dequeue();
 
             // Started speaking
-            VLog.D($"Playback Begin\nText: {SpeakingClip.textToSpeak}");
             AudioSource.clip = SpeakingClip.clip;
             AudioSource.timeSamples = 0;
             AudioSource.Play();
 
             // Callback events
-            Events?.OnStartSpeaking?.Invoke(this, SpeakingClip.textToSpeak);
-            Events?.OnTextPlaybackStart?.Invoke(SpeakingClip.textToSpeak);
-            Events?.OnAudioClipPlaybackStart?.Invoke(SpeakingClip.clip);
-            Events?.OnClipDataPlaybackStart?.Invoke(SpeakingClip);
+            OnPlaybackBegin(SpeakingClip);
 
             // Wait for completion
             if (_waitForCompletion != null)
@@ -622,71 +670,116 @@ namespace Meta.WitAi.TTS.Utilities
                 StopCoroutine(_waitForCompletion);
                 _waitForCompletion = null;
             }
-            _waitForCompletion = StartCoroutine(WaitForCompletion());
+            _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
+        }
+        // Handles failure
+        private void HandlePlaybackFailure(TTSClipData clipData, string error)
+        {
+            // Perform load completion
+            HandleLoadComplete(clipData, error, false, default(DateTime));
+
+            // Try to play next
+            RefreshPlayback();
+        }
+        // Playback begin
+        protected virtual void OnPlaybackBegin(TTSClipData clipData)
+        {
+            VLog.D($"Playback Begin\nText: {clipData.textToSpeak}");
+            Events?.OnStartSpeaking?.Invoke(this, clipData.textToSpeak);
+            Events?.OnTextPlaybackStart?.Invoke(clipData.textToSpeak);
+            Events?.OnAudioClipPlaybackStart?.Invoke(clipData.clip);
+            Events?.OnClipDataPlaybackStart?.Invoke(clipData);
         }
         // Wait for clip completion
-        protected virtual IEnumerator WaitForCompletion()
+        private IEnumerator WaitForPlaybackComplete()
         {
-            // Use delta time to wait
+            // Use delta time to wait for completion
             float elapsedTime = 0f;
-            while (SpeakingClip != null && SpeakingClip.clip != null && elapsedTime < SpeakingClip.clip.length)
+            while (!IsPlaybackComplete(elapsedTime))
             {
                 yield return new WaitForEndOfFrame();
                 elapsedTime += Time.deltaTime;
             }
+
             // Playback completed
-            OnPlaybackComplete(false);
+            HandlePlaybackComplete(false);
+        }
+        // Check for playback completion
+        protected virtual bool IsPlaybackComplete(float elapsedTime)
+        {
+            return SpeakingClip == null || SpeakingClip.clip == null || elapsedTime >= SpeakingClip.clip.length || (AudioSource != null && !AudioSource.isPlaying);
         }
         // Completed playback
-        protected virtual void OnPlaybackComplete(bool cancelled)
+        protected virtual void HandlePlaybackComplete(bool stopped)
         {
-            // Invalid
-            if (SpeakingClip == null)
-            {
-                return;
-            }
-
             // Old clip
             TTSClipData lastClipData = SpeakingClip;
 
             // Clear speaking clip
             SpeakingClip = null;
+
             // Stop playback handler
             if (_waitForCompletion != null)
             {
                 StopCoroutine(_waitForCompletion);
                 _waitForCompletion = null;
             }
+
             // Stop audio source playback
             if (AudioSource != null && AudioSource.isPlaying)
             {
                 AudioSource.Stop();
             }
 
-            // Completed successfully
-            if (!cancelled)
+            // Stopped
+            if (stopped)
             {
-                VLog.D($"Playback Complete\nText: {lastClipData.textToSpeak}");
-                Events?.OnFinishedSpeaking?.Invoke(this, lastClipData.textToSpeak);
-                Events?.OnTextPlaybackFinished?.Invoke(lastClipData.textToSpeak);
-                Events?.OnAudioClipPlaybackFinished?.Invoke(lastClipData.clip);
-                Events?.OnClipDataPlaybackFinished?.Invoke(lastClipData);
+                OnPlaybackCancelled(lastClipData, "Playback Stopped");
             }
-            // Cancelled
+            // No clip found
+            else if (lastClipData == null)
+            {
+                OnPlaybackCancelled(null, "TTSClipData no longer exists");
+            }
+            // Clip unloaded
+            else if (lastClipData.loadState == TTSClipLoadState.Unloaded)
+            {
+                OnPlaybackCancelled(lastClipData, "TTSClipData was unloaded");
+            }
+            // Clip destroyed
+            else if (lastClipData.clip == null)
+            {
+                OnPlaybackCancelled(lastClipData, "AudioClip no longer exists");
+            }
+            // Success
             else
             {
-                VLog.D($"Playback Cancelled\nText: {lastClipData?.textToSpeak}");
-                Events?.OnCancelledSpeaking?.Invoke(this, lastClipData.textToSpeak);
-                Events?.OnTextPlaybackCancelled?.Invoke(lastClipData.textToSpeak);
-                Events?.OnAudioClipPlaybackCancelled?.Invoke(lastClipData.clip);
-                Events?.OnClipDataPlaybackCancelled?.Invoke(lastClipData);
+                OnPlaybackComplete(lastClipData);
             }
 
             // Refresh in queue check
             RefreshQueued();
 
             // Attempt to play next in queue
-            OnPlaybackBegin();
+            RefreshPlayback();
+        }
+        // Playback cancelled
+        protected virtual void OnPlaybackCancelled(TTSClipData clipData, string reason)
+        {
+            VLog.D($"Playback Cancelled\nText: {clipData?.textToSpeak}\nReason: {reason}");
+            Events?.OnCancelledSpeaking?.Invoke(this, clipData?.textToSpeak);
+            Events?.OnTextPlaybackCancelled?.Invoke(clipData?.textToSpeak);
+            Events?.OnAudioClipPlaybackCancelled?.Invoke(clipData?.clip);
+            Events?.OnClipDataPlaybackCancelled?.Invoke(clipData);
+        }
+        // Playback success
+        protected virtual void OnPlaybackComplete(TTSClipData clipData)
+        {
+            VLog.D($"Playback Finished\nText: {clipData?.textToSpeak}");
+            Events?.OnFinishedSpeaking?.Invoke(this, clipData?.textToSpeak);
+            Events?.OnTextPlaybackFinished?.Invoke(clipData?.textToSpeak);
+            Events?.OnAudioClipPlaybackFinished?.Invoke(clipData?.clip);
+            Events?.OnClipDataPlaybackFinished?.Invoke(clipData);
         }
         #endregion
     }
