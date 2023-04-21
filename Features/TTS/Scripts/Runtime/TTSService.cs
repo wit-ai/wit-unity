@@ -441,17 +441,22 @@ namespace Meta.WitAi.TTS
                             OnWebStreamCancel(clipData);
                             return;
                         }
-
-                        // Success
-                        if (string.IsNullOrEmpty(error))
-                        {
-                            DiskCacheHandler?.StreamFromDiskCache(clipData);
-                        }
-                        // Failed
-                        else
+                        // Not in cache & cannot download
+                        if (string.Equals(error, WitConstants.ERROR_TTS_CACHE_DOWNLOAD))
                         {
                             WebHandler?.RequestStreamFromWeb(clipData);
+                            return;
                         }
+                        // Download failed, throw error
+                        if (!string.IsNullOrEmpty(error))
+                        {
+                            OnWebStreamBegin(clipData);
+                            OnWebStreamError(clipData, error);
+                            return;
+                        }
+
+                        // Stream from Cache
+                        DiskCacheHandler?.StreamFromDiskCache(clipData);
                     });
                 }
                 // Simply stream from the web
@@ -764,7 +769,7 @@ namespace Meta.WitAi.TTS
                 // Preload selected but not in disk cache, return an error
                 if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
                 {
-                    onDownloadComplete?.Invoke(clipData, downloadPath, "File is not Preloaded");
+                    onDownloadComplete?.Invoke(clipData, downloadPath, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
                     return;
                 }
 

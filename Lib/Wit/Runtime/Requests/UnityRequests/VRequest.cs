@@ -463,7 +463,10 @@ namespace Meta.WitAi.Requests
             catch (Exception e)
             {
                 // Failed to delete file
-                VLog.W($"Deleting Download File Failed\nPath: {tempDownloadPath}\n\n{e}");
+                string error = $"Deleting Download File Failed\nPath: {tempDownloadPath}\n\n{e}";
+                VLog.W(error);
+                onComplete?.Invoke(false, error);
+                return false;
             }
 
             // Add file download handler

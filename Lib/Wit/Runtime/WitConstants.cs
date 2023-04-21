@@ -46,6 +46,7 @@ namespace Meta.WitAi
         public const float ENDPOINT_TTS_STREAM_READY_DURATION = 0.1f; // In Seconds
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
+        public const string ERROR_TTS_CACHE_DOWNLOAD = "File is not Preloaded";
 
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";
