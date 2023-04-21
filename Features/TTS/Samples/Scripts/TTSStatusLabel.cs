@@ -22,31 +22,33 @@ namespace Meta.WitAi.TTS.Samples
         private void OnEnable()
         {
             RefreshLabel();
-            _speaker.Events.OnClipDataLoadBegin.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadAbort.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadFailed.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadSuccess.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataQueued.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackReady.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackStart.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackFinished.AddListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackCancelled.AddListener(OnClipRefresh);
+            _speaker.Events.OnLoadBegin.AddListener(OnClipRefresh);
+            _speaker.Events.OnLoadAbort.AddListener(OnClipRefresh);
+            _speaker.Events.OnLoadFailed.AddListener(OnClipRefresh);
+            _speaker.Events.OnLoadSuccess.AddListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackReady.AddListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackStart.AddListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackCancelled.AddListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackComplete.AddListener(OnClipRefresh);
         }
-        private void OnClipRefresh(TTSClipData clipData)
+        private void OnClipRefresh(TTSSpeaker speaker, TTSClipData clipData, string error)
+        {
+            RefreshLabel();
+        }
+        private void OnClipRefresh(TTSSpeaker speaker, TTSClipData clipData)
         {
             RefreshLabel();
         }
         private void OnDisable()
         {
-            _speaker.Events.OnClipDataQueued.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadBegin.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadAbort.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadFailed.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataLoadSuccess.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackReady.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackStart.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackFinished.RemoveListener(OnClipRefresh);
-            _speaker.Events.OnClipDataPlaybackCancelled.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnLoadBegin.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnLoadAbort.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnLoadFailed.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnLoadSuccess.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackReady.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackStart.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackCancelled.RemoveListener(OnClipRefresh);
+            _speaker.Events.OnPlaybackComplete.RemoveListener(OnClipRefresh);
         }
 
         private void RefreshLabel()

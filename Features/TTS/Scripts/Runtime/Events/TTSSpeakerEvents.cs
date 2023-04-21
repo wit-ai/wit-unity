@@ -11,6 +11,7 @@ using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Events;
 using Meta.WitAi.TTS.Data;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.TTS.Utilities
 {
@@ -19,48 +20,51 @@ namespace Meta.WitAi.TTS.Utilities
     [Serializable]
     public class TTSSpeakerClipDataEvent : UnityEvent<TTSClipData> { }
     [Serializable]
-    public class TTSSpeakerEvents : VoiceSpeechEvents
+    public class TTSSpeakerEvents : TTSSpeakerClipEvents
     {
-        [Header("Speaker Events")]
-        [Tooltip("Called when a speaking begins")]
-        public TTSSpeakerEvent OnStartSpeaking;
-        [Tooltip("Called when a speaking finishes")]
-        public TTSSpeakerEvent OnFinishedSpeaking;
-        [Tooltip("Called when a speaking is cancelled")]
-        public TTSSpeakerEvent OnCancelledSpeaking;
-        [Tooltip("Called when TTS audio clip load begins")]
-        public TTSSpeakerEvent OnClipLoadBegin;
-        [Tooltip("Called when TTS audio clip load fails")]
-        public TTSSpeakerEvent OnClipLoadFailed;
-        [Tooltip("Called when TTS audio clip load successfully")]
-        public TTSSpeakerEvent OnClipLoadSuccess;
-        [Tooltip("Called when TTS audio clip load is cancelled")]
-        public TTSSpeakerEvent OnClipLoadAbort;
-
-        [Header("TTSClip Data Events")]
-        [Tooltip("Called when a new clip is added to the playback queue")]
-        public TTSSpeakerClipDataEvent OnClipDataQueued;
-        [Tooltip("Called when TTS audio clip load begins")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadBegin;
-        [Tooltip("Called when TTS audio clip load fails")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadFailed;
-        [Tooltip("Called when TTS audio clip load successfully")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadSuccess;
-        [Tooltip("Called when TTS audio clip load is cancelled")]
-        public TTSSpeakerClipDataEvent OnClipDataLoadAbort;
-        [Tooltip("Called when a clip is ready for playback")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackReady;
-        [Tooltip("Called when a clip playback has begun")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackStart;
-        [Tooltip("Called when a clip playback has completed successfully")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackFinished;
-        [Tooltip("Called when a clip playback has been cancelled")]
-        public TTSSpeakerClipDataEvent OnClipDataPlaybackCancelled;
-
         [Header("Queue Events")]
         [Tooltip("Called when a tts request is added to an empty queue")]
-        public UnityEvent OnPlaybackQueueBegin;
+        [SerializeField] [FormerlySerializedAs("OnPlaybackQueueBegin")]
+        private UnityEvent _onPlaybackQueueBegin = new UnityEvent();
+        public UnityEvent OnPlaybackQueueBegin => _onPlaybackQueueBegin;
+
         [Tooltip("Called the final request is removed from a queue")]
-        public UnityEvent OnPlaybackQueueComplete;
+        [SerializeField] [FormerlySerializedAs("OnPlaybackQueueComplete")]
+        private UnityEvent _onPlaybackQueueComplete = new UnityEvent();
+        public UnityEvent OnPlaybackQueueComplete => _onPlaybackQueueComplete;
+
+        [Header("Deprecated Events")]
+        [Obsolete("Use 'OnLoadBegin' event")]
+        public TTSSpeakerClipDataEvent OnClipDataQueued;
+        [Obsolete("Use 'OnLoadBegin' event")]
+        public TTSSpeakerEvent OnClipLoadBegin;
+        [Obsolete("Use 'OnLoadBegin' event")]
+        public TTSSpeakerClipDataEvent OnClipDataLoadBegin;
+        [Obsolete("Use 'OnLoadAbort' event")]
+        public TTSSpeakerEvent OnClipLoadAbort;
+        [Obsolete("Use 'OnLoadAbort' event")]
+        public TTSSpeakerClipDataEvent OnClipDataLoadAbort;
+        [Obsolete("Use 'OnLoadFailed' event")]
+        public TTSSpeakerEvent OnClipLoadFailed;
+        [Obsolete("Use 'OnLoadFailed' event")]
+        public TTSSpeakerClipDataEvent OnClipDataLoadFailed;
+        [Obsolete("Use 'OnLoadSuccess' event")]
+        public TTSSpeakerEvent OnClipLoadSuccess;
+        [Obsolete("Use 'OnLoadSuccess' event")]
+        public TTSSpeakerClipDataEvent OnClipDataLoadSuccess;
+        [Obsolete("Use 'OnPlaybackReady' event")]
+        public TTSSpeakerClipDataEvent OnClipDataPlaybackReady;
+        [Obsolete("Use 'OnPlaybackStart' event")]
+        public TTSSpeakerEvent OnStartSpeaking;
+        [Obsolete("Use 'OnPlaybackStart' event")]
+        public TTSSpeakerClipDataEvent OnClipDataPlaybackStart;
+        [Obsolete("Use 'OnPlaybackCancelled' event")]
+        public TTSSpeakerEvent OnCancelledSpeaking;
+        [Obsolete("Use 'OnPlaybackCancelled' event")]
+        public TTSSpeakerClipDataEvent OnClipDataPlaybackCancelled;
+        [Obsolete("Use 'OnPlaybackComplete' event")]
+        public TTSSpeakerEvent OnFinishedSpeaking;
+        [Obsolete("Use 'OnPlaybackComplete' event")]
+        public TTSSpeakerClipDataEvent OnClipDataPlaybackFinished;
     }
 }
