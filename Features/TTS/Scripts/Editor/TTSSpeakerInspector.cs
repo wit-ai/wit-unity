@@ -160,7 +160,7 @@ namespace Meta.WitAi.TTS
             _voices = new string[settings.Length];
             for (int i = 0; i < settings.Length; i++)
             {
-                _voices[i] = settings[i].settingsID;
+                _voices[i] = settings[i].SettingsId;
                 if (string.Equals(_speaker.presetVoiceID, _voices[i], StringComparison.CurrentCultureIgnoreCase))
                 {
                     _voiceIndex = i;

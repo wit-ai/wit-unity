@@ -80,7 +80,7 @@ namespace Meta.WitAi.TTS
                     // Add voice setting id
                     if (clip.voiceSettings != null)
                     {
-                        displayName = $"{clip.voiceSettings.settingsID} - {displayName}";
+                        displayName = $"{clip.voiceSettings.SettingsId} - {displayName}";
                     }
                     // Foldout if desired
                     bool foldout = WitEditorUI.LayoutFoldout(new GUIContent(displayName), clip);

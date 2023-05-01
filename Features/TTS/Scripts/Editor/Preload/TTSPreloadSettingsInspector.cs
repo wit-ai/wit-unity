@@ -468,10 +468,10 @@ namespace Meta.WitAi.TTS.Preload
             {
                 foreach (var voiceSetting in service.GetAllPresetVoiceSettings())
                 {
-                    if (voiceSetting != null && !string.IsNullOrEmpty(voiceSetting.settingsID) &&
-                        !results.Contains(voiceSetting.settingsID))
+                    if (voiceSetting != null && !string.IsNullOrEmpty(voiceSetting.SettingsId) &&
+                        !results.Contains(voiceSetting.SettingsId))
                     {
-                        results.Add(voiceSetting.settingsID);
+                        results.Add(voiceSetting.SettingsId);
                     }
                 }
             }

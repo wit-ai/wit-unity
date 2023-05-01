@@ -171,17 +171,17 @@ namespace Meta.WitAi.TTS
 
         private static void UpdatePresets(TTSWit ttsWit)
         {
-            
+
             VLog.W($"TTS Service - No voices found");
         }
 
         // Set all blank IDs to default voice id
         private static void RefreshEmptySpeakers(TTSService service)
         {
-            string defaultVoiceID = service.VoiceProvider.VoiceDefaultSettings.settingsID;
+            string defaultVoiceID = service.VoiceProvider.VoiceDefaultSettings.SettingsId;
             foreach (var speaker in GameObject.FindObjectsOfType<TTSSpeaker>())
             {
-                if (string.IsNullOrEmpty(speaker.presetVoiceID) || string.Equals(speaker.presetVoiceID, TTSVoiceSettings.DEFAULT_ID))
+                if (string.IsNullOrEmpty(speaker.presetVoiceID))
                 {
                     speaker.presetVoiceID = defaultVoiceID;
                 }
@@ -193,7 +193,7 @@ namespace Meta.WitAi.TTS
         {
             TTSWitVoiceSettings result = new TTSWitVoiceSettings()
             {
-                settingsID = voiceData.name.ToUpper(),
+                SettingsId = voiceData.name.ToUpper(),
                 voice = voiceData.name
             };
             // Use first style provided

@@ -336,7 +336,10 @@ namespace Meta.WitAi.Requests
             try
             {
                 byte[] downloadedBytes = request.downloadHandler.data;
-                downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
+                if (downloadedBytes != null)
+                {
+                    downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
+                }
             }
             catch (Exception e)
             {

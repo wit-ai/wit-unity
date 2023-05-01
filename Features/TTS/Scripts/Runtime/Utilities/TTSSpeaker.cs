@@ -946,7 +946,7 @@ namespace Meta.WitAi.TTS.Utilities
         {
             StringBuilder log = new StringBuilder();
             log.AppendLine(comment);
-            log.AppendLine($"Voice: {requestData.ClipData?.voiceSettings?.settingsID}");
+            log.AppendLine($"Voice: {requestData.ClipData?.voiceSettings?.SettingsId}");
             log.AppendLine($"Cache: {requestData.ClipData?.diskCacheSettings?.DiskCacheLocation.ToString()}");
             log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
             log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");

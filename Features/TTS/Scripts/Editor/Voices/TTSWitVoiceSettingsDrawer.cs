@@ -25,9 +25,10 @@ namespace Meta.WitAi.TTS.Voices
         // Constants for var layout
         private const float VAR_HEIGHT = 20f;
         private const float VAR_MARGIN = 4f;
+        private const float FIELD_HEIGHT = 60f;
 
         // Constants for var lookup
-        private const string VAR_SETTINGS = "settingsID";
+        private const string VAR_SETTINGS = "SettingsId";
         private const string VAR_VOICE = "voice";
         private const string VAR_STYLE = "style";
 
@@ -55,7 +56,7 @@ namespace Meta.WitAi.TTS.Voices
             {
                 total += 2;
             }
-            return total * VAR_HEIGHT + Mathf.Max(0, total - 1) * VAR_MARGIN;
+            return total * VAR_HEIGHT + Mathf.Max(0, total - 1) * VAR_MARGIN + 2 * (FIELD_HEIGHT - VAR_HEIGHT);
         }
 
         // Handles gui layout
@@ -143,6 +144,14 @@ namespace Meta.WitAi.TTS.Voices
 
                     // Undent
                     EditorGUI.indentLevel--;
+                }
+
+                //
+                TextAreaAttribute area = subfield.GetCustomAttribute<TextAreaAttribute>();
+                if (area != null)
+                {
+                    subfieldRect.height = FIELD_HEIGHT;
+                    y += FIELD_HEIGHT - VAR_HEIGHT;
                 }
 
                 // Default layout

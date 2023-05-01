@@ -11,6 +11,7 @@ using System.Collections;
 using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Linq;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
@@ -187,7 +188,7 @@ namespace Meta.WitAi.TTS
             builder.AppendLine(logMessage);
             if (clipData != null)
             {
-                builder.AppendLine($"Voice: {(clipData.voiceSettings == null ? "Default" : clipData.voiceSettings.settingsID)}");
+                builder.AppendLine($"Voice: {(clipData.voiceSettings == null ? "Default" : clipData.voiceSettings.SettingsId)}");
                 builder.AppendLine($"Text: {clipData.textToSpeak}");
                 builder.AppendLine($"ID: {clipData.clipID}");
                 TTSDiskCacheLocation cacheLocation = TTSDiskCacheLocation.Stream;
@@ -212,31 +213,60 @@ namespace Meta.WitAi.TTS
         #endregion
 
         #region HELPERS
+        // Frequently used keys
+        private const string CLIP_ID_DELIM = "|";
+        private readonly SHA256 CLIP_HASH = SHA256.Create();
+
+        /// <summary>
+        /// Gets the text to be spoken after applying all relevant voice settings.
+        /// </summary>
+        /// <param name="textToSpeak">Text to be spoken by a particular voice</param>
+        /// <param name="voiceSettings">Voice settings to be used</param>
+        /// <returns>Returns a the final text to be spoken</returns>
+        public string GetFinalText(string textToSpeak, TTSVoiceSettings voiceSettings)
+        {
+            StringBuilder result = new StringBuilder();
+            AppendFinalText(result, textToSpeak, voiceSettings);
+            return result.ToString();
+        }
+        // Finalize text using a string builder
+        protected virtual void AppendFinalText(StringBuilder builder, string textToSpeak, TTSVoiceSettings voiceSettings)
+        {
+            if (!string.IsNullOrEmpty(voiceSettings?.PrependedText))
+            {
+                builder.Append(voiceSettings.PrependedText);
+            }
+            builder.Append(textToSpeak);
+            if (!string.IsNullOrEmpty(voiceSettings?.AppendedText))
+            {
+                builder.Append(voiceSettings.AppendedText);
+            }
+        }
+
         /// <summary>
         /// Obtain unique id for clip data
         /// </summary>
-        private const string CLIP_ID_DELIM = "|";
         public virtual string GetClipID(string textToSpeak, TTSVoiceSettings voiceSettings)
         {
             // Get a text string for a unique id
-            StringBuilder uniqueID = new StringBuilder();
+            StringBuilder uniqueId = new StringBuilder();
             // Add all data items
             if (VoiceProvider != null)
             {
                 Dictionary<string, string> data = VoiceProvider.EncodeVoiceSettings(voiceSettings);
                 foreach (var key in data.Keys)
                 {
-                    string keyClean = data[key].ToLower().Replace(CLIP_ID_DELIM, "");
-                    uniqueID.Append(keyClean);
-                    uniqueID.Append(CLIP_ID_DELIM);
+                    string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
+                    uniqueId.Append(keyClean);
+                    uniqueId.Append(CLIP_ID_DELIM);
                 }
             }
             // Finally, add unique id
-            uniqueID.Append(textToSpeak.ToLower());
+            AppendFinalText(uniqueId, textToSpeak, voiceSettings);
             // Return id
-            return GetSha256Hash(CLIP_HASH, uniqueID.ToString());
+            return GetSha256Hash(CLIP_HASH, uniqueId.ToString().ToLower());
         }
-        private readonly SHA256 CLIP_HASH = SHA256.Create();
+
         private string GetSha256Hash(SHA256 shaHash, string input)
         {
             // Convert the input string to a byte array and compute the hash.
@@ -295,7 +325,7 @@ namespace Meta.WitAi.TTS
             {
                 clipID = clipID,
                 audioType = GetAudioType(),
-                textToSpeak = textToSpeak,
+                textToSpeak = GetFinalText(textToSpeak, voiceSettings),
                 voiceSettings = voiceSettings,
                 diskCacheSettings = diskCacheSettings,
                 loadState = TTSClipLoadState.Unloaded,
@@ -846,7 +876,7 @@ namespace Meta.WitAi.TTS
             {
                 return null;
             }
-            return Array.Find(VoiceProvider.PresetVoiceSettings, (v) => string.Equals(v.settingsID, presetVoiceId, StringComparison.CurrentCultureIgnoreCase));
+            return Array.Find(VoiceProvider.PresetVoiceSettings, (v) => string.Equals(v.SettingsId, presetVoiceId, StringComparison.CurrentCultureIgnoreCase));
         }
         #endregion
     }

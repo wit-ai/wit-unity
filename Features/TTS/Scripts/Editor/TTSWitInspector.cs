@@ -17,7 +17,7 @@ namespace Meta.WitAi.TTS
     public class TTSWitInspector : TTSServiceInspector
     {
         private int selectedBaseVoice;
-        
+
         protected override void OnEditTimeGUI()
         {
             base.OnEditTimeGUI();
@@ -25,7 +25,7 @@ namespace Meta.WitAi.TTS
             var ttsWit = (TTSWit)target;
             var config = ttsWit.RequestSettings.configuration;
             if (!config) return;
-            
+
             var appInfo = config.GetApplicationInfo();
 
             if (null != appInfo.voices && appInfo.voices.Length > 0)
@@ -40,7 +40,7 @@ namespace Meta.WitAi.TTS
                     presets.Add(new TTSWitVoiceSettings
                     {
                         voice = voiceNames[selectedBaseVoice],
-                        settingsID = voiceNames[selectedBaseVoice]
+                        SettingsId = voiceNames[selectedBaseVoice]
                     });
                     ttsWit.SetVoiceSettings(presets.ToArray());
                 }
@@ -60,7 +60,7 @@ namespace Meta.WitAi.TTS
                     presets.Add(new TTSWitVoiceSettings
                     {
                         voice = appInfo.voices[i].name,
-                        settingsID = appInfo.voices[i].name
+                        SettingsId = appInfo.voices[i].name
                     });
                 }
                 ttsWit.SetVoiceSettings(presets.ToArray());
