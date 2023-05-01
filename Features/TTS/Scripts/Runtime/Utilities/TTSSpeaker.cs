@@ -70,13 +70,36 @@ namespace Meta.WitAi.TTS.Utilities
         // Log category name
         protected virtual string LogCategory => GetType().Name;
 
-        // Whether currently speaking or not
+        /// <summary>
+        /// Whether a clip is currently playing for this speaker
+        /// </summary>
         public bool IsSpeaking => SpeakingClip != null;
-        // Current clip to be played
+        /// <summary>
+        /// The data for the currently playing clip
+        /// </summary>
         public TTSClipData SpeakingClip => _speakingRequest.ClipData;
 
-        // Whether currently loading or not
+        /// <summary>
+        /// Whether there are any clips in the loading queue
+        /// </summary>
         public bool IsLoading => _queuedRequests.Count > 0;
+        /// <summary>
+        /// Whether any queued clips are still not ready for playback
+        /// </summary>
+        public bool IsPreparing
+        {
+            get
+            {
+                foreach (var request in _queuedRequests)
+                {
+                    if (request.ClipData != null && request.ClipData.loadState == TTSClipLoadState.Preparing)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
         // Loading clip queue
         public TTSClipData[] QueuedClips
         {
@@ -90,6 +113,11 @@ namespace Meta.WitAi.TTS.Utilities
                 return clips.ToArray();
             }
         }
+
+        /// <summary>
+        /// Whether the speaker currently has currently speaking clip or a playback queue
+        /// </summary>
+        public bool IsActive => IsSpeaking || IsLoading;
 
         // Current clip to be played
         protected TTSSpeakerRequestData _speakingRequest;
@@ -271,7 +299,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Refresh queue
         private void RefreshQueueEvents()
         {
-            bool newHasQueueStatus = IsLoading || IsSpeaking || _willHaveQueue;
+            bool newHasQueueStatus = IsActive || _willHaveQueue;
             if (_hasQueue != newHasQueueStatus)
             {
                 _hasQueue = newHasQueueStatus;
@@ -416,7 +444,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Speak text
             Speak(textToSpeak, diskCacheSettings, playbackEvents);
             // Wait while loading/speaking
-            yield return new WaitWhile(() => IsLoading || IsSpeaking);
+            yield return new WaitWhile(() => IsActive);
         }
 
         /// <summary>
@@ -512,7 +540,7 @@ namespace Meta.WitAi.TTS.Utilities
                 SpeakQueued(textToSpeak, diskCacheSettings, playbackEvents);
             }
             // Wait while loading/speaking
-            yield return new WaitWhile(() => IsLoading || IsSpeaking);
+            yield return new WaitWhile(() => IsActive);
         }
 
         /// <summary>
