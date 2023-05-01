@@ -179,7 +179,7 @@ namespace Meta.WitAi.Requests
                 return;
             }
             // Fail without samples
-            else if (newSamples == null)
+            if (newSamples == null)
             {
                 VLog.W($"Decode Chunk Failed\nNo samples returned");
                 TryToFinalize();
@@ -202,8 +202,11 @@ namespace Meta.WitAi.Requests
             }
 
             // Apply to clip
-            Clip.SetData(newSamples, _clipSetSamples);
-            _clipSetSamples += newSamples.Length;
+            if (newSamples.Length > 0)
+            {
+                Clip.SetData(newSamples, _clipSetSamples);
+                _clipSetSamples += newSamples.Length;
+            }
 
             // Stream is now ready
             if (!IsStreamReady && (float)_clipSetSamples / StreamData.DecodeSampleRate >= StreamData.ClipReadyLength)
