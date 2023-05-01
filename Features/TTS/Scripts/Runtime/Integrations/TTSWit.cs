@@ -8,16 +8,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
-using Castle.Core.Internal;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Requests;
-using UnityEngine.Serialization;
 
 namespace Meta.WitAi.TTS.Integrations
 {
@@ -498,7 +498,7 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Remove fields from TTSVoiceSettings
             Type baseType = typeof(TTSVoiceSettings);
-            fields = fields.FindAll((field) => field.DeclaringType != baseType);
+            fields = fields.ToList().FindAll((field) => field.DeclaringType != baseType).ToArray();
 
             // Apply & return
             _settingsFields[settingsType] = fields;
