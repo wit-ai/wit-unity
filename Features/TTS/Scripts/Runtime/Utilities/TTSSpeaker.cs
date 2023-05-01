@@ -14,7 +14,6 @@ using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
-using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS.Utilities
@@ -63,7 +62,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]
-        [SerializeField] private TTSSpeakerEvents _events;
+        [SerializeField] private TTSSpeakerEvents _events = new TTSSpeakerEvents();
         public TTSSpeakerEvents Events => _events;
         public VoiceSpeechEvents SpeechEvents => _events;
 
@@ -240,16 +239,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Clip unloaded externally
         protected virtual void HandleClipUnload(TTSClipData clipData)
         {
-            // Cancel load
-            if (QueueContainsClip(clipData))
-            {
-                HandleUnload(clipData, string.Empty);
-            }
-            // Cancel playback
-            if (clipData.Equals(SpeakingClip))
-            {
-                StopSpeaking();
-            }
+            Stop(clipData, true);
         }
         // Clip stream complete
         protected virtual void HandleClipUpdate(TTSClipData clipData)
@@ -622,6 +612,69 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
+        /// Stop load & playback of a specific clip
+        /// </summary>
+        /// <param name="clipData">The clip to be stopped & removed from the queue</param>
+        /// <param name="allInstances">Whether to remove the first instance of this clip or all instances</param>
+        public virtual void Stop(string textToSpeak, bool allInstances = false)
+        {
+            // Found speaking clip
+            if (string.Equals(SpeakingClip?.textToSpeak, textToSpeak))
+            {
+                Stop(SpeakingClip, allInstances);
+                return;
+            }
+
+            // Find all clips that match & stop them
+            foreach (var clipData in QueuedClips)
+            {
+                if (string.Equals(clipData?.textToSpeak, textToSpeak))
+                {
+                    Stop(clipData, allInstances);
+                    if (!allInstances)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stop load & playback of a specific clip
+        /// </summary>
+        /// <param name="clipData">The clip to be stopped & removed from the queue</param>
+        /// <param name="allInstances">Whether to remove the first instance of this clip or all instances</param>
+        public virtual void Stop(TTSClipData clipData, bool allInstances = false)
+        {
+            // Check if speaking
+            bool isSpeakingClip = SpeakingClip != null && clipData.Equals(SpeakingClip);
+
+            // Cancel queue
+            if (!isSpeakingClip || allInstances)
+            {
+                // Unload all instances
+                if (allInstances)
+                {
+                    if (QueueContainsClip(clipData))
+                    {
+                        HandleUnload(clipData, string.Empty);
+                    }
+                }
+                // Unload a single request
+                else
+                {
+                    HandleUnload(GetQueuedRequest(clipData), string.Empty);
+                }
+            }
+
+            // Cancel playback
+            if (isSpeakingClip)
+            {
+                StopSpeaking();
+            }
+        }
+
+        /// <summary>
         /// Abort loading of all items in the load queue
         /// </summary>
         public virtual void StopLoading()
@@ -700,7 +753,7 @@ namespace Meta.WitAi.TTS.Utilities
         private void HandleLoadComplete(TTSSpeakerRequestData requestData, string error)
         {
             // Not queued
-            if (!_queuedRequests.Contains(requestData))
+            if (_queuedRequests != null && !_queuedRequests.Contains(requestData))
             {
                 return;
             }
@@ -763,7 +816,7 @@ namespace Meta.WitAi.TTS.Utilities
         private void RefreshPlayback()
         {
             // Ignore if currently playing or nothing in uque
-            if (SpeakingClip != null ||  _queuedRequests.Count == 0)
+            if (SpeakingClip != null ||  _queuedRequests == null || _queuedRequests.Count == 0)
             {
                 return;
             }
@@ -904,6 +957,12 @@ namespace Meta.WitAi.TTS.Utilities
         // Handles unload of requests with specified should keep lookup
         private void HandleUnload(Func<TTSSpeakerRequestData, bool> shouldKeep, string error)
         {
+            // Ignore if destroyed
+            if (_queuedRequests == null)
+            {
+                return;
+            }
+
             // Otherwise create discard queue
             Queue<TTSSpeakerRequestData> discard = _queuedRequests;
             _queuedRequests = new Queue<TTSSpeakerRequestData>();

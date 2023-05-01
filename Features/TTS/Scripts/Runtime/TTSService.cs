@@ -672,7 +672,7 @@ namespace Meta.WitAi.TTS
         /// Perform clip unload
         /// </summary>
         /// <param name="clipID"></param>
-        private void OnUnloadBegin(TTSClipData clipData)
+        protected virtual void OnUnloadBegin(TTSClipData clipData)
         {
             // Abort if currently preparing
             if (clipData.loadState == TTSClipLoadState.Preparing)
