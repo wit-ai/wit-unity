@@ -22,12 +22,12 @@ namespace Meta.WitAi.TTS.Utilities
     {
         [Header("Load Settings")]
         [Tooltip("Text that is added to the front of any Speech() request")]
-        [TextArea]
-        [SerializeField] private string prependedText;
+        [TextArea] [FormerlySerializedAs("prependedText")]
+        public string PrependedText;
 
-        [TextArea]
         [Tooltip("Text that is added to the end of any Speech() text")]
-        [SerializeField] private string appendedText;
+        [TextArea] [FormerlySerializedAs("appendedText")]
+        public string AppendedText;
 
         [Tooltip("Preset voice setting id of TTSService voice settings")]
         [HideInInspector] [SerializeField] public string presetVoiceID;
@@ -198,14 +198,14 @@ namespace Meta.WitAi.TTS.Utilities
                 _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
             }
             // Fix prepend text to ensure it has a space
-            if (!string.IsNullOrEmpty(prependedText) && prependedText.Length > 0 && !prependedText.EndsWith(" "))
+            if (!string.IsNullOrEmpty(PrependedText) && PrependedText.Length > 0 && !PrependedText.EndsWith(" "))
             {
-                prependedText = prependedText + " ";
+                PrependedText = PrependedText + " ";
             }
             // Fix append text to ensure it is spaced correctly
-            if (!string.IsNullOrEmpty(appendedText) && appendedText.Length > 0 && !appendedText.StartsWith(" "))
+            if (!string.IsNullOrEmpty(AppendedText) && AppendedText.Length > 0 && !AppendedText.StartsWith(" "))
             {
-                appendedText = " " + appendedText;
+                AppendedText = " " + AppendedText;
             }
         }
         // Stop
@@ -333,7 +333,7 @@ namespace Meta.WitAi.TTS.Utilities
             for (int i = 0; i < phrases.Count; i++)
             {
                 string phrase = phrases[i];
-                phrase = $"{prependedText}{phrase}{appendedText}".Trim();
+                phrase = $"{PrependedText}{phrase}{AppendedText}".Trim();
                 phrases[i] = phrase;
             }
 

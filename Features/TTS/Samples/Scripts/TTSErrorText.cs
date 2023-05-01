@@ -15,27 +15,37 @@ namespace Meta.WitAi.TTS.Samples
     {
         // Label
         [SerializeField] private Text _errorLabel;
+
         // Current error response
-        private string _error = string.Empty;
+        private string _error;
+
+        // Reset on enable
+        private void OnEnable()
+        {
+            RefreshText();
+        }
 
         // Add listeners
         private void Update()
         {
-            if (TTSService.Instance != null)
+            string invalidError = TTSService.Instance == null ? "No TTS Service Found" : TTSService.Instance.GetInvalidError();
+            if (!string.Equals(invalidError, _error))
             {
-                string invalidError = TTSService.Instance.GetInvalidError();
-                if (!string.Equals(invalidError, _error))
-                {
-                    _error = invalidError;
-                    if (string.IsNullOrEmpty(_error))
-                    {
-                        _errorLabel.text = string.Empty;
-                    }
-                    else
-                    {
-                        _errorLabel.text = $"TTS Service Error: {_error}";
-                    }
-                }
+                _error = invalidError;
+                RefreshText();
+            }
+        }
+
+        // Refresh text
+        private void RefreshText()
+        {
+            if (string.IsNullOrEmpty(_error))
+            {
+                _errorLabel.text = string.Empty;
+            }
+            else
+            {
+                _errorLabel.text = $"Error: {_error}";
             }
         }
     }
