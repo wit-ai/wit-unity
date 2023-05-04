@@ -503,10 +503,6 @@ namespace Meta.WitAi
     public interface IVoiceService : IVoiceEventProvider, ITelemetryEventsProvider, IVoiceActivationHandler
     {
         /// <summary>
-        /// Returns true if this voice service is currently active and listening with the mic
-        /// </summary>
-        bool Active { get; }
-        /// <summary>
         /// Returns true if voice service is currently active or request is transmitting
         /// </summary>
         bool IsRequestActive { get; }
@@ -542,6 +538,11 @@ namespace Meta.WitAi
 
     public interface IVoiceActivationHandler
     {
+        /// <summary>
+        /// Returns true if this voice service is currently active and listening with the mic
+        /// </summary>
+        bool Active { get; }
+
         /// <summary>
         /// Send text data for NLU processing with custom request options & events.
         /// </summary>
