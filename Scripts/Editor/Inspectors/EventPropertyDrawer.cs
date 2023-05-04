@@ -71,9 +71,10 @@ namespace Meta.WitAi.Events.Editor
             foreach (var eventCategory in attributes)
             {
                 List<string> values = categoryLists.ContainsKey(eventCategory.Category) ? categoryLists[eventCategory.Category] : new List<string>();
-                if (!values.Contains(field.Name))
+                string fieldName = GetDisplayFieldName(field);
+                if (!values.Contains(fieldName))
                 {
-                    values.Add(field.Name);
+                    values.Add(fieldName);
                 }
                 categoryLists[eventCategory.Category] = values;
             }
@@ -93,6 +94,15 @@ namespace Meta.WitAi.Events.Editor
                 return false;
             }
             return Attribute.IsDefined(field, typeof(EventCategoryAttribute));
+        }
+        private string GetDisplayFieldName(FieldInfo field)
+        {
+            string result = field.Name.TrimStart('_');
+            return result[0].ToString().ToUpper() + result.Substring(1, result.Length - 1);
+        }
+        private string GetFieldNameFromDisplay(string fieldDisplayName)
+        {
+            return "_" + fieldDisplayName[0].ToString().ToLower() + fieldDisplayName.Substring(1, fieldDisplayName.Length - 1);
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
@@ -122,8 +132,11 @@ namespace Meta.WitAi.Events.Editor
 
                 foreach (var callback in callbacksArray)
                 {
-                    height += Mathf.RoundToInt(EditorGUI.GetPropertyHeight(property.FindPropertyRelative(callback),
-                                                   true) + CONTROL_SPACING);
+                    var fieldProperty = GetPropertyFromDisplayFieldName(property, callback);
+                    if (fieldProperty != null)
+                    {
+                        height += Mathf.RoundToInt(EditorGUI.GetPropertyHeight(fieldProperty, true) + CONTROL_SPACING);
+                    }
                 }
 
                 // Add some extra space so the last property field's +/- buttons don't overlap the next control.
@@ -207,6 +220,16 @@ namespace Meta.WitAi.Events.Editor
                         if (eventObject != null && selectedEventIndex != UNSELECTED &&
                             !eventObject.IsCallbackOverridden(eventName))
                         {
+                            var fieldName = GetFieldNameFromDisplay(eventName);
+                            if (eventObject.IsCallbackOverridden(fieldName))
+                            {
+                                eventObject.RemoveOverriddenCallback(fieldName);
+                            }
+                            fieldName = GetFieldNameFromDisplay(eventName).Substring(1);
+                            if (eventObject.IsCallbackOverridden(fieldName))
+                            {
+                                eventObject.RemoveOverriddenCallback(fieldName);
+                            }
                             eventObject.RegisterOverriddenCallback(eventName);
                         }
                     }
@@ -221,11 +244,15 @@ namespace Meta.WitAi.Events.Editor
 
                     foreach (var callback in eventObject.OverriddenCallbacks)
                     {
-                        callbackProperty = property.FindPropertyRelative(callback);
+                        var fieldProperty = GetPropertyFromDisplayFieldName(property, callback);
+                        if (fieldProperty == null)
+                        {
+                            continue;
+                        }
 
-                        propertyRect.height = EditorGUI.GetPropertyHeight(callbackProperty, true);
+                        propertyRect.height = EditorGUI.GetPropertyHeight(fieldProperty, true);
 
-                        EditorGUI.PropertyField(propertyRect, property.FindPropertyRelative(callback));
+                        EditorGUI.PropertyField(propertyRect, fieldProperty);
 
                         propertyRect.y += propertyRect.height + CONTROL_SPACING;
                     }
@@ -233,6 +260,20 @@ namespace Meta.WitAi.Events.Editor
 
                 EditorGUI.indentLevel--;
             }
+        }
+        private SerializedProperty GetPropertyFromDisplayFieldName(SerializedProperty property, string fieldName)
+        {
+            SerializedProperty result = property.FindPropertyRelative(fieldName);
+            if (result == null)
+            {
+                string fieldName2 = GetFieldNameFromDisplay(fieldName);
+                result = property.FindPropertyRelative(fieldName2);
+                if (result == null)
+                {
+                    Debug.LogError($"Could not find serialized property field: {fieldName} ({fieldName2})");
+                }
+            }
+            return result;
         }
     }
 }
