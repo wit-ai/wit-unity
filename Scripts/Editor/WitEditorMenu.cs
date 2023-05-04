@@ -71,38 +71,5 @@ namespace Meta.WitAi.Windows
 
         }
         #endregion
-
-        #region DRAWERS
-        [CustomPropertyDrawer(typeof(WitEndpointConfig))]
-        public class WitCustomEndpointPropertyDrawer : WitEndpointConfigDrawer
-        {
-
-        }
-        [CustomPropertyDrawer(typeof(WitAppInfo))]
-        public class WitCustomApplicationPropertyDrawer : WitApplicationPropertyDrawer
-        {
-
-        }
-        [CustomPropertyDrawer(typeof(WitIntentInfo))]
-        public class WitCustomIntentPropertyDrawer : WitIntentPropertyDrawer
-        {
-
-        }
-        [CustomPropertyDrawer(typeof(WitEntityInfo))]
-        public class WitCustomEntityPropertyDrawer : WitEntityPropertyDrawer
-        {
-
-        }
-        [CustomPropertyDrawer(typeof(WitTraitInfo))]
-        public class WitCustomTraitPropertyDrawer : WitTraitPropertyDrawer
-        {
-
-        }
-        [CustomPropertyDrawer(typeof(ValuePathMatcher))]
-        public class WitCustomValuePathMatcherPropertyDrawer : ValuePathMatcherPropertyDrawer
-        {
-
-        }
-        #endregion
     }
 }
