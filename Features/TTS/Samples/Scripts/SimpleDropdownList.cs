@@ -37,6 +37,8 @@ namespace Meta.WitAi.TTS.Samples
         private ScrollRect _dropdownListScrollRect;
         [SerializeField] [Tooltip("Prefab used for canvas dropdown list")]
         private Toggle _dropdownListCellPrefab;
+        [SerializeField] [Tooltip("Additional text padding for dropdown cells")]
+        private float _dropdownCellTextPadding = 2f;
 
         [SerializeField] [Tooltip("All available options for this dropdown")]
         private string[] _options;
@@ -205,8 +207,8 @@ namespace Meta.WitAi.TTS.Samples
             float height = cellRect.rect.height;
             if (cellText != null)
             {
-                float textMargin = height - cellText.rectTransform.rect.height;
-                height = cellText.preferredHeight + textMargin;
+                float textMargin = Mathf.Max(0f, height - cellText.rectTransform.rect.height);
+                height = Mathf.CeilToInt(cellText.preferredHeight + _dropdownCellTextPadding + textMargin);
                 cellRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
             }
 
