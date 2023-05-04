@@ -12,6 +12,11 @@
       "displayName": "Shapes",
       "description": "The sample code that goes with the Shapes tutorial.",
       "path": "Samples/Shapes"
+    },
+    {
+      "displayName": "TTS",
+      "description": "Shows how to use Text to Speech (TTS).",
+      "path": "Samples/TTS"
     }
   ],
   "description": "wit-unity is the Unity SDK for Wit.ai. It provides convenience tools for activating Wit and processing the responses that are returned.",
