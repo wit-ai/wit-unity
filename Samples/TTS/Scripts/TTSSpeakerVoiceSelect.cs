@@ -20,16 +20,32 @@ namespace Meta.WitAi.TTS.Samples
         [SerializeField] [Tooltip("Dropdown used for voice selection")]
         private SimpleDropdownList _dropdown;
 
+        protected override void Awake()
+        {
+            base.Awake();
+            _dropdown.DropdownToggleUnselectedText = "CUSTOM";
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();
             RefreshDropdown();
             _dropdown.OnOptionSelected.AddListener(OnOptionSelected);
         }
+
         protected override void OnDisable()
         {
             base.OnDisable();
             _dropdown.OnOptionSelected.RemoveListener(OnOptionSelected);
+        }
+
+        // Fix voice selection if changed elsewhere
+        private void Update()
+        {
+            if (!string.Equals(Speaker?.VoiceSettings?.SettingsId, _dropdown.SelectedOption))
+            {
+                _dropdown.SelectOption(Speaker?.VoiceSettings?.SettingsId);
+            }
         }
 
         // Refresh dropdown using voice settings
@@ -68,7 +84,6 @@ namespace Meta.WitAi.TTS.Samples
                 VLog.W("No speaker found");
                 return;
             }
-            Debug.Log($"Set Speaker: {newOption}");
             Speaker.presetVoiceID = newOption;
         }
     }

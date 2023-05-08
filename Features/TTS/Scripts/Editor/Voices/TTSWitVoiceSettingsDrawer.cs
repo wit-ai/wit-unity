@@ -15,6 +15,8 @@ using Meta.WitAi.Windows;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Lib;
 using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Utilities;
 using UnityEngine;
 
 namespace Meta.WitAi.TTS.Voices
@@ -33,6 +35,8 @@ namespace Meta.WitAi.TTS.Voices
         private const string VAR_STYLE = "style";
 
         // Voice data
+        private TTSService _ttsService;
+        private bool _onSpeaker;
         private IWitRequestConfiguration _configuration;
         private bool _configUpdating;
         private WitVoiceInfo[] _voices;
@@ -44,27 +48,55 @@ namespace Meta.WitAi.TTS.Voices
         // Determine height
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
+            // Get service
+            if (!_ttsService)
+            {
+                GetService(property, out _ttsService, out _onSpeaker);
+            }
             // Property
             if (!property.isExpanded)
             {
                 return VAR_HEIGHT;
             }
-            // Add each
+            // Add each field + 1 for dropdown
             int total = _fields.Length + 1;
+            // Remove 3 on speaker
+            if (_onSpeaker)
+            {
+                total -= 3;
+            }
+            // Add 2 for voice properties
             int voiceIndex = GetVoiceIndex(property);
             if (voiceIndex != -1)
             {
                 total += 2;
             }
-            return total * VAR_HEIGHT + Mathf.Max(0, total - 1) * VAR_MARGIN + 2 * (FIELD_HEIGHT - VAR_HEIGHT);
+            // Get height
+            float height = total * VAR_HEIGHT + Mathf.Max(0, total - 1) * VAR_MARGIN;
+            // Add fields
+            if (!_onSpeaker)
+            {
+                height += 2 * (FIELD_HEIGHT - VAR_HEIGHT);
+            }
+            return height;
         }
 
         // Handles gui layout
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            // Get service if needed
+            if (!_ttsService)
+            {
+                GetService(property, out _ttsService, out _onSpeaker);
+            }
+
             // On gui
             float y = position.y;
             string voiceName = property.FindPropertyRelative(VAR_SETTINGS).stringValue;
+            if (string.IsNullOrEmpty(voiceName))
+            {
+                voiceName = property.displayName;
+            }
             property.isExpanded =
                 EditorGUI.Foldout(new Rect(position.x, y, position.width, VAR_HEIGHT), property.isExpanded, voiceName);
             if (!property.isExpanded)
@@ -77,14 +109,23 @@ namespace Meta.WitAi.TTS.Voices
             EditorGUI.indentLevel++;
 
             // Refresh voices if needed
-            RefreshVoices(property);
+            RefreshVoices(_ttsService, property);
             // Get voice index
             int voiceIndex = GetVoiceIndex(property);
 
             // Iterate subfields
             for (int s = 0; s < _fields.Length; s++)
             {
+                // Get subfield
                 FieldInfo subfield = _fields[s];
+
+                // Ignore base fields on speaker
+                if (_onSpeaker && subfield.DeclaringType == typeof(TTSVoiceSettings))
+                {
+                    continue;
+                }
+
+                // Get subfield property
                 SerializedProperty subfieldProperty = property.FindPropertyRelative(subfield.Name);
                 Rect subfieldRect = new Rect(position.x, y, position.width, VAR_HEIGHT);
                 if (string.Equals(subfield.Name, VAR_VOICE) && voiceIndex != -1)
@@ -175,18 +216,42 @@ namespace Meta.WitAi.TTS.Voices
             // Undent
             EditorGUI.indentLevel--;
         }
-        // Refresh voices
-        private void RefreshVoices(SerializedProperty property)
+        // Get service & if on a speaker
+        private void GetService(SerializedProperty property, out TTSService ttsService, out bool onSpeaker)
         {
             // Get tts wit if possible
             object targetObject = property.serializedObject.targetObject;
-            if (targetObject == null || targetObject.GetType() !=  typeof(TTSWit))
+            if (targetObject != null)
+            {
+                // Currently on TTSService
+                if (targetObject is TTSService service)
+                {
+                    ttsService = service;
+                    onSpeaker = false;
+                    return;
+                }
+                // Currently on TTSSpeaker
+                if (targetObject is TTSSpeaker speaker)
+                {
+                    ttsService = speaker.TTSService;
+                    onSpeaker = true;
+                    return;
+                }
+            }
+            // Speaker not found
+            ttsService = null;
+            onSpeaker = false;
+        }
+        // Refresh voices
+        private void RefreshVoices(TTSService ttsService, SerializedProperty property)
+        {
+            // Ensure service exists
+            if (!(ttsService is TTSWit))
             {
                 return;
             }
             // Get configuration
-            TTSWit wit = property.serializedObject.targetObject as TTSWit;
-            IWitRequestConfiguration configuration = wit.RequestSettings.configuration;
+            IWitRequestConfiguration configuration = (ttsService as TTSWit).RequestSettings.configuration;
             // Set configuration
             if (_configuration != configuration)
             {

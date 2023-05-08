@@ -7,10 +7,13 @@
  */
 
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.TTS.Utilities;
 using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Integrations;
 
 namespace Meta.WitAi.TTS
 {
@@ -19,58 +22,103 @@ namespace Meta.WitAi.TTS
     {
         // Speaker
         private TTSSpeaker _speaker;
+        private SerializedProperty _presetVoiceProperty;
+        private SerializedProperty _customVoiceProperty;
 
         // Voices
         private int _voiceIndex = -1;
-        private string[] _voices = null;
+        private string[] _voicePresetIds = null;
 
         // Voice text
-        private const string UI_VOICE_HEADER = "Voice Settings";
-        private const string UI_VOICE_KEY = "Voice Preset";
+        private const string UI_PRESET_VOICE_KEY = "Voice Preset";
+        private const string UI_CUSTOM_VOICE_KEY = "Custom Voice";
+        private const string UI_CUSTOM_KEY = "CUSTOM";
+
+        //
+        void OnEnable()
+        {
+            _speaker = target as TTSSpeaker;
+            _presetVoiceProperty = serializedObject.FindProperty("presetVoiceID");
+            _customVoiceProperty = serializedObject.FindProperty("customWitVoiceSettings");
+        }
 
         // GUI
         public override void OnInspectorGUI()
         {
-            // Get speaker
-            if (_speaker == null)
+            // Display default ui
+            base.OnInspectorGUI();
+
+            // Check voices
+            TTSService tts = _speaker.TTSService;
+            TTSVoiceSettings[] settings = tts?.GetAllPresetVoiceSettings();
+            if (_voicePresetIds == null
+                || (settings != null && _voicePresetIds.Length != settings.Length + 1)
+                || (_voiceIndex >= 0 && _voiceIndex < _voicePresetIds.Length - 1 && !string.Equals(_speaker.presetVoiceID, _voicePresetIds[_voiceIndex])))
             {
-                _speaker = target as TTSSpeaker;
-            }
-            // Get voices
-            if (_voices == null || (_voiceIndex >= 0 && _voiceIndex < _voices.Length && !string.Equals(_speaker.presetVoiceID, _voices[_voiceIndex])))
-            {
-                RefreshVoices();
+                RefreshVoices(settings);
             }
 
-            // Voice select
-            EditorGUILayout.LabelField(UI_VOICE_HEADER, EditorStyles.boldLabel);
-            // No voices found
-            if (_voices == null || _voices.Length == 0)
+            // No preset voices found, assume custom
+            if (_voicePresetIds == null || _voicePresetIds.Length == 0)
             {
-                EditorGUILayout.TextField(UI_VOICE_KEY, _speaker.presetVoiceID);
+                GUI.enabled = false;
+                EditorGUILayout.TextField(UI_PRESET_VOICE_KEY, UI_CUSTOM_KEY);
+                GUI.enabled = true;
             }
             // Voice dropdown
             else
             {
                 bool updated = false;
-                WitEditorUI.LayoutPopup(UI_VOICE_KEY, _voices, ref _voiceIndex, ref updated);
+                WitEditorUI.LayoutPopup(UI_PRESET_VOICE_KEY, _voicePresetIds, ref _voiceIndex, ref updated);
                 if (updated)
                 {
-                    string newVoiceID = _voiceIndex >= 0 && _voiceIndex < _voices.Length
-                        ? _voices[_voiceIndex]
-                        : string.Empty;
-                    _speaker.presetVoiceID = newVoiceID;
-                    EditorUtility.SetDirty(_speaker);
+                    if (_voiceIndex >= 0 && _voiceIndex < _voicePresetIds.Length - 1)
+                    {
+                        _presetVoiceProperty.stringValue = _voicePresetIds[_voiceIndex];
+                    }
+                    else
+                    {
+                        _presetVoiceProperty.stringValue = null;
+                    }
                 }
             }
 
-            // Display default ui
-            EditorGUILayout.Space();
-            EditorGUILayout.Space();
-            base.OnInspectorGUI();
+            // Add custom layout
+            if (_voicePresetIds == null || _voiceIndex < 0 || _voiceIndex >= _voicePresetIds.Length - 1)
+            {
+                EditorGUILayout.PropertyField(_customVoiceProperty, new GUIContent(UI_CUSTOM_VOICE_KEY));
+            }
+
+            // Apply all modified properties
+            serializedObject.ApplyModifiedProperties();
 
             // Layout TTS clip queue
             LayoutClipQueue();
+        }
+
+        // Refresh voices
+        private void RefreshVoices(TTSVoiceSettings[] settings)
+        {
+            // Reset voice data
+            _voiceIndex = -1;
+            _voicePresetIds = null;
+            if (settings == null)
+            {
+                return;
+            }
+
+            // Get all ids
+            List<string> presetIds = settings.Select(s => s.SettingsId).ToList();
+            // Get voice index
+            _voiceIndex = presetIds.IndexOf(_speaker.presetVoiceID);
+            if (_voiceIndex == -1)
+            {
+                _voiceIndex = presetIds.Count;
+            }
+            // Add custom key
+            presetIds.Add(UI_CUSTOM_KEY);
+            // Apply preset ids
+            _voicePresetIds = presetIds.ToArray();
         }
 
         // Layout clip queue
@@ -137,34 +185,6 @@ namespace Meta.WitAi.TTS
                     }
                 }
                 EditorGUI.indentLevel--;
-            }
-        }
-
-        // Refresh voices
-        private void RefreshVoices()
-        {
-            // Reset voice data
-            _voiceIndex = -1;
-            _voices = null;
-
-            // Get settings
-            TTSService tts = _speaker.TTSService;
-            TTSVoiceSettings[] settings = tts?.GetAllPresetVoiceSettings();
-            if (settings == null)
-            {
-                VLog.E("No Preset Voice Settings Found!");
-                return;
-            }
-
-            // Apply all settings
-            _voices = new string[settings.Length];
-            for (int i = 0; i < settings.Length; i++)
-            {
-                _voices[i] = settings[i].SettingsId;
-                if (string.Equals(_speaker.presetVoiceID, _voices[i], StringComparison.CurrentCultureIgnoreCase))
-                {
-                    _voiceIndex = i;
-                }
             }
         }
     }

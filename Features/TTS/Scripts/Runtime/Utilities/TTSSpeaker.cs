@@ -14,13 +14,20 @@ using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
+using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS.Utilities
 {
     public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider
     {
-        [Header("Load Settings")]
+        [Header("Event Settings")]
+        [Tooltip("All speaker load and playback events")]
+        [SerializeField] private TTSSpeakerEvents _events = new TTSSpeakerEvents();
+        public TTSSpeakerEvents Events => _events;
+        public VoiceSpeechEvents SpeechEvents => _events;
+
+        [Header("Text Settings")]
         [Tooltip("Text that is added to the front of any Speech() request")]
         [TextArea] [FormerlySerializedAs("prependedText")]
         public string PrependedText;
@@ -29,10 +36,16 @@ namespace Meta.WitAi.TTS.Utilities
         [TextArea] [FormerlySerializedAs("appendedText")]
         public string AppendedText;
 
-        [Tooltip("Preset voice setting id of TTSService voice settings")]
-        [HideInInspector] [SerializeField] public string presetVoiceID;
-        public TTSVoiceSettings VoiceSettings => TTSService.GetPresetVoiceSettings(presetVoiceID);
+        [Header("Playback Settings")]
+        [Tooltip("Audio source to be used for text-to-speech playback")]
+        [SerializeField] [FormerlySerializedAs("_source")]
+        public AudioSource AudioSource;
 
+        [Tooltip("Duplicates audio source reference on awake instead of using it directly.")]
+        [SerializeField] private bool _cloneAudioSource = false;
+        public bool CloneAudioSource => _cloneAudioSource;
+
+        [Header("Load Settings")]
         [Tooltip("Optional TTSService reference to be used for text-to-speech loading.  If missing, it will check the component.  If that is also missing then it will use the current singleton")]
         [SerializeField] private TTSService _ttsService;
         public TTSService TTSService
@@ -51,20 +64,28 @@ namespace Meta.WitAi.TTS.Utilities
             }
         }
 
-        [Header("Playback Settings")]
-        [Tooltip("Audio source to be used for text-to-speech playback")]
-        [SerializeField] [FormerlySerializedAs("_source")]
-        public AudioSource AudioSource;
+        [Tooltip("Preset voice setting id of TTSService voice settings")]
+        [HideInInspector] [SerializeField] public string presetVoiceID;
 
-        [Tooltip("Duplicates audio source reference on awake instead of using it directly.")]
-        [SerializeField] private bool _cloneAudioSource = false;
-        public bool CloneAudioSource => _cloneAudioSource;
+        [Tooltip("Custom wit specific voice settings used if the preset is null or empty")]
+        [HideInInspector] [SerializeField] public TTSWitVoiceSettings customWitVoiceSettings;
 
-        [Header("Event Settings")]
-        [Tooltip("All speaker load and playback events")]
-        [SerializeField] private TTSSpeakerEvents _events = new TTSSpeakerEvents();
-        public TTSSpeakerEvents Events => _events;
-        public VoiceSpeechEvents SpeechEvents => _events;
+        /// <summary>
+        /// The voice settings to be used for this TTSSpeaker
+        /// </summary>
+        public TTSVoiceSettings VoiceSettings
+        {
+            get
+            {
+                // Attempts to use custom voice settings
+                if (string.IsNullOrEmpty(presetVoiceID) && customWitVoiceSettings != null)
+                {
+                    return customWitVoiceSettings;
+                }
+                // Uses preset voice id
+                return TTSService.GetPresetVoiceSettings(presetVoiceID);
+            }
+        }
 
         // Log category name
         protected virtual string LogCategory => GetType().Name;

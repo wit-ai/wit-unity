@@ -25,10 +25,10 @@ namespace Meta.WitAi.TTS.Samples
         [Header("Dropdown Toggle UI")]
         [SerializeField] [Tooltip("Button used for speaker dropdown toggle")]
         private Toggle _dropdownToggle;
-        [SerializeField] [Tooltip("Button text to be displayed without option selected")]
-        private string _dropdownToggleEmptyText = "...";
         [SerializeField] [Tooltip("Button arrow image showing open or closed")]
         private Transform _dropdownButtonArrowImage;
+        [SerializeField] [Tooltip("Button text to be displayed without option selected")]
+        public string DropdownToggleUnselectedText = "...";
 
         [Header("Dropdown List UI")]
         [SerializeField] [Tooltip("Canvas used for dropdown popup")]
@@ -79,7 +79,7 @@ namespace Meta.WitAi.TTS.Samples
         private List<Toggle> _cells = new List<Toggle>();
 
         /// <summary>
-        /// If data exists, select it
+        /// On awake, find dropdown cell
         /// </summary>
         protected virtual void Awake()
         {
@@ -96,6 +96,13 @@ namespace Meta.WitAi.TTS.Samples
                     Debug.LogError("No Dropdown Cell Prefab Found");
                 }
             }
+        }
+
+        /// <summary>
+        /// Perform dropdown setup methods
+        /// </summary>
+        protected virtual void Start()
+        {
             // Hide
             SetShowing(false);
             // Load dropdown
@@ -242,7 +249,7 @@ namespace Meta.WitAi.TTS.Samples
             {
                 if (string.IsNullOrEmpty(optionText))
                 {
-                    buttonText.text = _dropdownToggleEmptyText;
+                    buttonText.text = DropdownToggleUnselectedText;
                 }
                 else
                 {

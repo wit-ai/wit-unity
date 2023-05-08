@@ -191,7 +191,11 @@ namespace Meta.WitAi.TTS
             }
 
             // Add all voices to preset voice list
-            List<TTSWitVoiceSettings> voices = ttsWit.PresetWitVoiceSettings.ToList();
+            List<TTSWitVoiceSettings> voices = new List<TTSWitVoiceSettings>();
+            if (ttsWit.PresetWitVoiceSettings != null)
+            {
+                voices.AddRange(ttsWit.PresetWitVoiceSettings);
+            }
             foreach (var voiceData in voiceInfos)
             {
                 voices.Add(GetDefaultVoiceSetting(voiceData));
@@ -202,7 +206,11 @@ namespace Meta.WitAi.TTS
         // Adds a preset for a specific voice
         internal static void AddPresetForInfo(TTSWit ttsWit, WitVoiceInfo voiceData)
         {
-            List<TTSWitVoiceSettings> voices = ttsWit.PresetWitVoiceSettings.ToList();
+            List<TTSWitVoiceSettings> voices = new List<TTSWitVoiceSettings>();
+            if (ttsWit.PresetWitVoiceSettings != null)
+            {
+                voices.AddRange(ttsWit.PresetWitVoiceSettings);
+            }
             voices.Add(GetDefaultVoiceSetting(voiceData));
             ttsWit.SetVoiceSettings(voices.ToArray());
         }
