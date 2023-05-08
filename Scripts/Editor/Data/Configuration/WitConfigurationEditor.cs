@@ -54,6 +54,7 @@ namespace Meta.WitAi.Windows
 
         private EnumSynchronizer _enumSynchronizer;
 
+        private static Type[] _tabTypes;
         private WitConfigurationEditorTab[] _tabs;
 
         private const string ENTITY_SYNC_CONSENT_KEY = "Conduit.EntitySync.Consent";
@@ -78,12 +79,18 @@ namespace Meta.WitAi.Windows
 
         public void Initialize()
         {
-            _tabs =  AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(type => type.IsSubclassOf(typeof(WitConfigurationEditorTab)))
-                .Select(type => (WitConfigurationEditorTab)Activator.CreateInstance(type))
-                .OrderBy(tab =>tab.TabOrder)
-                .ToArray();
+            // Shared between all WitConfigurationEditors
+            if (_tabTypes == null)
+            {
+                _tabTypes = typeof(WitConfigurationEditorTab).GetSubclassTypes().ToArray();
+            }
+            // Generate tab instances
+            if (_tabs == null)
+            {
+                _tabs = _tabTypes.Select(type => (WitConfigurationEditorTab)Activator.CreateInstance(type))
+                    .OrderBy(tab =>tab.TabOrder)
+                    .ToArray();
+            }
 
             // Refresh configuration & auth tokens
             Configuration = target as WitConfiguration;
@@ -122,7 +129,7 @@ namespace Meta.WitAi.Windows
 
             // Draw header
             WitEditorUI.LayoutHeaderText(target.name, HeaderUrl, DocsUrl);
-            
+
 
             // Layout content
             LayoutContent();
