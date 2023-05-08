@@ -420,15 +420,15 @@ namespace Meta.WitAi.TTS.Integrations
         {
             get
             {
-                if (_presetVoiceSettings == null || _presetVoiceSettings.Length == 0)
+                if (_presetVoiceSettings == null)
                 {
-                    _presetVoiceSettings = new TTSWitVoiceSettings[] { new TTSWitVoiceSettings() };
+                    _presetVoiceSettings = new TTSWitVoiceSettings[] { };
                 }
                 return _presetVoiceSettings;
             }
         }
         // Default voice setting uses the first voice in the list
-        public TTSVoiceSettings VoiceDefaultSettings => PresetVoiceSettings[0];
+        public TTSVoiceSettings VoiceDefaultSettings => PresetVoiceSettings == null || PresetVoiceSettings.Length == 0 ? null : PresetVoiceSettings[0];
 
         #if UNITY_EDITOR
         // Apply settings

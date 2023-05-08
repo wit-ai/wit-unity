@@ -45,11 +45,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b15403450229c3a4b8455a61d6143a6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  PrependedText: 
+  AppendedText: 
   presetVoiceID: CHARLIE
+  _ttsService: {fileID: 0}
   AudioSource: {fileID: 3550832292895390901}
   _cloneAudioSource: 0
-  prependedText: 
-  appendedText: 
   _events:
     OnTextPlaybackStart:
       m_PersistentCalls:
@@ -72,61 +73,87 @@ MonoBehaviour:
     OnAudioClipPlaybackFinished:
       m_PersistentCalls:
         m_Calls: []
-    OnStartSpeaking:
+    _onLoadBegin:
       m_PersistentCalls:
         m_Calls: []
-    OnFinishedSpeaking:
+    _onLoadAbort:
       m_PersistentCalls:
         m_Calls: []
-    OnCancelledSpeaking:
+    _onLoadFailed:
       m_PersistentCalls:
         m_Calls: []
-    OnClipLoadBegin:
+    _onLoadSuccess:
       m_PersistentCalls:
         m_Calls: []
-    OnClipLoadFailed:
+    _onPlaybackReady:
       m_PersistentCalls:
         m_Calls: []
-    OnClipLoadSuccess:
+    _onPlaybackStart:
       m_PersistentCalls:
         m_Calls: []
-    OnClipLoadAbort:
+    _onPlaybackCancelled:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPlaybackClipUpdated:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPlaybackComplete:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPlaybackQueueBegin:
+      m_PersistentCalls:
+        m_Calls: []
+    _onPlaybackQueueComplete:
       m_PersistentCalls:
         m_Calls: []
     OnClipDataQueued:
       m_PersistentCalls:
         m_Calls: []
+    OnClipLoadBegin:
+      m_PersistentCalls:
+        m_Calls: []
     OnClipDataLoadBegin:
       m_PersistentCalls:
         m_Calls: []
-    OnClipDataLoadFailed:
-      m_PersistentCalls:
-        m_Calls: []
-    OnClipDataLoadSuccess:
+    OnClipLoadAbort:
       m_PersistentCalls:
         m_Calls: []
     OnClipDataLoadAbort:
       m_PersistentCalls:
         m_Calls: []
+    OnClipLoadFailed:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipDataLoadFailed:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipLoadSuccess:
+      m_PersistentCalls:
+        m_Calls: []
+    OnClipDataLoadSuccess:
+      m_PersistentCalls:
+        m_Calls: []
     OnClipDataPlaybackReady:
+      m_PersistentCalls:
+        m_Calls: []
+    OnStartSpeaking:
       m_PersistentCalls:
         m_Calls: []
     OnClipDataPlaybackStart:
       m_PersistentCalls:
         m_Calls: []
-    OnClipDataPlaybackFinished:
+    OnCancelledSpeaking:
       m_PersistentCalls:
         m_Calls: []
     OnClipDataPlaybackCancelled:
       m_PersistentCalls:
         m_Calls: []
-    OnPlaybackQueueBegin:
+    OnFinishedSpeaking:
       m_PersistentCalls:
         m_Calls: []
-    OnPlaybackQueueComplete:
+    OnClipDataPlaybackFinished:
       m_PersistentCalls:
         m_Calls: []
-  _ttsService: {fileID: 0}
 --- !u!114 &1295848615748463565
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -136,10 +163,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 3550832292187419422}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81f17bb00ee9f68428d962165826f2fd, type: 3}
+  m_Script: {fileID: 11500000, guid: d2accdd3f9f0a354b84b364eae500512, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxTextLength: 250
+  MaxTextLength: 250
 --- !u!1 &3550832292895390903
 GameObject:
   m_ObjectHideFlags: 0
