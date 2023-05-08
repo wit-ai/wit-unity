@@ -7,9 +7,10 @@
  */
 
 using System.Linq;
-using Meta.WitAi.TTS.Integrations;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Meta.WitAi.TTS.Integrations;
 
 namespace Meta.WitAi.TTS
 {
@@ -26,49 +27,47 @@ namespace Meta.WitAi.TTS
             var config = ttsWit.RequestSettings.configuration;
             if (!config) return;
 
+            // Get app info for voices
             var appInfo = config.GetApplicationInfo();
-
             if (null != appInfo.voices && appInfo.voices.Length > 0)
             {
-                var voiceNames = appInfo.voices.Select(v => v.name).ToArray();
+                // Get all voice names from wit
+                string[] voiceNames = appInfo.voices.Select(v => v.name).ToArray();
 
+                // Add a selected preset
                 GUILayout.BeginHorizontal();
                 selectedBaseVoice = EditorGUILayout.Popup(selectedBaseVoice, voiceNames);
-                if (GUILayout.Button("Add Preset", GUILayout.Width(75)))
+                GUI.enabled = selectedBaseVoice >= 0 && selectedBaseVoice < appInfo.voices.Length;
+                if (WitEditorUI.LayoutTextButton("Add Preset"))
                 {
-                    var presets = ttsWit.PresetWitVoiceSettings.ToList();
-                    presets.Add(new TTSWitVoiceSettings
-                    {
-                        voice = voiceNames[selectedBaseVoice],
-                        SettingsId = voiceNames[selectedBaseVoice]
-                    });
-                    ttsWit.SetVoiceSettings(presets.ToArray());
+                    TTSEditorUtilities.AddPresetForInfo(ttsWit, appInfo.voices[selectedBaseVoice]);
                 }
-
                 GUILayout.EndHorizontal();
+
+                // Add all unused presets
+                GUI.enabled = true;
+                if (GUILayout.Button("Add Unused Voices as Presets"))
+                {
+                    // Get used voices
+                    List<string> usedVoiceNames = ttsWit.PresetWitVoiceSettings.Select(v => v.voice).ToList();
+
+                    // Get unused voices
+                    var unusedVoices = appInfo.voices.Where(v => usedVoiceNames.Contains(v.name)).ToArray();
+
+                    // Add all unused presets
+                    TTSEditorUtilities.AddPresetsForInfo(ttsWit, unusedVoices);
+                }
             }
+            // Log warning
             else
             {
                 GUILayout.Label("There are currently no base presets available. Click refresh to check for updates.", EditorStyles.helpBox);
             }
 
-            if (GUILayout.Button("Add All Voices as Presets"))
-            {
-                var presets = ttsWit.PresetWitVoiceSettings.ToList();
-                for (int i = 0; i < appInfo.voices.Length; i++)
-                {
-                    presets.Add(new TTSWitVoiceSettings
-                    {
-                        voice = appInfo.voices[i].name,
-                        SettingsId = appInfo.voices[i].name
-                    });
-                }
-                ttsWit.SetVoiceSettings(presets.ToArray());
-
-            }
+            // Refresh button
             if (GUILayout.Button("Refresh Presets"))
             {
-                TTSEditorUtilities.RefreshAvailableVoices((TTSWit) target, info =>
+                TTSEditorUtilities.RefreshAvailableVoices(ttsWit, info =>
                 {
                     Repaint();
                 });
