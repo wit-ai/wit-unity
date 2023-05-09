@@ -52,7 +52,7 @@ namespace Meta.WitAi.TTS
                     List<string> usedVoiceNames = ttsWit.PresetWitVoiceSettings.Select(v => v.voice).ToList();
 
                     // Get unused voices
-                    var unusedVoices = appInfo.voices.Where(v => usedVoiceNames.Contains(v.name)).ToArray();
+                    var unusedVoices = appInfo.voices.Where(v => !usedVoiceNames.Contains(v.name)).ToArray();
 
                     // Add all unused presets
                     TTSEditorUtilities.AddPresetsForInfo(ttsWit, unusedVoices);
