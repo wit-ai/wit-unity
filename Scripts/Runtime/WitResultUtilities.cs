@@ -21,6 +21,7 @@ namespace Meta.WitAi
         public const string WIT_KEY_ENTITIES = "entities";
         public const string WIT_KEY_TRAITS = "traits";
         public const string WIT_KEY_FINAL = "is_final";
+        public const string WIT_PARTIAL_RESPONSE = "partial_response";
 
         #region Base Response methods
         /// <summary>
@@ -36,12 +37,15 @@ namespace Meta.WitAi
         /// <summary>
         /// Get whether this response is a 'final' response
         /// </summary>
-        public static bool HasResponse(this WitResponseNode witResponse) =>
-            null != witResponse
-            && witResponse.AsObject != null
-            && (witResponse.AsObject.HasChild(WIT_KEY_INTENTS)
-            || witResponse.AsObject.HasChild(WIT_KEY_ENTITIES)
-            || witResponse.AsObject.HasChild(WIT_KEY_TRAITS));
+        public static bool HasResponse(this WitResponseNode witResponse)
+        {
+            var response = witResponse?.AsObject;
+            return null != response
+                && (response.HasChild(WIT_KEY_INTENTS)
+                    || response.HasChild(WIT_KEY_ENTITIES)
+                    || response.HasChild(WIT_KEY_TRAITS)
+                    || response.HasChild(WIT_PARTIAL_RESPONSE));
+        }
 
         /// <summary>
         /// Get whether this response is a 'final' response
