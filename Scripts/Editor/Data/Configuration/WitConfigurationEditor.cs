@@ -20,7 +20,7 @@ using Meta.Conduit;
 using Meta.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;
-using Meta.WitAi.Windows.Conponents;
+using Meta.WitAi.Windows.Components;
 
 namespace Meta.WitAi.Windows
 {
