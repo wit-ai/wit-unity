@@ -16,7 +16,7 @@
     {
       "displayName": "TTS Voices",
       "description": "A sample scene for performing text-to-speech requests by customizing two voices and having them speak.",
-      "path": "Samples/Shared/TTSVoices"
+      "path": "Samples/TTSVoices"
     }
   ],
   "description": "wit-unity is the Unity SDK for Wit.ai. It provides convenience tools for activating Wit and processing the responses that are returned.",
