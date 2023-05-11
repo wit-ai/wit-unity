@@ -462,7 +462,6 @@ namespace Meta.WitAi
 
             // No longer active
             StatusCode = WitConstants.ERROR_CODE_TIMEOUT;
-            StatusDescription = $"Request timed out after {(DateTime.UtcNow - _requestStartTime).Seconds:0.00} seconds";
 
             // Clean up the current request if it is still going
             if (null != _request)
@@ -474,7 +473,18 @@ namespace Meta.WitAi
             CloseActiveStream();
 
             // Complete
-            MainThreadCallback(() => HandleNlpResponse(null, StatusDescription));
+            MainThreadCallback(() =>
+            {
+                string path = "";
+                if (null != _request?.RequestUri?.PathAndQuery)
+                {
+                    var uriSections = _request.RequestUri.PathAndQuery.Split(new char[] { '?' });
+                    path = uriSections[0];
+                }
+
+                StatusDescription = $"Request [{path}] timed out after {(DateTime.UtcNow - _requestStartTime).Seconds:0.00} seconds";
+                HandleNlpResponse(null, StatusDescription);
+            });
         }
 
         // Write stream
