@@ -29,7 +29,6 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -86,43 +85,118 @@ MonoBehaviour:
         m_PersistentCalls:
           m_Calls: []
   RequestSettings:
-    configuration: {fileID: 11400000, guid: 8ca721df475c92e4ca9167b74de4b2f6, type: 2}
+    configuration: {fileID: 11400000, guid: ad62e68efebb2e542a84be4abd5000a4, type: 2}
     audioType: 0
     audioStream: 1
     audioStreamReadyDuration: 0.1
     audioStreamChunkLength: 5
     audioStreamPreloadCount: 3
   _presetVoiceSettings:
-  - settingsID: CHARLIE
+  - SettingsId: CAEL
+    PrependedText: 
+    AppendedText: 
+    voice: Cael
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: CAM
+    PrependedText: 
+    AppendedText: 
+    voice: Cam
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: CARL
+    PrependedText: 
+    AppendedText: 
+    voice: Carl
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: CHARLIE
+    PrependedText: 
+    AppendedText: 
     voice: Charlie
     style: default
     speed: 100
     pitch: 100
-    gain: 50
-  - settingsID: REBECCA
-    voice: Rebecca
+  - SettingsId: CODY
+    PrependedText: 
+    AppendedText: 
+    voice: Cody
     style: default
     speed: 100
     pitch: 100
-    gain: 50
-  - settingsID: COOPER
+  - SettingsId: CONNOR
+    PrependedText: 
+    AppendedText: 
+    voice: Connor
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: COOPER
+    PrependedText: 
+    AppendedText: 
     voice: Cooper
     style: default
     speed: 100
     pitch: 100
-    gain: 50
-  - settingsID: VAMPIRE
-    voice: Vampire
-    style: default
-    speed: 100
-    pitch: 100
-    gain: 50
-  - settingsID: PROSPECTOR
+  - SettingsId: PROSPECTOR
+    PrependedText: 
+    AppendedText: 
     voice: Prospector
     style: default
     speed: 100
     pitch: 100
-    gain: 50
+  - SettingsId: RAILEY
+    PrependedText: 
+    AppendedText: 
+    voice: Railey
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: REBECCA
+    PrependedText: 
+    AppendedText: 
+    voice: Rebecca
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: REMI
+    PrependedText: 
+    AppendedText: 
+    voice: Remi
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: RUBIE
+    PrependedText: 
+    AppendedText: 
+    voice: Rubie
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: VAMPIRE
+    PrependedText: 
+    AppendedText: 
+    voice: Vampire
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: COLIN
+    PrependedText: 
+    AppendedText: 
+    voice: Colin
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: ROSIE
+    PrependedText: 
+    AppendedText: 
+    voice: Rosie
+    style: default
+    speed: 100
+    pitch: 100
 --- !u!114 &3627599131962939471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -154,6 +228,8 @@ MonoBehaviour:
   _diskPath: TTS/
   _defaultSettings:
     DiskCacheLocation: 0
+    StreamFromDisk: 0
+    StreamBufferLength: 5
   _events:
     OnStreamBegin:
       m_PersistentCalls:
