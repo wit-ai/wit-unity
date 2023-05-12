@@ -8,8 +8,9 @@
 
 using System.Linq;
 using UnityEngine;
+using Meta.WitAi;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     /// <summary>
     /// A demo script that uses a dropdown menu to adjust the

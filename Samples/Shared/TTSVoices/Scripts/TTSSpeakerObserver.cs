@@ -10,7 +10,7 @@ using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Utilities;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     /// <summary>
     /// A demo script that provides access to a TTSSpeaker

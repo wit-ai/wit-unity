@@ -12,7 +12,7 @@ using UnityEngine.UI;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Utilities;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     /// <summary>
     /// A simple script for providing clip information to a Text label

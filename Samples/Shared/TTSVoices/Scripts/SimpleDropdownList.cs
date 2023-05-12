@@ -11,7 +11,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     public class SimpleDropdownIndexEvent : UnityEvent<int> {}
     public class SimpleDropdownOptionEvent : UnityEvent<string> {}

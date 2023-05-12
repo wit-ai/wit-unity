@@ -8,8 +8,9 @@
 
 using UnityEngine;
 using UnityEngine.UI;
+using Meta.WitAi.TTS;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     public class TTSErrorText : MonoBehaviour
     {

@@ -6,11 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using Meta.WitAi;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     /// <summary>
     /// A demo script that uses two dropdown menus to adjust the

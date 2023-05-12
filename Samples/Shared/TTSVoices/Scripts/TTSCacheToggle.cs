@@ -6,12 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi.TTS;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Meta.WitAi.TTS.Samples
+namespace Meta.Voice.Samples.TTSVoices
 {
     public class TTSCacheToggle : MonoBehaviour
     {

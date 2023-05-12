@@ -85,7 +85,7 @@ MonoBehaviour:
         m_PersistentCalls:
           m_Calls: []
   RequestSettings:
-    configuration: {fileID: 11400000, guid: ad62e68efebb2e542a84be4abd5000a4, type: 2}
+    configuration: {fileID: 11400000, guid: 6329e25e1005d4845b580a523e588979, type: 2}
     audioType: 0
     audioStream: 1
     audioStreamReadyDuration: 0.1
