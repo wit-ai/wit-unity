@@ -482,7 +482,14 @@ namespace Meta.WitAi
                     path = uriSections[0];
                 }
 
-                StatusDescription = $"Request [{path}] timed out after {(DateTime.UtcNow - _requestStartTime).Seconds:0.00} seconds";
+                // TODO: T153403776 There are still problems with this logic. We're not properly propigating down if
+                // this was a cancellation due to user request or actual timeout.
+                var time = (DateTime.UtcNow - _requestStartTime);
+                if (time.Seconds > Timeout)
+                {
+                    StatusDescription = $"Request [{path}] timed out after {time.Seconds:0.00} seconds";
+                }
+
                 HandleNlpResponse(null, StatusDescription);
             });
         }
