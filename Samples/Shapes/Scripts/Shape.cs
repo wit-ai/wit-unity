@@ -6,9 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Meta.WitAi.Samples.Shapes
+namespace Meta.Voice.Samples.WitShapes
 {
-    
     public enum Shape
     {
         Cube,

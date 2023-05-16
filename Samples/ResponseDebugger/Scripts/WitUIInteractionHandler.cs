@@ -8,12 +8,13 @@
 
 using System.Net;
 using Meta.Voice;
+using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using TMPro;
 using UnityEngine;
 
-namespace Meta.WitAi.Samples.ResponseDebugger
+namespace Meta.Voice.Samples.WitResponseDebugger
 {
     public class WitUIInteractionHandler : MonoBehaviour
     {

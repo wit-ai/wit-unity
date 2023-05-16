@@ -7,11 +7,12 @@
  */
 
 using System;
+using Meta.WitAi;
 using Meta.Conduit;
 using Meta.WitAi.Json;
 using UnityEngine;
 
-namespace Meta.WitAi.Samples.Shapes
+namespace Meta.Voice.Samples.WitShapes
 {
     public class ColorChanger : MonoBehaviour
     {

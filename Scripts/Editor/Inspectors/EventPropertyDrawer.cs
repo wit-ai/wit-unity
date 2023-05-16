@@ -240,8 +240,6 @@ namespace Meta.WitAi.Events.Editor
                 {
                     var propertyRect = new Rect(position.x, position.y + propertyOffset, position.width, 0);
 
-                    SerializedProperty callbackProperty;
-
                     foreach (var callback in eventObject.OverriddenCallbacks)
                     {
                         var fieldProperty = GetPropertyFromDisplayFieldName(property, callback);

@@ -6,12 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using TMPro;
 using UnityEngine;
 
-namespace Meta.WitAi.Samples.Shapes
+namespace Meta.Voice.Samples.WitShapes
 {
     public class WitUIInteractionHandler : MonoBehaviour
     {
