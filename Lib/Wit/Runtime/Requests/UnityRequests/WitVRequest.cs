@@ -252,9 +252,6 @@ namespace Meta.WitAi.Requests
             // Generate user agent
             StringBuilder userAgent = new StringBuilder();
 
-            // Append prefix if any exists
-            userAgent.Append(WitConstants.HEADER_USERAGENT_PREFIX);
-
             // Append wit sdk version
             userAgent.Append($"wit-unity-{WitConstants.SDK_VERSION}");
 

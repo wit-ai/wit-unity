@@ -23,7 +23,6 @@ namespace Meta.WitAi
         public const string HEADER_REQUEST_ID = "X-Wit-Client-Request-Id";
         public const string HEADER_AUTH = "Authorization";
         public const string HEADER_USERAGENT = "User-Agent";
-        public const string HEADER_USERAGENT_PREFIX = "";
         public const string HEADER_USERAGENT_CONFID_MISSING = "not-yet-configured";
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
