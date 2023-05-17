@@ -696,7 +696,7 @@ namespace Meta.WitAi
             {
                 request.Cancel("Request was aborted by user.");
             }
-            else
+            else if (request.IsAudioInputActivated)
             {
                 request.DeactivateAudio();
             }
