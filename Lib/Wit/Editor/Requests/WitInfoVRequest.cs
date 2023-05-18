@@ -100,6 +100,13 @@ namespace Meta.WitAi.Requests
             }, null);
             return true;
         }
+        // Retrieve the version tags for the composer app
+        public bool RequestAppVersionTags(string applicationId,
+            RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete,
+            RequestProgressDelegate onProgress = null)
+        {
+            return RequestWitGet<WitVersionTagInfo[][]>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_TAGS}", null, onComplete, onProgress);
+        }
 
         // Obtain client app token
         public bool RequestClientAppToken(string applicationId,

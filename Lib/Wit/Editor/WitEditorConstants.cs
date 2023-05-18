@@ -16,6 +16,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_APPS_OFFSET = "offset";
         public const string ENDPOINT_APP_FOR_TOKEN = "is_app_for_token";
         public const string ENDPOINT_APP_ID = "id";
+        public const string ENDPOINT_TAGS = "tags";
 
         // Info Endpoints
         public const string ENDPOINT_CLIENTTOKENS = "client_tokens";

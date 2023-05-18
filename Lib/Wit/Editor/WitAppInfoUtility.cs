@@ -198,8 +198,29 @@ namespace Meta.WitAi.Lib
                         appInfo.composer = ep.ImportComposerInfo(); //TODO: split out to composer-only lib.
                     }
                     // Complete
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                    UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);
                 });
+            });
+        }
+        private static void UpdateVersionTagList(IWitRequestConfiguration configuration,
+            WitAppInfo appInfo, StringBuilder warnings,
+            Action<WitAppInfo, string> onUpdateComplete)
+        {
+            GetRequest(configuration).RequestAppVersionTags(appInfo.id, (versionTags, error) =>
+            {
+                if (!String.IsNullOrEmpty(error))
+                {
+                    warnings.AppendLine($"Could not determine export URI for {appInfo.id}.");
+                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
+                    return;
+                }
+
+                appInfo.versionTags = new WitVersionTagInfo[versionTags.Length];
+                for (var i = 0; i < versionTags.Length; i++)
+                {
+                    appInfo.versionTags[i] = versionTags[i][0];
+                }
+                UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
             });
         }
 
