@@ -379,6 +379,11 @@ namespace Meta.WitAi.TTS
                 return null;
             }
 
+            if (string.IsNullOrEmpty(clipData.textToSpeak))
+            {
+                clipData.loadState = TTSClipLoadState.Loaded;
+            }
+
             // From Runtime Cache
             if (clipData.loadState != TTSClipLoadState.Unloaded)
             {

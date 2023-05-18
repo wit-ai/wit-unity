@@ -780,7 +780,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Check for other errors
-            if (string.IsNullOrEmpty(error))
+            if (string.IsNullOrEmpty(error) && !string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
             {
                 if (requestData.ClipData == null)
                 {
@@ -864,31 +864,45 @@ namespace Meta.WitAi.TTS.Utilities
                 HandleLoadComplete(requestData, "AudioSource not found");
                 return;
             }
-            // Somehow clip unloaded
-            if (requestData.ClipData.clip == null)
+
+            if (!string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
             {
-                HandleLoadComplete(requestData, "AudioClip no longer exists");
-                return;
+                // Somehow clip unloaded
+                if (requestData.ClipData.clip == null)
+                {
+                    HandleLoadComplete(requestData, "AudioClip no longer exists");
+                    return;
+                }
+
+                // Dequeue & apply
+                _speakingRequest = _queuedRequests.Dequeue();
+
+                // Started speaking
+                AudioSource.clip = SpeakingClip?.clip;
+                AudioSource.timeSamples = 0;
+                AudioSource.Play();
+
+
+                // Call playback start events
+                OnPlaybackStart(_speakingRequest);
+
+                // Wait for completion
+                if (_waitForCompletion != null)
+                {
+                    StopCoroutine(_waitForCompletion);
+                    _waitForCompletion = null;
+                }
+
+                _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
             }
-
-            // Dequeue & apply
-            _speakingRequest = _queuedRequests.Dequeue();
-
-            // Started speaking
-            AudioSource.clip = SpeakingClip?.clip;
-            AudioSource.timeSamples = 0;
-            AudioSource.Play();
-
-            // Call playback start events
-            OnPlaybackStart(_speakingRequest);
-
-            // Wait for completion
-            if (_waitForCompletion != null)
+            else
             {
-                StopCoroutine(_waitForCompletion);
-                _waitForCompletion = null;
+                // If we're sending an empty string we're really just potentially queuing an event so we can trigger it
+                // between audio clips. Trigger start/stop events.
+                _speakingRequest = _queuedRequests.Dequeue();
+                OnPlaybackStart(_speakingRequest);
+                HandlePlaybackComplete(false);
             }
-            _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
         }
         // Wait for clip completion
         private IEnumerator WaitForPlaybackComplete()
