@@ -17,6 +17,9 @@ using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Utilities;
 using Meta.Conduit;
+#if VSDK_TELEMETRY_AVAILABLE
+using Meta.Voice.TelemetryUtilities;
+#endif
 using Meta.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;
@@ -24,7 +27,7 @@ using Meta.WitAi.Windows.Components;
 
 namespace Meta.WitAi.Windows
 {
-    public class WitConfigurationEditor : UnityEditor.Editor
+    public class WitConfigurationEditor : Editor
     {
         public WitConfiguration Configuration { get; private set; }
         private string _serverToken;
@@ -519,6 +522,9 @@ namespace Meta.WitAi.Windows
         /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
         private static void GenerateManifest(WitConfiguration configuration, bool openManifest)
         {
+#if VSDK_TELEMETRY_AVAILABLE
+            var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.GenerateManifest);
+#endif
             AssemblyWalker.AssembliesToIgnore = new HashSet<string>(configuration.excludedAssemblies);
 
             // Generate
@@ -545,9 +551,15 @@ namespace Meta.WitAi.Windows
             catch (Exception e)
             {
                 VLog.E($"Conduit manifest failed to generate\nPath: {fullPath}\n{e}");
+#if VSDK_TELEMETRY_AVAILABLE
+                Telemetry.AnnotateEvent(instanceKey, Telemetry.AnnotationKey.Error, e.Message);
+                Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Failure);
+#endif
                 return;
             }
-
+#if VSDK_TELEMETRY_AVAILABLE
+            Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+#endif
             Statistics.SuccessfulGenerations++;
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);
             Statistics.AddIncompatibleFrequencies(AssemblyMiner.IncompatibleSignatureFrequency);
