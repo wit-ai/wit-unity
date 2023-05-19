@@ -604,7 +604,7 @@ namespace Meta.WitAi.Windows
         private string GetVoiceServiceName(VoiceService service)
         {
             IWitRuntimeConfigProvider configProvider = service.GetComponent<IWitRuntimeConfigProvider>();
-            if (configProvider != null)
+            if (configProvider != null && configProvider.RuntimeConfiguration != null && configProvider.RuntimeConfiguration.witConfiguration != null)
             {
                 return $"{configProvider.RuntimeConfiguration.witConfiguration.name} [{service.gameObject.name}]";
             }
