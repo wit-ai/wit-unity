@@ -131,6 +131,36 @@ namespace Meta.Voice.Samples.TTSVoices
             _dropdownToggle.onValueChanged.RemoveListener(OnToggleClick);
         }
 
+        #if ENABLE_LEGACY_INPUT_MANAGER
+        /// <summary>
+        /// Hide if touch outside of the scroll rect & toggle button
+        /// </summary>
+        protected virtual void Update()
+        {
+            if (IsShowing && Input.GetMouseButtonDown(0) && _dropdownListScrollRect != null && _dropdownToggle != null)
+            {
+                Vector2 touchPosition = Input.mousePosition;
+                if (!IsInRect(_dropdownListScrollRect.viewport, touchPosition)
+                    && !IsInRect(_dropdownToggle.GetComponent<RectTransform>(), touchPosition))
+                {
+                    SetShowing(false);
+                }
+            }
+        }
+        // Check for rect
+        private static bool IsInRect(RectTransform rectTransform, Vector2 touchPosition)
+        {
+            // No main camera or rect
+            Camera cam = Camera.main;
+            if (cam == null || rectTransform == null)
+            {
+                return false;
+            }
+            // Check mouse position screen point
+            return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, touchPosition, cam);
+        }
+        #endif
+
         #region LOAD
         /// <summary>
         /// Load dropdown with specified options

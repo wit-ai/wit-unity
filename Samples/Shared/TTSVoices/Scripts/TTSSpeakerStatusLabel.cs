@@ -75,6 +75,7 @@ namespace Meta.Voice.Samples.TTSVoices
                 count++;
             }
             _label.text = status.ToString();
+            _label.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, _label.preferredHeight);
         }
     }
 }
