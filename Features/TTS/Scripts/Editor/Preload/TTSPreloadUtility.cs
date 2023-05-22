@@ -480,8 +480,8 @@ namespace Meta.WitAi.TTS.Preload
             foreach (var phraseProvider in phraseProviders)
             {
                 // Ignore if no voices are found
-                string[] voiceIds = phraseProvider.GetVoiceIds();
-                if (voiceIds == null || voiceIds.Length == 0)
+                List<string> voiceIds = phraseProvider.GetVoiceIds();
+                if (voiceIds == null || voiceIds.Count == 0)
                 {
                     continue;
                 }
@@ -496,8 +496,8 @@ namespace Meta.WitAi.TTS.Preload
                     }
 
                     // Ignore if phrases are null
-                    string[] phrases = phraseProvider.GetVoicePhrases(voiceId);
-                    if (phrases == null || phrases.Length == 0)
+                    List<string> phrases = phraseProvider.GetVoicePhrases(voiceId);
+                    if (phrases == null || phrases.Count == 0)
                     {
                         continue;
                     }

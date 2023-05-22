@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using Meta.WitAi.TTS.Utilities;
@@ -15,11 +16,19 @@ namespace Meta.Voice.Samples.TTSVoices
 {
     public class TTSSpeakerInput : MonoBehaviour
     {
+        // Speaker
         [SerializeField] private TTSSpeaker _speaker;
+
+        // Default input
         [SerializeField] private InputField _input;
         [SerializeField] private Button _stopButton;
         [SerializeField] private Button _speakButton;
+
+        // Queue button that will not stop previous clip
         [SerializeField] private Toggle _queueButton;
+        // Async toggle that will play a clip on completion
+        [SerializeField] private Toggle _asyncToggle;
+        [SerializeField] private AudioClip _asyncClip;
 
         [SerializeField] private string _dateId = "[DATE]";
         [SerializeField] private string[] _queuedText;
@@ -41,19 +50,54 @@ namespace Meta.Voice.Samples.TTSVoices
         // Speak phrase click
         private void SpeakClick()
         {
-            // Queue
-            if (_queueButton != null && _queueButton.isOn)
+            // Speak phrase
+            string phrase = FormatText(_input.text);
+            bool queued = _queueButton != null && _queueButton.isOn;
+            bool async = _asyncToggle != null && _asyncToggle.isOn;
+
+            // Speak async
+            if (async)
             {
-                _speaker.SpeakQueued(FormatText(_input.text));
+                StartCoroutine(SpeakAsync(phrase, queued));
+            }
+            // Speak queued
+            else if (queued)
+            {
+                _speaker.SpeakQueued(phrase);
+            }
+            // Speak
+            else
+            {
+                _speaker.Speak(phrase);
+            }
+
+            // Queue additional phrases
+            if (_queuedText != null && _queuedText.Length > 0 && queued)
+            {
                 foreach (var text in _queuedText)
                 {
                     _speaker.SpeakQueued(FormatText(text));
                 }
             }
-            // Set
+        }
+        // Speak async
+        private IEnumerator SpeakAsync(string phrase, bool queued)
+        {
+            // Queue
+            if (queued)
+            {
+                yield return _speaker.SpeakQueuedAsync(new string[] { phrase });
+            }
+            // Default
             else
             {
-                _speaker.Speak(FormatText(_input.text));
+                yield return _speaker.SpeakAsync(phrase);
+            }
+
+            // Play complete clip
+            if (_asyncClip != null)
+            {
+                _speaker.AudioSource.PlayOneShot(_asyncClip);
             }
         }
         // Format text with current datetime

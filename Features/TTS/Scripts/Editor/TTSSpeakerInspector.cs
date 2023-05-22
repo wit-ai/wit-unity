@@ -6,19 +6,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.TTS.Utilities;
 using Meta.WitAi.TTS.Data;
-using Meta.WitAi.TTS.Integrations;
 
 namespace Meta.WitAi.TTS
 {
     [CustomEditor(typeof(TTSSpeaker), true)]
-    public class TTSSpeakerInspector : UnityEditor.Editor
+    public class TTSSpeakerInspector : Editor
     {
         // Speaker
         private TTSSpeaker _speaker;
@@ -156,20 +154,20 @@ namespace Meta.WitAi.TTS
             }
 
             // Queue Foldout
-            TTSClipData[] QueuedClips = _speaker.QueuedClips;
-            _queueFoldout = EditorGUILayout.Foldout(_queueFoldout, $"{UI_CLIP_QUEUE_TEXT} {(QueuedClips == null ? 0 : QueuedClips.Length)}");
+            List<TTSClipData> queuedClips = _speaker.QueuedClips;
+            _queueFoldout = EditorGUILayout.Foldout(_queueFoldout, $"{UI_CLIP_QUEUE_TEXT} {(queuedClips == null ? 0 : queuedClips.Count)}");
             if (_queueFoldout)
             {
                 EditorGUI.indentLevel++;
-                if (QueuedClips == null || QueuedClips.Length == 0)
+                if (queuedClips == null || queuedClips.Count == 0)
                 {
                     EditorGUILayout.LabelField("None");
                 }
                 else
                 {
-                    for (int i = 0; i < QueuedClips.Length; i++)
+                    for (int i = 0; i < queuedClips.Count; i++)
                     {
-                        TTSClipData clipData = QueuedClips[i];
+                        TTSClipData clipData = queuedClips[i];
                         bool oldFoldout = WitEditorUI.GetFoldoutValue(clipData);
                         bool newFoldout = EditorGUILayout.Foldout(oldFoldout, $"Clip[{i}]");
                         if (oldFoldout != newFoldout)

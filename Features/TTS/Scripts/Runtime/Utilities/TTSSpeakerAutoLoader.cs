@@ -17,12 +17,12 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// The supported voice ids
         /// </summary>
-        string[] GetVoiceIds();
+        List<string> GetVoiceIds();
 
         /// <summary>
         /// Get specific phrases per voice
         /// </summary>
-        string[] GetVoicePhrases(string voiceId);
+        List<string> GetVoicePhrases(string voiceId);
     }
 
     [RequireComponent(typeof(TTSSpeaker))]
@@ -74,7 +74,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Set phrase list
-            _phrases = GetAllPhrases();
+            _phrases = GetAllPhrases().ToArray();
 
             // Load all clips
             List<TTSClipData> list = new List<TTSClipData>();
@@ -87,33 +87,33 @@ namespace Meta.WitAi.TTS.Utilities
             _clips = list.ToArray();
         }
         // Return all phrases
-        public virtual string[] GetAllPhrases()
+        public virtual List<string> GetAllPhrases()
         {
             // Ensure speaker exists
             SetupSpeaker();
 
-            // Get all phrases
-            List<string> phrases = new List<string>();
-
+            // Get all phrases unformatted
+            List<string> unformattedPhrases = new List<string>();
             // Add phrases split from phrase file
-            AddUniquePhrases(phrases, PhraseFile?.text.Split('\n'));
+            AddUniquePhrases(unformattedPhrases, PhraseFile?.text.Split('\n'));
             // Add phrases serialized in phrase array
-            AddUniquePhrases(phrases, Phrases);
+            AddUniquePhrases(unformattedPhrases, Phrases);
 
-            // Get final text
-            string[] oldPhrases = phrases.ToArray();
-            phrases.Clear();
-            for (int i = 0; i < oldPhrases.Length; i++)
+            // Iterate old phrases
+            List<string> phrases = new List<string>();
+            for (int i = 0; i < unformattedPhrases.Count; i++)
             {
-                string[] newPhrases = Speaker.GetFinalText(oldPhrases[i]);
-                if (newPhrases != null && newPhrases.Length > 0)
+                // Format phrases
+                List<string> newPhrases = Speaker.GetFinalText(unformattedPhrases[i]);
+                // Add to final list
+                if (newPhrases != null && newPhrases.Count > 0)
                 {
                     phrases.AddRange(newPhrases);
                 }
             }
 
             // Return array
-            return phrases.ToArray();
+            return phrases;
         }
         // Add unique, non-null phrases
         private void AddUniquePhrases(List<string> list, string[] newPhrases)
@@ -171,20 +171,22 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Returns the supported voice ids (Only this speaker)
         /// </summary>
-        public virtual string[] GetVoiceIds()
+        public virtual List<string> GetVoiceIds()
         {
             SetupSpeaker();
-            string voiceId = Speaker?.presetVoiceID;
+            string voiceId = Speaker?.VoiceSettings.SettingsId;
             if (string.IsNullOrEmpty(voiceId))
             {
                 return null;
             }
-            return new string[] {voiceId};
+            List<string> results = new List<string>();
+            results.Add(voiceId);
+            return results;
         }
         /// <summary>
         /// Returns the supported phrases per voice
         /// </summary>
-        public virtual string[] GetVoicePhrases(string voiceId)
+        public virtual List<string> GetVoicePhrases(string voiceId)
         {
             return GetAllPhrases();
         }

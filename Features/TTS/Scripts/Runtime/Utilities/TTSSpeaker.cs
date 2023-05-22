@@ -16,6 +16,7 @@ using UnityEngine.Serialization;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
+using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Utilities
 {
@@ -121,7 +122,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
         }
         // Loading clip queue
-        public TTSClipData[] QueuedClips
+        public List<TTSClipData> QueuedClips
         {
             get
             {
@@ -130,7 +131,7 @@ namespace Meta.WitAi.TTS.Utilities
                 {
                     clips.Add(request.ClipData);
                 }
-                return clips.ToArray();
+                return clips;
             }
         }
 
@@ -324,6 +325,67 @@ namespace Meta.WitAi.TTS.Utilities
                 }
             }
         }
+        // Check if clip request is active
+        protected bool IsClipRequestActive(TTSSpeakerRequestData requestData)
+        {
+            return IsClipRequestLoading(requestData) || IsClipRequestSpeaking(requestData);
+        }
+        // Check if clip request is active
+        protected bool IsClipRequestLoading(TTSSpeakerRequestData requestData)
+        {
+            return _queuedRequests.Contains(requestData);
+        }
+        // Check if clip request is active
+        protected bool IsClipRequestSpeaking(TTSSpeakerRequestData requestData)
+        {
+            return _speakingRequest.Equals(requestData);
+        }
+        // Waits for all requests to complete
+        protected IEnumerator WaitForCompletion(List<TTSSpeakerRequestData> requestData)
+        {
+            // All done
+            int count = requestData != null ? requestData.Count : 0;
+            if (count == 0)
+            {
+                yield break;
+            }
+
+            // Current active requests
+            int activeRequests = 0;
+            UnityAction<TTSSpeaker, TTSClipData> onComplete = (speaker, clip) => activeRequests--;
+            UnityAction<TTSSpeaker, TTSClipData, string> onError = (speaker, clip, error) => activeRequests--;
+
+            // Add event delegates
+            for (int r = 0; r < count; r++)
+            {
+                TTSSpeakerRequestData request = requestData[r];
+                if (!IsClipRequestActive(request))
+                {
+                    continue;
+                }
+                activeRequests++;
+                request.PlaybackEvents.OnLoadAbort.AddListener(onComplete);
+                request.PlaybackEvents.OnLoadFailed.AddListener(onError);
+                request.PlaybackEvents.OnPlaybackCancelled.AddListener(onError);
+                request.PlaybackEvents.OnPlaybackComplete.AddListener(onComplete);
+            }
+
+            // Wait for active requests to be complete
+            yield return new WaitWhile(() => activeRequests > 0);
+
+            // Remove event delegates
+            for (int r = 0; r < count; r++)
+            {
+                TTSSpeakerRequestData request = requestData[r];
+                if (request.PlaybackEvents != null)
+                {
+                    request.PlaybackEvents.OnLoadAbort.RemoveListener(onComplete);
+                    request.PlaybackEvents.OnLoadFailed.RemoveListener(onError);
+                    request.PlaybackEvents.OnPlaybackCancelled.RemoveListener(onError);
+                    request.PlaybackEvents.OnPlaybackComplete.RemoveListener(onComplete);
+                }
+            }
+        }
         #endregion
 
         #region TEXT
@@ -332,7 +394,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         /// <param name="textToSpeak">The base text to be spoken</param>
         /// <returns>Returns an array of split texts to be spoken</returns>
-        public virtual string[] GetFinalText(string textToSpeak)
+        public virtual List<string> GetFinalText(string textToSpeak)
         {
             // Get processors
             RefreshProcessors();
@@ -368,7 +430,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Return all text items
-            return phrases.ToArray();
+            return phrases;
         }
         /// <summary>
         /// Obtain final text list from format & text list
@@ -376,7 +438,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="format">The format to be used</param>
         /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
         /// <returns>Returns a list of formatted texts</returns>
-        public virtual string[] GetFinalTextFormatted(string format, params string[] textsToSpeak)
+        public virtual List<string> GetFinalTextFormatted(string format, params string[] textsToSpeak)
         {
             return GetFinalText(GetFormattedText(format, textsToSpeak));
         }
@@ -453,9 +515,9 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak text
-            Speak(textToSpeak, diskCacheSettings, playbackEvents);
+            List<TTSSpeakerRequestData> requests = Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
             // Wait while loading/speaking
-            yield return new WaitWhile(() => IsActive);
+            yield return WaitForCompletion(requests);
         }
 
         /// <summary>
@@ -546,12 +608,17 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakQueuedAsync(string[] textsToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak each queued
+            List<TTSSpeakerRequestData> requestList = new List<TTSSpeakerRequestData>();
             foreach (var textToSpeak in textsToSpeak)
             {
-                SpeakQueued(textToSpeak, diskCacheSettings, playbackEvents);
+                List<TTSSpeakerRequestData> newRequests = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+                if (newRequests != null && newRequests.Count > 0)
+                {
+                    requestList.AddRange(newRequests);
+                }
             }
             // Wait while loading/speaking
-            yield return new WaitWhile(() => IsActive);
+            yield return WaitForCompletion(requestList);
         }
 
         /// <summary>
@@ -593,22 +660,23 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the playback queue</param>
-        private void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents, bool addToQueue)
+        /// <returns>Speaker request data for request</returns>
+        private List<TTSSpeakerRequestData> Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents, bool addToQueue)
         {
             // Ensure voice settings exist
             TTSVoiceSettings voiceSettings = VoiceSettings;
             if (voiceSettings == null)
             {
                 VLog.E($"No voice found with preset id: {presetVoiceID}");
-                return;
+                return null;
             }
 
             // Get final text phrases to be spoken
-            string[] phrases = GetFinalText(textToSpeak);
-            if (phrases == null || phrases.Length == 0)
+            List<string> phrases = GetFinalText(textToSpeak);
+            if (phrases == null || phrases.Count == 0)
             {
                 VLog.W($"All phrases removed\nSource Phrase: {textToSpeak}");
-                return;
+                return null;
             }
 
             // Cancel previous loading queue
@@ -620,9 +688,11 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Iterate voices
+            List<TTSSpeakerRequestData> results = new List<TTSSpeakerRequestData>();
             foreach (var phrase in phrases)
             {
-                HandleLoad(phrase, voiceSettings, diskCacheSettings, playbackEvents, addToQueue);
+                TTSSpeakerRequestData requestData = HandleLoad(phrase, voiceSettings, diskCacheSettings, playbackEvents, addToQueue);
+                results.Add(requestData);
 
                 // Add additional to queue
                 if (!addToQueue)
@@ -630,6 +700,7 @@ namespace Meta.WitAi.TTS.Utilities
                     addToQueue = true;
                 }
             }
+            return results;
         }
 
         /// <summary>
@@ -743,7 +814,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region LOAD
         // Handles speaking depending on the state of the specified audio
-        private void HandleLoad(string textToSpeak, TTSVoiceSettings voiceSettings,
+        private TTSSpeakerRequestData HandleLoad(string textToSpeak, TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents,
             bool addToQueue)
         {
@@ -751,7 +822,7 @@ namespace Meta.WitAi.TTS.Utilities
             TTSSpeakerRequestData requestData = new TTSSpeakerRequestData();
             requestData.StartTime = DateTime.Now;
             requestData.StopQueueOnLoad = !addToQueue;
-            requestData.PlaybackEvents = playbackEvents;
+            requestData.PlaybackEvents = playbackEvents ?? new TTSSpeakerClipEvents();
 
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
@@ -760,15 +831,18 @@ namespace Meta.WitAi.TTS.Utilities
             // Ignore without clip
             if (requestData.ClipData == null)
             {
-                return;
+                return requestData;
             }
 
             // Enqueue
             _queuedRequests.Enqueue(requestData);
-            RefreshQueueEvents();
 
-            // Begin load callback
+            // Perform callbacks
+            RefreshQueueEvents();
             OnLoadBegin(requestData);
+
+            // Return data
+            return requestData;
         }
         // Load complete
         private void HandleLoadComplete(TTSSpeakerRequestData requestData, string error)
