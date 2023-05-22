@@ -10,6 +10,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -71,6 +73,9 @@ namespace Meta.WitAi.TTS.Utilities
         [Tooltip("Custom wit specific voice settings used if the preset is null or empty")]
         [HideInInspector] [SerializeField] public TTSWitVoiceSettings customWitVoiceSettings;
 
+        // Override voice settings
+        private TTSVoiceSettings _overrideVoiceSettings;
+
         /// <summary>
         /// The voice settings to be used for this TTSSpeaker
         /// </summary>
@@ -78,6 +83,11 @@ namespace Meta.WitAi.TTS.Utilities
         {
             get
             {
+                // Use override if exists & runtime
+                if (Application.isPlaying && _overrideVoiceSettings != null)
+                {
+                    return _overrideVoiceSettings;
+                }
                 // Attempts to use custom voice settings
                 if (string.IsNullOrEmpty(presetVoiceID) && customWitVoiceSettings != null)
                 {
@@ -810,6 +820,190 @@ namespace Meta.WitAi.TTS.Utilities
             StopLoading();
             StopSpeaking();
         }
+        #endregion
+
+        #region VOICE OVERRIDE
+        /// <summary>
+        /// Set a voice override for future requests
+        /// </summary>
+        /// <param name="overrideSettings">The settings to be applied to upcoming requests</param>
+        public void SetVoiceOverride(TTSVoiceSettings overrideVoiceSettings)
+        {
+            _overrideVoiceSettings = overrideVoiceSettings;
+        }
+
+        /// <summary>
+        /// Clears the current voice override
+        /// </summary>
+        public void ClearVoiceOverride() => SetVoiceOverride(null);
+
+        /// <summary>
+        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public void Speak(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Apply voice override
+            SetVoiceOverride(overrideVoiceSettings);
+
+            // Speak
+            Speak(textToSpeak, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public void SpeakQueued(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Apply voice override
+            SetVoiceOverride(overrideVoiceSettings);
+
+            // Speak
+            SpeakQueued(textToSpeak, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Decode a response node into text to be spoken or a specific voice setting
+        /// Example Data:
+        /// {
+        ///    "q": "Text to be spoken"
+        ///    "voice": "Charlie
+        /// }
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="textToSpeak">The text to be spoken output</param>
+        /// <param name="voiceSettings">The output for voice settings</param>
+        /// <returns>True if decode was successful</returns>
+        private bool DecodeResponse(WitResponseNode responseNode, out string textToSpeak, out TTSVoiceSettings voiceSettings)
+        {
+            // Wit settings
+            if (TTSWitVoiceSettings.CanDecode(responseNode))
+            {
+                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode);
+                if (witVoice != null)
+                {
+                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
+                    voiceSettings = witVoice;
+                    voiceSettings.SettingsId = "OVERRIDE";
+                    return true;
+                }
+            }
+
+            // Default application
+            textToSpeak = null;
+            voiceSettings = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool Speak(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Decode text to speak & voice settings
+            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            {
+                return false;
+            }
+            // Speak
+            Speak(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents);
+            return true;
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified response node & disk cache settings
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool Speak(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings) =>
+            Speak(responseNode, diskCacheSettings, null);
+
+        /// <summary>
+        /// Load a tts clip using the specified response node & playback events
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool Speak(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents) =>
+            Speak(responseNode, null, playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified response node & playback events
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool Speak(WitResponseNode responseNode) => Speak(responseNode, null, null);
+
+        /// <summary>
+        /// Load a tts clip using the specified text, disk cache settings & playback events.
+        /// Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool SpeakQueued(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Decode text to speak & voice settings
+            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            {
+                return false;
+            }
+            // Speak queued
+            SpeakQueued(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents);
+            return true;
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
+        /// speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool SpeakQueued(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents) =>
+            SpeakQueued(responseNode, null, playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified text & disk cache settings events.  Adds clip
+        /// to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool SpeakQueued(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings) =>
+            SpeakQueued(responseNode, diskCacheSettings, null);
+
+        /// <summary>
+        /// Load a tts clip using the specified text.  Adds clip to playback queue and will speak
+        /// once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public bool SpeakQueued(WitResponseNode responseNode) =>
+            SpeakQueued(responseNode, null, null);
         #endregion
 
         #region LOAD
