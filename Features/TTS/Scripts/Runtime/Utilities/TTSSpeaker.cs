@@ -354,7 +354,7 @@ namespace Meta.WitAi.TTS.Utilities
         protected IEnumerator WaitForCompletion(List<TTSSpeakerRequestData> requestData)
         {
             // All done
-            int count = requestData != null ? requestData.Count : 0;
+            int count = requestData?.Count ?? 0;
             if (count == 0)
             {
                 yield break;
@@ -363,7 +363,6 @@ namespace Meta.WitAi.TTS.Utilities
             // Current active requests
             int activeRequests = 0;
             UnityAction<TTSSpeaker, TTSClipData> onComplete = (speaker, clip) => activeRequests--;
-            UnityAction<TTSSpeaker, TTSClipData, string> onError = (speaker, clip, error) => activeRequests--;
 
             // Add event delegates
             for (int r = 0; r < count; r++)
@@ -374,10 +373,7 @@ namespace Meta.WitAi.TTS.Utilities
                     continue;
                 }
                 activeRequests++;
-                request.PlaybackEvents.OnLoadAbort.AddListener(onComplete);
-                request.PlaybackEvents.OnLoadFailed.AddListener(onError);
-                request.PlaybackEvents.OnPlaybackCancelled.AddListener(onError);
-                request.PlaybackEvents.OnPlaybackComplete.AddListener(onComplete);
+                request.PlaybackEvents.OnComplete.AddListener(onComplete);
             }
 
             // Wait for active requests to be complete
@@ -387,13 +383,7 @@ namespace Meta.WitAi.TTS.Utilities
             for (int r = 0; r < count; r++)
             {
                 TTSSpeakerRequestData request = requestData[r];
-                if (request.PlaybackEvents != null)
-                {
-                    request.PlaybackEvents.OnLoadAbort.RemoveListener(onComplete);
-                    request.PlaybackEvents.OnLoadFailed.RemoveListener(onError);
-                    request.PlaybackEvents.OnPlaybackCancelled.RemoveListener(onError);
-                    request.PlaybackEvents.OnPlaybackComplete.RemoveListener(onComplete);
-                }
+                request.PlaybackEvents?.OnComplete.RemoveListener(onComplete);
             }
         }
         #endregion
@@ -1156,7 +1146,8 @@ namespace Meta.WitAi.TTS.Utilities
             // Enqueue
             _queuedRequests.Enqueue(requestData);
 
-            // Perform callbacks
+            // Initialized, possibly started queue & load began
+            OnInit(requestData);
             RefreshQueueEvents();
             OnLoadBegin(requestData);
 
@@ -1467,6 +1458,12 @@ namespace Meta.WitAi.TTS.Utilities
             log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");
             VLog.D(LogCategory, log);
         }
+        // Initial callback as soon as the audio clip speak request is generated
+        protected virtual void OnInit(TTSSpeakerRequestData requestData)
+        {
+            Events?.OnInit?.Invoke(this, requestData.ClipData);
+            requestData.PlaybackEvents?.OnInit?.Invoke(this, requestData.ClipData);
+        }
         // Perform load begin events
         protected virtual void OnLoadBegin(TTSSpeakerRequestData requestData)
         {
@@ -1498,6 +1495,9 @@ namespace Meta.WitAi.TTS.Utilities
             // Speaker clip events
             Events?.OnLoadAbort?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnLoadAbort?.Invoke(this, requestData.ClipData);
+
+            // Complete
+            OnComplete(requestData);
         }
         // Perform load failed events
         protected virtual void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
@@ -1513,6 +1513,9 @@ namespace Meta.WitAi.TTS.Utilities
             // Speaker clip events
             Events?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
             requestData.PlaybackEvents?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
+
+            // Complete
+            OnComplete(requestData);
         }
         // Perform load success events
         protected virtual void OnLoadSuccess(TTSSpeakerRequestData requestData)
@@ -1587,6 +1590,9 @@ namespace Meta.WitAi.TTS.Utilities
             // Speaker clip events
             Events?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
             requestData.PlaybackEvents?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
+
+            // Complete
+            OnComplete(requestData);
         }
         // Perform audio clip update during streaming playback
         protected virtual void OnPlaybackClipUpdated(TTSSpeakerRequestData requestData)
@@ -1617,6 +1623,15 @@ namespace Meta.WitAi.TTS.Utilities
             // Speaker clip events
             Events?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
+
+            // Complete
+            OnComplete(requestData);
+        }
+        // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
+        protected virtual void OnComplete(TTSSpeakerRequestData requestData)
+        {
+            Events?.OnComplete?.Invoke(this, requestData.ClipData);
+            requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
         }
         #endregion
     }
