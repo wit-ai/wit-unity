@@ -22,6 +22,7 @@ namespace Meta.Voice.Samples.TTSVoices
         // Default input
         [SerializeField] private InputField _input;
         [SerializeField] private Button _stopButton;
+        [SerializeField] private Button _pauseButton;
         [SerializeField] private Button _speakButton;
 
         // Queue button that will not stop previous clip
@@ -37,16 +38,31 @@ namespace Meta.Voice.Samples.TTSVoices
         private string _voice;
         private bool _loading;
         private bool _speaking;
+        private bool _paused;
 
         // Add delegates
         private void OnEnable()
         {
-            RefreshButtons();
+            RefreshStopButton();
+            RefreshPauseButton();
             _stopButton.onClick.AddListener(StopClick);
+            _pauseButton.onClick.AddListener(PauseClick);
             _speakButton.onClick.AddListener(SpeakClick);
         }
         // Stop click
         private void StopClick() => _speaker.Stop();
+        // Pause click
+        private void PauseClick()
+        {
+            if (_speaker.IsPaused)
+            {
+                _speaker.Resume();
+            }
+            else
+            {
+                _speaker.Pause();
+            }
+        }
         // Speak phrase click
         private void SpeakClick()
         {
@@ -107,7 +123,7 @@ namespace Meta.Voice.Samples.TTSVoices
             if (result.Contains(_dateId))
             {
                 DateTime now = DateTime.Now;
-                string dateString = $"{now.ToLongDateString()} at {now.ToShortTimeString()}";
+                string dateString = $"{now.ToLongDateString()} at {now.ToLongTimeString()}";
                 result = text.Replace(_dateId, dateString);
             }
             return result;
@@ -131,19 +147,29 @@ namespace Meta.Voice.Samples.TTSVoices
             // On state changes
             if (_loading != _speaker.IsLoading)
             {
-                _loading = _speaker.IsLoading;
-                RefreshButtons();
+                RefreshStopButton();
             }
             if (_speaking != _speaker.IsSpeaking)
             {
-                _speaking = _speaker.IsSpeaking;
-                RefreshButtons();
+                RefreshStopButton();
+            }
+            if (_paused != _speaker.IsPaused)
+            {
+                RefreshPauseButton();
             }
         }
         // Refresh interactable based on states
-        private void RefreshButtons()
+        private void RefreshStopButton()
         {
+            _loading = _speaker.IsLoading;
+            _speaking = _speaker.IsSpeaking;
             _stopButton.interactable = _loading || _speaking;
+        }
+        // Refresh text based on pause state
+        private void RefreshPauseButton()
+        {
+            _paused = _speaker.IsPaused;
+            _pauseButton.GetComponentInChildren<Text>().text = _paused ? "Resume" : "Pause";
         }
     }
 }

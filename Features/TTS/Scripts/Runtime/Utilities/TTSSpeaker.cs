@@ -174,44 +174,8 @@ namespace Meta.WitAi.TTS.Utilities
         // Automatically generate source if needed
         protected virtual void Awake()
         {
-            // Find base audio source if possible
-            if (AudioSource == null)
-            {
-                AudioSource = gameObject.GetComponentInChildren<AudioSource>();
-            }
-
-            // Duplicate audio source
-            if (CloneAudioSource)
-            {
-                // Create new audio source
-                AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
-                instance.PreloadCopyData();
-
-                // Move into this transform & default to 3D audio
-                if (AudioSource == null)
-                {
-                    instance.transform.SetParent(transform, false);
-                    instance.spread = 1f;
-                }
-
-                // Move into audio source & copy source values
-                else
-                {
-                    instance.transform.SetParent(AudioSource.transform, false);
-                    instance.Copy(AudioSource);
-                }
-
-                // Reset instance's transform
-                instance.transform.localPosition = Vector3.zero;
-                instance.transform.localRotation = Quaternion.identity;
-                instance.transform.localScale = Vector3.one;
-
-                // Apply
-                AudioSource = instance;
-            }
-
-            // Setup audio source settings
-            AudioSource.playOnAwake = false;
+            // Initialize audio
+            InitAudio(CloneAudioSource);
 
             // Get text processors
             RefreshProcessors();
@@ -277,22 +241,23 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void HandleClipUpdate(TTSClipData clipData)
         {
             // Ignore if not speaking clip
-            if (!clipData.Equals(SpeakingClip) || AudioSource == null || !AudioSource.isPlaying)
+            if (!clipData.Equals(SpeakingClip))
             {
                 return;
             }
 
-            // Stop previous clip playback
-            int elapsedSamples = AudioSource.timeSamples;
-            AudioSource.Stop();
-
-            // Apply clip data
+            // Apply new clip data
             _speakingRequest.ClipData = clipData;
+            // Get current elapsed samples
+            int elapsedSamples = GetAudioElapsed();
+            // Begin playback from elapsed sample
+            PlayAudio(_speakingRequest.ClipData.clip, elapsedSamples);
 
-            // Apply audio source
-            AudioSource.clip = SpeakingClip.clip;
-            AudioSource.timeSamples = elapsedSamples;
-            AudioSource.Play();
+            // Pause if desired
+            if (IsPaused)
+            {
+                PauseAudio();
+            }
 
             // Clip updated callback
             OnPlaybackClipUpdated(_speakingRequest);
@@ -1184,12 +1149,6 @@ namespace Meta.WitAi.TTS.Utilities
                 }
             }
 
-            // Stop previously spoken clips
-            if (requestData.StopQueueOnLoad)
-            {
-                StopSpeaking();
-            }
-
             // Load failed
             if (!string.IsNullOrEmpty(error))
             {
@@ -1206,8 +1165,16 @@ namespace Meta.WitAi.TTS.Utilities
                 OnPlaybackReady(requestData);
             }
 
+            // Stop previously spoken clip & play next
+            if (requestData.StopQueueOnLoad && IsSpeaking)
+            {
+                StopSpeaking();
+            }
             // Attempt to play next in queue
-            RefreshPlayback();
+            else
+            {
+                RefreshPlayback();
+            }
         }
         #endregion
 
@@ -1243,9 +1210,10 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
             // No audio source
-            if (AudioSource == null)
+            string errors = GetAudioErrors();
+            if (!string.IsNullOrEmpty(errors))
             {
-                HandleLoadComplete(requestData, "AudioSource not found");
+                HandleLoadComplete(requestData, errors);
                 return;
             }
 
@@ -1262,10 +1230,7 @@ namespace Meta.WitAi.TTS.Utilities
                 _speakingRequest = _queuedRequests.Dequeue();
 
                 // Started speaking
-                AudioSource.clip = SpeakingClip?.clip;
-                AudioSource.timeSamples = 0;
-                AudioSource.Play();
-
+                PlayAudio(_speakingRequest.ClipData.clip);
 
                 // Call playback start events
                 OnPlaybackStart(_speakingRequest);
@@ -1276,7 +1241,6 @@ namespace Meta.WitAi.TTS.Utilities
                     StopCoroutine(_waitForCompletion);
                     _waitForCompletion = null;
                 }
-
                 _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
             }
             else
@@ -1296,7 +1260,26 @@ namespace Meta.WitAi.TTS.Utilities
             while (!IsPlaybackComplete(elapsedTime))
             {
                 yield return new WaitForEndOfFrame();
-                elapsedTime += Time.deltaTime;
+
+                // Fix audio source, paused/resumed externally
+                bool shouldBePaused = IsAudioPlaying();
+                if (IsPaused == shouldBePaused)
+                {
+                    if (IsPaused)
+                    {
+                        PauseAudio();
+                    }
+                    else
+                    {
+                        ResumeAudio();
+                    }
+                }
+
+                // Only increment if playing
+                if (!IsPaused)
+                {
+                    elapsedTime += Time.deltaTime;
+                }
             }
 
             // Playback completed
@@ -1305,7 +1288,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Check for playback completion
         protected virtual bool IsPlaybackComplete(float elapsedTime)
         {
-            return SpeakingClip == null || SpeakingClip.clip == null || elapsedTime >= SpeakingClip.clip.length || (AudioSource != null && !AudioSource.isPlaying);
+            return elapsedTime >= GetAudioLength() || (!IsAudioPlaying() && !IsPaused);
         }
         // Completed playback
         protected virtual void HandlePlaybackComplete(bool stopped)
@@ -1323,10 +1306,7 @@ namespace Meta.WitAi.TTS.Utilities
             _speakingRequest = new TTSSpeakerRequestData();
 
             // Stop audio source playback
-            if (AudioSource != null && AudioSource.isPlaying)
-            {
-                AudioSource.Stop();
-            }
+            StopAudio();
 
             // Stopped
             if (stopped)
@@ -1357,8 +1337,52 @@ namespace Meta.WitAi.TTS.Utilities
             // Refresh in queue check
             RefreshQueueEvents();
 
-            // Attempt to play next in queue
+            // Attempt to play next in queue if all playback was not just stopped
             RefreshPlayback();
+        }
+        #endregion
+
+        #region PAUSE
+        /// <summary>
+        /// Whether playback is currently paused or not
+        /// </summary>
+        public bool IsPaused { get; private set; }
+
+        /// <summary>
+        /// Pause any current or future loaded audio playback
+        /// </summary>
+        public void Pause() => SetPause(true);
+
+        /// <summary>
+        /// Resume playback for current and future audio clips
+        /// </summary>
+        public void Resume() => SetPause(false);
+
+        // Set's the current pause state
+        protected virtual void SetPause(bool toPaused)
+        {
+            // Ignore if same
+            if (IsPaused == toPaused)
+            {
+                return;
+            }
+
+            // Apply
+            IsPaused = toPaused;
+            VLog.D($"Speak Audio {(IsPaused ? "Paused" : "Resumed")}");
+
+            // Adjust if speaking
+            if (IsSpeaking)
+            {
+                if (IsPaused)
+                {
+                    PauseAudio();
+                }
+                else if (!IsPaused)
+                {
+                    ResumeAudio();
+                }
+            }
         }
         #endregion
 
@@ -1448,7 +1472,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region PLAYBACK EVENTS
         // Log comment with request
-        protected virtual void LogRequestData(string comment, TTSSpeakerRequestData requestData)
+        protected virtual void LogRequestData(string comment, TTSSpeakerRequestData requestData, bool warning = false)
         {
             StringBuilder log = new StringBuilder();
             log.AppendLine(comment);
@@ -1456,7 +1480,14 @@ namespace Meta.WitAi.TTS.Utilities
             log.AppendLine($"Cache: {requestData.ClipData?.diskCacheSettings?.DiskCacheLocation.ToString()}");
             log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
             log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");
-            VLog.D(LogCategory, log);
+            if (warning)
+            {
+                VLog.W(LogCategory, log);
+            }
+            else
+            {
+                VLog.D(LogCategory, log);
+            }
         }
         // Initial callback as soon as the audio clip speak request is generated
         protected virtual void OnInit(TTSSpeakerRequestData requestData)
@@ -1502,7 +1533,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform load failed events
         protected virtual void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
         {
-            LogRequestData($"Load Failed\nError: {error}", requestData);
+            LogRequestData($"Load Failed\nError: {error}", requestData, true);
 
             // Deprecated speaker events
 #pragma warning disable CS0618
@@ -1632,6 +1663,111 @@ namespace Meta.WitAi.TTS.Utilities
         {
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
+        }
+        #endregion
+
+        #region UNITY AUDIO
+        // Initialize audio
+        private void InitAudio(bool clone)
+        {
+            // Find base audio source if possible
+            if (AudioSource == null)
+            {
+                AudioSource = gameObject.GetComponentInChildren<AudioSource>();
+            }
+
+            // Duplicate audio source
+            if (clone)
+            {
+                // Create new audio source
+                AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
+                instance.PreloadCopyData();
+
+                // Move into this transform & default to 3D audio
+                if (AudioSource == null)
+                {
+                    instance.transform.SetParent(transform, false);
+                    instance.spread = 1f;
+                }
+
+                // Move into audio source & copy source values
+                else
+                {
+                    instance.transform.SetParent(AudioSource.transform, false);
+                    instance.Copy(AudioSource);
+                }
+
+                // Reset instance's transform
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one;
+
+                // Apply
+                AudioSource = instance;
+            }
+
+            // Setup audio source settings
+            AudioSource.playOnAwake = false;
+        }
+        // Ensure audio source exists
+        private string GetAudioErrors()
+        {
+            if (AudioSource == null)
+            {
+                return "Audio source is missing";
+            }
+            return string.Empty;
+        }
+        // Check if audio is playing
+        private bool IsAudioPlaying()
+        {
+            return AudioSource != null && AudioSource.isPlaying;
+        }
+        // Get elapsed samples from audio source
+        private int GetAudioElapsed()
+        {
+            return AudioSource == null ? 0 : AudioSource.timeSamples;
+        }
+        // Get audio length from audio source clip
+        private float GetAudioLength()
+        {
+            return AudioSource?.clip == null ? 0f : AudioSource.clip.length;
+        }
+        // Play audio
+        private void PlayAudio(AudioClip clip, int offsetSamples = 0)
+        {
+            // Stop previous audio
+            StopAudio();
+
+            // Play audio
+            AudioSource.clip = clip;
+            AudioSource.timeSamples = offsetSamples;
+            AudioSource.Play();
+        }
+        // Stop audio
+        private void StopAudio()
+        {
+            if (IsAudioPlaying())
+            {
+                AudioSource.Stop();
+            }
+            AudioSource.clip = null;
+        }
+        // Pause audio
+        private void PauseAudio()
+        {
+            if (IsAudioPlaying())
+            {
+                AudioSource.Pause();
+            }
+        }
+        // Resume audio
+        private void ResumeAudio()
+        {
+            if (!IsAudioPlaying())
+            {
+                AudioSource.UnPause();
+            }
         }
         #endregion
     }
