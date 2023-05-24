@@ -838,42 +838,6 @@ namespace Meta.WitAi.TTS.Utilities
         public void ClearVoiceOverride() => SetVoiceOverride(null);
 
         /// <summary>
-        /// Load a tts clip using the specified response node, disk cache settings & playback events.
-        /// Cancels all previous clips when loaded & then plays.
-        /// </summary>
-        /// <param name="textToSpeak">The text to be spoken</param>
-        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
-        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
-        public void Speak(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
-            TTSSpeakerClipEvents playbackEvents)
-        {
-            // Apply voice override
-            SetVoiceOverride(overrideVoiceSettings);
-
-            // Speak
-            Speak(textToSpeak, diskCacheSettings, playbackEvents);
-        }
-
-        /// <summary>
-        /// Load a tts clip using the specified response node, disk cache settings & playback events.
-        /// Adds clip to playback queue and will speak once queue has completed all playback.
-        /// </summary>
-        /// <param name="textToSpeak">The text to be spoken</param>
-        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
-        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
-        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
-        public void SpeakQueued(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
-            TTSSpeakerClipEvents playbackEvents)
-        {
-            // Apply voice override
-            SetVoiceOverride(overrideVoiceSettings);
-
-            // Speak
-            SpeakQueued(textToSpeak, diskCacheSettings, playbackEvents);
-        }
-
-        /// <summary>
         /// Decode a response node into text to be spoken or a specific voice setting
         /// Example Data:
         /// {
@@ -904,6 +868,24 @@ namespace Meta.WitAi.TTS.Utilities
             textToSpeak = null;
             voiceSettings = null;
             return false;
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public void Speak(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Apply voice override
+            SetVoiceOverride(overrideVoiceSettings);
+
+            // Speak
+            Speak(textToSpeak, diskCacheSettings, playbackEvents);
         }
 
         /// <summary>
@@ -956,6 +938,82 @@ namespace Meta.WitAi.TTS.Utilities
         public bool Speak(WitResponseNode responseNode) => Speak(responseNode, null, null);
 
         /// <summary>
+        /// Load a tts clip using the specified text, disk cache settings & playback events and then waits
+        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakAsync(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
+        {
+            // Set voice override
+            SetVoiceOverride(overrideVoiceSettings);
+
+            // Wait while loading/speaking
+            yield return SpeakAsync(textToSpeak, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text, disk cache settings & playback events and then waits
+        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
+        {
+            // Decode text to speak & voice settings
+            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            {
+                yield break;
+            }
+
+            // Wait while loading/speaking
+            yield return SpeakAsync(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text & playback events and then waits
+        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents)
+        {
+            yield return SpeakAsync(responseNode, null, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text & disk cache settings and then waits
+        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings)
+        {
+            yield return SpeakAsync(responseNode, diskCacheSettings, null);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public void SpeakQueued(string textToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+        {
+            // Apply voice override
+            SetVoiceOverride(overrideVoiceSettings);
+
+            // Speak
+            SpeakQueued(textToSpeak, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
         /// Load a tts clip using the specified text, disk cache settings & playback events.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
@@ -1004,6 +1062,73 @@ namespace Meta.WitAi.TTS.Utilities
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool SpeakQueued(WitResponseNode responseNode) =>
             SpeakQueued(responseNode, null, null);
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases, disk cache settings & playback events and then
+        /// waits for the files to load & play.  Adds clip to playback queue and will speak once queue has
+        /// completed all playback.
+        /// </summary>
+        /// <param name="textsToSpeak">Multiple texts to be spoken</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakQueuedAsync(string[] textsToSpeak, TTSVoiceSettings overrideVoiceSettings, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
+        {
+            // Set override
+            SetVoiceOverride(overrideVoiceSettings);
+            // Wait while loading/speaking
+            yield return SpeakQueuedAsync(textsToSpeak, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases, disk cache settings & playback events and then
+        /// waits for the files to load & play.  Adds clip to playback queue and will speak once queue has
+        /// completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
+        {
+            // Decode text to speak & voice settings
+            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            {
+                yield break;
+            }
+            // Wait while loading/speaking
+            yield return SpeakQueuedAsync(new string[] {textToSpeak}, voiceSettings, diskCacheSettings, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
+        /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents)
+        {
+            yield return SpeakQueuedAsync(responseNode, null, playbackEvents);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases & disk cache settings and then waits for the files to
+        /// load & play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings)
+        {
+            yield return SpeakQueuedAsync(responseNode, diskCacheSettings, null);
+        }
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases and then waits for the files to load & play.
+        /// Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode)
+        {
+            yield return SpeakQueuedAsync(responseNode, null, null);
+        }
         #endregion
 
         #region LOAD
