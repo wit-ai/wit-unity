@@ -9,6 +9,7 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
+using System.Linq;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
 
@@ -206,7 +207,7 @@ namespace Meta.WitAi.Lib
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
         {
-            GetRequest(configuration).RequestAppVersionTags(appInfo.id, (versionTags, error) =>
+            GetRequest(configuration).RequestAppVersionTags(appInfo.id, (versionTagsBySnapshot, error) =>
             {
                 if (!String.IsNullOrEmpty(error))
                 {
@@ -215,10 +216,15 @@ namespace Meta.WitAi.Lib
                     return;
                 }
 
-                appInfo.versionTags = new WitVersionTagInfo[versionTags.Length];
-                for (var i = 0; i < versionTags.Length; i++)
+                int totalTagCount = versionTagsBySnapshot.Sum(snap =>snap.Length);
+                appInfo.versionTags = new WitVersionTagInfo[totalTagCount];
+
+                for (int snapshot = 0, currentTag = 0; snapshot < versionTagsBySnapshot.Length; snapshot++)
                 {
-                    appInfo.versionTags[i] = versionTags[i][0];
+                    for (var tag = 0; tag < versionTagsBySnapshot[snapshot].Length; tag++, currentTag++)
+                    {
+                        appInfo.versionTags[currentTag] = versionTagsBySnapshot[snapshot][tag];
+                    }
                 }
                 UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
             });
