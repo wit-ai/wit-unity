@@ -28,6 +28,7 @@ namespace Meta.WitAi.Lib
         private readonly List<PathValues> _serverVariables = new List<PathValues>();
         private readonly ArrayList _clientVariables = new ArrayList();
         private const string ComposerFolderName = "/composer/";
+        private const string CharacterFolderName = "/characters/";
 
         private static class ModuleType
         {
@@ -46,19 +47,19 @@ namespace Meta.WitAi.Lib
         public WitComposerInfo ImportComposerInfo()
         {
             WitComposerInfo info = new WitComposerInfo();
-            info = ExtractCanvases(info, GetCanvasJsons());
+            info = ExtractCanvases(info, GetJsonFileNames(ComposerFolderName));
             return info;
         }
         /// <summary>
-        /// Finds all the Composer canvases in the zip archive
+        /// Finds all the Json files canvases in the zip archive under the given folder
         /// </summary>
-        /// <returns>new list of entries which represent canvases</returns>
-        private List<ZipArchiveEntry> GetCanvasJsons()
+        /// <returns>new list of entries which represent json files</returns>
+        private List<ZipArchiveEntry> GetJsonFileNames(string folder)
         {
             var jsonCanvases = new List<ZipArchiveEntry>();
             foreach (var entry in _zip.Entries)
             {
-                if (entry.FullName.Contains(ComposerFolderName))
+                if (entry.FullName.Contains(folder))
                 {
                     jsonCanvases.Add(entry);
                 }
@@ -76,7 +77,7 @@ namespace Meta.WitAi.Lib
 
             for (var i = 0; i < jsonCanvases.Count; i++)
             {
-                var jsonNode = ExtractCanvasJson(_zip, jsonCanvases[i].Name);
+                var jsonNode = ExtractJson(_zip, jsonCanvases[i].Name);
                 info.canvases[i].contextMap = ParseModules(jsonNode);
                 var name = Path.GetFileNameWithoutExtension(jsonCanvases[i].Name);
                 name = name.Substring(0, 1).ToUpper() + name.Substring(1, name.Length - 1); //capitalize 1st letter
@@ -86,22 +87,22 @@ namespace Meta.WitAi.Lib
         }
 
         /// <summary>
-        /// Extracts a Wit JSON object representing the given canvas
+        /// Extracts a Wit JSON object representing the given json file
         /// </summary>
         /// <param name="zip">zip archive from Wit.ai export</param>
-        /// <param name="canvasName">one of the canvas names, defined in CanvasType</param>
+        /// <param name="fileName">one of the file names</param>
         /// <returns>The entire canvas structure as nested JSON objects</returns>
-        private WitResponseNode ExtractCanvasJson(ZipArchive zip, string canvasName)
+        private WitResponseNode ExtractJson(ZipArchive zip, string fileName)
         {
-            var entry = zip.Entries.First((v) => v.Name.EndsWith(canvasName));
-            if (entry.Name.EndsWith(canvasName))
+            var entry = zip.Entries.First((v) => v.Name.EndsWith(fileName));
+            if (entry.Name.EndsWith(fileName))
             {
                 var stream = entry.Open();
                 var json = new StreamReader(stream).ReadToEnd();
 
                 return JsonConvert.DeserializeToken(json);
             }
-            VLog.W("Could not open canvas named "+ canvasName);
+            VLog.W("Could not open file named "+ fileName);
             return null;
         }
 
@@ -296,6 +297,27 @@ namespace Meta.WitAi.Lib
             _clientVariables.Clear();
 
             return result;
+        }
+
+
+        public WitCharacterInfo[] ImportCharacterInfo()
+        {
+            WitCharacterInfo[] info = ExtractCharacters(GetJsonFileNames(CharacterFolderName));
+            return info;
+        }
+
+        private WitCharacterInfo[] ExtractCharacters(List<ZipArchiveEntry> jsonFiles)
+        {
+            WitCharacterInfo[] characters = new WitCharacterInfo[jsonFiles.Count];
+
+            for (var i = 0; i < jsonFiles.Count; i++)
+            {
+                var jsonNode = ExtractJson(_zip, jsonFiles[i].Name);
+                var voiceConfig = jsonNode["voice_config"];
+                characters[i] = JsonConvert.DeserializeObject<WitCharacterInfo>(jsonNode);
+                characters[i].voiceConfig = JsonConvert.DeserializeObject<WitVoiceConfig>(voiceConfig);
+            }
+            return characters;
         }
     }
 }
