@@ -22,6 +22,7 @@ namespace Meta.WitAi
         public const string WIT_KEY_TRAITS = "traits";
         public const string WIT_KEY_FINAL = "is_final";
         public const string WIT_PARTIAL_RESPONSE = "partial_response";
+        public const string WIT_RESPONSE = "response";
 
         #region Base Response methods
         /// <summary>
@@ -44,7 +45,40 @@ namespace Meta.WitAi
                 && (response.HasChild(WIT_KEY_INTENTS)
                     || response.HasChild(WIT_KEY_ENTITIES)
                     || response.HasChild(WIT_KEY_TRAITS)
-                    || response.HasChild(WIT_PARTIAL_RESPONSE));
+                    || response.HasChild(WIT_PARTIAL_RESPONSE)
+                    || response.HasChild(WIT_RESPONSE));
+        }
+
+        /// <summary>
+        /// Gets the content of a witResponse's partial or final response whichever is present.
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        /// <returns></returns>
+        public static WitResponseClass GetResponse(this WitResponseNode witResponse)
+        {
+            return witResponse.GetFinalResponse() ?? witResponse.GetPartialResponse();
+        }
+
+        /// <summary>
+        /// Gets the content of a witResponse["response"] node.
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        /// <returns></returns>
+        public static WitResponseClass GetFinalResponse(this WitResponseNode witResponse)
+        {
+            var response = witResponse?.AsObject;
+            return null != response && response.HasChild(WIT_PARTIAL_RESPONSE) ? response[WIT_PARTIAL_RESPONSE].AsObject : null;
+        }
+
+        /// <summary>
+        /// Gets the content of a witResponse["partial_response"] node.
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        /// <returns></returns>
+        public static WitResponseClass GetPartialResponse(this WitResponseNode witResponse)
+        {
+            var response = witResponse?.AsObject;
+            return null != response && response.HasChild(WIT_PARTIAL_RESPONSE) ? response[WIT_PARTIAL_RESPONSE].AsObject : null;
         }
 
         /// <summary>
