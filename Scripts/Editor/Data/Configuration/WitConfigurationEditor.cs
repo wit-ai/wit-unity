@@ -165,44 +165,48 @@ namespace Meta.WitAi.Windows
                 GUILayout.TextArea(WitTexts.Texts.ConfigurationConduitMissingTokenLabel, WitStyles.LabelError);
             }
 
+            EditorGUI.indentLevel++;
+
             // Set conduit
-            var useConduit = GUILayout.Toggle(Configuration.useConduit, "Use Conduit (Beta)");
-            if (Configuration.useConduit != useConduit)
+            var updated = false;
+            WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.ConfigurationConduitUseConduitLabel), ref Configuration.useConduit, ref updated);
+            if (updated)
             {
-                Configuration.useConduit = useConduit;
                 EditorUtility.SetDirty(Configuration);
             }
 
             GenerateManifestIfNeeded();
 
             // Configuration buttons
-            EditorGUI.indentLevel++;
             GUILayout.Space(EditorGUI.indentLevel * WitStyles.ButtonMargin);
             {
                 GUI.enabled = Configuration.useConduit;
-                var useRelaxedMatching = GUILayout.Toggle(Configuration.relaxedResolution, new GUIContent("Relaxed Resolution", "Allows resolving parameters by value if an exact match was not found. Disable to improve runtime performance."));
-                if (Configuration.relaxedResolution != useRelaxedMatching)
+                updated = false;
+                WitEditorUI.LayoutToggle(
+                    new GUIContent(WitTexts.Texts.ConfigurationConduitRelaxedResolutionsLabel,
+                        WitTexts.Texts.ConfigurationConduitRelaxedResolutionsTooltip),
+                    ref Configuration.relaxedResolution, ref updated);
+                if (updated)
                 {
-                    Configuration.relaxedResolution = useRelaxedMatching;
                     EditorUtility.SetDirty(Configuration);
                 }
 
                 GUILayout.BeginHorizontal();
                 {
-                    if (WitEditorUI.LayoutTextButton(_manifestAvailable ? "Update Manifest" : "Generate Manifest"))
+                    if (WitEditorUI.LayoutTextButton(_manifestAvailable ? WitTexts.Texts.ConfigurationConduitUpdateManifestLabel : WitTexts.Texts.ConfigurationConduitGenerateManifestLabel))
                     {
                         GenerateManifest(Configuration, true);
                     }
 
                     GUI.enabled = Configuration.useConduit && _manifestAvailable;
-                    if (WitEditorUI.LayoutTextButton("Select Manifest") && _manifestAvailable)
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitSelectManifestLabel) && _manifestAvailable)
                     {
                         Selection.activeObject =
                             AssetDatabase.LoadAssetAtPath<TextAsset>(Configuration.GetManifestEditorPath());
                     }
 
                     GUI.enabled = Configuration.useConduit;
-                    if (WitEditorUI.LayoutTextButton("Specify Assemblies"))
+                    if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitSpecifyAssembliesLabel))
                     {
                         PresentAssemblySelectionDialog();
                     }
@@ -210,7 +214,7 @@ namespace Meta.WitAi.Windows
                     if (isServerTokenValid && !_disableServerPost)
                     {
                         GUI.enabled = Configuration.useConduit && _manifestAvailable && !_syncInProgress;
-                        if (WitEditorUI.LayoutTextButton("Sync Entities"))
+                        if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitSyncEntitiesLabel))
                         {
                             SyncEntities();
                             GUIUtility.ExitGUI();
@@ -218,7 +222,7 @@ namespace Meta.WitAi.Windows
                         }
                         if (_isAutoTrainAvailable)
                         {
-                            if (WitEditorUI.LayoutTextButton("Auto Train") && _manifestAvailable)
+                            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitAutoTrainLabel) && _manifestAvailable)
                             {
                                 SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
                             }

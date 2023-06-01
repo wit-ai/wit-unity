@@ -98,6 +98,15 @@ namespace Meta.WitAi
 
             [Header("Configuration Conduit Texts")]
             public string ConfigurationConduitMissingTokenLabel;
+            public string ConfigurationConduitUseConduitLabel;
+            public string ConfigurationConduitRelaxedResolutionsLabel;
+            public string ConfigurationConduitRelaxedResolutionsTooltip;
+            public string ConfigurationConduitUpdateManifestLabel;
+            public string ConfigurationConduitGenerateManifestLabel;
+            public string ConfigurationConduitSelectManifestLabel;
+            public string ConfigurationConduitSpecifyAssembliesLabel;
+            public string ConfigurationConduitSyncEntitiesLabel;
+            public string ConfigurationConduitAutoTrainLabel;
 
             [Header("Configuration Intent Texts")]
             public string ConfigurationIntentsTabLabel;
