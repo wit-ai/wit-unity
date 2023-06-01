@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.Voice.TelemetryUtilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -90,17 +91,29 @@ namespace Meta.WitAi
         {
             GUIContent content = new GUIContent(text);
 #if UNITY_2021_3_OR_NEWER
-            return EditorGUILayout.LinkButton(content);
+            var isClicked = EditorGUILayout.LinkButton(content);
+            if (isClicked)
+            {
+                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, new Dictionary<Telemetry.AnnotationKey, string>
+                {
+                    {Telemetry.AnnotationKey.ControlId, text},
+                    {Telemetry.AnnotationKey.Type, "Link"}
+                });
+            }
 #else
             var style = GUI.skin.GetStyle("Label");
-            return LayoutButton(content, style, new GUILayoutOption[] {});
+            var isClicked = LayoutButton(content, style, new GUILayoutOption[] {});
 #endif
+
+
+            return isClicked;
         }
 
         public static bool LayoutIconButton(GUIContent icon)
         {
             return LayoutButton(icon, WitStyles.IconButton, null);
         }
+
         public static void LayoutTabButtons(string[] tabTitles, ref int selection)
         {
             if (tabTitles != null)
@@ -124,7 +137,32 @@ namespace Meta.WitAi
         }
         private static bool LayoutButton(GUIContent content, GUIStyle style, GUILayoutOption[] options)
         {
-            return GUILayout.Button(content, style, options);
+            var isClicked = GUILayout.Button(content, style, options);
+            if (isClicked)
+            {
+                var annotations = new Dictionary<Telemetry.AnnotationKey, string>
+                {
+                    { Telemetry.AnnotationKey.ControlId, content.text }
+                };
+
+                var name = content.text;
+                if (string.IsNullOrEmpty(name) && content.image != null)
+                {
+                    name = content.image.name;
+                    annotations[Telemetry.AnnotationKey.ControlId] = name;
+                    annotations.Add(Telemetry.AnnotationKey.Type, "Image");
+                }
+
+                if (string.IsNullOrEmpty(name))
+                {
+                    // We can't figure out what was just clicked, so skip telemetry.
+                    return true;
+                }
+
+                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, annotations);
+            }
+
+            return isClicked;
         }
         // Layout header button
         public static void LayoutHeaderButton(Texture2D headerTexture, string headerURL, string docsUrl)
@@ -353,6 +391,11 @@ namespace Meta.WitAi
             // Update
             if (toggleValue != newToggleValue)
             {
+                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<Telemetry.AnnotationKey, string>
+                {
+                    {Telemetry.AnnotationKey.ControlId, key.text},
+                    {Telemetry.AnnotationKey.Value, newToggleValue.ToString()}
+                });
                 toggleValue = newToggleValue;
                 isUpdated = true;
             }
