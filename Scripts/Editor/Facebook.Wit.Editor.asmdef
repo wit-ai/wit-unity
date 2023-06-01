@@ -23,7 +23,7 @@
         {
             "name": "com.meta.xr.sdk.voice.telemetry",
             "expression": "",
-            "define": "VSDK_TELEMETRY_AVAILAIBLE"
+            "define": "VSDK_TELEMETRY_AVAILABLE"
         }
     ],
     "noEngineReferences": false
