@@ -7,6 +7,7 @@
   "WitAppUnderstandingEndpoint": "/[APP_ID]/understanding",
   "WitOpenButtonLabel": "Open Wit.ai",
   "VLogLevelLabel": "VLog Min Console Level",
+  "TelemetryLevelLabel": "Telemetry Logging Level",
   "ConfigurationSelectLabel": "Wit Configuration",
   "ConfigurationSelectMissingLabel": "No Wit Configurations Found",
   "SetupTitleLabel": "Welcome to Wit.ai",

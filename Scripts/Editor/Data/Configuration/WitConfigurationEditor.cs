@@ -507,10 +507,12 @@ namespace Meta.WitAi.Windows
             _didCheckAutoTrainAvailability = true;
             CheckAutoTrainIsAvailable(Configuration, (isAvailable) => {
                 _isAutoTrainAvailable = isAvailable;
+#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.CheckAutoTrain, new Dictionary<Telemetry.AnnotationKey, string>
                 {
                     { Telemetry.AnnotationKey.IsAvailable, isAvailable.ToString() }
                 });
+#endif
             });
         }
 
@@ -566,7 +568,7 @@ namespace Meta.WitAi.Windows
 #endif
                 return;
             }
-
+#if VSDK_TELEMETRY_AVAILABLE
             try
             {
                 var incompatibleSignatures = string.Join(" ", AssemblyMiner.IncompatibleSignatureFrequency.Keys);
@@ -580,7 +582,7 @@ namespace Meta.WitAi.Windows
                 VLog.W($"Failed to collect signature telemetry. Exception: {e}");
             }
 
-#if VSDK_TELEMETRY_AVAILABLE
+
             Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
 #endif
             Statistics.SuccessfulGenerations++;
@@ -620,11 +622,15 @@ namespace Meta.WitAi.Windows
         // Sync entities
         private void SyncEntities(Action successCallback = null)
         {
+#if VSDK_TELEMETRY_AVAILABLE
             var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.SyncEntities);
+#endif
 
             if (!EditorUtility.DisplayDialog("Synchronizing with Wit.Ai entities", "This will synchronize local enums with Wit.Ai entities. Part of this process involves generating code locally and may result in overwriting existing code. Please make sure to backup your work before proceeding.", "Proceed", "Cancel", DialogOptOutDecisionType.ForThisSession, ENTITY_SYNC_CONSENT_KEY))
             {
+#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Cancel);
+#endif
                 VLog.D("Entity Sync cancelled");
                 return;
             }
@@ -633,7 +639,9 @@ namespace Meta.WitAi.Windows
             var validServerToken = WitConfigurationUtility.IsServerTokenValid(_serverToken);
             if (!validServerToken)
             {
+#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.EndEventWithFailure(instanceKey, "Invalid server token");
+#endif
                 VLog.E($"Conduit Sync Failed\nError: Invalid server token");
                 return;
             }
@@ -660,12 +668,16 @@ namespace Meta.WitAi.Windows
                     EditorUtility.ClearProgressBar();
                     if (!success)
                     {
+#if VSDK_TELEMETRY_AVAILABLE
                         Telemetry.EndEventWithFailure(instanceKey, data);
+#endif
                         VLog.E($"Conduit failed to synchronize entities\nError: {data}");
                     }
                     else
                     {
+#if VSDK_TELEMETRY_AVAILABLE
                         Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+#endif
                         VLog.D("Conduit successfully synchronized entities");
                         successCallback?.Invoke();
                     }
@@ -679,7 +691,9 @@ namespace Meta.WitAi.Windows
 
         private static void AutoTrainOnWitAi(WitConfiguration configuration)
         {
+#if VSDK_TELEMETRY_AVAILABLE
             var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.AutoTrain);
+#endif
             var manifest = LoadManifest(configuration.ManifestLocalPath);
 
             var intents = ManifestGenerator.ExtractManifestData();
@@ -689,7 +703,9 @@ namespace Meta.WitAi.Windows
             {
                 if (isSuccess)
                 {
+#if VSDK_TELEMETRY_AVAILABLE
                     Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+#endif
                     EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.",
                         "OK");
                 }
@@ -697,7 +713,9 @@ namespace Meta.WitAi.Windows
                 {
                     var failureMessage =
                         $"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifest}";
+#if VSDK_TELEMETRY_AVAILABLE
                     Telemetry.EndEventWithFailure(instanceKey, failureMessage);
+#endif
                     VLog.E(failureMessage);
                     EditorUtility.DisplayDialog("Auto Train", "Failed to start auto train process on WIT.ai.", "OK");
                 }
@@ -724,15 +742,21 @@ namespace Meta.WitAi.Windows
 
         private static Manifest LoadManifest(string manifestPath)
         {
+#if VSDK_TELEMETRY_AVAILABLE
             var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.LoadManifest);
+#endif
 
             var manifest = ManifestLoader.LoadManifest(manifestPath);
 
             if (manifest == null)
             {
+#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.EndEventWithFailure(instanceKey);
+#endif
             }
+#if VSDK_TELEMETRY_AVAILABLE
             Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+#endif
 
             return manifest;
         }

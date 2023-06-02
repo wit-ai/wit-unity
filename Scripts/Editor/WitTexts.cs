@@ -26,6 +26,7 @@ namespace Meta.WitAi
             public string WitDocsTitle;
             public string WitDocsUrl;
             public string VLogLevelLabel;
+            public string TelemetryLevelLabel;
             public string ConfigurationFileManagerLabel;
             public string ConfigurationFileNameLabel;
             public string ConfigurationSelectLabel;
