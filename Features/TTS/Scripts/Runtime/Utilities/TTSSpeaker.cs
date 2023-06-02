@@ -1217,6 +1217,12 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
+            // Resume prior to playback
+            if (requestData.StopQueueOnLoad && IsPaused)
+            {
+                Resume();
+            }
+
             if (!string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
             {
                 // Somehow clip unloaded
