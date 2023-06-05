@@ -108,17 +108,17 @@ namespace Meta.WitAi.Requests
             {
                 messageRequest.MessageRequest(Endpoint, ShouldPost,
                     Options.Text, Options.QueryParams,
-                    HandleNlpResponse, SetDownloadProgress);
+                    HandleFinalNlpResponse, SetDownloadProgress);
             }
         }
 
         /// <summary>
         /// Set status code prior to handling response
         /// </summary>
-        protected override void HandleNlpResponse(WitResponseNode responseData, string error)
+        protected override void HandleFinalNlpResponse(WitResponseNode responseData, string error)
         {
             StatusCode = _request.ResponseCode;
-            base.HandleNlpResponse(responseData, error);
+            base.HandleFinalNlpResponse(responseData, error);
         }
 
         /// <summary>
