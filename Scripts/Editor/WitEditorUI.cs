@@ -8,9 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-#if VSDK_TELEMETRY_AVAILABLE
 using Meta.Voice.TelemetryUtilities;
-#endif
 using UnityEditor;
 using UnityEngine;
 
@@ -96,13 +94,11 @@ namespace Meta.WitAi
             var isClicked = EditorGUILayout.LinkButton(content);
             if (isClicked)
             {
-#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, new Dictionary<Telemetry.AnnotationKey, string>
                 {
                     {Telemetry.AnnotationKey.ControlId, text},
                     {Telemetry.AnnotationKey.Type, "Link"}
                 });
-#endif
             }
 #else
             var style = GUI.skin.GetStyle("Label");
@@ -144,7 +140,6 @@ namespace Meta.WitAi
             var isClicked = GUILayout.Button(content, style, options);
             if (isClicked)
             {
-#if VSDK_TELEMETRY_AVAILABLE
                 var annotations = new Dictionary<Telemetry.AnnotationKey, string>
                 {
                     { Telemetry.AnnotationKey.ControlId, content.text }
@@ -165,7 +160,6 @@ namespace Meta.WitAi
                 }
 
                 Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, annotations);
-#endif
             }
 
             return isClicked;
@@ -397,13 +391,11 @@ namespace Meta.WitAi
             // Update
             if (toggleValue != newToggleValue)
             {
-#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<Telemetry.AnnotationKey, string>
                 {
                     {Telemetry.AnnotationKey.ControlId, key.text},
                     {Telemetry.AnnotationKey.Value, newToggleValue.ToString()}
                 });
-#endif
                 toggleValue = newToggleValue;
                 isUpdated = true;
             }
@@ -443,14 +435,12 @@ namespace Meta.WitAi
                 {
                     value = $"{newSelectionValue}";
                 }
-#if VSDK_TELEMETRY_AVAILABLE
                 Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<Telemetry.AnnotationKey, string>
                 {
                     {Telemetry.AnnotationKey.ControlId, key},
                     {Telemetry.AnnotationKey.Type, "Popup"},
                     {Telemetry.AnnotationKey.Value, value}
                 });
-#endif
 
                 selectionValue = newSelectionValue;
                 isUpdated = true;

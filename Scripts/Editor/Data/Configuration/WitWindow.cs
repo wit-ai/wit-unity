@@ -8,9 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-#if VSDK_TELEMETRY_AVAILABLE
 using Meta.Voice.TelemetryUtilities;
-#endif
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Data.Configuration;
@@ -93,8 +91,19 @@ namespace Meta.WitAi.Windows
 
             var showTooltips = ShowTooltips;
             WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.ShowTooltipsLabel), ref showTooltips, ref updated);
-            if (updated) ShowTooltips = showTooltips;
+            if (updated)
+            {
+                ShowTooltips = showTooltips;
+            }
+
 #if VSDK_TELEMETRY_AVAILABLE
+            var enableTelemetry = TelemetryConsentManager.ConsentProvided;
+            WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.TelemetryEnabledLabel), ref enableTelemetry, ref updated);
+            if (updated)
+            {
+                TelemetryConsentManager.ConsentProvided = enableTelemetry;
+            }
+
             var telemetryLogLevel = _telemetryLogLevel;
             WitEditorUI.LayoutPopup(WitTexts.Texts.TelemetryLevelLabel, _telemetryLogLevelNames, ref telemetryLogLevel, ref updated);
             if (updated)
