@@ -18,9 +18,14 @@ Use the following steps to set up TTS for your app once the plugin has been impo
 2. Navigate to Assets > Create > Voice SDK > TTS > Add Default TTS Setup
 3. In your scene heirarchy navigate inside the newly generated TTS GameObject to select the TTSWitService gameobject and adjust the inspector to fit your needs:
     3a. Use TTSWit > Request Settings > Configuration to select the Wit Configuration asset generated in step 2.
-    3b. Once your configuration is setup, go to 'Preset Voice Settings' and setup any voices that might be shared by multiple TTSSpeakers.  For more information, see [TTS Voice Customization](https://developer.oculus.com/documentation/unity/voice-sdk-tts-voice-customization/).![image](Images/tts_service_settings.png)
-    3c. Under TTS Runtime Cache (Script), adjust the settings to indicate how often clips will be automatically uploaded from memory. For more information, see [TTS Cache Options](https://developer.oculus.com/documentation/unity/voice-sdk-tts-cache-options/).
-    3d. If needed, adjust your disk cache directory location and name in the tree under TTS Disk Cache (Script). For more information, see [TTS Cache Options](https://developer.oculus.com/documentation/unity/voice-sdk-tts-cache-options/).![image](Images/tts_service_cachesettings.png)
+    3b. Once your configuration is setup, go to 'Preset Voice Settings' and setup any voices that might be shared by multiple TTSSpeakers.
+        For more information, see TTS Voice Customization: https://developer.oculus.com/documentation/unity/voice-sdk-tts-voice-customization
+    ![image](Images/tts_service_settings.png)
+    3c. Under TTS Runtime Cache (Script), adjust the settings to indicate how often clips will be automatically uploaded from memory.
+        For more information, see TTS Cache Options: https://developer.oculus.com/documentation/unity/voice-sdk-tts-cache-options
+    3d. If needed, adjust your disk cache directory location and name in the tree under TTS Disk Cache (Script).
+        For more information, see TTS Cache Options: https://developer.oculus.com/documentation/unity/voice-sdk-tts-cache-options/
+    ![image](Images/tts_service_cachesettings.png)
 4. Move & duplicate the TTSSpeaker to all the locations in your app where you would like TTS to be played.
 5. Modify each TTSSpeaker via the Inspector to fit your needs:
     5a. Under Voice Settings, select the Voice Preset for the specific speaker or select Custom to apply speaker specific settings.
