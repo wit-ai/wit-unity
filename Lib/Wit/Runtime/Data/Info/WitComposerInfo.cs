@@ -29,6 +29,8 @@ namespace Meta.WitAi.Data.Info
         [Tooltip("The Context Map is a JSON object passed between the the server and the client. \n" +
             "These are the JSON paths and values present in the Context Map on the server")]
         public ContextMapPaths contextMap;
+        [Tooltip("A listing of all the actions sent by the Responses in this canvas.")]
+        public string[] actions;
     }
 
     /// <summary>
