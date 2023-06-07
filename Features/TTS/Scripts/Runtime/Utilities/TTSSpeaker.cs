@@ -164,7 +164,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// The script used to perform audio playback of IAudioClipStreams.
         /// 1. Gets IAudioPlayer component if applied to this speaker
-        /// 2. If not found, adds a UnityAudioPlayer
+        /// 2. If no IAudioPlayer component is found, the TTSService's audio system
+        /// will be used to generate an audio player.
+        /// 3. If still not found, adds a UnityAudioPlayer.
         /// </summary>
         public IAudioPlayer AudioPlayer
         {
@@ -175,7 +177,11 @@ namespace Meta.WitAi.TTS.Utilities
                     _audioPlayer = gameObject.GetComponent<IAudioPlayer>();
                     if (_audioPlayer == null)
                     {
-                        _audioPlayer = gameObject.AddComponent<UnityAudioPlayer>();
+                        _audioPlayer = TTSService?.AudioSystem?.GetAudioPlayer(gameObject);
+                        if (_audioPlayer == null)
+                        {
+                            _audioPlayer = gameObject.AddComponent<UnityAudioPlayer>();
+                        }
                     }
                 }
                 return _audioPlayer;

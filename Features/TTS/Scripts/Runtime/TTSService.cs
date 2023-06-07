@@ -44,6 +44,29 @@ namespace Meta.WitAi.TTS
         }
         private static TTSService _instance;
 
+        /// <summary>
+        /// Audio system to be used for streaming & playback
+        /// </summary>
+        public IAudioSystem AudioSystem
+        {
+            get
+            {
+                if (_audioSystem == null && Application.isPlaying)
+                {
+                    // Search on TTS Service
+                    _audioSystem = gameObject.GetComponent<IAudioSystem>();
+                    if (_audioSystem == null)
+                    {
+                        // Add default unity audio system if not found
+                        _audioSystem = gameObject.AddComponent<UnityAudioSystem>();
+                    }
+                }
+                return _audioSystem;
+            }
+            set => _audioSystem = value;
+        }
+        private IAudioSystem _audioSystem;
+
         // Handles TTS runtime cache
         public abstract ITTSRuntimeCacheHandler RuntimeCacheHandler { get; }
         // Handles TTS cache requests
@@ -343,8 +366,15 @@ namespace Meta.WitAi.TTS
         // Generate a new audio clip stream
         protected virtual IAudioClipStream CreateClipStream()
         {
-            // TODO: Use Audio System
-            return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, 0.1f);
+            // Default
+            if (AudioSystem == null)
+            {
+                return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, 0.1f);
+            }
+
+            // Get audio clip via audio system
+            return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,
+                WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
         }
         // Sets a clip stream to the clip
         protected virtual void SetClipStream(TTSClipData clipData, IAudioClipStream clipStream)
