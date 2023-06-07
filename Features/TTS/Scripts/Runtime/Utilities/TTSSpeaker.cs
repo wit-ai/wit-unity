@@ -11,10 +11,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Meta.WitAi.Json;
-using Meta.WitAi.Requests;
 using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Meta.Voice.Audio;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
@@ -38,15 +38,6 @@ namespace Meta.WitAi.TTS.Utilities
         [Tooltip("Text that is added to the end of any Speech() text")]
         [TextArea] [FormerlySerializedAs("appendedText")]
         public string AppendedText;
-
-        [Header("Playback Settings")]
-        [Tooltip("Audio source to be used for text-to-speech playback")]
-        [SerializeField] [FormerlySerializedAs("_source")]
-        public AudioSource AudioSource;
-
-        [Tooltip("Duplicates audio source reference on awake instead of using it directly.")]
-        [SerializeField] private bool _cloneAudioSource = false;
-        public bool CloneAudioSource => _cloneAudioSource;
 
         [Header("Load Settings")]
         [Tooltip("Optional TTSService reference to be used for text-to-speech loading.  If missing, it will check the component.  If that is also missing then it will use the current singleton")]
@@ -170,12 +161,47 @@ namespace Meta.WitAi.TTS.Utilities
         private ISpeakerTextPreprocessor[] _textPreprocessors;
         private ISpeakerTextPostprocessor[] _textPostprocessors;
 
+        /// <summary>
+        /// The script used to perform audio playback of IAudioClipStreams.
+        /// 1. Gets IAudioPlayer component if applied to this speaker
+        /// 2. If not found, adds a UnityAudioPlayer
+        /// </summary>
+        public IAudioPlayer AudioPlayer
+        {
+            get
+            {
+                if (_audioPlayer == null)
+                {
+                    _audioPlayer = gameObject.GetComponent<IAudioPlayer>();
+                    if (_audioPlayer == null)
+                    {
+                        _audioPlayer = gameObject.AddComponent<UnityAudioPlayer>();
+                    }
+                }
+                return _audioPlayer;
+            }
+        }
+        private IAudioPlayer _audioPlayer;
+
+        // Unity audio source if used by the unity player
+        public AudioSource AudioSource
+        {
+            get
+            {
+                if (AudioPlayer is IAudioSourceProvider uap)
+                {
+                    return uap.AudioSource;
+                }
+                return null;
+            }
+        }
+
         #region LIFECYCLE
         // Automatically generate source if needed
-        protected virtual void Awake()
+        protected virtual void Start()
         {
             // Initialize audio
-            InitAudio(CloneAudioSource);
+            AudioPlayer.Init();
 
             // Get text processors
             RefreshProcessors();
@@ -249,14 +275,14 @@ namespace Meta.WitAi.TTS.Utilities
             // Apply new clip data
             _speakingRequest.ClipData = clipData;
             // Get current elapsed samples
-            int elapsedSamples = GetAudioElapsed();
+            int elapsedSamples = AudioPlayer.ElapsedSamples;
             // Begin playback from elapsed sample
-            PlayAudio(_speakingRequest.ClipData.clip, elapsedSamples);
+            AudioPlayer.Play(_speakingRequest.ClipData.clipStream, elapsedSamples);
 
             // Pause if desired
             if (IsPaused)
             {
-                PauseAudio();
+                AudioPlayer.Pause();
             }
 
             // Clip updated callback
@@ -1188,7 +1214,7 @@ namespace Meta.WitAi.TTS.Utilities
         private void RefreshPlayback()
         {
             // Ignore if currently playing or nothing in uque
-            if (SpeakingClip != null ||  _queuedRequests == null || _queuedRequests.Count == 0)
+            if (SpeakingClip != null ||  _queuedRequests == null || _queuedRequests.Count == 0 || _audioPlayer == null)
             {
                 return;
             }
@@ -1210,7 +1236,7 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
             // No audio source
-            string errors = GetAudioErrors();
+            string errors = AudioPlayer.GetPlaybackErrors();
             if (!string.IsNullOrEmpty(errors))
             {
                 HandleLoadComplete(requestData, errors);
@@ -1236,7 +1262,7 @@ namespace Meta.WitAi.TTS.Utilities
                 _speakingRequest = _queuedRequests.Dequeue();
 
                 // Started speaking
-                PlayAudio(_speakingRequest.ClipData.clip);
+                AudioPlayer.Play(_speakingRequest.ClipData.clipStream, 0);
 
                 // Call playback start events
                 OnPlaybackStart(_speakingRequest);
@@ -1268,16 +1294,16 @@ namespace Meta.WitAi.TTS.Utilities
                 yield return new WaitForEndOfFrame();
 
                 // Fix audio source, paused/resumed externally
-                bool shouldBePaused = IsAudioPlaying();
-                if (IsPaused == shouldBePaused)
+                bool playerPaused = !AudioPlayer.IsPlaying;
+                if (IsPaused != playerPaused)
                 {
                     if (IsPaused)
                     {
-                        PauseAudio();
+                        AudioPlayer.Pause();
                     }
                     else
                     {
-                        ResumeAudio();
+                        AudioPlayer.Resume();
                     }
                 }
 
@@ -1294,7 +1320,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Check for playback completion
         protected virtual bool IsPlaybackComplete(float elapsedTime)
         {
-            return elapsedTime >= GetAudioLength() || (!IsAudioPlaying() && !IsPaused);
+            return elapsedTime >= AudioPlayer?.ClipStream.Length || (!AudioPlayer.IsPlaying && !IsPaused);
         }
         // Completed playback
         protected virtual void HandlePlaybackComplete(bool stopped)
@@ -1312,7 +1338,7 @@ namespace Meta.WitAi.TTS.Utilities
             _speakingRequest = new TTSSpeakerRequestData();
 
             // Stop audio source playback
-            StopAudio();
+            AudioPlayer.Stop();
 
             // Stopped
             if (stopped)
@@ -1382,11 +1408,11 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 if (IsPaused)
                 {
-                    PauseAudio();
+                    AudioPlayer.Pause();
                 }
                 else if (!IsPaused)
                 {
-                    ResumeAudio();
+                    AudioPlayer.Resume();
                 }
             }
         }
@@ -1485,6 +1511,7 @@ namespace Meta.WitAi.TTS.Utilities
             log.AppendLine($"Voice: {requestData.ClipData?.voiceSettings?.SettingsId}");
             log.AppendLine($"Cache: {requestData.ClipData?.diskCacheSettings?.DiskCacheLocation.ToString()}");
             log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
+            log.AppendLine($"Audio Player Type: {(_audioPlayer == null ? "NULL" : _audioPlayer.GetType().ToString())}");
             log.AppendLine($"Audio Clip Stream Type: {(requestData.ClipData?.clipStream == null ? "NULL" : requestData.ClipData?.clipStream.GetType().ToString())}");
             log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");
             if (warning)
@@ -1670,111 +1697,6 @@ namespace Meta.WitAi.TTS.Utilities
         {
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
-        }
-        #endregion
-
-        #region UNITY AUDIO
-        // Initialize audio
-        private void InitAudio(bool clone)
-        {
-            // Find base audio source if possible
-            if (AudioSource == null)
-            {
-                AudioSource = gameObject.GetComponentInChildren<AudioSource>();
-            }
-
-            // Duplicate audio source
-            if (clone)
-            {
-                // Create new audio source
-                AudioSource instance = new GameObject($"{gameObject.name}_AudioOneShot").AddComponent<AudioSource>();
-                instance.PreloadCopyData();
-
-                // Move into this transform & default to 3D audio
-                if (AudioSource == null)
-                {
-                    instance.transform.SetParent(transform, false);
-                    instance.spread = 1f;
-                }
-
-                // Move into audio source & copy source values
-                else
-                {
-                    instance.transform.SetParent(AudioSource.transform, false);
-                    instance.Copy(AudioSource);
-                }
-
-                // Reset instance's transform
-                instance.transform.localPosition = Vector3.zero;
-                instance.transform.localRotation = Quaternion.identity;
-                instance.transform.localScale = Vector3.one;
-
-                // Apply
-                AudioSource = instance;
-            }
-
-            // Setup audio source settings
-            AudioSource.playOnAwake = false;
-        }
-        // Ensure audio source exists
-        private string GetAudioErrors()
-        {
-            if (AudioSource == null)
-            {
-                return "Audio source is missing";
-            }
-            return string.Empty;
-        }
-        // Check if audio is playing
-        private bool IsAudioPlaying()
-        {
-            return AudioSource != null && AudioSource.isPlaying;
-        }
-        // Get elapsed samples from audio source
-        private int GetAudioElapsed()
-        {
-            return AudioSource == null ? 0 : AudioSource.timeSamples;
-        }
-        // Get audio length from audio source clip
-        private float GetAudioLength()
-        {
-            return AudioSource?.clip == null ? 0f : AudioSource.clip.length;
-        }
-        // Play audio
-        private void PlayAudio(AudioClip clip, int offsetSamples = 0)
-        {
-            // Stop previous audio
-            StopAudio();
-
-            // Play audio
-            AudioSource.clip = clip;
-            AudioSource.timeSamples = offsetSamples;
-            AudioSource.Play();
-        }
-        // Stop audio
-        private void StopAudio()
-        {
-            if (IsAudioPlaying())
-            {
-                AudioSource.Stop();
-            }
-            AudioSource.clip = null;
-        }
-        // Pause audio
-        private void PauseAudio()
-        {
-            if (IsAudioPlaying())
-            {
-                AudioSource.Pause();
-            }
-        }
-        // Resume audio
-        private void ResumeAudio()
-        {
-            if (!IsAudioPlaying())
-            {
-                AudioSource.UnPause();
-            }
         }
         #endregion
     }

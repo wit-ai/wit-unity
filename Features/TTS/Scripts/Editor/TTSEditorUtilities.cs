@@ -271,7 +271,6 @@ namespace Meta.WitAi.TTS
             audio.playOnAwake = false;
             audio.loop = false;
             audio.spatialBlend = 0f; // Default to 2D
-            speaker.AudioSource = audio;
 
             // Return speaker
             VLog.D($"TTS Service - Instantiated Speaker {speaker.gameObject.name}");
