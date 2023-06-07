@@ -12,6 +12,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Linq;
+using Meta.Voice.Audio;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
@@ -76,7 +77,6 @@ namespace Meta.WitAi.TTS
         // Set instance
         protected virtual void Awake()
         {
-            // Set instance
             _instance = this;
             _delegates = false;
         }
@@ -206,7 +206,7 @@ namespace Meta.WitAi.TTS
                 }
                 builder.AppendLine($"Cache: {cacheLocation}");
                 builder.AppendLine($"Type: {clipData.audioType}");
-                builder.AppendLine($"Length: {(clipData.clip == null ? "NULL" : clipData.clip.length.ToString("0.000") + "secs")}");
+                builder.AppendLine($"Length: {(clipData.clipStream == null ? "NULL" : clipData.clipStream.Length + " secs")}");
             }
             return builder.ToString();
         }
@@ -333,8 +333,62 @@ namespace Meta.WitAi.TTS
                 queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings)
             };
 
+            // Generate new clip stream
+            IAudioClipStream clipStream = CreateClipStream();
+            SetClipStream(clipData, clipStream);
+
             // Return generated clip
             return clipData;
+        }
+        // Generate a new audio clip stream
+        protected virtual IAudioClipStream CreateClipStream()
+        {
+            // TODO: Use Audio System
+            return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, 0.1f);
+        }
+        // Sets a clip stream to the clip
+        protected virtual void SetClipStream(TTSClipData clipData, IAudioClipStream clipStream)
+        {
+            // Remove previous events
+            if (clipData.clipStream != null)
+            {
+                clipData.clipStream.OnStreamUpdated = null;
+                clipData.clipStream.OnStreamComplete = null;
+            }
+
+            // Apply clip stream
+            clipData.clipStream = clipStream;
+
+            // Add new events
+            if (clipData.clipStream != null)
+            {
+                clipData.clipStream.OnStreamUpdated = (cs) => OnClipStreamUpdated(clipData, cs);
+                clipData.clipStream.OnStreamComplete = (cs) => OnClipStreamComplete(clipData, cs);
+            }
+        }
+        // Clip stream updated
+        protected virtual void OnClipStreamUpdated(TTSClipData clipData, IAudioClipStream clipStream)
+        {
+            // Ignore invalid
+            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
+            {
+                return;
+            }
+
+            // Updated
+            WebHandler?.WebStreamEvents?.OnStreamClipUpdate?.Invoke(clipData);
+        }
+        // Clip stream complete
+        protected virtual void OnClipStreamComplete(TTSClipData clipData, IAudioClipStream clipStream)
+        {
+            // Ignore invalid
+            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
+            {
+                return;
+            }
+
+            // Complete
+            WebHandler?.WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
         }
         // Get audio type
         protected virtual AudioType GetAudioType()
@@ -567,7 +621,8 @@ namespace Meta.WitAi.TTS
                 }
             }
 
-            // Now loaded
+            // Set clip stream
+            SetClipStream(clipData, clipData.clipStream);
             SetClipLoadState(clipData, TTSClipLoadState.Loaded);
             VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
 
@@ -690,10 +745,11 @@ namespace Meta.WitAi.TTS
                 DiskCacheHandler?.CancelDiskCacheStream(clipData);
             }
             // Destroy clip
-            if (clipData.clip != null)
+            if (clipData.clipStream != null)
             {
-                clipData.clip.DestroySafely();
-                clipData.clip = null;
+                IAudioClipStream clipStream = clipData.clipStream;
+                SetClipStream(clipData, null);
+                clipStream.Unload();
             }
 
             // Clip is now unloaded

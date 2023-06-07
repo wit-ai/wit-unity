@@ -15,6 +15,7 @@ using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Utilities;
 using Meta.WitAi.Requests;
+using Meta.Voice.Audio;
 
 namespace Meta.WitAi.TTS.Integrations
 {
@@ -163,13 +164,13 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Load clip async
             VRequest request = new VRequest();
-            bool canPerform = request.RequestAudioClip(new Uri(request.CleanUrl(filePath)), (clip, error) =>
-            {
-                // Apply clip
-                clipData.clip = clip;
-                // Call on complete
-                OnStreamComplete(clipData, error);
-            }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk, 0.01f, clipData.diskCacheSettings.StreamBufferLength, (progress) => clipData.loadProgress = progress);
+            bool canPerform = request.RequestAudioStream(clipData.clipStream, new Uri(request.CleanUrl(filePath)),
+                (clipStream, error) =>
+                {
+                    clipData.clipStream = clipStream;
+                    OnStreamComplete(clipData, error);
+                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk,
+                0.01f, (progress) => clipData.loadProgress = progress);
             if (canPerform)
             {
                 _streamRequests[clipData.clipID] = request;

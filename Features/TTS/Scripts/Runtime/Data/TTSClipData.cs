@@ -8,6 +8,8 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.WitAi.Requests;
+using Meta.Voice.Audio;
 using UnityEngine;
 
 namespace Meta.WitAi.TTS.Data
@@ -38,8 +40,34 @@ namespace Meta.WitAi.TTS.Data
         // Request data
         public Dictionary<string, string> queryParameters;
 
-        // Clip
-        [NonSerialized] public AudioClip clip;
+        // Clip stream
+        public IAudioClipStream clipStream
+        {
+            get => _clipStream;
+            set
+            {
+                // Unload previous clip stream
+                IAudioClipStream v = value;
+                if (_clipStream != v && _clipStream != null)
+                {
+                    _clipStream.Unload();
+                }
+                // Apply new clip stream
+                _clipStream = v;
+            }
+        }
+        private IAudioClipStream _clipStream;
+        public AudioClip clip
+        {
+            get
+            {
+                if (clipStream is IAudioClipProvider uacs)
+                {
+                    return uacs.Clip;
+                }
+                return null;
+            }
+        }
         // Clip load state
         [NonSerialized] public TTSClipLoadState loadState;
         // Clip load progress

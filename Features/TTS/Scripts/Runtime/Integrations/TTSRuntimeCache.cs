@@ -186,18 +186,23 @@ namespace Meta.WitAi.TTS.Integrations
             long total = 0;
             foreach (var key in _clips.Keys)
             {
-                total += GetClipBytes(_clips[key].clip);
+                total += GetClipBytes(_clips[key].clipStream.Channels, _clips[key].clipStream.TotalSamples);
             }
             return (int)(total / (long)1024) + 1;
         }
         // Return bytes occupied by clip
         public static long GetClipBytes(AudioClip clip)
         {
-            if (clip == null)
+            if (clip != null)
             {
-                return 0;
+                return GetClipBytes(clip.channels, clip.samples);
             }
-            return ((clip.samples * clip.channels) * 2);
+            return 0;
+        }
+        // Return bytes occupied by clip
+        public static long GetClipBytes(int channels, int samples)
+        {
+            return channels * samples * 2;
         }
     }
 }

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Meta.Voice.Audio;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
@@ -74,12 +75,6 @@ namespace Meta.WitAi.TTS.Integrations
         public WitConfiguration configuration;
         public TTSWitAudioType audioType;
         public bool audioStream;
-        [Tooltip("Amount of clip length in seconds that must be received before stream is considered ready.")]
-        public float audioStreamReadyDuration;
-        [Tooltip("Total samples to be used to generate clip. A new clip will be generated every time this chunk size is surpassed.")]
-        public float audioStreamChunkLength;
-        [Tooltip("Amount of placeholder stream clips to be generated on service generation.")]
-        public int audioStreamPreloadCount;
     }
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
@@ -124,103 +119,7 @@ namespace Meta.WitAi.TTS.Integrations
         {
             return WitTTSVRequest.GetAudioType(RequestSettings.audioType);
         }
-        // Preload stream cache
-        protected override void Awake()
-        {
-            base.Awake();
-            PreloadStreamCache();
-        }
-        // Add delegates
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            AudioStreamHandler.OnClipUpdated += OnStreamClipUpdated;
-            AudioStreamHandler.OnStreamComplete += OnStreamClipComplete;
-        }
-        // Remove delegates
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-            AudioStreamHandler.OnClipUpdated -= OnStreamClipUpdated;
-            AudioStreamHandler.OnStreamComplete -= OnStreamClipComplete;
-        }
-        // Destroy stream cache
-        protected override void OnDestroy()
-        {
-            base.OnDestroy();
-            UnloadStreamCache();
-        }
-
-        // Clip stream updated
-        private void OnStreamClipUpdated(AudioClip oldClip, AudioClip newClip)
-        {
-            TTSClipData[] clips = GetAllRuntimeCachedClips();
-            if (clips == null)
-            {
-                return;
-            }
-            foreach (var clipData in clips)
-            {
-                if (oldClip == clipData.clip)
-                {
-                    clipData.clip = newClip;
-                    WebStreamEvents?.OnStreamClipUpdate?.Invoke(clipData);
-                }
-            }
-        }
-        // Clip stream complete
-        private void OnStreamClipComplete(AudioClip clip)
-        {
-            TTSClipData[] clips = GetAllRuntimeCachedClips();
-            if (clips == null)
-            {
-                return;
-            }
-            foreach (var clipData in clips)
-            {
-                if (clip == clipData.clip)
-                {
-                    WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
-                }
-            }
-        }
         #endregion
-
-        #region AudioStream Cache
-        // Simple check for cache
-        private bool _wasCached = false;
-        // Preload the stream cache
-        private void PreloadStreamCache()
-        {
-            // Ignore
-            if (!RequestSettings.audioStream || RequestSettings.audioStreamPreloadCount <= 0 || _wasCached)
-            {
-                return;
-            }
-
-            // Total samples to preload
-            int totalSamples = Mathf.CeilToInt(RequestSettings.audioStreamChunkLength *
-                                               WitConstants.ENDPOINT_TTS_CHANNELS *
-                                               WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-
-            // Preload specified amount of clips
-            _wasCached = true;
-            AudioStreamHandler.PreloadCachedClips(RequestSettings.audioStreamPreloadCount, totalSamples, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-        }
-        // Preload the stream cache
-        private void UnloadStreamCache()
-        {
-            // Ignore if was not cached
-            if (!_wasCached)
-            {
-                return;
-            }
-
-            // Destroy all cached clips
-            AudioStreamHandler.DestroyCachedClips();
-            _wasCached = false;
-        }
-        #endregion AudioStream Cache
 
         #region ITTSWebHandler Streams
         // Request settings
@@ -230,9 +129,6 @@ namespace Meta.WitAi.TTS.Integrations
         {
             audioType = TTSWitAudioType.PCM,
             audioStream = true,
-            audioStreamReadyDuration = 0.1f, // .1 seconds received before starting playback
-            audioStreamChunkLength = 5f, // 5 seconds per clip generation
-            audioStreamPreloadCount = 3 // 3 clips preloaded to be streamed at once
         };
 
         // Use settings web stream events
@@ -290,19 +186,22 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Request tts
             WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestStream(clipData.textToSpeak, RequestSettings.audioType, stream, RequestSettings.audioStreamReadyDuration, RequestSettings.audioStreamChunkLength, clipData.queryParameters,
-                (clip, error) =>
+            request.RequestStream(clipData.clipStream, clipData.textToSpeak, RequestSettings.audioType, stream, clipData.queryParameters,
+                (clipStream, error) =>
                 {
                     // Apply
                     _webStreams.Remove(clipData.clipID);
-                    clipData.clip = clip;
+
+                    // Set new clip stream
+                    clipData.clipStream = clipStream;
+
                     // Unloaded
                     if (clipData.loadState == TTSClipLoadState.Unloaded)
                     {
                         error = WitConstants.CANCEL_ERROR;
-                        clip.DestroySafely();
-                        clip = null;
+                        clipStream?.Unload();
                     }
+
                     // Error
                     if (!string.IsNullOrEmpty(error))
                     {
@@ -318,7 +217,6 @@ namespace Meta.WitAi.TTS.Integrations
                     // Success
                     else
                     {
-                        clipData.clip.name = clipData.clipID;
                         WebStreamEvents?.OnStreamReady?.Invoke(clipData);
                         if (!stream)
                         {

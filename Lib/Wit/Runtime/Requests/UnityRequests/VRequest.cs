@@ -14,13 +14,12 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
-using Unity.Collections;
+using Meta.Voice.Audio;
 
 namespace Meta.WitAi.Requests
 {
@@ -736,54 +735,47 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Request audio clip with url, type, progress delegate & ready delegate
         /// </summary>
+        /// <param name="clipStream">The clip audio stream handler, if null one will be generated</param>
         /// <param name="unityRequest">The unity request to add a download handler to</param>
-        /// <param name="onClipReady">Called when the clip is ready for playback or has failed to load</param>
+        /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="onProgress">Clip progress callback</param>
-        public bool RequestAudioClip(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<AudioClip> onClipReady,
+        public bool RequestAudioStream(IAudioClipStream clipStream,
+            UnityWebRequest unityRequest,
+            RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
             AudioType audioType, bool audioStream,
-            float audioStreamReadyDuration, float audioStreamChunkLength,
             RequestProgressDelegate onProgress = null)
         {
             // Audio streaming
 #if UNITY_WEBGL
             if (audioStream && audioType != AudioType.OGGVORBIS)
 #else
-            if (audioStream && audioType != AudioType.OGGVORBIS && audioType != AudioType.UNKNOWN)
+            if (audioStream && !AudioStreamHandler.CanDecodeType(audioType))
 #endif
             {
-                VLog.W($"Audio streaming not supported by Unity for {(audioType == AudioType.UNKNOWN ? "PCM" : audioType.ToString())}");
+                VLog.W($"Audio streaming not currently supported by for {(audioType == AudioType.UNKNOWN ? "PCM" : audioType.ToString())}");
                 audioStream = false;
             }
 
             // Add audio download handler
             if (unityRequest.downloadHandler == null)
             {
-                // Use default handler
-                if (audioType != AudioType.UNKNOWN)
+                if (AudioStreamHandler.CanDecodeType(audioType))
                 {
-                    unityRequest.downloadHandler = new DownloadHandlerAudioClip(unityRequest.uri, audioType);
+                    // Check clip stream
+                    if (clipStream == null)
+                    {
+                        onClipStreamReady?.Invoke(null, "No clip stream provided");
+                        return false;
+                    }
+
+                    // Use custom audio stream handler
+                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, audioType, audioStream);
                 }
-                // Assumes Raw PCM
-                else if (!audioStream)
-                {
-                    unityRequest.downloadHandler = new DownloadHandlerBuffer();
-                }
-                // Assumes Raw PCM
                 else
                 {
-                    AudioStreamData data = new AudioStreamData()
-                    {
-                        ClipName = WitConstants.ENDPOINT_TTS_CLIP,
-                        ClipReadyLength = audioStreamReadyDuration,
-                        ClipChunkSize = Mathf.CeilToInt(audioStreamChunkLength * WitConstants.ENDPOINT_TTS_SAMPLE_RATE),
-                        DecodeType = AudioStreamDecodeType.PCM16,
-                        DecodeChannels = WitConstants.ENDPOINT_TTS_CHANNELS,
-                        DecodeSampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE
-                    };
-                    unityRequest.downloadHandler = new AudioStreamHandler(data);
+                    unityRequest.downloadHandler = new DownloadHandlerAudioClip(unityRequest.uri, audioType);
                 }
             }
 
@@ -794,104 +786,91 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform default request operation
-            return Request(unityRequest, (response, error) => OnRequestAudioReady(response, error, onClipReady), onProgress);
+            return Request(unityRequest, (response, error) => OnRequestAudioReady(response, error, onClipStreamReady), onProgress);
         }
         // Called on audio ready to be decoded
         private void OnRequestAudioReady(UnityWebRequest request, string error,
-            RequestCompleteDelegate<AudioClip> onClipReady)
+            RequestCompleteDelegate<IAudioClipStream> onClipStreamReady)
         {
             // Check error
             if (!string.IsNullOrEmpty(error))
             {
-                onClipReady?.Invoke(null, error);
+                onClipStreamReady?.Invoke(null, error);
                 return;
             }
 
             // Get clip
-            AudioClip clip = null;
+            IAudioClipStream clipStream = null;
             try
             {
-                // Default audio clip handler
-                if (request.downloadHandler is DownloadHandlerAudioClip)
-                {
-                    clip = DownloadHandlerAudioClip.GetContent(request);
-                }
                 // Custom Raw PCM streaming
-                else if (request.downloadHandler is AudioStreamHandler downloadHandlerRaw)
+                if (request.downloadHandler is AudioStreamHandler downloadHandlerRaw)
                 {
-                    clip = downloadHandlerRaw.Clip;
+                    clipStream = downloadHandlerRaw.ClipStream;
                 }
-                // Buffer assumes Raw PCM
-                else if (request.downloadHandler is DownloadHandlerBuffer)
+                // Unity audio clip stream with existing clip
+                else if (request.downloadHandler is DownloadHandlerAudioClip audioDownloader)
                 {
-                    AudioStreamHandler.GetClipFromRawDataAsync(request.downloadHandler.data, AudioStreamDecodeType.PCM16, WitConstants.ENDPOINT_TTS_CLIP,
-                        WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, (c, e) => OnRequestAudioDecoded(c, e, onClipReady));
+                    AudioClip clip = audioDownloader.audioClip;
+                    clipStream = new UnityAudioClipStream(clip);
+                    clipStream.UpdateState();
+                }
+                // Failed to decode audio clip
+                else if (request.downloadHandler != null)
+                {
+                    onClipStreamReady?.Invoke(null, $"Invalid download handler: {request.downloadHandler.GetType()}");
+                    return;
+                }
+                // Failed to decode audio clip
+                else
+                {
+                    onClipStreamReady?.Invoke(null, $"Missing download handler");
                     return;
                 }
             }
             catch (Exception e)
             {
                 // Failed to decode audio clip
-                onClipReady?.Invoke(null, $"Failed to decode audio clip\n{e}");
-                return;
-            }
-
-            // Finalize decode
-            OnRequestAudioDecoded(clip, error, onClipReady);
-        }
-        // Callback on audio decode completion
-        private void OnRequestAudioDecoded(AudioClip clip, string error,
-            RequestCompleteDelegate<AudioClip> onClipReady)
-        {
-            // Check error
-            if (!string.IsNullOrEmpty(error))
-            {
-                onClipReady?.Invoke(null, error);
+                onClipStreamReady?.Invoke(null, $"Failed to decode audio clip\n{e}");
                 return;
             }
 
             // Invalid clip
-            if (clip != null && (clip.channels == 0 || clip.length == 0f))
+            if (clipStream != null && clipStream.TotalSamples == 0)
             {
-                clip.DestroySafely();
-                clip = null;
-            }
-
-            // Clip is still missing
-            if (clip == null)
-            {
-                onClipReady?.Invoke(null, "Failed to decode empty audio clip");
+                clipStream.Unload();
+                onClipStreamReady?.Invoke(null, "Clip has no samples");
                 return;
             }
 
-            // Return clip
-            onClipReady?.Invoke(clip, string.Empty);
+            // Clip is still missing
+            if (clipStream == null)
+            {
+                onClipStreamReady?.Invoke(null, "Failed to decode audio clip stream");
+                return;
+            }
+
+            // Success
+            onClipStreamReady?.Invoke(clipStream, string.Empty);
         }
 
         /// <summary>
         /// Request audio clip with url, type, progress delegate & ready delegate
         /// </summary>
+        /// <param name="clipStream">The clip audio stream handler, if null one will be generated</param>
         /// <param name="uri">The url to be called</param>
         /// <param name="onClipReady">Called when the clip is ready for playback or has failed to load</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="onProgress">Clip progress callback</param>
-        public bool RequestAudioClip(Uri uri,
-            RequestCompleteDelegate<AudioClip> onClipReady,
+        public bool RequestAudioStream(IAudioClipStream clipStream,
+            Uri uri,
+            RequestCompleteDelegate<IAudioClipStream> onClipReady,
             AudioType audioType, bool audioStream,
-            float audioStreamReadyDuration, float audioStreamChunkLength,
+            float audioStreamReadyDuration,
             RequestProgressDelegate onProgress = null)
         {
-            UnityWebRequest audioRequest;
-            if (audioType == AudioType.UNKNOWN)
-            {
-                audioRequest = UnityWebRequest.Get(uri);
-            }
-            else
-            {
-                audioRequest = UnityWebRequestMultimedia.GetAudioClip(uri, audioType);
-            }
-            return RequestAudioClip(audioRequest, onClipReady, audioType, audioStream, audioStreamReadyDuration, audioStreamChunkLength, onProgress);
+            return RequestAudioStream(clipStream, new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onClipReady, audioType, audioStream, onProgress);
         }
         #endregion
     }

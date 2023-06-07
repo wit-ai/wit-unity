@@ -1135,7 +1135,7 @@ namespace Meta.WitAi.TTS.Utilities
                 {
                     error = "No TTSClipData found";
                 }
-                else if (requestData.ClipData.clip == null)
+                else if (requestData.ClipData.clipStream == null)
                 {
                     error = "No AudioClip found";
                 }
@@ -1226,9 +1226,9 @@ namespace Meta.WitAi.TTS.Utilities
             if (!string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
             {
                 // Somehow clip unloaded
-                if (requestData.ClipData.clip == null)
+                if (requestData.ClipData.clipStream == null)
                 {
-                    HandleLoadComplete(requestData, "AudioClip no longer exists");
+                    HandleLoadComplete(requestData, "AudioClipStream no longer exists");
                     return;
                 }
 
@@ -1330,7 +1330,7 @@ namespace Meta.WitAi.TTS.Utilities
                 OnPlaybackCancelled(lastRequestData, "TTSClipData was unloaded");
             }
             // Clip destroyed
-            else if (lastRequestData.ClipData.clip == null)
+            else if (lastRequestData.ClipData.clipStream == null)
             {
                 OnPlaybackCancelled(lastRequestData, "AudioClip no longer exists");
             }
@@ -1485,6 +1485,7 @@ namespace Meta.WitAi.TTS.Utilities
             log.AppendLine($"Voice: {requestData.ClipData?.voiceSettings?.SettingsId}");
             log.AppendLine($"Cache: {requestData.ClipData?.diskCacheSettings?.DiskCacheLocation.ToString()}");
             log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
+            log.AppendLine($"Audio Clip Stream Type: {(requestData.ClipData?.clipStream == null ? "NULL" : requestData.ClipData?.clipStream.GetType().ToString())}");
             log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");
             if (warning)
             {

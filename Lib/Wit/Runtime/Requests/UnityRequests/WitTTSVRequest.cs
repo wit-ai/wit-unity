@@ -12,7 +12,7 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Meta.Voice.Audio;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -130,12 +130,12 @@ namespace Meta.WitAi.Requests
         /// <param name="onClipReady">Clip ready to be played</param>
         /// <param name="onProgress">Clip load progress</param>
         /// <returns>False if request cannot be called</returns>
-        public bool RequestStream(string textToSpeak,
+        public bool RequestStream(IAudioClipStream clipStream,
+            string textToSpeak,
             TTSWitAudioType audioType,
             bool audioStream,
-            float audioStreamReadyDuration, float audioStreamChunkLength,
             Dictionary<string, string> ttsData,
-            RequestCompleteDelegate<AudioClip> onClipReady,
+            RequestCompleteDelegate<IAudioClipStream> onClipReady,
             RequestProgressDelegate onProgress = null)
         {
             // Error if no text is provided
@@ -157,8 +157,7 @@ namespace Meta.WitAi.Requests
                 UnityWebRequest unityRequest = GetUnityRequest(audioType, bytes);
 
                 // Perform an audio stream request
-                RequestAudioClip(unityRequest, onClipReady, GetAudioType(audioType), audioStream,
-                    audioStreamReadyDuration, audioStreamChunkLength, onProgress);
+                RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(audioType), audioStream, onProgress);
             });
             return true;
         }

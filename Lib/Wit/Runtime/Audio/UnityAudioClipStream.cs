@@ -207,7 +207,6 @@ namespace Meta.Voice.Audio
             ClipsGenerated++;
             AudioClip clip = AudioClip.Create($"AudioClip_{ClipsGenerated:000}", lengthSamples, channels, frequency, false);
             Clips.Add(clip);
-            VLog.D($"Generating TTS Clip #{ClipsGenerated}\nSamples: {lengthSamples}");
         }
         // Preload a single clip
         private static AudioClip GetCachedClip(int lengthSamples, int channels, int frequency)
