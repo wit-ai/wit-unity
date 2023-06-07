@@ -104,7 +104,7 @@ namespace Meta.Voice
             {
                 HandlePartialNlpResponse(responseData);
             }
-
+            
             // Error returned
             if (!string.IsNullOrEmpty(error))
             {

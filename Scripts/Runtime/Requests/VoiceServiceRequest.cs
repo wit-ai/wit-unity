@@ -55,6 +55,7 @@ namespace Meta.WitAi.Requests
         {
             VoiceServiceRequestResults results = new VoiceServiceRequestResults(newMessage);
             results.StatusCode = StatusCode;
+            results.ResponseData = ResponseData;
             return results;
         }
 
