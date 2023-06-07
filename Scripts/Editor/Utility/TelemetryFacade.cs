@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#if !VSDK_TELEMETRY_AVAILABLE && UNITY_2021_2_OR_NEWER
 using System.Collections.Generic;
 
-#if !VSDK_TELEMETRY_AVAILABLE
 namespace Meta.Voice.TelemetryUtilities
 {
     /// <summary>
