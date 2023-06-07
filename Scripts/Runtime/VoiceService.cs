@@ -68,7 +68,7 @@ namespace Meta.WitAi
         /// <summary>
         /// Returns true if this voice service is currently active and listening with the mic
         /// </summary>
-        public virtual bool Active => _requests != null && _requests.Count > 0;
+        public virtual bool Active => Requests != null && Requests.Count > 0;
 
         /// <summary>
         /// The Conduit-based dispatcher that dispatches incoming invocations based on a manifest.
@@ -78,7 +78,7 @@ namespace Meta.WitAi
         /// <summary>
         /// Returns true if the service is actively communicating with Wit.ai during an Activation. The mic may or may not still be active while this is true.
         /// </summary>
-        public virtual bool IsRequestActive => _requests.Count > 0;
+        public virtual bool IsRequestActive => Requests.Count > 0;
 
         /// <summary>
         /// Gets/Sets a custom transcription provider. This can be used to replace any built in asr
@@ -121,9 +121,7 @@ namespace Meta.WitAi
         /// <summary>
         /// All currently running requests
         /// </summary>
-        public VoiceServiceRequest[] Requests => _requests.ToArray();
-        // The set of initialized, queued or transmitting requests
-        protected HashSet<VoiceServiceRequest> _requests = new HashSet<VoiceServiceRequest>();
+        public HashSet<VoiceServiceRequest> Requests { get; } = new HashSet<VoiceServiceRequest>();
 
         /// <summary>
         /// Constructs a <see cref="VoiceService"/>
@@ -183,7 +181,7 @@ namespace Meta.WitAi
             textRequest.Events.OnCancel.AddListener(HandleRequestResults);
             textRequest.Events.OnFailed.AddListener(HandleRequestResults);
             textRequest.Events.OnSuccess.AddListener(HandleRequestResults);
-            _requests.Add(textRequest);
+            Requests.Add(textRequest);
         }
         #endregion TEXT REQUESTS
 
@@ -213,9 +211,9 @@ namespace Meta.WitAi
         protected virtual void HandleRequestResults(VoiceServiceRequest request)
         {
             // Remove request from requests list
-            if (_requests.Contains(request))
+            if (Requests.Contains(request))
             {
-                _requests.Remove(request);
+                Requests.Remove(request);
             }
         }
         #endregion SHARED
@@ -297,7 +295,7 @@ namespace Meta.WitAi
             audioRequest.Events.OnCancel.AddListener(HandleRequestResults);
             audioRequest.Events.OnFailed.AddListener(HandleRequestResults);
             audioRequest.Events.OnSuccess.AddListener(HandleRequestResults);
-            _requests.Add(audioRequest);
+            Requests.Add(audioRequest);
         }
         // Callback for early validation
         protected virtual void OnAudioPartialResponse(VoiceServiceRequest audioRequest)
@@ -506,6 +504,10 @@ namespace Meta.WitAi
         /// Returns true if voice service is currently active or request is transmitting
         /// </summary>
         bool IsRequestActive { get; }
+        /// <summary>
+        /// The current running voice requests
+        /// </summary>
+        HashSet<VoiceServiceRequest> Requests { get; }
 
         /// <summary>
         /// Returns true Mic is still enabled
