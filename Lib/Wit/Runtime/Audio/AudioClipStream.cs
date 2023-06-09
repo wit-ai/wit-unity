@@ -120,12 +120,12 @@ namespace Meta.Voice.Audio
         public virtual void UpdateState()
         {
             // Stream ready
-            if (!IsReady && (StreamReadyLength <= 0f || (float)AddedSamples / (Channels * SampleRate) >= StreamReadyLength))
+            if (!IsReady && (StreamReadyLength <= 0f || (float)AddedSamples * Channels * SampleRate >= StreamReadyLength))
             {
                 HandleStreamReady();
             }
             // Stream complete
-            else if (!IsComplete && TotalSamples > 0 && AddedSamples == TotalSamples)
+            if (!IsComplete && TotalSamples > 0 && AddedSamples == TotalSamples)
             {
                 HandleStreamComplete();
             }
