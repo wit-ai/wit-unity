@@ -15,7 +15,6 @@ namespace Meta.Conduit.Editor
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using UnityEngine;
 
     /// <summary>
     /// Generates manifests from the codebase that capture the essence of what we need to expose to the backend.

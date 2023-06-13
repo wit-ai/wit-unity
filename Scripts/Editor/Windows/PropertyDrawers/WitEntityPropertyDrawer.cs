@@ -61,7 +61,7 @@ namespace Meta.WitAi.Windows
                 return;
             }
 
-            var assemblyWalker = WitConfigurationEditor.AssemblyWalker;
+            var assemblyWalker = ConduitManifestGenerationManager.GetInstance(configuration).AssemblyWalker;
             if (assemblyWalker == null)
             {
                 return;

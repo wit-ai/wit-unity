@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Meta.WitAi.Configuration;
-using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
 using UnityEngine.Serialization;
