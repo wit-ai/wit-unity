@@ -7,10 +7,15 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.WitAi.Requests
 {
@@ -46,6 +51,122 @@ namespace Meta.WitAi.Requests
                 Results.StatusCode = newCode;
             }
         }
+        
+        #region Simulation
+        protected override bool OnSimulateResponse()
+        {
+            if (null == simulatedResponse) return false;
+            
+
+            // Begin calling on main thread if needed
+            WatchMainThreadCallbacks();
+            
+            SimulateResponse();
+            return true;
+        }
+
+        private async void SimulateResponse()
+        {
+            var stackTrace = new StackTrace();
+            StatusCode = simulatedResponse.code;
+            var statusDescription = simulatedResponse.responseDescription;
+            for (int i = 0; i < simulatedResponse.messages.Count - 1; i++)
+            {
+                var message = simulatedResponse.messages[i];
+                await System.Threading.Tasks.Task.Delay((int)(message.delay * 1000));
+                var partialResponse = WitResponseNode.Parse(message.responseBody);
+                HandlePartialNlpResponse(partialResponse);
+            }
+
+            var lastMessage = simulatedResponse.messages.Last();
+            await System.Threading.Tasks.Task.Delay((int)(lastMessage.delay * 1000));
+            var lastResponseData = WitResponseNode.Parse(lastMessage.responseBody);
+            MainThreadCallback(() =>
+            {
+                // Send partial data if not previously sent
+                if (!lastResponseData.HasResponse())
+                {
+                    HandlePartialNlpResponse(lastResponseData);
+                }
+
+                // Apply error if needed
+                if (null != lastResponseData)
+                {
+                    var error = lastResponseData["error"];
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        statusDescription += $"\n{error}";
+                    }
+                }
+
+                // Call completion delegate
+                HandleFinalNlpResponse(lastResponseData,
+                    StatusCode == (int)HttpStatusCode.OK
+                        ? string.Empty
+                        : $"{statusDescription}\n\nStackTrace:\n{stackTrace}\n\n");
+            });
+        }
+
+        #endregion
+        
+        #region Thread Safety
+        // Check performing
+        private CoroutineUtility.CoroutinePerformer _performer = null;
+        // All actions
+        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+
+        // While active, perform any sent callbacks
+        protected void WatchMainThreadCallbacks()
+        {
+            // Ignore if already performing
+            if (_performer != null)
+            {
+                return;
+            }
+
+            // Check callbacks every frame (editor or runtime)
+            _performer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
+        }
+        // Every frame check for callbacks & perform any found
+        private System.Collections.IEnumerator PerformMainThreadCallbacks()
+        {
+            // While checking, continue
+            while (HasMainThreadCallbacks())
+            {
+                // Wait for frame
+                if (Application.isPlaying && !Application.isBatchMode)
+                {
+                    yield return new WaitForEndOfFrame();
+                }
+                // Wait for a tick
+                else
+                {
+                    yield return null;
+                }
+
+                // Perform if possible
+                while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
+                {
+                    result();
+                }
+            }
+            _performer = null;
+        }
+        // If active or performing callbacks
+        private bool HasMainThreadCallbacks()
+        {
+            return IsActive || _mainThreadCallbacks.Count > 0;
+        }
+        // Called from background thread
+        protected void MainThreadCallback(Action action)
+        {
+            if (action == null)
+            {
+                return;
+            }
+            _mainThreadCallbacks.Enqueue(action);
+        }
+        #endregion
 
         /// <summary>
         /// Returns an empty result object with the current status code

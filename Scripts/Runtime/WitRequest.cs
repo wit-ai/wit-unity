@@ -20,8 +20,8 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
+using Meta.WitAi.Utilities;
 using UnityEngine;
-using UnityEngine.Networking;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -419,7 +419,7 @@ namespace Meta.WitAi
 
             // Begin calling on main thread if needed
             WatchMainThreadCallbacks();
-
+            
             // Perform http post or put
             if (_request.Method == "POST" || _request.Method == "PUT")
             {
@@ -977,64 +977,5 @@ namespace Meta.WitAi
             onResponse = null;
         }
         #endregion HTTP REQUEST
-
-        #region CALLBACKS
-        // Check performing
-        private CoroutineUtility.CoroutinePerformer _performer = null;
-        // All actions
-        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
-
-        // Called from background thread
-        private void MainThreadCallback(Action action)
-        {
-            if (action == null)
-            {
-                return;
-            }
-            _mainThreadCallbacks.Enqueue(action);
-        }
-        // While active, perform any sent callbacks
-        private void WatchMainThreadCallbacks()
-        {
-            // Ignore if already performing
-            if (_performer != null)
-            {
-                return;
-            }
-
-            // Check callbacks every frame (editor or runtime)
-            _performer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
-        }
-        // Every frame check for callbacks & perform any found
-        private System.Collections.IEnumerator PerformMainThreadCallbacks()
-        {
-            // While checking, continue
-            while (HasMainThreadCallbacks())
-            {
-                // Wait for frame
-                if (Application.isPlaying && !Application.isBatchMode)
-                {
-                    yield return new WaitForEndOfFrame();
-                }
-                // Wait for a tick
-                else
-                {
-                    yield return null;
-                }
-
-                // Perform if possible
-                while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
-                {
-                    result();
-                }
-            }
-            _performer = null;
-        }
-        // If active or performing callbacks
-        private bool HasMainThreadCallbacks()
-        {
-            return IsActive || _mainThreadCallbacks.Count > 0;
-        }
-        #endregion
     }
 }

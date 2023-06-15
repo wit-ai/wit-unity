@@ -9,6 +9,7 @@
 using System;
 using System.Text;
 using Meta.WitAi;
+using Meta.WitAi.Data;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -28,6 +29,10 @@ namespace Meta.Voice
         where TEvents : VoiceRequestEvents<TUnityEvent>
         where TResults : IVoiceRequestResults
     {
+        #region SIMULATION
+        public static SimulatedResponse simulatedResponse;
+        #endregion
+        
         /// <summary>
         /// The states of a voice request
         /// </summary>
@@ -113,7 +118,10 @@ namespace Meta.Voice
                     break;
                 case VoiceRequestState.Transmitting:
                     OnSend();
-                    HandleSend();
+                    if (!OnSimulateResponse())
+                    {
+                        HandleSend();
+                    }
                     break;
                 case VoiceRequestState.Canceled:
                     HandleCancel();
@@ -263,12 +271,21 @@ namespace Meta.Voice
             Log($"Request Transmitting");
             RaiseEvent(Events?.OnSend);
         }
-
+        
         /// <summary>
         /// Child class send implementation
         /// Call HandleFailure, HandleCancel from this class
         /// </summary>
         protected abstract void HandleSend();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>True if the response was simulated</returns>
+        protected virtual bool OnSimulateResponse()
+        {
+            return false;
+        }
         #endregion TRANSMISSION
 
         #region RESULTS
