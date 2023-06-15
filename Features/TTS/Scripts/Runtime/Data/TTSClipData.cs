@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.WitAi.Requests;
 using Meta.Voice.Audio;
 using UnityEngine;
 
@@ -37,6 +36,11 @@ namespace Meta.WitAi.TTS.Data
         // Cache settings for request
         public TTSDiskCacheSettings diskCacheSettings;
 
+        /// <summary>
+        /// Unique request id used for tracking & logging
+        /// </summary>
+        public string queryRequestId => _queryRequestId;
+        private string _queryRequestId = Guid.NewGuid().ToString();
         // Request data
         public Dictionary<string, string> queryParameters;
 

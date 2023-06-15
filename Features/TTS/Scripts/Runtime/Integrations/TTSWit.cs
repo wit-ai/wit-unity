@@ -119,6 +119,15 @@ namespace Meta.WitAi.TTS.Integrations
         {
             return WitTTSVRequest.GetAudioType(RequestSettings.audioType);
         }
+        // Get tts request prior to transmission
+        private WitTTSVRequest GetTtsRequest(TTSClipData clipData)
+        {
+            // Apply audio type
+            clipData.audioType = GetAudioType();
+
+            // Return data
+            return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId, clipData.textToSpeak, clipData.queryParameters, RequestSettings.audioType, RequestSettings.audioStream);
+        }
         #endregion
 
         #region ITTSWebHandler Streams
@@ -185,8 +194,8 @@ namespace Meta.WitAi.TTS.Integrations
             bool stream = Application.isPlaying && RequestSettings.audioStream;
 
             // Request tts
-            WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestStream(clipData.clipStream, clipData.textToSpeak, RequestSettings.audioType, stream, clipData.queryParameters,
+            WitTTSVRequest request = GetTtsRequest(clipData);
+            request.RequestStream(clipData.clipStream,
                 (clipStream, error) =>
                 {
                     // Apply
@@ -286,8 +295,8 @@ namespace Meta.WitAi.TTS.Integrations
             }
 
             // Request tts
-            WitTTSVRequest request = new WitTTSVRequest(RequestSettings.configuration);
-            request.RequestDownload(downloadPath, clipData.textToSpeak, RequestSettings.audioType, clipData.queryParameters,
+            WitTTSVRequest request = GetTtsRequest(clipData);
+            request.RequestDownload(downloadPath,
                 (success, error) =>
                 {
                     _webDownloads.Remove(clipData.clipID);
