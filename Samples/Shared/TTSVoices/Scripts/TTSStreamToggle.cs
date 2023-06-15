@@ -69,6 +69,7 @@ namespace Meta.WitAi.TTS.Samples
             if (_service != null)
             {
                 _service.RequestSettings.audioStream = toStreaming;
+                _service.UnloadAll();
             }
         }
         // Update if changed externally

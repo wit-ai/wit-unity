@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using Meta.WitAi;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -83,7 +84,12 @@ namespace Meta.Voice.Samples.TTSVoices
         /// </summary>
         protected virtual void Awake()
         {
-            // Find existing toggle if no prefab is assigned
+            FindCellPrefab();
+        }
+
+        // Find existing toggle if no prefab is assigned
+        private void FindCellPrefab()
+        {
             if (_dropdownListCellPrefab == null)
             {
                 _dropdownListCellPrefab = _dropdownListScrollRect.content.GetComponentInChildren<Toggle>();
@@ -175,6 +181,14 @@ namespace Meta.Voice.Samples.TTSVoices
             foreach (var cell in _cells)
             {
                 cell.gameObject.SetActive(false);
+            }
+
+            // Setup if needed, or log error
+            FindCellPrefab();
+            if (_dropdownListCellPrefab == null)
+            {
+                VLog.W($"Cannot load {gameObject.name} without a cell prefab");
+                return;
             }
 
             // Iterate all options
