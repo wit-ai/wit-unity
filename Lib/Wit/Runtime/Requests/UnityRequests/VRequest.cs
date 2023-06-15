@@ -535,7 +535,7 @@ namespace Meta.WitAi.Requests
             // Android editor: simulate jar handling
             if (Application.isPlaying && checkPath.StartsWith(Application.streamingAssetsPath))
 #else
-            // Jar file (Android streaming assets)
+            // Jar file
             if (checkPath.StartsWith("jar"))
 #endif
             {
@@ -763,15 +763,22 @@ namespace Meta.WitAi.Requests
             {
                 if (AudioStreamHandler.CanDecodeType(audioType))
                 {
-                    // Check clip stream
+                    // Cannot download without clip stream info
                     if (clipStream == null)
                     {
                         onClipStreamReady?.Invoke(null, "No clip stream provided");
                         return false;
                     }
-
                     // Use custom audio stream handler
-                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, audioType, audioStream);
+                    if (audioStream)
+                    {
+                        unityRequest.downloadHandler = new AudioStreamHandler(clipStream, audioType);
+                    }
+                    // Use buffer stream handler
+                    else
+                    {
+                        unityRequest.downloadHandler = new DownloadHandlerBuffer();
+                    }
                 }
                 else
                 {
@@ -786,10 +793,10 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform default request operation
-            return Request(unityRequest, (response, error) => OnRequestAudioReady(response, error, onClipStreamReady), onProgress);
+            return Request(unityRequest, (response, error) => OnRequestAudioReady(clipStream, audioType, response, error, onClipStreamReady), onProgress);
         }
         // Called on audio ready to be decoded
-        private void OnRequestAudioReady(UnityWebRequest request, string error,
+        private void OnRequestAudioReady(IAudioClipStream clipStream, AudioType audioType, UnityWebRequest request, string error,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady)
         {
             // Check error
@@ -800,7 +807,6 @@ namespace Meta.WitAi.Requests
             }
 
             // Get clip
-            IAudioClipStream clipStream = null;
             try
             {
                 // Custom Raw PCM streaming
@@ -809,8 +815,18 @@ namespace Meta.WitAi.Requests
                     clipStream = downloadHandlerRaw.ClipStream;
                 }
                 // Unity audio clip stream with existing clip
+                else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
+                {
+                    byte[] data = rawDownloader.data;
+                    float[] samples = AudioStreamHandler.DecodeAudio(data,
+                        AudioStreamHandler.GetDecodeType(audioType));
+                    clipStream.SetTotalSamples(samples.Length);
+                    clipStream.AddSamples(samples);
+                }
+                // Unity audio clip stream with existing clip
                 else if (request.downloadHandler is DownloadHandlerAudioClip audioDownloader)
                 {
+                    clipStream?.Unload();
                     AudioClip clip = audioDownloader.audioClip;
                     clipStream = new UnityAudioClipStream(clip);
                     clipStream.UpdateState();

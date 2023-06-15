@@ -146,8 +146,6 @@ namespace Meta.WitAi.TTS
                 WebHandler.WebStreamEvents.OnStreamCancel.AddListener(OnWebStreamCancel);
                 WebHandler.WebStreamEvents.OnStreamReady.AddListener(OnWebStreamReady);
                 WebHandler.WebStreamEvents.OnStreamError.AddListener(OnWebStreamError);
-                WebHandler.WebStreamEvents.OnStreamClipUpdate.AddListener(OnStreamClipUpdated);
-                WebHandler.WebStreamEvents.OnStreamComplete.AddListener(OnWebStreamComplete);
                 WebHandler.WebDownloadEvents.OnDownloadBegin.AddListener(OnWebDownloadBegin);
                 WebHandler.WebDownloadEvents.OnDownloadCancel.AddListener(OnWebDownloadCancel);
                 WebHandler.WebDownloadEvents.OnDownloadSuccess.AddListener(OnWebDownloadSuccess);
@@ -182,8 +180,6 @@ namespace Meta.WitAi.TTS
                 WebHandler.WebStreamEvents.OnStreamCancel.RemoveListener(OnWebStreamCancel);
                 WebHandler.WebStreamEvents.OnStreamReady.RemoveListener(OnWebStreamReady);
                 WebHandler.WebStreamEvents.OnStreamError.RemoveListener(OnWebStreamError);
-                WebHandler.WebStreamEvents.OnStreamClipUpdate.RemoveListener(OnStreamClipUpdated);
-                WebHandler.WebStreamEvents.OnStreamComplete.RemoveListener(OnWebStreamComplete);
                 WebHandler.WebDownloadEvents.OnDownloadBegin.RemoveListener(OnWebDownloadBegin);
                 WebHandler.WebDownloadEvents.OnDownloadCancel.RemoveListener(OnWebDownloadCancel);
                 WebHandler.WebDownloadEvents.OnDownloadSuccess.RemoveListener(OnWebDownloadSuccess);
@@ -353,12 +349,9 @@ namespace Meta.WitAi.TTS
                 diskCacheSettings = diskCacheSettings,
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
-                queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings)
+                queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
+                clipStream = CreateClipStream()
             };
-
-            // Generate new clip stream
-            IAudioClipStream clipStream = CreateClipStream();
-            SetClipStream(clipData, clipStream);
 
             // Return generated clip
             return clipData;
@@ -375,50 +368,6 @@ namespace Meta.WitAi.TTS
             // Get audio clip via audio system
             return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,
                 WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-        }
-        // Sets a clip stream to the clip
-        protected virtual void SetClipStream(TTSClipData clipData, IAudioClipStream clipStream)
-        {
-            // Remove previous events
-            if (clipData.clipStream != null)
-            {
-                clipData.clipStream.OnStreamUpdated = null;
-                clipData.clipStream.OnStreamComplete = null;
-            }
-
-            // Apply clip stream
-            clipData.clipStream = clipStream;
-
-            // Add new events
-            if (clipData.clipStream != null)
-            {
-                clipData.clipStream.OnStreamUpdated = (cs) => OnClipStreamUpdated(clipData, cs);
-                clipData.clipStream.OnStreamComplete = (cs) => OnClipStreamComplete(clipData, cs);
-            }
-        }
-        // Clip stream updated
-        protected virtual void OnClipStreamUpdated(TTSClipData clipData, IAudioClipStream clipStream)
-        {
-            // Ignore invalid
-            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
-            {
-                return;
-            }
-
-            // Updated
-            WebHandler?.WebStreamEvents?.OnStreamClipUpdate?.Invoke(clipData);
-        }
-        // Clip stream complete
-        protected virtual void OnClipStreamComplete(TTSClipData clipData, IAudioClipStream clipStream)
-        {
-            // Ignore invalid
-            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
-            {
-                return;
-            }
-
-            // Complete
-            WebHandler?.WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
         }
         // Get audio type
         protected virtual AudioType GetAudioType()
@@ -625,43 +574,16 @@ namespace Meta.WitAi.TTS
         private void OnWebStreamBegin(TTSClipData clipData) => OnStreamBegin(clipData, false);
         private void OnStreamBegin(TTSClipData clipData, bool fromDisk)
         {
+            // Set delegates for clip stream update/completion
+            if (clipData.clipStream != null)
+            {
+                clipData.clipStream.OnStreamUpdated = (cs) => OnStreamUpdated(clipData, cs, fromDisk);
+                clipData.clipStream.OnStreamComplete = (cs) => OnStreamComplete(clipData, cs, fromDisk);
+            }
+
             // Callback delegate
             VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Begin", clipData));
             Events?.Stream?.OnStreamBegin?.Invoke(clipData);
-        }
-        // Handle successful completion of disk cache streaming
-        private void OnDiskStreamReady(TTSClipData clipData) => OnStreamReady(clipData, true);
-        private void OnWebStreamReady(TTSClipData clipData) => OnStreamReady(clipData, false);
-        private void OnStreamReady(TTSClipData clipData, bool fromDisk)
-        {
-            // Refresh cache for file size
-            if (RuntimeCacheHandler != null)
-            {
-                // Stop forcing an unload if runtime cache update fails
-                RuntimeCacheHandler.OnClipRemoved.RemoveListener(OnRuntimeClipRemoved);
-                bool failed = !RuntimeCacheHandler.AddClip(clipData);
-                RuntimeCacheHandler.OnClipRemoved.AddListener(OnRuntimeClipRemoved);
-
-                // Handle fail directly
-                if (failed)
-                {
-                    OnStreamError(clipData, "Removed from runtime cache due to file size", fromDisk);
-                    OnRuntimeClipRemoved(clipData);
-                    return;
-                }
-            }
-
-            // Set clip stream
-            SetClipStream(clipData, clipData.clipStream);
-            SetClipLoadState(clipData, TTSClipLoadState.Loaded);
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
-
-            // Invoke playback is ready
-            clipData.onPlaybackReady?.Invoke(string.Empty);
-            clipData.onPlaybackReady = null;
-
-            // Callback delegate
-            Events?.Stream?.OnStreamReady?.Invoke(clipData);
         }
         // Handle cancel of disk cache streaming
         private void OnDiskStreamCancel(TTSClipData clipData) => OnStreamCancel(clipData, true);
@@ -708,16 +630,63 @@ namespace Meta.WitAi.TTS
             // Unload clip
             Unload(clipData);
         }
-        // Web stream complete
-        private void OnStreamClipUpdated(TTSClipData clipData)
+        // Handle successful completion of disk cache streaming
+        private void OnDiskStreamReady(TTSClipData clipData) => OnStreamReady(clipData, true);
+        private void OnWebStreamReady(TTSClipData clipData) => OnStreamReady(clipData, false);
+        private void OnStreamReady(TTSClipData clipData, bool fromDisk)
         {
-            VLog.D(GetClipLog($"Stream Clip Updated", clipData));
+            // Refresh cache for file size
+            if (RuntimeCacheHandler != null)
+            {
+                // Stop forcing an unload if runtime cache update fails
+                RuntimeCacheHandler.OnClipRemoved.RemoveListener(OnRuntimeClipRemoved);
+                bool failed = !RuntimeCacheHandler.AddClip(clipData);
+                RuntimeCacheHandler.OnClipRemoved.AddListener(OnRuntimeClipRemoved);
+
+                // Handle fail directly
+                if (failed)
+                {
+                    OnStreamError(clipData, "Removed from runtime cache due to file size", fromDisk);
+                    OnRuntimeClipRemoved(clipData);
+                    return;
+                }
+            }
+
+            // Set delegates again since the stream may have changed during setup
+            if (clipData.clipStream != null)
+            {
+                clipData.clipStream.OnStreamUpdated = (cs) => OnStreamUpdated(clipData, cs, fromDisk);
+                clipData.clipStream.OnStreamComplete = (cs) => OnStreamComplete(clipData, cs, fromDisk);
+            }
+
+            // Set clip stream state
+            SetClipLoadState(clipData, TTSClipLoadState.Loaded);
+            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
+
+            // Invoke playback is ready
+            clipData.onPlaybackReady?.Invoke(string.Empty);
+            clipData.onPlaybackReady = null;
+
+            // Callback delegate
+            Events?.Stream?.OnStreamReady?.Invoke(clipData);
+        }
+        // Stream clip update
+        private void OnStreamUpdated(TTSClipData clipData, IAudioClipStream clipStream, bool fromDisk)
+        {
+            // Ignore invalid
+            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
+            {
+                return;
+            }
+
+            // Log & call event
+            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Updated", clipData));
             Events?.Stream?.OnStreamClipUpdate?.Invoke(clipData);
         }
-        // Web stream complete
-        private void OnWebStreamComplete(TTSClipData clipData)
+        // Stream complete
+        private void OnStreamComplete(TTSClipData clipData, IAudioClipStream clipStream, bool fromDisk)
         {
-            VLog.D(GetClipLog($"Web Stream Complete", clipData));
+            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Complete", clipData));
             Events?.Stream?.OnStreamComplete?.Invoke(clipData);
         }
         #endregion
@@ -774,13 +743,9 @@ namespace Meta.WitAi.TTS
                 // Cancel disk cache stream
                 DiskCacheHandler?.CancelDiskCacheStream(clipData);
             }
-            // Destroy clip
-            if (clipData.clipStream != null)
-            {
-                IAudioClipStream clipStream = clipData.clipStream;
-                SetClipStream(clipData, null);
-                clipStream.Unload();
-            }
+
+            // Unloads clip stream
+            clipData.clipStream = null;
 
             // Clip is now unloaded
             SetClipLoadState(clipData, TTSClipLoadState.Unloaded);

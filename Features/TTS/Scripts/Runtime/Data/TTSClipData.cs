@@ -48,8 +48,11 @@ namespace Meta.WitAi.TTS.Data
             {
                 // Unload previous clip stream
                 IAudioClipStream v = value;
-                if (_clipStream != v && _clipStream != null)
+                if (_clipStream != null && _clipStream != v)
                 {
+                    clipStream.OnStreamReady = null;
+                    clipStream.OnStreamUpdated = null;
+                    clipStream.OnStreamComplete = null;
                     _clipStream.Unload();
                 }
                 // Apply new clip stream

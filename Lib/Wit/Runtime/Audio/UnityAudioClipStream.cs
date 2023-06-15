@@ -51,7 +51,7 @@ namespace Meta.Voice.Audio
         public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength, float newChunkLength) : base(newChannels, newSampleRate, newStreamReadyLength)
         {
             _streamable = true;
-            _chunkSize = Mathf.CeilToInt(Mathf.Max(newChunkLength, 0.1f) * newChannels * newSampleRate);
+            _chunkSize = Mathf.CeilToInt(Mathf.Max(newChunkLength, newStreamReadyLength) * newChannels * newSampleRate);
         }
 
         /// <summary>

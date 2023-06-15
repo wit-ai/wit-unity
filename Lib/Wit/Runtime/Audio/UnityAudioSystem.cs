@@ -20,6 +20,12 @@ namespace Meta.Voice.Audio
         /// Chunk buffer length in seconds
         /// </summary>
         public float ChunkBufferLength = UnityAudioClipStream.DEFAULT_CHUNK_LENGTH;
+
+        /// <summary>
+        /// Audio clip ready length in seconds
+        /// </summary>
+        public float AudioClipReadyLength = 1f;
+
         /// <summary>
         /// Chunk buffer length in seconds
         /// </summary>
@@ -58,7 +64,7 @@ namespace Meta.Voice.Audio
         /// <param name="channels">Number of channels within audio</param>
         /// <param name="sampleRate">Desired rate of playback</param>
         public IAudioClipStream GetAudioClipStream(int channels, int sampleRate) =>
-            new UnityAudioClipStream(channels, sampleRate, Mathf.CeilToInt(ChunkBufferLength * channels * sampleRate));
+            new UnityAudioClipStream(channels, sampleRate, AudioClipReadyLength, ChunkBufferLength);
 
         /// <summary>
         /// Returns a new audio player for managing audio clip stream playback states
