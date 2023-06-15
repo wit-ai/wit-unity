@@ -48,7 +48,11 @@ namespace Meta.WitAi.Requests
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="requestId">A unique identifier that can be used to track the request</param>
         /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
-        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false)
+        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
+        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
+        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false,
+            RequestProgressDelegate onDownloadProgress = null,
+            RequestFirstResponseDelegate onFirstResponse = null) : base(onDownloadProgress, onFirstResponse)
         {
             Configuration = configuration;
             RequestId = requestId;
@@ -75,13 +79,11 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Perform a generic request
         /// </summary>
-        /// <param name="unityRequest">The unity request</param>
-        /// <param name="onProgress"></param>
-        /// <param name="onComplete"></param>
-        /// <returns></returns>
+        /// <param name="unityRequest">The request to be managed</param>
+        /// <param name="onComplete">The callback delegate on request completion</param>
+        /// <returns>False if the request cannot be performed</returns>
         public override bool Request(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<UnityWebRequest> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<UnityWebRequest> onComplete)
         {
             // Ensure configuration is set
             if (Configuration == null)
@@ -91,7 +93,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform base
-            return base.Request(unityRequest, onComplete, onProgress);
+            return base.Request(unityRequest, onComplete);
         }
 
         /// <summary>
@@ -99,15 +101,13 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="uriEndpoint">Endpoint name</param>
         /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The download progress</param>
+        /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete, onProgress);
+            return RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete);
         }
 
         /// <summary>
@@ -116,15 +116,13 @@ namespace Meta.WitAi.Requests
         /// <param name="uriEndpoint">Endpoint name</param>
         /// <param name="uriParams">Endpoint url parameters</param>
         /// <param name="postText">Text to be sent to endpoint</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The upload progress</param>
+        /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete, onProgress);
+            return RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete);
         }
 
         /// <summary>
@@ -138,10 +136,9 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPut<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete, onProgress);
+            return RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete);
         }
         #endregion
 

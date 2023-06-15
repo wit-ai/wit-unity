@@ -45,6 +45,8 @@ namespace Meta.WitAi.Requests
 
         // Request progress delegate
         public delegate void RequestProgressDelegate(float progress);
+        // Request first response
+        public delegate void RequestFirstResponseDelegate();
         // Default request completion delegate
         public delegate void RequestCompleteDelegate<TResult>(TResult result, string error);
 
@@ -81,19 +83,32 @@ namespace Meta.WitAi.Requests
         private UnityWebRequest _request;
         // Callbacks for progress & completion
         private RequestProgressDelegate _onDownloadProgress;
+        private RequestFirstResponseDelegate _onFirstResponse;
         private RequestCompleteDelegate<UnityWebRequest> _onComplete;
 
         // Coroutine running the request
         private CoroutineUtility.CoroutinePerformer _coroutine;
 
         /// <summary>
+        /// A constructor that takes in download progress delegate & first response delegate
+        /// </summary>
+        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
+        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
+        public VRequest(RequestProgressDelegate onDownloadProgress = null,
+            RequestFirstResponseDelegate onFirstResponse = null)
+        {
+            _onDownloadProgress = onDownloadProgress;
+            _onFirstResponse = onFirstResponse;
+        }
+
+        /// <summary>
         /// Initialize with a request and an on completion callback
         /// </summary>
         /// <param name="unityRequest">The unity request to be performed</param>
-        /// <param name="onProgress">The callback on get progress</param>
+        /// <param name="onProgress"></param>
         /// <param name="onComplete">The callback on completion, returns the request & error string</param>
         /// <returns>False if the request cannot be performed</returns>
-        public virtual bool Request(UnityWebRequest unityRequest, RequestCompleteDelegate<UnityWebRequest> onComplete, RequestProgressDelegate onDownloadProgress = null)
+        public virtual bool Request(UnityWebRequest unityRequest, RequestCompleteDelegate<UnityWebRequest> onComplete)
         {
             // Already setup
             if (_request != null)
@@ -104,7 +119,6 @@ namespace Meta.WitAi.Requests
 
             // Setup
             _request = unityRequest;
-            _onDownloadProgress = onDownloadProgress;
             _onComplete = onComplete;
             IsPerforming = false;
             IsComplete = false;
@@ -186,6 +200,13 @@ namespace Meta.WitAi.Requests
                     {
                         DownloadProgress = newProgress;
                         _onDownloadProgress?.Invoke(DownloadProgress);
+                    }
+
+                    // First response received
+                    if (_onFirstResponse != null && _request.downloadedBytes > 0)
+                    {
+                        _onFirstResponse.Invoke();
+                        _onFirstResponse = null;
                     }
 
                     // Stream is ready
@@ -292,6 +313,7 @@ namespace Meta.WitAi.Requests
 
             // Remove delegates
             _onDownloadProgress = null;
+            _onFirstResponse = null;
             _onComplete = null;
 
             // Dispose
@@ -414,8 +436,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">Called once file data has been loaded</param>
         /// <returns>False if cannot begin request</returns>
         public bool RequestFile(Uri uri,
-            RequestCompleteDelegate<byte[]> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<byte[]> onComplete)
         {
             // Get unity request
             UnityWebRequest unityRequest = UnityWebRequest.Get(uri);
@@ -439,7 +460,7 @@ namespace Meta.WitAi.Requests
 
                 // Success
                 onComplete?.Invoke(fileData, string.Empty);
-            }, onProgress);
+            });
         }
 
         /// <summary>
@@ -447,10 +468,8 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request to add a download handler to</param>
         /// <param name="onComplete">Called once download has completed</param>
-        /// <param name="onProgress">Download progress delegate</param>
         public bool RequestFileDownload(string downloadPath, UnityWebRequest unityRequest,
-            RequestCompleteDelegate<bool> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<bool> onComplete)
         {
             // Get temporary path for download
             string tempDownloadPath = downloadPath + ".tmp";
@@ -510,7 +529,7 @@ namespace Meta.WitAi.Requests
 
                 // Complete
                 onComplete?.Invoke(string.IsNullOrEmpty(error), error);
-            }, onProgress);
+            });
         }
 
         /// <summary>
@@ -540,12 +559,7 @@ namespace Meta.WitAi.Requests
 #endif
             {
                 Uri uri = new Uri(CleanUrl(checkPath));
-                return RequestFile(uri, (response, error) =>
-                {
-                    // If getting here, most likely failed but double check anyway
-                    onComplete?.Invoke(string.IsNullOrEmpty(error), error);
-                },
-                (progress) =>
+                _onDownloadProgress = (progress) =>
                 {
                     // Stop as early as possible
                     if (progress > 0f && progress < 1f)
@@ -556,6 +570,11 @@ namespace Meta.WitAi.Requests
                         localHandle?.Invoke(true, String.Empty);
                         VLog.D("Async Check File Exists Success");
                     }
+                };
+                return RequestFile(uri, (response, error) =>
+                {
+                    // If getting here, most likely failed but double check anyway
+                    onComplete?.Invoke(string.IsNullOrEmpty(error), error);
                 });
             }
 
@@ -572,10 +591,8 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The text download progress</param>
         public bool RequestText(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<string> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<string> onComplete)
         {
             return Request(unityRequest, (response, error) =>
             {
@@ -594,7 +611,7 @@ namespace Meta.WitAi.Requests
                 }
                 // Success
                 onComplete?.Invoke(text, string.Empty);
-            }, onProgress);
+            });
         }
         #endregion
 
@@ -604,12 +621,10 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The text download progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJson<TData>(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
             // Set request header for json
             unityRequest.SetRequestHeader("Content-Type", "application/json");
@@ -643,7 +658,7 @@ namespace Meta.WitAi.Requests
                         onComplete?.Invoke(result, string.Empty);
                     }
                 });
-            }, onProgress);
+            });
         }
 
         /// <summary>
@@ -656,10 +671,9 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         /// <returns></returns>
         public bool RequestJsonGet<TData>(Uri uri,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJson(UnityWebRequest.Get(uri), onComplete, onProgress);
+            return RequestJson(UnityWebRequest.Get(uri), onComplete);
         }
 
         /// <summary>
@@ -668,17 +682,15 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to be requested</param>
         /// <param name="postData">The data to be uploaded</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPost<TData>(Uri uri, byte[] postData,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
             unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            return RequestJson(unityRequest, onComplete, onProgress);
+            return RequestJson(unityRequest, onComplete);
         }
         /// <summary>
         /// Performs a json request by posting a string
@@ -686,14 +698,12 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to be requested</param>
         /// <param name="postText">The string to be uploaded</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPost<TData>(Uri uri, string postText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJsonPost(uri, Encoding.UTF8.GetBytes(postText), onComplete, onProgress);
+            return RequestJsonPost(uri, Encoding.UTF8.GetBytes(postText), onComplete);
         }
 
         /// <summary>
@@ -702,17 +712,15 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to be requested</param>
         /// <param name="putData">The data to be uploaded</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPut<TData>(Uri uri, byte[] putData,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
             unityRequest.uploadHandler = new UploadHandlerRaw(putData);
             unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            return RequestJson(unityRequest, onComplete, onProgress);
+            return RequestJson(unityRequest, onComplete);
         }
         /// <summary>
         /// Performs a json put request with a string
@@ -720,14 +728,12 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to be requested</param>
         /// <param name="putText">The string to be uploaded</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPut<TData>(Uri uri, string putText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<TData> onComplete)
         {
-            return RequestJsonPut(uri, Encoding.UTF8.GetBytes(putText), onComplete, onProgress);
+            return RequestJsonPut(uri, Encoding.UTF8.GetBytes(putText), onComplete);
         }
         #endregion
 
@@ -740,12 +746,10 @@ namespace Meta.WitAi.Requests
         /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="onProgress">Clip progress callback</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             UnityWebRequest unityRequest,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
-            AudioType audioType, bool audioStream,
-            RequestProgressDelegate onProgress = null)
+            AudioType audioType, bool audioStream)
         {
             // Audio streaming
 #if UNITY_WEBGL
@@ -793,7 +797,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform default request operation
-            return Request(unityRequest, (response, error) => OnRequestAudioReady(clipStream, audioType, response, error, onClipStreamReady), onProgress);
+            return Request(unityRequest, (response, error) => OnRequestAudioReady(clipStream, audioType, response, error, onClipStreamReady));
         }
         // Called on audio ready to be decoded
         private void OnRequestAudioReady(IAudioClipStream clipStream, AudioType audioType, UnityWebRequest request, string error,
@@ -878,15 +882,12 @@ namespace Meta.WitAi.Requests
         /// <param name="onClipReady">Called when the clip is ready for playback or has failed to load</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="onProgress">Clip progress callback</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             Uri uri,
             RequestCompleteDelegate<IAudioClipStream> onClipReady,
-            AudioType audioType, bool audioStream,
-            float audioStreamReadyDuration,
-            RequestProgressDelegate onProgress = null)
+            AudioType audioType, bool audioStream)
         {
-            return RequestAudioStream(clipStream, new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onClipReady, audioType, audioStream, onProgress);
+            return RequestAudioStream(clipStream, new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onClipReady, audioType, audioStream);
         }
         #endregion
     }

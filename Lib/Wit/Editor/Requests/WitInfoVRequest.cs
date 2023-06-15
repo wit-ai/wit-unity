@@ -18,12 +18,20 @@ namespace Meta.WitAi.Requests
 {
     internal class WitInfoVRequest : WitVRequest, IWitInfoVRequest
     {
-        // Constructor
-        public WitInfoVRequest(IWitRequestConfiguration configuration, bool useServerToken = true) : base(configuration, null, useServerToken) {}
+        /// <summary>
+        /// Constructor for wit based info VRequests
+        /// </summary>
+        /// <param name="configuration">The configuration interface to be used</param>
+        /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
+        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
+        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
+        public WitInfoVRequest(IWitRequestConfiguration configuration, bool useServerToken = true,
+            RequestProgressDelegate onDownloadProgress = null,
+            RequestFirstResponseDelegate onFirstResponse = null)
+            : base(configuration, null, useServerToken, onDownloadProgress, onFirstResponse) {}
 
         // Get all apps & return the current app info
-        public bool RequestAppId(RequestCompleteDelegate<string> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestAppId(RequestCompleteDelegate<string> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
             uriParameters[WitEditorConstants.ENDPOINT_APPS_LIMIT] = 10000.ToString();
@@ -48,41 +56,37 @@ namespace Meta.WitAi.Requests
                     error = "No app id found for token";
                 }
                 onComplete?.Invoke(null, error);
-            }, onProgress);
+            });
         }
 
         // Gets all app data
         public bool RequestApps(int limit, int offset,
-            RequestCompleteDelegate<WitAppInfo[]> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitAppInfo[]> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
             uriParameters[WitEditorConstants.ENDPOINT_APPS_LIMIT] = Mathf.Max(limit, 1).ToString();
             uriParameters[WitEditorConstants.ENDPOINT_APPS_OFFSET] = Mathf.Max(offset, 0).ToString();
-            return RequestWitGet<WitAppInfo[]>(WitEditorConstants.ENDPOINT_APPS, uriParameters, onComplete, onProgress);
+            return RequestWitGet<WitAppInfo[]>(WitEditorConstants.ENDPOINT_APPS, uriParameters, onComplete);
         }
 
         // Get app info request
         public bool RequestAppInfo(string applicationId,
-            RequestCompleteDelegate<WitAppInfo> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitAppInfo> onComplete)
         {
             return RequestWitGet<WitAppInfo>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}", null,
-                onComplete, onProgress);
+                onComplete);
         }
 
         // Get the export url to download
         public bool RequestAppExportInfo(string applicationId,
-            RequestCompleteDelegate<WitExportInfo> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitExportInfo> onComplete)
         {
             return RequestWitGet<WitExportInfo>(WitEditorConstants.ENDPOINT_EXPORT, null,
-                onComplete, onProgress);
+                onComplete);
         }
         // Download the export zip from provided url
         public bool RequestAppExportZip(string downloadUri,
-            RequestCompleteDelegate<ZipArchive> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<ZipArchive> onComplete)
         {
             var uri = new Uri(downloadUri);
             var request = new VRequest();
@@ -97,21 +101,19 @@ namespace Meta.WitAi.Requests
                 {
                     onComplete(null, e.ToString());
                 }
-            }, null);
+            });
             return true;
         }
         // Retrieve the version tags for the composer app
         public bool RequestAppVersionTags(string applicationId,
-            RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete)
         {
-            return RequestWitGet<WitVersionTagInfo[][]>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_TAGS}", null, onComplete, onProgress);
+            return RequestWitGet<WitVersionTagInfo[][]>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_TAGS}", null, onComplete);
         }
 
         // Obtain client app token
         public bool RequestClientAppToken(string applicationId,
-            RequestCompleteDelegate<string> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<string> onComplete)
         {
             var jsonNode = new WitResponseClass()
             {
@@ -133,66 +135,56 @@ namespace Meta.WitAi.Requests
                         error = $"No client app token found for app\nApp: {applicationId}";
                     }
                     onComplete?.Invoke(null, error);
-                }, onProgress);
+                });
         }
 
         // Obtain wit app intents
-        public bool RequestIntentList(RequestCompleteDelegate<WitIntentInfo[]> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestIntentList(RequestCompleteDelegate<WitIntentInfo[]> onComplete)
         {
-            return RequestWitGet<WitIntentInfo[]>(WitEditorConstants.ENDPOINT_INTENTS, null,
-                onComplete, onProgress);
+            return RequestWitGet<WitIntentInfo[]>(WitEditorConstants.ENDPOINT_INTENTS, null, onComplete);
         }
 
         // Get specific intent info
-        public bool RequestIntentInfo(string intentId,
-            RequestCompleteDelegate<WitIntentInfo> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestIntentInfo(string intentId, RequestCompleteDelegate<WitIntentInfo> onComplete)
         {
-            return RequestWitGet<WitIntentInfo>($"{WitEditorConstants.ENDPOINT_INTENTS}/{intentId}", null,
-                onComplete, onProgress);
+            return RequestWitGet<WitIntentInfo>($"{WitEditorConstants.ENDPOINT_INTENTS}/{intentId}",
+                null, onComplete);
         }
 
         // Obtain wit app entities
-        public bool RequestEntityList(RequestCompleteDelegate<WitEntityInfo[]> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestEntityList(RequestCompleteDelegate<WitEntityInfo[]> onComplete)
         {
-            return RequestWitGet<WitEntityInfo[]>(WitEditorConstants.ENDPOINT_ENTITIES, null,
-                onComplete, onProgress);
+            return RequestWitGet<WitEntityInfo[]>(WitEditorConstants.ENDPOINT_ENTITIES,
+                null, onComplete);
         }
 
         // Get specific entity info
         public bool RequestEntityInfo(string entityId,
-            RequestCompleteDelegate<WitEntityInfo> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitEntityInfo> onComplete)
         {
-            return RequestWitGet<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}", null, onComplete,
-                onProgress);
+            return RequestWitGet<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}",
+                null, onComplete);
         }
 
         // Obtain wit app traits
-        public bool RequestTraitList(RequestCompleteDelegate<WitTraitInfo[]> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestTraitList(RequestCompleteDelegate<WitTraitInfo[]> onComplete)
         {
-            return RequestWitGet<WitTraitInfo[]>(WitEditorConstants.ENDPOINT_TRAITS, null, onComplete,
-                onProgress);
+            return RequestWitGet<WitTraitInfo[]>(WitEditorConstants.ENDPOINT_TRAITS,
+                null, onComplete);
         }
 
         // Get specific trait info
         public bool RequestTraitInfo(string traitId,
-            RequestCompleteDelegate<WitTraitInfo> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<WitTraitInfo> onComplete)
         {
-            return RequestWitGet<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}", null,
-                onComplete, onProgress);
+            return RequestWitGet<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}",
+                null, onComplete);
         }
 
         // Obtain wit app voices in a dictionary format
-        public bool RequestVoiceList(RequestCompleteDelegate<Dictionary<string, WitVoiceInfo[]>> onComplete,
-            RequestProgressDelegate onProgress = null)
+        public bool RequestVoiceList(RequestCompleteDelegate<Dictionary<string, WitVoiceInfo[]>> onComplete)
         {
-            return RequestWitGet<Dictionary<string, WitVoiceInfo[]>>(WitEditorConstants.ENDPOINT_TTS_VOICES, null, onComplete,
-                onProgress);
+            return RequestWitGet<Dictionary<string, WitVoiceInfo[]>>(WitEditorConstants.ENDPOINT_TTS_VOICES, null, onComplete);
         }
     }
 }

@@ -41,12 +41,26 @@ namespace Meta.WitAi.Requests
         // Whether audio should stream or not
         public bool Stream { get; }
 
-        // Constructor
-        public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string textToSpeak, Dictionary<string, string> ttsData, TTSWitAudioType audioType, bool audioStream = false) : base(configuration, requestId, false)
+        /// <summary>
+        /// Constructor for wit based text-to-speech VRequests
+        /// </summary>
+        /// <param name="configuration">The configuration interface to be used</param>
+        /// <param name="requestId">A unique identifier that can be used to track the request</param>
+        /// <param name="textToSpeak">The text to be spoken by the request</param>
+        /// <param name="ttsData">The text parameters used for the request</param>
+        /// <param name="audioFileType">The expected audio file type of the request</param>
+        /// <param name="audioStream">Whether the audio should be played while streaming or should wait until completion.</param>
+        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
+        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
+        public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string textToSpeak,
+            Dictionary<string, string> ttsData, TTSWitAudioType audioFileType, bool audioStream = false,
+            RequestProgressDelegate onDownloadProgress = null,
+            RequestFirstResponseDelegate onFirstResponse = null)
+            : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
         {
             TextToSpeak = textToSpeak;
             TtsData = ttsData;
-            FileType = audioType;
+            FileType = audioFileType;
             Stream = audioStream;
             Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
         }
@@ -67,8 +81,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">Clip load progress</param>
         /// <returns>False if request cannot be called</returns>
         public bool RequestStream(IAudioClipStream clipStream,
-            RequestCompleteDelegate<IAudioClipStream> onClipReady,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<IAudioClipStream> onClipReady)
         {
             // Error if no text is provided
             if (string.IsNullOrEmpty(TextToSpeak))
@@ -89,7 +102,7 @@ namespace Meta.WitAi.Requests
                 UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
 
                 // Perform an audio stream request
-                RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream, onProgress);
+                RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream);
             });
             return true;
         }
@@ -98,14 +111,10 @@ namespace Meta.WitAi.Requests
         /// TTS streaming audio request
         /// </summary>
         /// <param name="downloadPath">Download path</param>
-        /// <param name="textToSpeak">Text to be spoken</param>
-        /// <param name="ttsData">Info on tts voice settings</param>
         /// <param name="onComplete">Clip completed download</param>
-        /// <param name="onProgress">Clip load progress</param>
         /// <returns>False if request cannot be called</returns>
         public bool RequestDownload(string downloadPath,
-            RequestCompleteDelegate<bool> onComplete,
-            RequestProgressDelegate onProgress = null)
+            RequestCompleteDelegate<bool> onComplete)
         {
             // Error
             if (string.IsNullOrEmpty(TextToSpeak))
@@ -121,7 +130,7 @@ namespace Meta.WitAi.Requests
                 UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
 
                 // Perform an audio stream request
-                RequestFileDownload(downloadPath, unityRequest, onComplete, onProgress);
+                RequestFileDownload(downloadPath, unityRequest, onComplete);
             });
             return true;
         }

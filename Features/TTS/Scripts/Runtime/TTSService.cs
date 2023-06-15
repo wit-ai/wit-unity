@@ -77,6 +77,15 @@ namespace Meta.WitAi.TTS
         public abstract ITTSVoiceProvider VoiceProvider { get; }
 
         /// <summary>
+        /// Static event called whenever any TTSService.Awake is called
+        /// </summary>
+        public static event Action<TTSService> OnServiceStart;
+        /// <summary>
+        /// Static event called whenever any TTSService.OnDestroy is called
+        /// </summary>
+        public static event Action<TTSService> OnServiceDestroy;
+
+        /// <summary>
         /// Returns error if invalid
         /// </summary>
         public virtual string GetInvalidError()
@@ -102,6 +111,11 @@ namespace Meta.WitAi.TTS
         {
             _instance = this;
             _delegates = false;
+        }
+        // Call event
+        protected virtual void Start()
+        {
+            OnServiceStart?.Invoke(this);
         }
         // Log if invalid
         protected virtual void OnEnable()
@@ -189,13 +203,12 @@ namespace Meta.WitAi.TTS
         // Remove instance
         protected virtual void OnDestroy()
         {
-            // Remove instance
             if (_instance == this)
             {
                 _instance = null;
             }
-            // Abort & unload all
             UnloadAll();
+            OnServiceDestroy?.Invoke(this);
         }
 
         /// <summary>
@@ -350,6 +363,7 @@ namespace Meta.WitAi.TTS
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
                 queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
+                queryStream = false,
                 clipStream = CreateClipStream()
             };
 
@@ -686,8 +700,21 @@ namespace Meta.WitAi.TTS
         // Stream complete
         private void OnStreamComplete(TTSClipData clipData, IAudioClipStream clipStream, bool fromDisk)
         {
+            // Ignore invalid
+            if (clipStream == null || clipData == null || clipStream != clipData.clipStream)
+            {
+                return;
+            }
+
+            // Log & call event
             VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Complete", clipData));
             Events?.Stream?.OnStreamComplete?.Invoke(clipData);
+
+            // Web request completion
+            if (!fromDisk)
+            {
+                Events?.WebRequest?.OnRequestComplete.Invoke(clipData);
+            }
         }
         #endregion
 

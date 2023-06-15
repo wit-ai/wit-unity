@@ -163,14 +163,13 @@ namespace Meta.WitAi.TTS.Integrations
             string filePath = GetDiskCachePath(clipData);
 
             // Load clip async
-            VRequest request = new VRequest();
+            VRequest request = new VRequest((progress) => clipData.loadProgress = progress);
             bool canPerform = request.RequestAudioStream(clipData.clipStream, new Uri(request.CleanUrl(filePath)),
                 (clipStream, error) =>
                 {
                     clipData.clipStream = clipStream;
                     OnStreamComplete(clipData, error);
-                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk,
-                0.01f, (progress) => clipData.loadProgress = progress);
+                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk);
             if (canPerform)
             {
                 _streamRequests[clipData.clipID] = request;

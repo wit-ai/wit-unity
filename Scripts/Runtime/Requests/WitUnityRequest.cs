@@ -52,7 +52,7 @@ namespace Meta.WitAi.Requests
             // Generate a message WitVRequest
             if (InputType == NLPRequestInputType.Text)
             {
-                _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
+                _request = new WitMessageVRequest(Configuration, newOptions.RequestId, SetDownloadProgress);
                 Endpoint = Configuration.GetEndpointInfo().Message;
                 _request.Timeout = Mathf.RoundToInt(Configuration.timeoutMS / 1000f);
                 ShouldPost = false;
@@ -108,7 +108,7 @@ namespace Meta.WitAi.Requests
             {
                 messageRequest.MessageRequest(Endpoint, ShouldPost,
                     Options.Text, Options.QueryParams,
-                    HandleFinalNlpResponse, SetDownloadProgress);
+                    HandleFinalNlpResponse);
             }
         }
 

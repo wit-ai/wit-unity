@@ -41,6 +41,8 @@ namespace Meta.WitAi.TTS.Data
         /// </summary>
         public string queryRequestId => _queryRequestId;
         private string _queryRequestId = Guid.NewGuid().ToString();
+        // Whether service should stream audio or just provide all at once
+        public bool queryStream;
         // Request data
         public Dictionary<string, string> queryParameters;
 

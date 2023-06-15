@@ -111,6 +111,8 @@ namespace Meta.WitAi.TTS.Integrations
         }
         private ITTSDiskCacheHandler _diskCache;
 
+        // Web request events
+        public TTSWebRequestEvents WebRequestEvents => Events.WebRequest;
         // Configuration provider
         public WitConfiguration Configuration => RequestSettings.configuration;
 
@@ -124,9 +126,32 @@ namespace Meta.WitAi.TTS.Integrations
         {
             // Apply audio type
             clipData.audioType = GetAudioType();
+            clipData.queryStream = RequestSettings.audioStream;
 
-            // Return data
-            return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId, clipData.textToSpeak, clipData.queryParameters, RequestSettings.audioType, RequestSettings.audioStream);
+            // Return request
+            return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
+                clipData.textToSpeak, clipData.queryParameters,
+                RequestSettings.audioType, clipData.queryStream,
+                (progress) => OnRequestProgressUpdated(clipData, progress),
+                () => OnRequestFirstResponse(clipData));
+        }
+
+        // Download progress callbacks
+        private void OnRequestProgressUpdated(TTSClipData clipData, float newProgress)
+        {
+            if (clipData != null)
+            {
+                clipData.loadProgress = newProgress;
+            }
+        }
+
+        // Progress callbacks
+        private void OnRequestFirstResponse(TTSClipData clipData)
+        {
+            if (clipData != null)
+            {
+                WebRequestEvents?.OnRequestFirstResponse?.Invoke(clipData);
+            }
         }
         #endregion
 
@@ -190,6 +215,9 @@ namespace Meta.WitAi.TTS.Integrations
                 CancelWebStream(clipData);
             }
 
+            // Begin request
+            WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
+
             // Whether to stream
             bool stream = Application.isPlaying && RequestSettings.audioStream;
 
@@ -217,23 +245,26 @@ namespace Meta.WitAi.TTS.Integrations
                         if (string.Equals(error, WitConstants.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
                         {
                             WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
+                            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
                         }
                         else
                         {
                             WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
+                            WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
                         }
                     }
                     // Success
                     else
                     {
                         WebStreamEvents?.OnStreamReady?.Invoke(clipData);
-                        if (!stream)
+                        WebRequestEvents?.OnRequestReady?.Invoke(clipData);
+                        if (!RequestSettings.audioStream || !WitTTSVRequest.CanStreamAudio(RequestSettings.audioType))
                         {
                             WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
+                            WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
                         }
                     }
-                },
-                (progress) => clipData.loadProgress = progress);
+                });
             _webStreams[clipData.clipID] = request;
         }
         /// <summary>
@@ -258,6 +289,7 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Call delegate
             WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
+            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
 
             // Success
             return true;
@@ -294,6 +326,9 @@ namespace Meta.WitAi.TTS.Integrations
                 CancelWebDownload(clipData, downloadPath);
             }
 
+            // Begin request
+            WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
+
             // Request tts
             WitTTSVRequest request = GetTtsRequest(clipData);
             request.RequestDownload(downloadPath,
@@ -303,13 +338,15 @@ namespace Meta.WitAi.TTS.Integrations
                     if (string.IsNullOrEmpty(error))
                     {
                         WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
+                        WebRequestEvents?.OnRequestReady?.Invoke(clipData);
                     }
                     else
                     {
                         WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
+                        WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
                     }
-                },
-                (progress) => clipData.loadProgress = progress);
+                    WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
+                });
             _webDownloads[clipData.clipID] = request;
         }
         /// <summary>
@@ -334,6 +371,7 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Download cancelled
             WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
+            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
 
             // Success
             return true;
