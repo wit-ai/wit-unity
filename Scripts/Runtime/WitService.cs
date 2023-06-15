@@ -741,14 +741,14 @@ namespace Meta.WitAi
             // Handle Success
             if (request.State == VoiceRequestState.Successful)
             {
-                VLog.D("Request Success");
+                VLog.I("Request Success");
                 VoiceEvents?.OnResponse?.Invoke(request.Results.ResponseData);
                 VoiceEvents?.OnRequestCompleted?.Invoke();
             }
             // Handle Cancellation
             else if (request.State == VoiceRequestState.Canceled)
             {
-                VLog.D($"Request Canceled\nReason: {request.Results.Message}");
+                VLog.I($"Request Canceled\nReason: {request.Results.Message}");
                 VoiceEvents?.OnCanceled?.Invoke(request.Results.Message);
                 if (!string.Equals(request.Results.Message, WitConstants.CANCEL_MESSAGE_PRE_SEND))
                 {

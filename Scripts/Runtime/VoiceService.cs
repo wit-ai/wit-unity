@@ -331,7 +331,7 @@ namespace Meta.WitAi
             // Deactivate & abort immediately but use the response data as results
             if (validationData.validResponse)
             {
-                VLog.D("Validated Early");
+                VLog.I("Validated Early");
                 audioRequest.CompleteEarly();
             }
         }

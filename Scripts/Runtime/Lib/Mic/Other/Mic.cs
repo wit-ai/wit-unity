@@ -305,7 +305,7 @@ namespace Meta.WitAi.Lib
             }
             else
             {
-                VLog.D($"Found {_devices.Count} Mics");
+                VLog.I($"Found {_devices.Count} Mics");
             }
 
             UnityEngine.Profiling.Profiler.EndSample();
@@ -326,7 +326,7 @@ namespace Meta.WitAi.Lib
         private void StartMicrophone()
         {
 #if !UNITY_WEBGL || UNITY_EDITOR
-            VLog.D("Reserved mic " + CurrentDeviceName);
+            VLog.I("Reserved mic " + CurrentDeviceName);
             AudioClip = Microphone.Start(CurrentDeviceName, MIC_CLIP_LOOP, MIC_CLIP_CHANNELS, AudioClipSampleRate);
             AudioClip.name = CurrentDeviceName;
             // Init the num of channels from AudioClip in
@@ -340,7 +340,7 @@ namespace Meta.WitAi.Lib
             if (MicrophoneIsRecording(CurrentDeviceName))
             {
 #if !UNITY_WEBGL || UNITY_EDITOR
-                VLog.D("Released mic " + CurrentDeviceName);
+                VLog.I("Released mic " + CurrentDeviceName);
                 Microphone.End(CurrentDeviceName);
 #endif
             }

@@ -1407,7 +1407,7 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Apply
             IsPaused = toPaused;
-            VLog.D($"Speak Audio {(IsPaused ? "Paused" : "Resumed")}");
+            Log($"Speak Audio {(IsPaused ? "Paused" : "Resumed")}");
 
             // Adjust if speaking
             if (IsSpeaking)
@@ -1491,8 +1491,8 @@ namespace Meta.WitAi.TTS.Utilities
         {
             StringBuilder log = new StringBuilder();
             log.AppendLine(comment);
-            log.AppendLine($"Voice: {presetVoiceID}");
-            VLog.D(LogCategory, log);
+            log.AppendLine($"Voice: {VoiceSettings?.SettingsId}");
+            VLog.I(LogCategory, log);
         }
         // Perform start of playback queue
         protected virtual void OnPlaybackQueueBegin()
@@ -1526,7 +1526,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
             else
             {
-                VLog.D(LogCategory, log);
+                VLog.I(LogCategory, log);
             }
         }
         // Initial callback as soon as the audio clip speak request is generated

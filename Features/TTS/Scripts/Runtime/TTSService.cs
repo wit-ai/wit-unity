@@ -580,7 +580,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Preparing);
 
             // Begin load
-            VLog.D(GetClipLog("Load Clip", clipData));
+            VLog.I(GetClipLog("Load Clip", clipData));
             Events?.OnClipCreated?.Invoke(clipData);
         }
         // Handle begin of disk cache streaming
@@ -596,7 +596,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Callback delegate
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Begin", clipData));
+            VLog.I(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Begin", clipData));
             Events?.Stream?.OnStreamBegin?.Invoke(clipData);
         }
         // Handle cancel of disk cache streaming
@@ -612,7 +612,7 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady = null;
 
             // Callback delegate
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Canceled", clipData));
+            VLog.I(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Canceled", clipData));
             Events?.Stream?.OnStreamCancel?.Invoke(clipData);
 
             // Unload clip
@@ -675,7 +675,7 @@ namespace Meta.WitAi.TTS
 
             // Set clip stream state
             SetClipLoadState(clipData, TTSClipLoadState.Loaded);
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
+            VLog.I(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData));
 
             // Invoke playback is ready
             clipData.onPlaybackReady?.Invoke(string.Empty);
@@ -694,7 +694,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Log & call event
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Updated", clipData));
+            VLog.I(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Updated", clipData));
             Events?.Stream?.OnStreamClipUpdate?.Invoke(clipData);
         }
         // Stream complete
@@ -707,7 +707,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Log & call event
-            VLog.D(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Complete", clipData));
+            VLog.I(GetClipLog($"{(fromDisk ? "Disk" : "Web")} Stream Complete", clipData));
             Events?.Stream?.OnStreamComplete?.Invoke(clipData);
 
             // Web request completion
@@ -778,7 +778,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Unloaded);
 
             // Unload
-            VLog.D(GetClipLog($"Unload Clip", clipData));
+            VLog.I(GetClipLog($"Unload Clip", clipData));
             Events?.OnClipUnloaded?.Invoke(clipData);
         }
         #endregion
@@ -870,7 +870,7 @@ namespace Meta.WitAi.TTS
             DiskCacheHandler.CheckCachedToDisk(clipData, (clip, found) =>
             {
                 // Cache checked
-                VLog.D(GetClipLog($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipData));
+                VLog.I(GetClipLog($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipData));
 
                 // Already downloaded, return successful
                 if (found)
@@ -896,7 +896,7 @@ namespace Meta.WitAi.TTS
         // On web download begin
         private void OnWebDownloadBegin(TTSClipData clipData, string downloadPath)
         {
-            VLog.D(GetClipLog($"Download Clip - Begin\nPath: {downloadPath}", clipData));
+            VLog.I(GetClipLog($"Download Clip - Begin\nPath: {downloadPath}", clipData));
             Events?.Download?.OnDownloadBegin?.Invoke(clipData, downloadPath);
         }
         // On web download complete
@@ -907,7 +907,7 @@ namespace Meta.WitAi.TTS
             clipData.onDownloadComplete = null;
 
             // Log
-            VLog.D(GetClipLog($"Download Clip - Success\nPath: {downloadPath}", clipData));
+            VLog.I(GetClipLog($"Download Clip - Success\nPath: {downloadPath}", clipData));
             Events?.Download?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
         }
         // On web download complete
@@ -918,7 +918,7 @@ namespace Meta.WitAi.TTS
             clipData.onDownloadComplete = null;
 
             // Log
-            VLog.D(GetClipLog($"Download Clip - Canceled\nPath: {downloadPath}", clipData));
+            VLog.I(GetClipLog($"Download Clip - Canceled\nPath: {downloadPath}", clipData));
             Events?.Download?.OnDownloadCancel?.Invoke(clipData, downloadPath);
         }
         // On web download complete
