@@ -281,7 +281,13 @@ namespace Meta.Voice
         /// Method for handling failure with only an error string
         /// </summary>
         /// <param name="error">The error to be returned</param>
-        protected virtual void HandleFailure(string error) => HandleFailure(GetResultsWithMessage(error));
+        protected virtual void HandleFailure(string error)
+        {
+            if (!string.IsNullOrEmpty(error)) error += "\n\n";
+            error += $"[Request id: {Options.RequestId}]";
+            HandleFailure(GetResultsWithMessage(error));
+        }
+
         /// <summary>
         /// Method for handling failure with a full result object
         /// </summary>
