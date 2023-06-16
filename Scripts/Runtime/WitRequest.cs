@@ -45,7 +45,7 @@ namespace Meta.WitAi
         /// <summary>
         /// The request timeout in ms
         /// </summary>
-        public int Timeout { get; private set; } = 1000;
+        public int TimeoutMs { get; private set; } = 1000;
         /// <summary>
         /// Encoding settings for audio based requests
         /// </summary>
@@ -237,7 +237,7 @@ namespace Meta.WitAi
         protected override void OnInit()
         {
             // Determine configuration setting
-            Timeout = Configuration == null ? Timeout : Configuration.timeoutMS;
+            TimeoutMs = Configuration == null ? TimeoutMs : Configuration.timeoutMS;
 
             // Set request settings
             Command = Path.Split('/').First();
@@ -415,17 +415,17 @@ namespace Meta.WitAi
             }
 
             // Apply timeout
-            _request.Timeout = Timeout;
+            _request.Timeout = TimeoutMs;
 
             // Begin calling on main thread if needed
             WatchMainThreadCallbacks();
-            
+
             // Perform http post or put
             if (_request.Method == "POST" || _request.Method == "PUT")
             {
                 var getRequestTask = _request.BeginGetRequestStream(HandleWriteStream, _request);
                 ThreadPool.RegisterWaitForSingleObject(getRequestTask.AsyncWaitHandle,
-                    HandleTimeoutTimer, _request, Timeout, true);
+                    HandleTimeoutMsTimer, _request, TimeoutMs, true);
             }
             // Move right to response
             else
@@ -448,11 +448,11 @@ namespace Meta.WitAi
                 return;
             }
             var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
-            ThreadPool.RegisterWaitForSingleObject(asyncResult.AsyncWaitHandle, HandleTimeoutTimer, _request, Timeout, true);
+            ThreadPool.RegisterWaitForSingleObject(asyncResult.AsyncWaitHandle, HandleTimeoutMsTimer, _request, TimeoutMs, true);
         }
 
         // Handle timeout callback
-        private void HandleTimeoutTimer(object state, bool timeout)
+        private void HandleTimeoutMsTimer(object state, bool timeout)
         {
             // Ignore false or too late
             if (!timeout)
@@ -479,15 +479,18 @@ namespace Meta.WitAi
                 if (null != _request?.RequestUri?.PathAndQuery)
                 {
                     var uriSections = _request.RequestUri.PathAndQuery.Split(new char[] { '?' });
-                    path = uriSections[0];
+                    path = uriSections[0].Substring(1);
                 }
 
-                // TODO: T153403776 There are still problems with this logic. We're not properly propigating down if
-                // this was a cancellation due to user request or actual timeout.
-                var time = (DateTime.UtcNow - _requestStartTime);
-                if (time.Seconds > Timeout)
+                // This was a cancellation due to actual timeout.
+                var elapsed = (DateTime.UtcNow - _requestStartTime).TotalMilliseconds;
+                if (elapsed >= TimeoutMs)
                 {
-                    StatusDescription = $"Request [{path}] timed out after {time.Seconds:0.00} seconds";
+                    StatusDescription = $"Request [{path}] timed out after {elapsed:0.00} ms";
+                }
+                else
+                {
+                    VLog.W($"Timeout called early {elapsed:0.00} ms");
                 }
 
                 HandleFinalNlpResponse(null, StatusDescription);
@@ -533,7 +536,9 @@ namespace Meta.WitAi
             catch (WebException e)
             {
                 // Ignore cancelation errors & if error already occured
-                if (e.Status == WebExceptionStatus.RequestCanceled || StatusCode != 0)
+                if (e.Status == WebExceptionStatus.RequestCanceled
+                    || e.Status == WebExceptionStatus.Timeout
+                    || StatusCode != 0)
                 {
                     return;
                 }
@@ -658,7 +663,8 @@ namespace Meta.WitAi
             }
             catch (WebException e)
             {
-                if (e.Status != WebExceptionStatus.RequestCanceled)
+                if (e.Status != WebExceptionStatus.RequestCanceled
+                    && e.Status != WebExceptionStatus.Timeout)
                 {
                     // Apply status & error
                     _stackTrace = e.StackTrace;
@@ -768,7 +774,7 @@ namespace Meta.WitAi
         // Check status
         private void CheckStatus()
         {
-            if (StatusCode == 0) return;
+            if (StatusCode == 0 || StatusCode == WitConstants.ERROR_CODE_TIMEOUT) return;
 
             switch (StatusCode)
             {

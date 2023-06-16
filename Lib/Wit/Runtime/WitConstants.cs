@@ -86,8 +86,8 @@ namespace Meta.WitAi
         /// </summary>
         public const int ERROR_CODE_ABORTED = -6;
         /// <summary>
-        /// Request to the server timeed out
+        /// Request to the server timed out
         /// </summary>
-        public const int ERROR_CODE_TIMEOUT = -7;
+        public const int ERROR_CODE_TIMEOUT = 14;
     }
 }
