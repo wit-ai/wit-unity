@@ -202,7 +202,12 @@ namespace Meta.Conduit.Editor
                     VLog.E($"Method {method.Name} in assembly {assembly.FullName} had null declaring type");
                     continue;
                 }
-                
+
+                if (method.DeclaringType != method.ReflectedType)
+                {
+                    // This method was declared elsewhere, so we should process it where it's declared only.
+                    continue;
+                }
                 
                 var attributes = method.GetCustomAttributes(typeof(ConduitActionAttribute), false);
                 if (attributes.Length == 0)
