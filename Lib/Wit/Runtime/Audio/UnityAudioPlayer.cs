@@ -100,6 +100,7 @@ namespace Meta.Voice.Audio
             // Play audio
             if (ClipStream is IAudioClipProvider uacs)
             {
+                AudioSource.loop = false;
                 AudioSource.clip = uacs.Clip;
                 AudioSource.timeSamples = offsetSamples;
                 AudioSource.Play();
