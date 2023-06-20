@@ -119,6 +119,11 @@ namespace Meta.WitAi.Data.Configuration
             for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++)
             {
                 Scene scene = SceneManager.GetSceneAt(sceneIndex);
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    continue;
+                }
+
                 foreach (var rootGameObject in scene.GetRootGameObjects())
                 {
                     IWitConfigurationProvider[] providers = rootGameObject.GetComponentsInChildren<IWitConfigurationProvider>(true);
