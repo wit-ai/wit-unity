@@ -675,8 +675,7 @@ namespace Meta.WitAi
             // Transmit recording request
             else if (previousRequest != null && previousRequest.IsActive && _minKeepAliveWasHit)
             {
-                _transmitRequests.Add(_recordingRequest);
-                _recordingRequest = null;
+                _transmitRequests.Add(previousRequest);
                 VoiceEvents?.OnMicDataSent?.Invoke();
             }
             // Disable below event
