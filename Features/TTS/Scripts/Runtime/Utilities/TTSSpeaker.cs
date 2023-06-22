@@ -412,6 +412,8 @@ namespace Meta.WitAi.TTS.Utilities
             // Add prepend & appended text to each item
             for (int i = 0; i < phrases.Count; i++)
             {
+                if (string.IsNullOrEmpty(phrases[i].Trim())) continue;
+
                 string phrase = phrases[i];
                 phrase = $"{PrependedText}{phrase}{AppendedText}".Trim();
                 phrases[i] = phrase;
