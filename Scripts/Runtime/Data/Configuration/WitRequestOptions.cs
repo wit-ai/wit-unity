@@ -50,7 +50,8 @@ namespace Meta.WitAi.Configuration
         /// </summary>
         public Action<WitRequest> onResponse;
 
-        // Get json string
+        // Get json string. Used to get the payload for PI.
+        // PI will reparse these parameters and construct it's own request.
         public string ToJsonString()
         {
             // Get default json
