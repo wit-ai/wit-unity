@@ -238,7 +238,10 @@ namespace Meta.WitAi.TTS
                 }
                 builder.AppendLine($"Cache: {cacheLocation}");
                 builder.AppendLine($"Type: {clipData.audioType}");
-                builder.AppendLine($"Length: {(clipData.clipStream == null ? "NULL" : clipData.clipStream.Length + " secs")}");
+                if (clipData.clipStream != null)
+                {
+                    builder.AppendLine($"Length: {clipData.clipStream.Length:0.00} seconds");
+                }
             }
             return builder.ToString();
         }

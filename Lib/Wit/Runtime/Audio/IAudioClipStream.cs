@@ -51,7 +51,7 @@ namespace Meta.Voice.Audio
         int TotalSamples { get; }
 
         /// <summary>
-        /// The length of the stream in seconds.  Typically Mathf.Max(TotalSamples, AddedSamples) * Channels * SampleRate
+        /// The length of the stream in seconds.  Typically Mathf.Max(TotalSamples, AddedSamples) / (Channels * SampleRate)
         /// </summary>
         float Length { get; }
 

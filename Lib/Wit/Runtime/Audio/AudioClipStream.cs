@@ -45,9 +45,9 @@ namespace Meta.Voice.Audio
         public int TotalSamples { get; protected set; }
 
         /// <summary>
-        /// The length of the stream in seconds.  Typically TotalSamples * Channels * SampleRate
+        /// The length of the stream in seconds.
         /// </summary>
-        public float Length => (float)Mathf.Max(TotalSamples, AddedSamples) * Channels * SampleRate;
+        public float Length => GetSampleLength(Mathf.Max(TotalSamples, AddedSamples));
 
         /// <summary>
         /// A getter for the minimum length in seconds required before the OnStreamReady method is called
@@ -120,8 +120,7 @@ namespace Meta.Voice.Audio
         public virtual void UpdateState()
         {
             // Stream ready
-            if (!IsReady && (StreamReadyLength <= 0f ||
-                             (float) AddedSamples * Channels * SampleRate >= StreamReadyLength))
+            if (!IsReady && (StreamReadyLength <= 0f || GetSampleLength(AddedSamples) >= StreamReadyLength))
             {
                 HandleStreamReady();
             }
@@ -178,6 +177,22 @@ namespace Meta.Voice.Audio
             OnStreamReady = null;
             OnStreamUpdated = null;
             OnStreamComplete = null;
+        }
+
+        /// <summary>
+        /// Calculates length in seconds for a specified number of samples
+        /// </summary>
+        private float GetSampleLength(int totalSamples)
+        {
+            return GetLength(totalSamples, Channels, SampleRate);
+        }
+
+        /// <summary>
+        /// Calculates length in seconds based on total samples, channels & samples per second
+        /// </summary>
+        public static float GetLength(int totalSamples, int channels, int samplesPerSecond)
+        {
+            return (float) totalSamples / (channels * samplesPerSecond);
         }
     }
 }
