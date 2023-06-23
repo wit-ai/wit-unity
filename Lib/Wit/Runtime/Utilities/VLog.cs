@@ -47,8 +47,14 @@ namespace Meta.WitAi
 
         // Init on load
         [UnityEngine.RuntimeInitializeOnLoadMethod]
-        private static void Init()
+        public static void Init()
         {
+            // Already init
+            if (_editorLogLevel != (VLogLevel) (-1))
+            {
+                return;
+            }
+
             // Load log
             string editorLogLevel = UnityEditor.EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
 

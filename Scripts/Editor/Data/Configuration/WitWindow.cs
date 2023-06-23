@@ -191,6 +191,7 @@ namespace Meta.WitAi.Windows
                 logLevelOptions.Add(level.ToString());
             }
             _logLevelNames = logLevelOptions.ToArray();
+            VLog.Init();
             _logLevel = logLevelOptions.IndexOf(VLog.EditorLogLevel.ToString());
         }
         private void SetLogLevel(int newLevel)
