@@ -46,7 +46,7 @@ namespace Meta.WitAi.Windows
         private enum HamburgerMenu
         {
             None = -1,
-            Save =  0, 
+            Save =  0,
             CopyToClipboard = 1,
             CopyRequestID = 2
         }
@@ -372,9 +372,10 @@ namespace Meta.WitAi.Windows
                 _responseText = _status;
                 _submitStart = System.DateTime.Now;
                 _request = witConfiguration.CreateMessageRequest(new WitRequestOptions(), new VoiceServiceRequestEvents());
+                _request.Options.Text = _utterance;
                 _request.Events.OnSend.AddListener(OnSend);
                 _request.Events.OnComplete.AddListener(OnComplete);
-                _request.Send(_utterance);
+                _request.Send();
             }
         }
 
@@ -502,7 +503,7 @@ namespace Meta.WitAi.Windows
             {
                 EditorGUIUtility.systemCopyBuffer = WitResultUtilities.GetCodeFromPath(path);
             });
-            
+
             if (Selection.activeGameObject)
             {
                 menu.AddSeparator("");

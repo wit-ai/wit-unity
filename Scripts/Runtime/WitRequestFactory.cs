@@ -117,7 +117,7 @@ namespace Meta.WitAi
             IDynamicEntitiesProvider[] additionalDynamicEntities)
         {
             // Generate options exist
-            WitRequestOptions options = newOptions != null ? newOptions : new WitRequestOptions();
+            WitRequestOptions options = newOptions ?? new WitRequestOptions();
             // Set intents
             if (-1 != options.nBestIntents)
             {

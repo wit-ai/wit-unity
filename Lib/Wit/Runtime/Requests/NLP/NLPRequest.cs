@@ -99,27 +99,11 @@ namespace Meta.Voice
             {
                 return "Cannot send audio without activation";
             }
+            if (InputType == NLPRequestInputType.Text && string.IsNullOrEmpty(Options?.Text))
+            {
+                return "Cannot send text request without Options.Text";
+            }
             return base.GetSendError();
-        }
-
-        /// <summary>
-        /// Applies the specified text to the options if possible & then submits
-        /// </summary>
-        public void Send(string text)
-        {
-            // Ignore unless text event
-            if (InputType != NLPRequestInputType.Text)
-            {
-                LogW($"Request Text Ignored\nReason: Request only accepts audio input");
-                return;
-            }
-            // Apply text if will be able to send
-            if (CanSend)
-            {
-                Options.Text = text;
-            }
-            // Send
-            Send();
         }
     }
 }

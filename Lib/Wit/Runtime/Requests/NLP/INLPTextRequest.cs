@@ -24,10 +24,5 @@ namespace Meta.Voice
         where TEvents : INLPTextRequestEvents<TUnityEvent>
         where TResults : INLPTextRequestResults
     {
-        /// <summary>
-        /// Send text via a NLP request
-        /// </summary>
-        /// <param name="text">The text to be processed via NLP</param>
-        void Send(string text);
     }
 }

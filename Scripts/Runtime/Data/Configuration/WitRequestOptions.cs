@@ -8,11 +8,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using Meta.WitAi.Interfaces;
-using UnityEngine;
 
 namespace Meta.WitAi.Configuration
 {
@@ -40,12 +38,6 @@ namespace Meta.WitAi.Configuration
         public string requestID => RequestId;
 
         /// <summary>
-        /// Additional parameters to be used for custom
-        /// implementation overrides.
-        /// </summary>
-        public Dictionary<string, string> additionalParameters = new Dictionary<string, string>();
-
-        /// <summary>
         /// Callback for completion
         /// </summary>
         public Action<WitRequest> onResponse;
@@ -54,20 +46,15 @@ namespace Meta.WitAi.Configuration
         // PI will reparse these parameters and construct it's own request.
         public string ToJsonString()
         {
-            // Get default json
-            string results = JsonUtility.ToJson(this);
-
-            // Append parameters before final }
-            StringBuilder parameters = new StringBuilder();
-            foreach (var key in additionalParameters.Keys)
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters["nBestIntents"] = nBestIntents.ToString();
+            parameters["tag"] = tag;
+            parameters["requestID"] = RequestId;
+            foreach (var key in QueryParams.Keys)
             {
-                string value = additionalParameters[key].Replace("\"", "\\\"");
-                parameters.Append($",\"{key}\":\"{value}\"");
+                parameters[key] = QueryParams[key];
             }
-            results = results.Insert(results.Length - 1, parameters.ToString());
-
-            // Return json
-            return results;
+            return JsonConvert.SerializeObject(parameters);
         }
     }
 }

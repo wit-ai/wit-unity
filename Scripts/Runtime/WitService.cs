@@ -266,6 +266,13 @@ namespace Meta.WitAi
             // Stop recording
             StopRecording();
 
+            // Setup options
+            if (requestOptions == null)
+            {
+                requestOptions = new WitRequestOptions();
+            }
+            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
+
             // Now active
             _isActive = true;
             _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider.RuntimeConfiguration.preferredActivationOffset);
@@ -366,7 +373,6 @@ namespace Meta.WitAi
             _recordingRequest.Events.OnComplete.AddListener(HandleComplete);
 
             // Call service events
-            VoiceEvents.OnRequestOptionSetup?.Invoke(_recordingRequest.Options);
             VoiceEvents.OnRequestInitialized?.Invoke(_recordingRequest);
         }
         /// <summary>
@@ -407,6 +413,11 @@ namespace Meta.WitAi
             }
 
             // Handle option setup
+            if (requestOptions == null)
+            {
+                requestOptions = new WitRequestOptions();
+            }
+            requestOptions.Text = text;
             VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
 
             // Generate request
@@ -424,7 +435,7 @@ namespace Meta.WitAi
             VoiceEvents?.OnSend?.Invoke(request);
 
             // Send & return
-            request.Send(text);
+            request.Send();
             return request;
         }
         #endregion TEXT REQUESTS
