@@ -104,7 +104,7 @@ namespace Meta.WitAi.Requests
             });
             return true;
         }
-        // Retrieve the version tags for the composer app
+        // Retrieve the version tags for the app
         public bool RequestAppVersionTags(string applicationId,
             RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete)
         {

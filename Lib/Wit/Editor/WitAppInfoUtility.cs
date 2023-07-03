@@ -196,8 +196,8 @@ namespace Meta.WitAi.Lib
                     else
                     {
                         configuration.GetConfigData();
-                        var ep = new ExportParser(exportZip);
-                        appInfo.composer = ep.ImportComposerInfo();
+                        var ep = new ExportParser();
+                        ep.ProcessExtensions(configuration,exportZip);
                     }
                     // Complete
                     UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);
