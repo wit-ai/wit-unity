@@ -84,6 +84,7 @@ namespace Meta.WitAi.Data.Configuration
                 WitConfiguration config = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
                 if (!config.isDemoOnly || loaded.Contains(config))
                 {
+                    config.UpdateDataAssets();
                     found.Add(config);
                 }
             }

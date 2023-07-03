@@ -9,6 +9,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
@@ -32,7 +34,12 @@ namespace Meta.WitAi.Data.Configuration
         /// Application info
         /// </summary>
         [FormerlySerializedAs("application")]
-        [SerializeField] private WitAppInfo _appInfo;
+        [SerializeField] private WitAppInfo _appInfo;   //to be replaced by _configData
+
+        /// <summary>
+        /// Configuration data about the app.
+        /// </summary>
+        [SerializeField] private WitConfigurationData[] _configData;
 
         /// <summary>
         /// Configuration id
@@ -122,6 +129,20 @@ namespace Meta.WitAi.Data.Configuration
             endpointConfiguration = new WitEndpointConfig();
         }
 
+        /// <summary>
+        /// Refreshes the individual data components of the configuration.
+        /// </summary>
+        public void UpdateDataAssets()
+        {
+            #if UNITY_EDITOR
+            RefreshPlugins();
+            #endif
+
+            foreach (WitConfigurationData data in _configData)
+            {
+                data.Refresh(this);
+            }
+        }
         // Logger invalid warnings
         private const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
         private const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
@@ -167,6 +188,20 @@ namespace Meta.WitAi.Data.Configuration
         /// Returns application info
         /// </summary>
         public WitAppInfo GetApplicationInfo() => _appInfo;
+
+        /// <summary>
+        /// Returns all the configuration data for this app.
+        /// </summary>
+        /// <returns></returns>
+        public WitConfigurationData[] GetConfigData()
+        {
+            if (_configData == null)
+            {
+                _configData = Array.Empty<WitConfigurationData>();
+            }
+            return _configData;
+        }
+
         /// <summary>
         /// Return endpoint override
         /// </summary>
@@ -204,6 +239,14 @@ namespace Meta.WitAi.Data.Configuration
             _appInfo = newInfo;
             SaveConfiguration();
         }
+
+        /// <summary>
+        /// Saves the plugin-specific data for this WitConfiguration
+        /// </summary>
+        public void SetConfigData(WitConfigurationData[] configData)
+        {
+            _configData = configData;
+        }
         // Save this configuration asset
         private void SaveConfiguration()
         {
@@ -213,6 +256,37 @@ namespace Meta.WitAi.Data.Configuration
             #else
             AssetDatabase.SaveAssets();
             #endif
+        }
+
+        private void RefreshPlugins()
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            // Find all derived data types
+            List<Type> dataPlugins =  typeof(WitConfigurationData).GetSubclassTypes();
+
+            // Create instances of the types and register them
+            List<WitConfigurationData> newConfigs = new List<WitConfigurationData>();
+            var configurationAssetPath = AssetDatabase.GetAssetPath(this);
+            foreach (Type dataType in dataPlugins)
+            {
+
+                // Grab existing if present
+                var plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
+                // Generate instance & add to asset
+                if (plugin == null)
+                {
+                    plugin = (WitConfigurationData)CreateInstance(dataType);
+                    plugin.Refresh(this);
+                    plugin.name = dataType.Name;
+                    AssetDatabase.AddObjectToAsset(plugin, configurationAssetPath);
+                    AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(plugin));
+                    plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, typeof(WitConfigurationData));
+                }
+                newConfigs.Add(plugin);
+            }
+            SetConfigData(newConfigs.ToArray());
+            AssetDatabase.SaveAssets();
         }
         #endif
         #endregion

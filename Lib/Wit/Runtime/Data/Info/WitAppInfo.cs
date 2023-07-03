@@ -107,13 +107,5 @@ namespace Meta.WitAi.Data.Info
         [NonReorderable]
         #endif
         public WitComposerInfo composer;
-
-        /// <summary>
-        /// All the characters in the app, and their details
-        /// </summary>
-        #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
-        [NonReorderable]
-        #endif
-        public WitCharacterInfo[] characters;
     }
 }

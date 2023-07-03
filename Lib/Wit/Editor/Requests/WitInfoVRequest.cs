@@ -16,7 +16,7 @@ using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi.Requests
 {
-    internal class WitInfoVRequest : WitVRequest, IWitInfoVRequest
+    public class WitInfoVRequest : WitVRequest, IWitInfoVRequest
     {
         /// <summary>
         /// Constructor for wit based info VRequests

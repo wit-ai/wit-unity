@@ -287,6 +287,7 @@ namespace Meta.WitAi.Windows
             LayoutConduitContent();
             GUILayout.EndVertical();
 
+
             // Layout configuration request tabs
             LayoutConfigurationRequestTabs();
 
@@ -389,7 +390,6 @@ namespace Meta.WitAi.Windows
         {
             // Application info
             Data.Info.WitAppInfo appInfo = Configuration.GetApplicationInfo();
-
             // Indent
             EditorGUI.indentLevel++;
 
@@ -402,7 +402,8 @@ namespace Meta.WitAi.Windows
                     // Enable if not selected
                     GUI.enabled = _requestTab != i;
                     // If valid and clicked, begin selecting
-                    if (null != appInfo.id &&_tabs[i].ShouldTabShow(appInfo))
+                    if (null != appInfo.id &&
+                        (_tabs[i].ShouldTabShow(appInfo) || _tabs[i].ShouldTabShow(Configuration)))
                     {
                         if (WitEditorUI.LayoutTabButton(_tabs[i].GetTabText(true)))
                         {
@@ -425,7 +426,18 @@ namespace Meta.WitAi.Windows
                     : string.Empty;
                 if (!string.IsNullOrEmpty(propertyID) && Configuration != null)
                 {
-                    SerializedObject serializedObj = new SerializedObject(Configuration);
+                    var newConfigData = Array.Find(Configuration.GetConfigData(), d => d.GetType() == _tabs[_requestTab].DataType);
+
+                    SerializedObject serializedObj;
+                    if (newConfigData == null)
+                    {
+                        serializedObj = new SerializedObject(Configuration);
+                    }
+                    else
+                    {
+                        serializedObj = new SerializedObject(newConfigData);
+                    }
+
                     SerializedProperty serializedProp = serializedObj.FindProperty(_tabs[_requestTab].GetPropertyName(propertyID));
                     if (serializedProp == null)
                     {
@@ -447,7 +459,6 @@ namespace Meta.WitAi.Windows
                             EditorGUILayout.PropertyField(serializedPropChild);
                         }
                     }
-
                     serializedObj.ApplyModifiedProperties();
                 }
             }
@@ -464,10 +475,12 @@ namespace Meta.WitAi.Windows
             if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
                 Configuration.SetServerToken(_serverToken);
+                Configuration.UpdateDataAssets();
             }
             else if (WitConfigurationUtility.IsClientTokenValid(Configuration.GetClientAccessToken()))
             {
                 Configuration.RefreshAppInfo();
+                Configuration.UpdateDataAssets();
             }
             if (Configuration.useConduit)
             {

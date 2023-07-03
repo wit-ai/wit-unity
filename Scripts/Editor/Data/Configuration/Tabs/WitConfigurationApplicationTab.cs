@@ -6,12 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 namespace Meta.WitAi.Data.Configuration.Tabs
 {
     public class WitConfigurationApplicationTab : WitConfigurationEditorTab
     {
+        public override Type DataType => null;
         public override string TabID { get; } = "application";
         public override int TabOrder { get; } = 0;
         public override string TabLabel { get; } = WitTexts.Texts.ConfigurationApplicationTabLabel;

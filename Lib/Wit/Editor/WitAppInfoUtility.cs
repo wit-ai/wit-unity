@@ -195,9 +195,9 @@ namespace Meta.WitAi.Lib
                     // Got download
                     else
                     {
+                        configuration.GetConfigData();
                         var ep = new ExportParser(exportZip);
-                        appInfo.composer = ep.ImportComposerInfo(); //TODO: split out to composer-only lib.
-                        appInfo.characters = ep.ImportCharacterInfo();
+                        appInfo.composer = ep.ImportComposerInfo();
                     }
                     // Complete
                     UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);

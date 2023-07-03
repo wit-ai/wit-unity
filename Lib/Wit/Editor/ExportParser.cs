@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
@@ -24,6 +25,8 @@ namespace Meta.WitAi.Lib
     /// </summary>
     public class ExportParser
     {
+        private static List<IExportParserPlugin> _plugins;
+
         private readonly ZipArchive _zip;
         private readonly List<PathValues> _sharedVariables = new List<PathValues>();
         private readonly List<PathValues> _serverVariables = new List<PathValues>();
@@ -31,7 +34,6 @@ namespace Meta.WitAi.Lib
         private readonly HashSet<string> _actions = new HashSet<string>();
 
         private const string ComposerFolderName = "/composer/";
-        private const string CharacterFolderName = "/characters/";
         private const string ResponseFieldsName = "response_fields";
         private const string ContextFieldsName = "context_fields";
         private const string ModulesName = "modules";
@@ -45,9 +47,37 @@ namespace Meta.WitAi.Lib
             public const string Decision = "decision";
             public const string Context = "context";
         }
-        public ExportParser(ZipArchive zip)
+
+        protected ExportParser()
+        {
+            if (_plugins != null)
+                return;
+
+            _plugins = new List<IExportParserPlugin>();
+            AutoRegisterPlugins();
+        }
+
+        public ExportParser(ZipArchive zip): this()
         {
             _zip = zip;
+        }
+
+        private void AutoRegisterPlugins()
+        {
+            // Get all loaded assemblies in the current domain
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            // Find all types that implement the IPlugin interface
+            List<Type> pluginTypes = typeof(IExportParserPlugin).GetSubclassTypes();
+
+            // Create instances of the plugin types and register them
+            foreach (Type pluginType in pluginTypes)
+            {
+                if (Activator.CreateInstance(pluginType) is IExportParserPlugin plugin)
+                {
+                    _plugins.Add(plugin);
+                }
+            }
         }
         /// <summary>
         /// Parses the provided zip export and extracts the context map values
@@ -56,17 +86,17 @@ namespace Meta.WitAi.Lib
         public WitComposerInfo ImportComposerInfo()
         {
             WitComposerInfo info = new WitComposerInfo();
-            info = ExtractCanvases(info, GetJsonFileNames(ComposerFolderName));
+            info = ExtractCanvases(info, GetJsonFileNames(ComposerFolderName, _zip));
             return info;
         }
         /// <summary>
         /// Finds all the Json files canvases in the zip archive under the given folder
         /// </summary>
         /// <returns>new list of entries which represent json files</returns>
-        private List<ZipArchiveEntry> GetJsonFileNames(string folder)
+        protected List<ZipArchiveEntry> GetJsonFileNames(string folder, ZipArchive zip)  //add zip
         {
             var jsonCanvases = new List<ZipArchiveEntry>();
-            foreach (var entry in _zip.Entries)
+            foreach (var entry in zip.Entries)
             {
                 if (entry.FullName.Contains(folder))
                 {
@@ -103,7 +133,7 @@ namespace Meta.WitAi.Lib
         /// <param name="zip">zip archive from Wit.ai export</param>
         /// <param name="fileName">one of the file names</param>
         /// <returns>The entire canvas structure as nested JSON objects</returns>
-        private WitResponseNode ExtractJson(ZipArchive zip, string fileName)
+        protected WitResponseNode ExtractJson(ZipArchive zip, string fileName)
         {
             var entry = zip.Entries.First((v) => v.Name.EndsWith(fileName));
             if (entry.Name.EndsWith(fileName))
@@ -327,26 +357,12 @@ namespace Meta.WitAi.Lib
             return result;
         }
 
-
-        public WitCharacterInfo[] ImportCharacterInfo()
+        public void ProcessExtensions(IWitRequestConfiguration config)
         {
-            WitCharacterInfo[] info = ExtractCharacters(GetJsonFileNames(CharacterFolderName));
-            return info;
-        }
-
-        private WitCharacterInfo[] ExtractCharacters(List<ZipArchiveEntry> jsonFiles)
-        {
-            const string voiceConfigName = "voice_config";
-            WitCharacterInfo[] characters = new WitCharacterInfo[jsonFiles.Count];
-
-            for (var i = 0; i < jsonFiles.Count; i++)
+            foreach (IExportParserPlugin plugin in _plugins)
             {
-                var jsonNode = ExtractJson(_zip, jsonFiles[i].Name);
-                var voiceConfig = jsonNode[voiceConfigName];
-                characters[i] = JsonConvert.DeserializeObject<WitCharacterInfo>(jsonNode);
-                characters[i].voiceConfig = JsonConvert.DeserializeObject<WitVoiceConfig>(voiceConfig);
+                plugin.Process(config, _zip);
             }
-            return characters;
         }
     }
 }
