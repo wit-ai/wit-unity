@@ -173,37 +173,7 @@ namespace Meta.WitAi.Lib
                 UpdateClientToken(configuration, appInfo, warnings, onUpdateComplete);
             });
         }
-        private static void UpdateExportInfo(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration).RequestAppExportInfo(appInfo.id, (exportInfo, error) =>
-            {
-                if (!String.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Could not determine export URI for {appInfo.id}.");
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-                    return;
-                }
-                GetRequest(configuration).RequestAppExportZip(exportInfo.uri, (exportZip, downloadError) =>
-                {
-                    // Failed to update client token
-                    if (!string.IsNullOrEmpty(downloadError))
-                    {
-                        warnings.AppendLine($"App export download failed ({downloadError})");
-                    }
-                    // Got download
-                    else
-                    {
-                        configuration.GetConfigData();
-                        var ep = new ExportParser();
-                        ep.ProcessExtensions(configuration,exportZip);
-                    }
-                    // Complete
-                    UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);
-                });
-            });
-        }
+
         private static void UpdateVersionTagList(IWitRequestConfiguration configuration,
             WitAppInfo appInfo, StringBuilder warnings,
             Action<WitAppInfo, string> onUpdateComplete)
@@ -448,7 +418,8 @@ namespace Meta.WitAi.Lib
                         appInfo.voices = voiceList.ToArray();
                     }
 
-                    UpdateExportInfo(configuration, appInfo, warnings, onUpdateComplete);
+                    // Complete
+                    UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);
 
                 });
         }

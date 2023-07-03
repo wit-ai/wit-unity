@@ -277,11 +277,10 @@ namespace Meta.WitAi.Data.Configuration
                 if (plugin == null)
                 {
                     plugin = (WitConfigurationData)CreateInstance(dataType);
-                    plugin.Refresh(this);
                     plugin.name = dataType.Name;
                     AssetDatabase.AddObjectToAsset(plugin, configurationAssetPath);
                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(plugin));
-                    plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, typeof(WitConfigurationData));
+                    plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 }
                 newConfigs.Add(plugin);
             }

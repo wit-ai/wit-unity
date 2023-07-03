@@ -84,7 +84,6 @@ namespace Meta.WitAi.Data.Configuration
                 WitConfiguration config = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
                 if (!config.isDemoOnly || loaded.Contains(config))
                 {
-                    config.UpdateDataAssets();
                     found.Add(config);
                 }
             }
@@ -215,6 +214,8 @@ namespace Meta.WitAi.Data.Configuration
             unityPath = unityPath.Replace(Application.dataPath, "Assets");
             AssetDatabase.CreateAsset(configurationAsset, unityPath);
             AssetDatabase.SaveAssets();
+
+            configurationAsset.UpdateDataAssets(); //must be done after SaveAssets
 
             // Refresh configurations
             ReloadConfigurationData();

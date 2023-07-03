@@ -84,9 +84,11 @@ namespace Meta.WitAi.Requests
             return RequestWitGet<WitExportInfo>(WitEditorConstants.ENDPOINT_EXPORT, null,
                 onComplete);
         }
+
+        public delegate void RequestCompleteDelegateByAppId<TResult>(string appId, TResult result, string error);
         // Download the export zip from provided url
-        public bool RequestAppExportZip(string downloadUri,
-            RequestCompleteDelegate<ZipArchive> onComplete)
+        public bool RequestAppExportZip(string downloadUri, string appId,
+            RequestCompleteDelegateByAppId<ZipArchive> onComplete)
         {
             var uri = new Uri(downloadUri);
             var request = new VRequest();
@@ -95,11 +97,11 @@ namespace Meta.WitAi.Requests
                 try
                 {
                     var zip = new ZipArchive(new MemoryStream(result));
-                    onComplete(zip, null);
+                    onComplete(appId, zip, null);
                 }
                 catch (Exception e)
                 {
-                    onComplete(null, e.ToString());
+                    onComplete(appId, null, e.ToString());
                 }
             });
             return true;
