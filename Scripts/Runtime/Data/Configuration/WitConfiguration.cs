@@ -39,7 +39,7 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Configuration data about the app.
         /// </summary>
-        [SerializeField] private WitConfigurationData[] _configData;
+        [SerializeField] private WitConfigurationAssetData[] _configData;
 
         /// <summary>
         /// Configuration id
@@ -138,7 +138,7 @@ namespace Meta.WitAi.Data.Configuration
             RefreshPlugins();
             #endif
 
-            foreach (WitConfigurationData data in _configData)
+            foreach (WitConfigurationAssetData data in _configData)
             {
                 data.Refresh(this);
             }
@@ -193,11 +193,11 @@ namespace Meta.WitAi.Data.Configuration
         /// Returns all the configuration data for this app.
         /// </summary>
         /// <returns></returns>
-        public WitConfigurationData[] GetConfigData()
+        public WitConfigurationAssetData[] GetConfigData()
         {
             if (_configData == null)
             {
-                _configData = Array.Empty<WitConfigurationData>();
+                _configData = Array.Empty<WitConfigurationAssetData>();
             }
             return _configData;
         }
@@ -243,7 +243,7 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Saves the plugin-specific data for this WitConfiguration
         /// </summary>
-        public void SetConfigData(WitConfigurationData[] configData)
+        public void SetConfigData(WitConfigurationAssetData[] configData)
         {
             _configData = configData;
         }
@@ -263,24 +263,24 @@ namespace Meta.WitAi.Data.Configuration
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             // Find all derived data types
-            List<Type> dataPlugins =  typeof(WitConfigurationData).GetSubclassTypes();
+            List<Type> dataPlugins =  typeof(WitConfigurationAssetData).GetSubclassTypes();
 
             // Create instances of the types and register them
-            List<WitConfigurationData> newConfigs = new List<WitConfigurationData>();
+            List<WitConfigurationAssetData> newConfigs = new List<WitConfigurationAssetData>();
             var configurationAssetPath = AssetDatabase.GetAssetPath(this);
             foreach (Type dataType in dataPlugins)
             {
 
                 // Grab existing if present
-                var plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
+                var plugin = (WitConfigurationAssetData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 // Generate instance & add to asset
                 if (plugin == null)
                 {
-                    plugin = (WitConfigurationData)CreateInstance(dataType);
+                    plugin = (WitConfigurationAssetData)CreateInstance(dataType);
                     plugin.name = dataType.Name;
                     AssetDatabase.AddObjectToAsset(plugin, configurationAssetPath);
                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(plugin));
-                    plugin = (WitConfigurationData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
+                    plugin = (WitConfigurationAssetData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 }
                 newConfigs.Add(plugin);
             }

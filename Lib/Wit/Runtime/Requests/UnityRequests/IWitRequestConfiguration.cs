@@ -43,7 +43,7 @@ namespace Meta.WitAi
         string GetConfigurationId();
         string GetApplicationId();
         WitAppInfo GetApplicationInfo();
-        WitConfigurationData[] GetConfigData();
+        WitConfigurationAssetData[] GetConfigData();
         IWitRequestEndpointInfo GetEndpointInfo();
         string GetClientAccessToken();
 #if UNITY_EDITOR
@@ -51,7 +51,7 @@ namespace Meta.WitAi
         string GetServerAccessToken();
         void SetApplicationInfo(WitAppInfo appInfo);
 
-        void SetConfigData(WitConfigurationData[] configData);
+        void SetConfigData(WitConfigurationAssetData[] configData);
 #endif
         /// <summary>
         /// Refreshes the individual data components of the configuration.
@@ -67,7 +67,7 @@ namespace Meta.WitAi
     {
         private string _clientToken;
         private string _serverToken;
-        private WitConfigurationData[] _configurationData =  Array.Empty<WitConfigurationData>();
+        private WitConfigurationAssetData[] _configurationData =  Array.Empty<WitConfigurationAssetData>();
 
         public WitServerRequestConfiguration(string serverToken)
         {
@@ -77,12 +77,12 @@ namespace Meta.WitAi
         public string GetConfigurationId() => null;
         public string GetApplicationId() => null;
         public WitAppInfo GetApplicationInfo() => new WitAppInfo();
-        public WitConfigurationData[] GetConfigData() => _configurationData;
+        public WitConfigurationAssetData[] GetConfigData() => _configurationData;
 
         public void SetApplicationInfo(WitAppInfo newInfo)
         {
         }
-        public void SetConfigData(WitConfigurationData[] configData)
+        public void SetConfigData(WitConfigurationAssetData[] configData)
         {
             _configurationData = configData;
         }

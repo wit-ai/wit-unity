@@ -15,7 +15,7 @@ namespace Meta.WitAi.Data.Configuration
     /**
      * A portion of the Wit app's configuration data.
      */
-    public abstract class WitConfigurationData : ScriptableObject
+    public abstract class WitConfigurationAssetData : ScriptableObject
     {
         /**
          * Retrieves from the server the relevant data.
