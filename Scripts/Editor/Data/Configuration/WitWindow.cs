@@ -97,7 +97,7 @@ namespace Meta.WitAi.Windows
                 ShowTooltips = showTooltips;
             }
 
-#if VSDK_TELEMETRY_AVAILABLE
+#if VSDK_TELEMETRY_AVAILABLE && UNITY_EDITOR_WIN
             var enableTelemetry = TelemetryConsentManager.ConsentProvided;
             WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.TelemetryEnabledLabel), ref enableTelemetry, ref updated);
             if (updated)
