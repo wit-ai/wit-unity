@@ -18,7 +18,9 @@ namespace Meta.WitAi
         // Wit service endpoint info
         public const string URI_SCHEME = "https";
         public const string URI_AUTHORITY = "api.wit.ai";
+
         public const int URI_DEFAULT_PORT = -1;
+
         // Wit service header keys
         public const string HEADER_REQUEST_ID = "X-Wit-Client-Request-Id";
         public const string HEADER_AUTH = "Authorization";
@@ -61,30 +63,39 @@ namespace Meta.WitAi
         /// some other general error happens that is not an error from the server
         /// </summary>
         public const int ERROR_CODE_GENERAL = -1;
+
         /// <summary>
         /// Error code returned when no configuration is defined
         /// </summary>
         public const int ERROR_CODE_NO_CONFIGURATION = -2;
+
         /// <summary>
         /// Error code returned when the client token has not been set in the
         /// Wit configuration.
         /// </summary>
         public const int ERROR_CODE_NO_CLIENT_TOKEN = -3;
+
         /// <summary>
         /// No data was returned from the server.
         /// </summary>
         public const int ERROR_CODE_NO_DATA_FROM_SERVER = -4;
+
         /// <summary>
         /// Invalid data was returned from the server.
         /// </summary>
         public const int ERROR_CODE_INVALID_DATA_FROM_SERVER = -5;
+
         /// <summary>
         /// Request was aborted
         /// </summary>
         public const int ERROR_CODE_ABORTED = -6;
+
         /// <summary>
         /// Request to the server timed out
         /// </summary>
         public const int ERROR_CODE_TIMEOUT = 14;
+
+        public const string ERROR_RESPONSE_EMPTY_TRANSCRIPTION = "empty-transcription";
+        public const string ERROR_RESPONSE_TIMEOUT = "timeout";
     }
 }
