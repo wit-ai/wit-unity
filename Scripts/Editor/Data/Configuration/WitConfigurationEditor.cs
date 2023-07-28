@@ -437,7 +437,7 @@ namespace Meta.WitAi.Windows
                     {
                         serializedObj = new SerializedObject(newConfigData);
                     }
-
+                    GUI.enabled = false;
                     SerializedProperty serializedProp = serializedObj.FindProperty(_tabs[_requestTab].GetPropertyName(propertyID));
                     if (serializedProp == null)
                     {
