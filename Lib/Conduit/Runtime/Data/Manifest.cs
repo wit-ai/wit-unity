@@ -99,16 +99,18 @@ namespace Meta.Conduit
 
         public Tuple<MethodInfo, Type> GetMethodInfo(IManifestMethod action)
         {
-            var lastPeriod = action.ID.LastIndexOf('.');
+            var actionId = action?.ID;
+            var lastPeriod = actionId.LastIndexOf('.');
             if (lastPeriod <= 0)
             {
-                VLog.E($"Invalid Action ID: {action.ID}");
+                VLog.E($"Invalid Action ID: {actionId}");
                 return null;
             }
 
-            var typeName = action.ID.Substring(0, lastPeriod);
-            var qualifiedTypeName = $"{typeName},{action.Assembly}";
-            var method = action.ID.Substring(lastPeriod + 1);
+            var typeName = actionId.Substring(0, lastPeriod);
+            var qualifiedTypeName = typeName;
+            qualifiedTypeName += action.Assembly != null ? $",{action.Assembly}" : "";
+            var method = actionId.Substring(lastPeriod + 1);
 
             var targetType = Type.GetType(qualifiedTypeName);
             if (targetType == null)
@@ -117,8 +119,9 @@ namespace Meta.Conduit
                 return  null;
             }
 
-            var types = new Type[action.Parameters.Count];
-            for (var i = 0; i < action.Parameters.Count; i++)
+            var total = action.Parameters == null ? 0 : action.Parameters.Count;
+            var types = new Type[total];
+            for (var i = 0; i < total; i++)
             {
                 var manifestParameter = action.Parameters[i];
                 var fullTypeName = $"{manifestParameter.QualifiedTypeName},{manifestParameter.TypeAssembly}";
@@ -235,7 +238,7 @@ namespace Meta.Conduit
                     Type = targetType,
                     MethodInfo = targetMethod,
                     CustomAttributeType = typeof(HandleEntityResolutionFailureAttribute)
-                    
+
                 };
 
                 if (!_methodLookup.ContainsKey(action.Name))
