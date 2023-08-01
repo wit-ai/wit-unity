@@ -35,13 +35,32 @@ using Meta.WitAi;
 
 namespace Meta.WitAi.Lib
 {
+    /// <summary>
+    /// The various Mic states possible
+    /// </summary>
+    public enum MicState
+    {
+        Off,
+        Enabling,
+        On,
+        Disabling
+    }
+
+    /// <summary>
+    /// A simple mic playback class
+    /// </summary>
     public class Mic : MonoBehaviour, IAudioInputSource
     {
         // ================================================
 
         #region MEMBERS
-
         // ================================================
+        /// <summary>
+        /// The current state of Mic playback
+        /// </summary>
+        public MicState State { get; private set; }
+        private Coroutine _micEnabler;
+
         /// <summary>
         /// Whether the microphone is running
         /// </summary>
@@ -61,6 +80,13 @@ namespace Meta.WitAi.Lib
         /// Sample duration/length in milliseconds
         /// </summary>
         public int SampleDurationMS { get; private set; }
+
+        /// <summary>
+        /// Stop trying to start mic after this duration in seconds
+        /// </summary>
+        public float StartMicTimeout = 5f;
+        // Seconds between mic device check
+        private const float MIC_CHECK = 0.5f;
 
         /// <summary>
         /// Check if input is available & start if possible
@@ -257,32 +283,65 @@ namespace Meta.WitAi.Lib
         // Safely start microphone
         public void SafeStartMicrophone()
         {
+            if (State == MicState.Enabling || State == MicState.On)
+            {
+                return;
+            }
             // Can't start if inactive
             if (!gameObject.activeInHierarchy)
             {
                 return;
             }
-            // Look for devices
-            if (Devices == null || Devices.Count == 0)
+
+            // Stop
+            if (_micEnabler != null)
             {
-                // Check for devices
-                RefreshMicDevices();
-                // None found
-                if (Devices == null || Devices.Count == 0)
+                StopCoroutine(_micEnabler);
+                _micEnabler = null;
+            }
+
+            // Enabling
+            State = MicState.Enabling;
+            _micEnabler = StartCoroutine(WaitForMics());
+        }
+
+        // Wait for mics
+        private IEnumerator WaitForMics()
+        {
+            // Wait for devices
+            float checkTime = MIC_CHECK;
+            float elapsedTime = 0f;
+            while ((Devices == null || Devices.Count == 0) && elapsedTime <= StartMicTimeout)
+            {
+                if (checkTime >= MIC_CHECK)
                 {
-                    return;
+                    checkTime = 0f;
+                    RefreshMicDevices();
                 }
+                yield return new WaitForEndOfFrame();
+                checkTime += Time.deltaTime;
+                elapsedTime += Time.deltaTime;
             }
 
-            // Ignore if already setup & recording
-            string micID = CurrentDeviceName;
-            if (!string.IsNullOrEmpty(micID) && AudioClip != null && string.Equals(micID, AudioClip.name) && MicrophoneIsRecording(micID))
+            // Timeout
+            if (elapsedTime > StartMicTimeout)
             {
-                return;
+                VLog.W("Mic start timed out");
+                State = MicState.Off;
+                _micEnabler = null;
+                yield break;
             }
 
-            // Set device
-            ChangeDevice(CurrentDeviceIndex < 0 ? 0 : CurrentDeviceIndex);
+            // Change device if desired
+            string micID = CurrentDeviceName;
+            if (string.IsNullOrEmpty(micID) || AudioClip == null || !string.Equals(micID, AudioClip.name) || !MicrophoneIsRecording(micID))
+            {
+                ChangeDevice(CurrentDeviceIndex < 0 ? 0 : CurrentDeviceIndex);
+            }
+
+            // On
+            State = MicState.On;
+            _micEnabler = null;
         }
 
         /// <summary>
@@ -337,6 +396,23 @@ namespace Meta.WitAi.Lib
 
         private void StopMicrophone()
         {
+            // Not already off or disabled
+            if (State == MicState.Disabling || State == MicState.Off)
+            {
+                return;
+            }
+
+            // Disable
+            State = MicState.Disabling;
+
+            // Stop waiting to enable
+            if (_micEnabler != null)
+            {
+                StopCoroutine(_micEnabler);
+                _micEnabler = null;
+            }
+
+            // End
             if (MicrophoneIsRecording(CurrentDeviceName))
             {
 #if !UNITY_WEBGL || UNITY_EDITOR
@@ -344,11 +420,16 @@ namespace Meta.WitAi.Lib
                 Microphone.End(CurrentDeviceName);
 #endif
             }
+
+            // Destroy clip
             if (AudioClip != null)
             {
                 AudioClip.DestroySafely();
                 AudioClip = null;
             }
+
+            // Disabled
+            State = MicState.Off;
         }
         #endregion
 
