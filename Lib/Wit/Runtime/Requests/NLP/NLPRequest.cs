@@ -99,10 +99,6 @@ namespace Meta.Voice
             {
                 return "Cannot send audio without activation";
             }
-            if (InputType == NLPRequestInputType.Text && string.IsNullOrEmpty(Options?.Text))
-            {
-                return "Cannot send text request without Options.Text";
-            }
             return base.GetSendError();
         }
     }
