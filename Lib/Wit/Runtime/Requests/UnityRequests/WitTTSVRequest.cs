@@ -29,6 +29,10 @@ namespace Meta.WitAi.Requests
         #endif
         WAV = 2
     }
+
+    /// <summary>
+    /// A Wit VRequest subclass for handling TTS requests
+    /// </summary>
     public class WitTTSVRequest : WitVRequest
     {
         // The text to be requested
@@ -39,7 +43,7 @@ namespace Meta.WitAi.Requests
         // The audio type to be used
         public TTSWitAudioType FileType { get; }
         // Whether audio should stream or not
-        public bool Stream { get; }
+        public bool Stream { get; private set; }
 
         /// <summary>
         /// Constructor for wit based text-to-speech VRequests
@@ -74,65 +78,129 @@ namespace Meta.WitAi.Requests
             return headers;
         }
 
-        /// <summary>
-        /// Streams text to speech audio clip
-        /// </summary>
-        /// <param name="onClipReady">Clip ready to be played</param>
-        /// <param name="onProgress">Clip load progress</param>
-        /// <returns>False if request cannot be called</returns>
-        public bool RequestStream(IAudioClipStream clipStream,
-            RequestCompleteDelegate<IAudioClipStream> onClipReady)
+        // Performs web error check locally
+        private string GetWebErrors(bool downloadOnly = false)
         {
-            // Error if no text is provided
-            if (string.IsNullOrEmpty(TextToSpeak))
-            {
-                onClipReady?.Invoke(null, WitConstants.ENDPOINT_TTS_NO_TEXT);
-                return false;
-            }
+            // Get errors
+            string errors = GetWebErrors(TextToSpeak, Configuration);
             // Warn if incompatible with streaming
-            if (Stream && !CanStreamAudio(FileType))
+            if (!downloadOnly && Stream && !CanStreamAudio(FileType))
             {
                 VLog.W($"Wit cannot stream {FileType} files please use {TTSWitAudioType.PCM} instead.");
+                Stream = false;
             }
-
-            // Async encode
-            EncodePostBytesAsync(TextToSpeak, TtsData, (bytes) =>
-            {
-                // Get tts unity request
-                UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
-
-                // Perform an audio stream request
-                RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream);
-            });
-            return true;
+            // Return errors
+            return errors;
         }
 
         /// <summary>
-        /// TTS streaming audio request
+        /// Method for determining if there are problems that will arise
+        /// with performing a web request prior to doing so
         /// </summary>
-        /// <param name="downloadPath">Download path</param>
-        /// <param name="onComplete">Clip completed download</param>
-        /// <returns>False if request cannot be called</returns>
-        public bool RequestDownload(string downloadPath,
-            RequestCompleteDelegate<bool> onComplete)
+        public static string GetWebErrors(string textToSpeak, IWitRequestConfiguration configuration)
         {
-            // Error
-            if (string.IsNullOrEmpty(TextToSpeak))
+            // Invalid text
+            if (string.IsNullOrEmpty(textToSpeak))
             {
-                onComplete?.Invoke(false, WitConstants.ENDPOINT_TTS_NO_TEXT);
-                return false;
+                return WitConstants.ENDPOINT_TTS_NO_TEXT;
+            }
+            // Check configuration & configuration token
+            if (configuration == null)
+            {
+                return WitConstants.ERROR_NO_CONFIG;
+            }
+            if (string.IsNullOrEmpty(configuration.GetClientAccessToken()))
+            {
+                return WitConstants.ERROR_NO_CONFIG_TOKEN;
+            }
+            #if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+            // Mobile network reachability check
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                return WitConstants.ERROR_REACHABILITY;
+            }
+            #endif
+            // Should be good
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
+        /// provided audio clip stream.
+        /// </summary>
+        /// <param name="clipStream">The audio clip stream used
+        /// to handle audio data caching</param>
+        /// <param name="onClipReady">The callback when the audio
+        /// clip stream is ready for playback</param>
+        /// <returns>An error string if applicable</returns>
+        public string RequestStream(IAudioClipStream clipStream,
+            RequestCompleteDelegate<IAudioClipStream> onClipReady)
+        {
+            // Error check
+            string errors = GetWebErrors();
+            if (!string.IsNullOrEmpty(errors))
+            {
+                onClipReady?.Invoke(clipStream, errors);
+                return errors;
             }
 
-            // Async encode
-            EncodePostBytesAsync(TextToSpeak, TtsData, (bytes) =>
+            // Encode post data
+            byte[] bytes = EncodePostData(TextToSpeak, TtsData);
+            if (bytes == null)
             {
-                // Get tts unity request
-                UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+                errors = WitConstants.ERROR_TTS_DECODE;
+                onClipReady?.Invoke(clipStream, errors);
+                return errors;
+            }
 
-                // Perform an audio stream request
-                RequestFileDownload(downloadPath, unityRequest, onComplete);
-            });
-            return true;
+            // Get tts unity request
+            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+
+            // Perform an audio stream request
+            if (!RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream))
+            {
+                return "Failed to start audio stream";
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
+        /// a specific path on disk.
+        /// </summary>
+        /// <param name="downloadPath">Path to download the audio clip to</param>
+        /// <param name="onComplete">The callback when the clip is
+        /// either completely downloaded or failed to download</param>
+        /// <returns>An error string if applicable</returns>
+        public string RequestDownload(string downloadPath,
+            RequestCompleteDelegate<bool> onComplete)
+        {
+            // Error check
+            string errors = GetWebErrors(true);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                onComplete?.Invoke(false, errors);
+                return errors;
+            }
+
+            // Encode post data
+            byte[] bytes = EncodePostData(TextToSpeak, TtsData);
+            if (bytes == null)
+            {
+                errors = WitConstants.ERROR_TTS_DECODE;
+                onComplete?.Invoke(false, errors);
+                return errors;
+            }
+
+            // Get tts unity request
+            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+
+            // Perform an audio download request
+            if (!RequestFileDownload(downloadPath, unityRequest, onComplete))
+            {
+                return "Failed to start audio stream";
+            }
+            return string.Empty;
         }
 
         // Encode post bytes async
@@ -164,6 +232,23 @@ namespace Meta.WitAi.Requests
             return unityRequest;
         }
 
+        // Cast audio type
+        public static TTSWitAudioType GetWitAudioType(AudioType audioType)
+        {
+            switch (audioType)
+            {
+                #if OGG_SUPPORT
+                case AudioType.OGGVORBIS:
+                    return TTSWitAudioType.OGGVORBIS;
+                #endif
+                case AudioType.MPEG:
+                    return TTSWitAudioType.MPEG;
+                case AudioType.WAV:
+                    return TTSWitAudioType.WAV;
+                default:
+                    return TTSWitAudioType.PCM;
+            }
+        }
         // Cast audio type
         public static AudioType GetAudioType(TTSWitAudioType witAudioType)
         {
@@ -231,7 +316,7 @@ namespace Meta.WitAi.Requests
         {
             switch (witAudioType)
             {
-                // Raw PCM: Supported by Wit.ai & custom unity implementation (DownloadHandlerRawPCM)
+                // Raw PCM: Supported by Wit.ai & custom unity implementation (AudioDow)
                 case TTSWitAudioType.PCM:
                     return true;
                 #if OGG_SUPPORT

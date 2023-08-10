@@ -194,7 +194,7 @@ namespace Meta.WitAi.Requests
             UploadProgress = 0f;
             DownloadProgress = 0f;
             _onDownloadProgress?.Invoke(DownloadProgress);
-            _request.SendWebRequest();
+            _request?.SendWebRequest();
         }
 
         // Check for whether request is complete
@@ -270,7 +270,7 @@ namespace Meta.WitAi.Requests
                 }
 
                 // Stream is ready, call delegate
-                if (!IsStreamReady && _request.downloadHandler is IVRequestStreamable streamHandler && streamHandler.IsStreamReady)
+                if (!IsStreamReady && _request?.downloadHandler is IVRequestStreamable streamHandler && streamHandler.IsStreamReady)
                 {
                     IsStreamReady = true;
                     _onStreamReady?.Invoke(_request, string.Empty);
@@ -359,7 +359,7 @@ namespace Meta.WitAi.Requests
             string downloadedJson = string.Empty;
             try
             {
-                byte[] downloadedBytes = request.downloadHandler.data;
+                byte[] downloadedBytes = request?.downloadHandler?.data;
                 if (downloadedBytes != null)
                 {
                     downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
@@ -477,7 +477,7 @@ namespace Meta.WitAi.Requests
 
             // Complete if still performing
             TData results = default(TData);
-            if (IsPerforming)
+            if (IsPerforming && _request != null)
             {
                 // Set code & error if applicable
                 DownloadProgress = 1f;

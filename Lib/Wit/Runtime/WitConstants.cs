@@ -36,15 +36,22 @@ namespace Meta.WitAi
         public const string ENDPOINT_JSON_DELIMITER = "\r\n";
         public const string ENDPOINT_ERROR_PARAM = "error";
 
+        // Errors
+        public const string ERROR_REACHABILITY = "Endpoint not reachable";
+        public const string ERROR_NO_CONFIG = "No WitConfiguration Set";
+        public const string ERROR_NO_CONFIG_TOKEN = "No WitConfiguration Client Token";
+
         // TTS Endpoint
         public const string ENDPOINT_TTS = "synthesize";
         public const string ENDPOINT_TTS_PARAM = "q";
+        public const string ENDPOINT_TTS_NO_CLIP = "No tts clip provided";
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
         public const string ERROR_TTS_CACHE_DOWNLOAD = "File is not Preloaded";
+        public const string ERROR_TTS_DECODE = "Data failed to encode";
 
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";

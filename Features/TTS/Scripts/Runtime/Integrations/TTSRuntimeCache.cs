@@ -186,7 +186,10 @@ namespace Meta.WitAi.TTS.Integrations
             long total = 0;
             foreach (var key in _clips.Keys)
             {
-                total += GetClipBytes(_clips[key].clipStream.Channels, _clips[key].clipStream.TotalSamples);
+                if (_clips[key].clipStream != null)
+                {
+                    total += GetClipBytes(_clips[key].clipStream.Channels, _clips[key].clipStream.TotalSamples);
+                }
             }
             return (int)(total / (long)1024) + 1;
         }
