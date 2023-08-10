@@ -133,7 +133,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uriEndpoint">Endpoint name</param>
         /// <returns>Returns the request complete data including a parsed result if possible</returns>
         public async Task<RequestCompleteResponse<TData>> RequestWitGetAsync<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams) =>
+            Dictionary<string, string> uriParams = null) =>
             await RequestJsonGetAsync<TData>(GetUri(uriEndpoint, uriParams));
 
         /// <summary>
