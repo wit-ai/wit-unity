@@ -12,6 +12,7 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using Meta.WitAi.Json;
 using UnityEngine;
@@ -166,6 +167,39 @@ namespace Meta.WitAi.Requests
 
         /// <summary>
         /// Performs a wit tts request that streams audio data into the
+        /// provided audio clip stream & returns once the request is ready
+        /// </summary>
+        /// <param name="clipStream">The audio clip stream used
+        /// to handle audio data caching</param>
+        /// <param name="onClipReady">The callback when the audio
+        /// clip stream is ready for playback</param>
+        /// <returns>An error string if applicable</returns>
+        public async Task<RequestCompleteResponse<IAudioClipStream>> RequestStreamAsync(IAudioClipStream clipStream)
+        {
+            // Error check
+            string errors = GetWebErrors();
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return new RequestCompleteResponse<IAudioClipStream>(clipStream, errors);
+            }
+
+            // Async encode
+            var bytes = await EncodePostBytesAsync(TextToSpeak, TtsData);
+            if (bytes == null)
+            {
+                errors = WitConstants.ERROR_TTS_DECODE;
+                return new RequestCompleteResponse<IAudioClipStream>(clipStream, errors);
+            }
+
+            // Get tts unity request
+            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+
+            // Perform request async
+            return await RequestAudioStreamAsync(clipStream, GetAudioType(FileType), Stream, unityRequest);
+        }
+
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
         /// a specific path on disk.
         /// </summary>
         /// <param name="downloadPath">Path to download the audio clip to</param>
@@ -203,10 +237,43 @@ namespace Meta.WitAi.Requests
             return string.Empty;
         }
 
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
+        /// a specific path on disk and asynchronously returns any errors
+        /// encountered once complete
+        /// </summary>
+        /// <param name="downloadPath">Path to download the audio clip to</param>
+        /// <returns>An error string if applicable</returns>
+        public async Task<string> RequestDownloadAsync(string downloadPath)
+        {
+            // Error check
+            string errors = GetWebErrors(true);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return errors;
+            }
+
+            // Async encode
+            byte[] bytes = await EncodePostBytesAsync(TextToSpeak, TtsData);
+            if (bytes == null)
+            {
+                return WitConstants.ERROR_TTS_DECODE;
+            }
+
+            // Get tts unity request
+            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+
+            // Perform request async
+            return await RequestFileDownloadAsync(downloadPath, unityRequest);
+        }
+
         // Encode post bytes async
-        private void EncodePostBytesAsync(string textToSpeak, Dictionary<string, string> ttsData,
-            Action<byte[]> onEncoded) => ThreadUtility.PerformInBackground(() => EncodePostData(textToSpeak, ttsData),
-            (bytes, error) => onEncoded(bytes));
+        private async Task<byte[]> EncodePostBytesAsync(string textToSpeak, Dictionary<string, string> ttsData)
+        {
+            byte[] results = null;
+            await Task.Run(() => results = EncodePostData(textToSpeak, ttsData));
+            return results;
+        }
 
         // Encode tts post bytes
         private byte[] EncodePostData(string textToSpeak, Dictionary<string, string> ttsData)
