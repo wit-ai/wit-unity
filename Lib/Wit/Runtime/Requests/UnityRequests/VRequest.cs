@@ -875,6 +875,13 @@ namespace Meta.WitAi.Requests
         public bool RequestText(UnityWebRequest unityRequest,
             RequestCompleteDelegate<string> onComplete)
         {
+            // Set download handler if needed
+            if (unityRequest.downloadHandler == null)
+            {
+                unityRequest.downloadHandler = new DownloadHandlerBuffer();
+            }
+
+            // Perform request
             return Request(unityRequest, (response, error) =>
             {
                 // Request error
@@ -893,6 +900,22 @@ namespace Meta.WitAi.Requests
                 // Success
                 onComplete?.Invoke(text, string.Empty);
             });
+        }
+
+        /// <summary>
+        /// Performs a text request async & returns the text along with any errors
+        /// </summary>
+        /// <param name="unityRequest">The unity request performing the post or get</param>
+        public async Task<RequestCompleteResponse<string>> RequestTextAsync(UnityWebRequest unityRequest)
+        {
+            // Set download handler if needed
+            if (unityRequest.downloadHandler == null)
+            {
+                unityRequest.downloadHandler = new DownloadHandlerBuffer();
+            }
+
+            // Perform the request until completion
+            return await RequestAsync(unityRequest, (request) => request?.downloadHandler?.text);
         }
         #endregion
 
