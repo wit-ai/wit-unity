@@ -12,6 +12,7 @@ using System.Text;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Json
@@ -74,62 +75,81 @@ namespace Meta.WitAi.Json
         }
 
         /// <summary>
-        /// Generate a default instance, deserialize and return async
+        /// Safely parse a string into a json node async
         /// </summary>
-        public static void DeserializeObjectAsync<IN_TYPE>(string jsonString, Action<IN_TYPE, bool> onComplete, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        /// <param name="jsonString">Json parseable string</param>
+        public static async Task<WitResponseNode> DeserializeTokenAsync(string jsonString)
         {
-            IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
-            ThreadUtility.PerformInBackground(
-                () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonString, customConverters, suppressWarnings),
-                (success, error) => onComplete?.Invoke(instance, success));
+            WitResponseNode result = null;
+            await Task.Run(() => result = DeserializeToken(jsonString));
+            return result;
         }
-        /// <summary>
-        /// Generate a default instance, deserialize and return async
-        /// </summary>
-        public static void DeserializeObjectAsync<IN_TYPE>(WitResponseNode jsonToken, Action<IN_TYPE, bool> onComplete, JsonConverter[] customConverters = null, bool suppressWarnings = false)
-        {
-            IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
-            ThreadUtility.PerformInBackground(
-                () => DeserializeIntoObject<IN_TYPE>(ref instance, jsonToken, customConverters, suppressWarnings),
-                (success, error) => onComplete?.Invoke(instance, success));
-        }
+
         /// <summary>
         /// Generate a default instance, deserialize and return
         /// </summary>
         public static IN_TYPE DeserializeObject<IN_TYPE>(string jsonString, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
-            DeserializeIntoObject<IN_TYPE>(ref instance, jsonString, customConverters, suppressWarnings);
-            return instance;
+            return DeserializeIntoObject<IN_TYPE>(instance, jsonString, customConverters, suppressWarnings);;
         }
+
+        /// <summary>
+        /// Generate a default instance, deserialize and return async
+        /// </summary>
+        public static async Task<IN_TYPE> DeserializeObjectAsync<IN_TYPE>(string jsonString, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            IN_TYPE result = default(IN_TYPE);
+            await Task.Run(() => result = DeserializeObject<IN_TYPE>(jsonString, customConverters, suppressWarnings));
+            return result;
+        }
+
         /// <summary>
         /// Generate a default instance, deserialize and return
         /// </summary>
         public static IN_TYPE DeserializeObject<IN_TYPE>(WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
             IN_TYPE instance = (IN_TYPE)EnsureExists(typeof(IN_TYPE), null);
-            DeserializeIntoObject<IN_TYPE>(ref instance, jsonToken, customConverters, suppressWarnings);
-            return instance;
+            return DeserializeIntoObject<IN_TYPE>(instance, jsonToken, customConverters, suppressWarnings);
+        }
+
+        /// <summary>
+        /// Generate a default instance, deserialize and return async
+        /// </summary>
+        public static async Task<IN_TYPE>  DeserializeObjectAsync<IN_TYPE>(WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            IN_TYPE result = default(IN_TYPE);
+            await Task.Run(() => result = DeserializeObject<IN_TYPE>(jsonToken, customConverters, suppressWarnings));
+            return result;
         }
 
         /// <summary>
         /// Deserialize json string into an existing instance
         /// </summary>
-        public static bool DeserializeIntoObject<IN_TYPE>(ref IN_TYPE instance, string jsonString, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        public static IN_TYPE DeserializeIntoObject<IN_TYPE>(IN_TYPE instance, string jsonString, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
-            // Parse json
-            WitResponseNode jsonToken = DeserializeToken(jsonString);
-            return DeserializeIntoObject<IN_TYPE>(ref instance, jsonToken, customConverters, suppressWarnings);
+            return DeserializeIntoObject<IN_TYPE>(instance, DeserializeToken(jsonString), customConverters, suppressWarnings);
         }
+
+        /// <summary>
+        /// Deserialize json string into an existing instance async
+        /// </summary>
+        public static async Task<IN_TYPE> DeserializeIntoObjectAsync<IN_TYPE>(IN_TYPE instance, string jsonString, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            IN_TYPE result = default(IN_TYPE);
+            await Task.Run(() => result = DeserializeIntoObject<IN_TYPE>(instance, jsonString, customConverters, suppressWarnings));
+            return result;
+        }
+
         /// <summary>
         /// Deserialize json string into an existing instance
         /// </summary>
-        public static bool DeserializeIntoObject<IN_TYPE>(ref IN_TYPE instance, WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        public static IN_TYPE DeserializeIntoObject<IN_TYPE>(IN_TYPE instance, WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
             // Could not parse
             if (jsonToken == null)
             {
-                return false;
+                return instance;
             }
             // Use default if no customs are added
             if (customConverters == null)
@@ -142,37 +162,44 @@ namespace Meta.WitAi.Json
             if (iType == typeof(WitResponseNode))
             {
                 object result = jsonToken;
-                instance = (IN_TYPE)result;
-                return true;
+                return (IN_TYPE)result;
             }
             if (iType == typeof(WitResponseClass))
             {
                 object result = jsonToken.AsObject;
-                instance = (IN_TYPE)result;
-                return true;
+                return (IN_TYPE)result;
             }
             if (iType == typeof(WitResponseArray))
             {
                 object result = jsonToken.AsArray;
-                instance = (IN_TYPE)result;
-                return true;
+                return (IN_TYPE)result;
             }
 
             try
             {
                 StringBuilder log = new StringBuilder();
-                instance = (IN_TYPE)DeserializeToken(iType, instance, jsonToken, log, customConverters);
+                IN_TYPE result = (IN_TYPE)DeserializeToken(iType, instance, jsonToken, log, customConverters);
                 if (log.Length > 0 && !suppressWarnings)
                 {
                     VLog.D($"Deserialize Warnings\n{log}");
                 }
-                return true;
+                return result;
             }
             catch (Exception e)
             {
                 VLog.E($"Deserialize Failed\nTo: {typeof(IN_TYPE)}\n{e}");
-                return false;
+                return instance;
             }
+        }
+
+        /// <summary>
+        /// Deserialize json string into an existing instance async
+        /// </summary>
+        public static async Task<IN_TYPE> DeserializeIntoObjectAsync<IN_TYPE>(IN_TYPE instance, WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            IN_TYPE result = default(IN_TYPE);
+            await Task.Run(() => result = DeserializeIntoObject<IN_TYPE>(instance, jsonToken, customConverters, suppressWarnings));
+            return result;
         }
 
         /// <summary>

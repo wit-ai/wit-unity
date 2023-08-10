@@ -38,9 +38,7 @@ namespace Meta.WitAi.Data.Entities
         public WitEntityDataBase<T> FromEntityWitResponseNode(WitResponseNode node)
         {
             responseNode = node;
-            WitEntityDataBase<T> result = this;
-            JsonConvert.DeserializeIntoObject(ref result, node);
-            return result;
+            return JsonConvert.DeserializeIntoObject(this, node);
         }
 
         public override string ToString()

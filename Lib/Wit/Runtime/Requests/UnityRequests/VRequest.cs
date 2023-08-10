@@ -639,25 +639,18 @@ namespace Meta.WitAi.Requests
                     return;
                 }
 
-                // Deserialize
-                JsonConvert.DeserializeObjectAsync<TData>(text, (result, deserializeSuccess) =>
+                // Deserialize synchronously
+                var result = JsonConvert.DeserializeObject<TData>(text);
+                // Parse failed
+                if (result == null)
                 {
-                    // Return parsed error
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        onComplete?.Invoke(result, error);
-                    }
-                    // Parse failed
-                    else if (!deserializeSuccess)
-                    {
-                        onComplete?.Invoke(result, $"Failed to parse json\n{text}");
-                    }
-                    // Success
-                    else
-                    {
-                        onComplete?.Invoke(result, string.Empty);
-                    }
-                });
+                    onComplete?.Invoke(result, $"Failed to parse json\n{text}");
+                }
+                // Success
+                else
+                {
+                    onComplete?.Invoke(result, string.Empty);
+                }
             });
         }
 

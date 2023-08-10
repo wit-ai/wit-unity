@@ -27,9 +27,7 @@ namespace Meta.WitAi.Data.Intents
 
         public WitIntentData FromIntentWitResponseNode(WitResponseNode node)
         {
-            WitIntentData result = this;
-            JsonConvert.DeserializeIntoObject(ref result, node);
-            return result;
+            return JsonConvert.DeserializeIntoObject(this, node);
         }
     }
 }
