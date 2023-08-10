@@ -16,6 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
@@ -23,11 +24,14 @@ using Meta.Voice.Audio;
 
 namespace Meta.WitAi.Requests
 {
-    // VRequest streamable interface
+    /// <summary>
+    /// Interface for custom download handler for streaming callbacks
+    /// </summary>
     public interface IVRequestStreamable
     {
         bool IsStreamReady { get; }
         bool IsStreamComplete { get; }
+        void CleanUp();
     }
 
     /// <summary>
@@ -50,6 +54,36 @@ namespace Meta.WitAi.Requests
         // Default request completion delegate
         public delegate void RequestCompleteDelegate<TResult>(TResult result, string error);
 
+        /// <summary>
+        /// A request result wrapper which can return a result and error string.
+        /// </summary>
+        /// <typeparam name="TResult">the type of the result data</typeparam>
+        public struct RequestCompleteResponse<TValue>
+        {
+            /// <summary>
+            /// The type of the result data
+            /// </summary>
+            public TValue Value;
+
+            /// <summary>
+            /// The error string, if errors occurred. Will be NullOrEmpty otherwise.
+            /// </summary>
+            public string Error;
+
+            /// <summary>
+            /// Simple constructor with value and error
+            /// </summary>
+            /// <param name="value">The value of the response</param>
+            /// <param name="error">Any returned error from the request</param>
+            public RequestCompleteResponse(TValue value, string error)
+            {
+                Value = value;
+                Error = error;
+            }
+            public RequestCompleteResponse(TValue value) : this(value, string.Empty) { }
+            public RequestCompleteResponse(string error) : this(default(TValue), string.Empty) { }
+        }
+
         #region INSTANCE
         /// <summary>
         /// Timeout in seconds
@@ -62,13 +96,29 @@ namespace Meta.WitAi.Requests
         public bool IsPerforming { get; private set; } = false;
 
         /// <summary>
+        /// If first response has been received
+        /// </summary>
+        public bool HasFirstResponse { get; private set; } = false;
+
+        /// <summary>
+        /// If the download handler incorporates IVRequestStreamable & IsStreamReady
+        /// </summary>
+        public bool IsStreamReady { get; private set; } = false;
+
+        /// <summary>
         /// Whether or not the completion delegate has been called
         /// </summary>
         public bool IsComplete { get; private set; } = false;
+
         /// <summary>
         /// Response Code if applicable
         /// </summary>
         public int ResponseCode { get; set; } = 0;
+
+        /// <summary>
+        /// Response error
+        /// </summary>
+        public string ResponseError { get; private set; }
 
         /// <summary>
         /// Current progress for get requests
@@ -84,6 +134,7 @@ namespace Meta.WitAi.Requests
         // Callbacks for progress & completion
         private RequestProgressDelegate _onDownloadProgress;
         private RequestFirstResponseDelegate _onFirstResponse;
+        private RequestCompleteDelegate<UnityWebRequest> _onStreamReady;
         private RequestCompleteDelegate<UnityWebRequest> _onComplete;
 
         // Coroutine running the request
@@ -101,29 +152,18 @@ namespace Meta.WitAi.Requests
             _onFirstResponse = onFirstResponse;
         }
 
-        /// <summary>
-        /// Initialize with a request and an on completion callback
-        /// </summary>
-        /// <param name="unityRequest">The unity request to be performed</param>
-        /// <param name="onProgress"></param>
-        /// <param name="onComplete">The callback on completion, returns the request & error string</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public virtual bool Request(UnityWebRequest unityRequest, RequestCompleteDelegate<UnityWebRequest> onComplete)
+        // Setup request settings
+        protected virtual void Setup(UnityWebRequest unityRequest)
         {
-            // Already setup
-            if (_request != null)
-            {
-                onComplete?.Invoke(unityRequest, "Request is already being performed");
-                return false;
-            }
-
             // Setup
             _request = unityRequest;
-            _onComplete = onComplete;
             IsPerforming = false;
+            HasFirstResponse = false;
+            IsStreamReady = false;
             IsComplete = false;
             UploadProgress = 0f;
             DownloadProgress = 0f;
+            ResponseError = string.Empty;
 
             // Add all headers
             Dictionary<string, string> headers = GetHeaders();
@@ -141,13 +181,8 @@ namespace Meta.WitAi.Requests
             // Dispose handlers automatically
             _request.disposeUploadHandlerOnDispose = true;
             _request.disposeDownloadHandlerOnDispose = true;
-
-            // Begin
-            _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
-
-            // Success
-            return true;
         }
+
         /// <summary>
         /// Clean the url prior to use
         /// </summary>
@@ -163,66 +198,10 @@ namespace Meta.WitAi.Requests
             // Return url
             return result;
         }
+
         // Override for custom headers
         protected virtual Dictionary<string, string> GetHeaders() => null;
-        // Perform update
-        protected virtual IEnumerator PerformUpdate()
-        {
-            // Continue while request exists & is not complete
-            while (!IsRequestComplete())
-            {
-                // Wait
-                yield return null;
 
-                // Waiting to begin
-                if (!IsPerforming)
-                {
-                    // Can start
-                    if (MaxConcurrentRequests <= 0 || _requestCount < MaxConcurrentRequests)
-                    {
-                        _requestCount++;
-                        Begin();
-                    }
-                }
-                // Update progresses
-                else
-                {
-                    // Set upload progress
-                    float newProgress = _request.uploadProgress;
-                    if (!UploadProgress.Equals(newProgress))
-                    {
-                        UploadProgress = newProgress;
-                    }
-
-                    // Set download progress
-                    newProgress = _request.downloadProgress;
-                    if (!DownloadProgress.Equals(newProgress))
-                    {
-                        DownloadProgress = newProgress;
-                        _onDownloadProgress?.Invoke(DownloadProgress);
-                    }
-
-                    // First response received
-                    if (_onFirstResponse != null && _request.downloadedBytes > 0)
-                    {
-                        _onFirstResponse.Invoke();
-                        _onFirstResponse = null;
-                    }
-
-                    // Stream is ready
-                    if (_onComplete != null && _request.downloadHandler is IVRequestStreamable streamHandler)
-                    {
-                        if (streamHandler.IsStreamReady)
-                        {
-                            _onComplete.Invoke(_request, string.Empty);
-                            _onComplete = null;
-                        }
-                    }
-                }
-            }
-            // Complete
-            Complete();
-        }
         // Begin request
         protected virtual void Begin()
         {
@@ -232,6 +211,7 @@ namespace Meta.WitAi.Requests
             _onDownloadProgress?.Invoke(DownloadProgress);
             _request.SendWebRequest();
         }
+
         // Check for whether request is complete
         protected virtual bool IsRequestComplete()
         {
@@ -265,21 +245,54 @@ namespace Meta.WitAi.Requests
             // Complete
             return true;
         }
-        // Request complete
-        protected virtual void Complete()
-        {
-            // Perform callback
-            if (IsPerforming && IsRequestComplete())
-            {
-                DownloadProgress = 1f;
-                ResponseCode = (int)_request.responseCode;
-                _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, GetSpecificRequestError(_request));
-            }
 
-            // Unload
-            Unload();
+        // Performs an update & begins the stream if needed
+        protected virtual void Update()
+        {
+            // Waiting to begin
+            if (!IsPerforming)
+            {
+                // Start performing request
+                if (MaxConcurrentRequests <= 0 || _requestCount < MaxConcurrentRequests)
+                {
+                    _requestCount++;
+                    Begin();
+                }
+            }
+            // Update progresses
+            else if (_request != null)
+            {
+                // Set upload progress
+                float newProgress = _request.uploadProgress;
+                if (!UploadProgress.Equals(newProgress))
+                {
+                    UploadProgress = newProgress;
+                }
+
+                // Set download progress
+                newProgress = _request.downloadProgress;
+                if (!DownloadProgress.Equals(newProgress))
+                {
+                    DownloadProgress = newProgress;
+                    _onDownloadProgress?.Invoke(DownloadProgress);
+                }
+
+                // First response received, call delegate
+                if (!HasFirstResponse && _request.downloadedBytes > 0)
+                {
+                    HasFirstResponse = true;
+                    _onFirstResponse?.Invoke();
+                }
+
+                // Stream is ready, call delegate
+                if (!IsStreamReady && _request.downloadHandler is IVRequestStreamable streamHandler && streamHandler.IsStreamReady)
+                {
+                    IsStreamReady = true;
+                    _onStreamReady?.Invoke(_request, string.Empty);
+                }
+            }
         }
+
         // Abort request
         public virtual void Cancel()
         {
@@ -287,13 +300,16 @@ namespace Meta.WitAi.Requests
             if (_onComplete != null && _request != null)
             {
                 DownloadProgress = 1f;
+                ResponseCode = WitConstants.ERROR_CODE_ABORTED;
+                ResponseError = WitConstants.CANCEL_ERROR;
                 _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, WitConstants.CANCEL_ERROR);
+                _onComplete?.Invoke(_request, ResponseError);
             }
 
             // Unload
             Unload();
         }
+
         // Request destroy
         protected virtual void Unload()
         {
@@ -314,13 +330,14 @@ namespace Meta.WitAi.Requests
             // Remove delegates
             _onDownloadProgress = null;
             _onFirstResponse = null;
+            _onStreamReady = null;
             _onComplete = null;
 
             // Dispose
             if (_request != null)
             {
                 // Additional cleanup
-                if (_request.downloadHandler is AudioStreamHandler audioStreamer)
+                if (_request.downloadHandler is IVRequestStreamable audioStreamer)
                 {
                     audioStreamer.CleanUp();
                 }
@@ -335,6 +352,7 @@ namespace Meta.WitAi.Requests
             // Officially complete
             IsComplete = true;
         }
+
         // Returns more specific request error
         public static string GetSpecificRequestError(UnityWebRequest request)
         {
@@ -393,9 +411,126 @@ namespace Meta.WitAi.Requests
         }
         #endregion
 
-        #region FILE
+        #region COROUTINE
         /// <summary>
-        /// Performs a simple http header request
+        /// Initialize with a request and an on completion callback
+        /// </summary>
+        /// <param name="unityRequest">The unity request to be performed</param>
+        /// <param name="onComplete">The callback on completion, returns the request & error string</param>
+        /// <returns>False if the request cannot be performed</returns>
+        public virtual bool Request(UnityWebRequest unityRequest,
+            RequestCompleteDelegate<UnityWebRequest> onComplete)
+        {
+            // Already setup
+            if (_request != null)
+            {
+                onComplete?.Invoke(unityRequest, "Request is already being performed");
+                return false;
+            }
+
+            // Set on complete delegate & setup
+            _onComplete = onComplete;
+            Setup(unityRequest);
+
+            // Begin coroutine
+            _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
+
+            // Success
+            return true;
+        }
+        // Perform update
+        private IEnumerator PerformUpdate()
+        {
+            // Update until complete
+            while (!IsRequestComplete())
+            {
+                yield return null;
+                Update();
+            }
+
+            // Complete if still performing
+            if (IsPerforming)
+            {
+                DownloadProgress = 1f;
+                ResponseCode = (int)_request.responseCode;
+                ResponseError = GetSpecificRequestError(_request);
+                _onDownloadProgress?.Invoke(DownloadProgress);
+                _onComplete?.Invoke(_request, ResponseError);
+                _onComplete = null;
+            }
+
+            // Unload
+            Unload();
+        }
+        #endregion
+
+        #region TASK
+        /// <summary>
+        /// Initialize with a request and an on completion callback
+        /// </summary>
+        /// <param name="unityRequest">The unity request to be performed</param>
+        /// <param name="onDecode">A function to be performed to async decode all request data</param>
+        /// <returns>Any errors encountered during the request</returns>
+        public virtual async Task<RequestCompleteResponse<TData>> RequestAsync<TData>(UnityWebRequest unityRequest,
+                Func<UnityWebRequest, TData> onDecode)
+        {
+            // Already setup
+            if (_request != null)
+            {
+                return new RequestCompleteResponse<TData>("Request is already being performed");
+            }
+
+            // Setup
+            Setup(unityRequest);
+
+            // Continue while request exists & is not complete
+            while (!IsRequestComplete())
+            {
+                await Task.Delay(100);
+                Update();
+            }
+
+            // Complete if still performing
+            TData results = default(TData);
+            if (IsPerforming)
+            {
+                // Set code & error if applicable
+                DownloadProgress = 1f;
+                ResponseCode = (int)_request.responseCode;
+                ResponseError = GetSpecificRequestError(_request);
+
+                // Decode
+                if (string.IsNullOrEmpty(ResponseError) && onDecode != null)
+                {
+                    try
+                    {
+                        results = onDecode.Invoke(_request);
+                        if (results == null)
+                        {
+                            ResponseError = "Decode failed";
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        ResponseError = $"Decode failed\n{e}";
+                    }
+                }
+
+                // Perform callbacks
+                _onDownloadProgress?.Invoke(DownloadProgress);
+                _onComplete?.Invoke(_request, ResponseError);
+                _onComplete = null;
+            }
+
+            // Unload
+            Unload();
+
+            // Return results
+            return new RequestCompleteResponse<TData>(results, ResponseError);
+        }
+        #endregion
+
+        #region FILE
         /// </summary>
         /// <param name="uri"></param>
         /// <param name="onComplete">Called once header lookup has completed</param>
