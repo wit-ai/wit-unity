@@ -525,11 +525,18 @@ namespace Meta.WitAi.Json
         #endregion
 
         #region Serialize
-        // Serialize object into json
-        public static string SerializeObject<FROM_TYPE>(FROM_TYPE inObject, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        /// <summary>
+        /// Serializes an object into a json string
+        /// </summary>
+        /// <param name="inObject">The object to be serialized into json</param>
+        /// <param name="customConverters">Custom json conversion interfaces</param>
+        /// <param name="suppressWarnings">If true, all warnings will be ignored</param>
+        /// <typeparam name="TFromType">The type of object to be decoded</typeparam>
+        /// <returns>A json string corresponding to the inObject</returns>
+        public static string SerializeObject<TFromType>(TFromType inObject, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
             // Decode token
-            WitResponseNode jsonToken = SerializeToken<FROM_TYPE>(inObject, customConverters, suppressWarnings);
+            WitResponseNode jsonToken = SerializeToken<TFromType>(inObject, customConverters, suppressWarnings);
             if (jsonToken != null)
             {
                 try
@@ -545,12 +552,32 @@ namespace Meta.WitAi.Json
             // Default value
             return "{}";
         }
+
         /// <summary>
-        /// Serialize object into WitResponseNode
+        /// Serializes an object into a json string asynchronously
         /// </summary>
-        /// <param name="inObject">Serialize object</param>
-        /// <returns></returns>
-        public static WitResponseNode SerializeToken<FROM_TYPE>(FROM_TYPE inObject, JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        /// <param name="inObject">The object to be serialized into json</param>
+        /// <param name="customConverters">Custom json conversion interfaces</param>
+        /// <param name="suppressWarnings">If true, all warnings will be ignored</param>
+        /// <typeparam name="TFromType">The type of object to be decoded</typeparam>
+        /// <returns>A string after waiting for the serialization</returns>
+        public static async Task<string> SerializeObjectAsync<TFromType>(TFromType inObject,
+            JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            string results = null;
+            await Task.Run(() => results = SerializeObject<TFromType>(inObject, customConverters, suppressWarnings));
+            return results;
+        }
+
+        /// <summary>
+        /// Serializes an object into a WitResponseNode
+        /// </summary>
+        /// <param name="inObject">The object to be serialized into json</param>
+        /// <param name="customConverters">Custom json conversion interfaces</param>
+        /// <param name="suppressWarnings">If true, all warnings will be ignored</param>
+        /// <typeparam name="TFromType">The type of object to be decoded</typeparam>
+        /// <returns>A json WitResponseNode corresponding to the inObject, or null in case of errors</returns>
+        public static WitResponseNode SerializeToken<TFromType>(TFromType inObject, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
             // Use default if no customs are added
             if (customConverters == null)
@@ -560,7 +587,7 @@ namespace Meta.WitAi.Json
             try
             {
                 StringBuilder log = new StringBuilder();
-                WitResponseNode jsonToken = SerializeToken(typeof(FROM_TYPE), inObject, log, customConverters);
+                WitResponseNode jsonToken = SerializeToken(typeof(TFromType), inObject, log, customConverters);
                 if (log.Length > 0 && !suppressWarnings)
                 {
                     VLog.W($"Serialize Token Warnings\n{log}");
@@ -573,6 +600,23 @@ namespace Meta.WitAi.Json
             }
             return null;
         }
+
+        /// <summary>
+        /// Serializes an object into a WitResponseNode
+        /// </summary>
+        /// <param name="inObject">The object to be serialized into json</param>
+        /// <param name="customConverters">Custom json conversion interfaces</param>
+        /// <param name="suppressWarnings">If true, all warnings will be ignored</param>
+        /// <typeparam name="TFromType">The type of object to be decoded</typeparam>
+        /// <returns>A json WitResponseNode corresponding to the inObject, or null in case of errors</returns>
+        public static async Task<WitResponseNode> SerializeTokenAsync<TFromType>(TFromType inObject,
+            JsonConverter[] customConverters = null, bool suppressWarnings = false)
+        {
+            WitResponseNode results = null;
+            await Task.Run(() => results = SerializeToken<TFromType>(inObject, customConverters, suppressWarnings));
+            return results;
+        }
+
         // Convert data to node
         private static WitResponseNode SerializeToken(Type inType, object inObject, StringBuilder log, JsonConverter[] customConverters)
         {
