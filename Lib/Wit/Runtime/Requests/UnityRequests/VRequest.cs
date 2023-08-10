@@ -6,10 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if UNITY_ANDROID && UNITY_EDITOR
-#define FAKE_JAR_LOAD
-#endif
-
 using System;
 using System.IO;
 using System.Collections;
@@ -531,9 +527,11 @@ namespace Meta.WitAi.Requests
         #endregion
 
         #region FILE
+        /// <summary>
+        /// Performs a header request on a uri
         /// </summary>
-        /// <param name="uri"></param>
-        /// <param name="onComplete">Called once header lookup has completed</param>
+        /// <param name="uri">The uri to perform the request on</param>
+        /// <param name="onComplete">A completion callback that includes the headers</param>
         /// <returns></returns>
         public bool RequestFileHeaders(Uri uri,
             RequestCompleteDelegate<Dictionary<string, string>> onComplete)
@@ -562,6 +560,20 @@ namespace Meta.WitAi.Requests
                 // Success
                 onComplete?.Invoke(headers, string.Empty);
             });
+        }
+
+        /// <summary>
+        /// Performs a header request on a uri asynchronously
+        /// </summary>
+        /// <param name="uri">The uri to perform the request on</param>
+        /// <returns>Returns the header</returns>
+        public async Task<RequestCompleteResponse<Dictionary<string, string>>> RequestFileHeadersAsync(Uri uri)
+        {
+            // Header unity request
+            UnityWebRequest unityRequest = UnityWebRequest.Head(uri);
+
+            // Perform request & return the results
+            return await RequestAsync(unityRequest, (request) => request.GetResponseHeaders());
         }
 
         /// <summary>
@@ -598,6 +610,116 @@ namespace Meta.WitAi.Requests
             });
         }
 
+        /// <summary>
+        /// Performs a simple http header request
+        /// </summary>
+        /// <param name="uri">Uri to get a file</param>
+        /// <returns>False if cannot begin request</returns>
+        public async Task<RequestCompleteResponse<byte[]>> RequestFileAsync(Uri uri)
+        {
+            // Get unity request
+            UnityWebRequest unityRequest = UnityWebRequest.Get(uri);
+
+            // Perform request
+            return await RequestAsync(unityRequest, (request) =>  unityRequest.downloadHandler?.data);
+        }
+
+        /// <summary>
+        /// Checks if a file exists at a specified location using async calls
+        /// </summary>
+        /// <param name="checkPath">The local file path to be checked</param>
+        /// <returns>An error if found</returns>
+        public async Task<RequestCompleteResponse<bool>> RequestFileExistsAsync(string checkPath)
+        {
+            // Results
+            RequestCompleteResponse<bool> results = new RequestCompleteResponse<bool>();
+            results.Value = false;
+
+            // WebGL & web files, perform a header lookup
+            if (checkPath.StartsWith("http"))
+            {
+                var headerResponse = await RequestFileHeadersAsync(new Uri(CleanUrl(checkPath)));
+                results.Error = headerResponse.Error;
+                results.Value = string.IsNullOrEmpty(results.Error) && headerResponse.Value.Keys.Count > 0;
+                if (string.IsNullOrEmpty(results.Error) && !results.Value)
+                {
+                    results.Error = "No headers found";
+                }
+                return results;
+            }
+
+            // Check if within a jar file
+            bool requiresRequest = checkPath.StartsWith("jar");
+
+#if UNITY_ANDROID && UNITY_EDITOR
+            // Android editor: simulate jar handling
+            requiresRequest = requiresRequest || (Application.isPlaying && checkPath.StartsWith(Application.streamingAssetsPath));
+#endif
+
+            // Request required
+            if (requiresRequest)
+            {
+                // Setup
+                bool complete = false;
+
+                // Request received data
+                _onFirstResponse = () =>
+                {
+                    results.Value = true;
+                    Cancel();
+                };
+
+                // Request complete
+                _onComplete = (request, error) =>
+                {
+                    if (!string.Equals(error, WitConstants.CANCEL_ERROR))
+                    {
+                        results.Error = error;
+                        results.Value = string.IsNullOrEmpty(error);
+                    }
+                    complete = true;
+                };
+
+                // Request async & cancels on first response
+                await RequestFileAsync(new Uri(CleanUrl(checkPath)));
+
+                // Return if found
+                return results;
+            }
+
+            // Check file directly
+            try
+            {
+                results.Value = File.Exists(checkPath);
+            }
+            catch (Exception e)
+            {
+                results.Error = $"File exists check failed\nPath: {checkPath}\n{e}";
+            }
+
+            // Success
+            return results;
+        }
+
+        /// <summary>
+        /// Uses async method to check if file exists & return via the oncomplete method
+        /// </summary>
+        /// <param name="checkPath">The local file path to be checked</param>
+        public bool RequestFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
+        {
+            // Request async but don't wait
+            #pragma warning disable CS4014
+            WaitFileExists(checkPath, onComplete);
+            return true;
+        }
+        private async void WaitFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
+        {
+            RequestCompleteResponse<bool> results = await RequestFileExistsAsync(checkPath);
+            onComplete?.Invoke(results.Value, results.Error);
+        }
+        #endregion
+
+        #region DOWNLOADING
         /// <summary>
         /// Download a file using a unityrequest
         /// </summary>
@@ -665,58 +787,6 @@ namespace Meta.WitAi.Requests
                 // Complete
                 onComplete?.Invoke(string.IsNullOrEmpty(error), error);
             });
-        }
-
-        /// <summary>
-        /// Checks if a file exists at a specified location
-        /// </summary>
-        /// <param name="checkPath">The local file path to be checked</param>
-        /// <param name="onComplete">Called once check has completed.  Returns true if file exists</param>
-        public bool RequestFileExists(string checkPath,
-            RequestCompleteDelegate<bool> onComplete)
-        {
-            // WebGL & web files, perform a header lookup
-            if (checkPath.StartsWith("http"))
-            {
-                Uri uri = new Uri(CleanUrl(checkPath));
-                return RequestFileHeaders(uri, (headers, error) =>
-                {
-                    onComplete?.Invoke(headers != null, error);
-                });
-            }
-
-#if FAKE_JAR_LOAD
-            // Android editor: simulate jar handling
-            if (Application.isPlaying && checkPath.StartsWith(Application.streamingAssetsPath))
-#else
-            // Jar file
-            if (checkPath.StartsWith("jar"))
-#endif
-            {
-                Uri uri = new Uri(CleanUrl(checkPath));
-                _onDownloadProgress = (progress) =>
-                {
-                    // Stop as early as possible
-                    if (progress > 0f && progress < 1f)
-                    {
-                        var localHandle = onComplete;
-                        onComplete = null;
-                        Cancel();
-                        localHandle?.Invoke(true, String.Empty);
-                        VLog.D("Async Check File Exists Success");
-                    }
-                };
-                return RequestFile(uri, (response, error) =>
-                {
-                    // If getting here, most likely failed but double check anyway
-                    onComplete?.Invoke(string.IsNullOrEmpty(error), error);
-                });
-            }
-
-            // Can simply use File.IO otherwise
-            bool found = File.Exists(checkPath);
-            onComplete?.Invoke(found, string.Empty);
-            return true;
         }
         #endregion
 
