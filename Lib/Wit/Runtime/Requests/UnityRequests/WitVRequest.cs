@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -77,7 +78,7 @@ namespace Meta.WitAi.Requests
 
         #region REQUESTS
         /// <summary>
-        /// Perform a generic request
+        /// Perform a unity request with coroutines
         /// </summary>
         /// <param name="unityRequest">The request to be managed</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
@@ -97,6 +98,24 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
+        /// Initialize with a request & return an error if applicable
+        /// </summary>
+        /// <param name="unityRequest">The unity request to be performed</param>
+        /// <returns>Any errors encountered during the request</returns>
+        public override async Task<RequestCompleteResponse<TData>> RequestAsync<TData>(UnityWebRequest unityRequest,
+            Func<UnityWebRequest, TData> onDecode)
+        {
+            // Ensure configuration is set
+            if (Configuration == null)
+            {
+                return new RequestCompleteResponse<TData>("Cannot perform a request without a Wit configuration");
+            }
+
+            // Perform base
+            return await base.RequestAsync(unityRequest, onDecode);
+        }
+
+        /// <summary>
         /// Get request to a wit endpoint
         /// </summary>
         /// <param name="uriEndpoint">Endpoint name</param>
@@ -105,10 +124,17 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams,
-            RequestCompleteDelegate<TData> onComplete)
-        {
-            return RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete);
-        }
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete);
+
+        /// <summary>
+        /// Get request to a wit endpoint asynchronously
+        /// </summary>
+        /// <param name="uriEndpoint">Endpoint name</param>
+        /// <returns>Returns the request complete data including a parsed result if possible</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestWitGetAsync<TData>(string uriEndpoint,
+            Dictionary<string, string> uriParams) =>
+            await RequestJsonGetAsync<TData>(GetUri(uriEndpoint, uriParams));
 
         /// <summary>
         /// Post text request to a wit endpoint
@@ -120,10 +146,19 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
-            RequestCompleteDelegate<TData> onComplete)
-        {
-            return RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete);
-        }
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete);
+
+        /// <summary>
+        /// Post request to a wit endpoint asynchronously
+        /// </summary>
+        /// <param name="uriEndpoint">Endpoint name</param>
+        /// <param name="uriParams">Endpoint url parameters</param>
+        /// <param name="postText">Text to be sent to endpoint</param>
+        /// <returns>Returns the request complete data including a parsed result if possible</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestWitPostAsync<TData>(string uriEndpoint,
+            Dictionary<string, string> uriParams, string postText) =>
+            await RequestJsonPostAsync<TData>(GetUri(uriEndpoint, uriParams), postText);
 
         /// <summary>
         /// Put text request to a wit endpoint
@@ -136,10 +171,19 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPut<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText,
-            RequestCompleteDelegate<TData> onComplete)
-        {
-            return RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete);
-        }
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete);
+
+        /// <summary>
+        /// Put text request to a wit endpoint asynchronously
+        /// </summary>
+        /// <param name="uriEndpoint">Endpoint name</param>
+        /// <param name="uriParams">Endpoint url parameters</param>
+        /// <param name="putText">Text to be sent to endpoint</param>
+        /// <returns>Returns the request complete data including a parsed result if possible</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestWitPutAsync<TData>(string uriEndpoint,
+            Dictionary<string, string> uriParams, string putText)
+            => await RequestJsonPutAsync<TData>(GetUri(uriEndpoint, uriParams), putText);
         #endregion
 
         #region STATIC
