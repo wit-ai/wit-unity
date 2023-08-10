@@ -1344,11 +1344,18 @@ namespace Meta.WitAi.Requests
                 // Unity audio clip download handler using IAudioClipSetter
                 if (request.downloadHandler is DownloadHandlerAudioClip audioDownloader)
                 {
-                    clipStream?.Unload();
                     AudioClip clip = audioDownloader.audioClip;
-                    // TODO: Use IAudioClipSetter instead of ref
-                    clipStream = new UnityAudioClipStream(clip);
-                    clipStream.UpdateState();
+                    if (clipStream is IAudioClipSetter clipSetter)
+                    {
+                        if (!clipSetter.SetClip(clip))
+                        {
+                            return $"DownloadHandlerAudioClip cannot set AudioClip onto {clipStream.GetType().Name}";
+                        }
+                    }
+                    else
+                    {
+                        return $"DownloadHandlerAudioClip cannot be used for stream: {clipStream?.GetType().Name}";
+                    }
                 }
                 // Decode audio data from audio stream handler
                 else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)

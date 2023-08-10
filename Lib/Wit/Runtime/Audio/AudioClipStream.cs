@@ -29,11 +29,11 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// The current number of channels in this audio data stream
         /// </summary>
-        public int Channels { get; private set; }
+        public int Channels { get; protected set; }
         /// <summary>
         /// A getter for the current sample rate of how many samples per second should be played
         /// </summary>
-        public int SampleRate { get; private set; }
+        public int SampleRate { get; protected set; }
 
         /// <summary>
         /// The total number of samples currently added to this stream

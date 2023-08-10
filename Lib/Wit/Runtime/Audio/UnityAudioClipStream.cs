@@ -15,7 +15,7 @@ namespace Meta.Voice.Audio
     /// <summary>
     /// A class for generating and appending to audio clips while streaming
     /// </summary>
-    public class UnityAudioClipStream : AudioClipStream, IAudioClipProvider
+    public class UnityAudioClipStream : AudioClipStream, IAudioClipProvider, IAudioClipSetter
     {
         /// <summary>
         /// The audio clip to be used for Unity AudioSource playback
@@ -30,40 +30,33 @@ namespace Meta.Voice.Audio
         public const float DEFAULT_CHUNK_LENGTH = 5f;
 
         /// <summary>
-        /// Constructor with default chunk length
-        /// </summary>
-        /// <param name="newChannels">The audio channels/tracks for the incoming audio data</param>
-        /// <param name="newSampleRate">The sample rate for incoming audio data</param>
-        /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
-        public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength) : base(newChannels, newSampleRate, newStreamReadyLength)
-        {
-            _streamable = true;
-            _chunkSize = Mathf.CeilToInt(DEFAULT_CHUNK_LENGTH * (newChannels * newSampleRate));
-        }
-
-        /// <summary>
         /// Constructor with specific chunk size
         /// </summary>
         /// <param name="newChannels">The audio channels/tracks for the incoming audio data</param>
         /// <param name="newSampleRate">The sample rate for incoming audio data</param>
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
         /// <param name="newChunkSamples">Samples to increase audio clip by</param>
-        public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength, float newChunkLength) : base(newChannels, newSampleRate, newStreamReadyLength)
+        public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength, float newChunkLength = DEFAULT_CHUNK_LENGTH)
+            : base(newChannels, newSampleRate, newStreamReadyLength)
         {
             _streamable = true;
             _chunkSize = Mathf.CeilToInt(Mathf.Max(newChunkLength, newStreamReadyLength) * newChannels * newSampleRate);
         }
 
         /// <summary>
-        /// Constructor with an existing audio clip
+        /// Sets an audio clip & disables adding additional samples
         /// </summary>
         /// <param name="newClip">Audio clip to be used for playback</param>
-        public UnityAudioClipStream(AudioClip newClip) : base(newClip == null ? 0 : newClip.channels, newClip == null ? 0 : newClip.frequency, 0f)
+        public bool SetClip(AudioClip newClip)
         {
             _streamable = false;
-            AddedSamples = newClip == null ? 0 : newClip.samples;
-            TotalSamples = newClip == null ? 0 : newClip.samples;
             Clip = newClip;
+            Channels = !Clip ? 0 : Clip.channels;
+            SampleRate = !Clip ? 0 : Clip.frequency;
+            AddedSamples = !Clip ? 0 : Clip.samples;
+            TotalSamples = !Clip ? 0 : Clip.samples;
+            UpdateState();
+            return true;
         }
 
         /// <summary>

@@ -94,11 +94,6 @@ namespace Meta.Voice.Audio
         void SetTotalSamples(int totalSamples);
 
         /// <summary>
-        /// Performs a manual refresh to determine if stream is ready or completed
-        /// </summary>
-        void UpdateState();
-
-        /// <summary>
         /// Called when clip stream should be completely removed from RAM
         /// </summary>
         void Unload();
