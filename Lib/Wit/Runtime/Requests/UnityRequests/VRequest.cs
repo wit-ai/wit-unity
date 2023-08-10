@@ -921,7 +921,7 @@ namespace Meta.WitAi.Requests
 
         #region JSON
         /// <summary>
-        /// Performs a json request & handles the resultant text
+        /// Performs a request for text & decodes it into json
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The delegate upon completion</param>
@@ -934,28 +934,57 @@ namespace Meta.WitAi.Requests
             unityRequest.SetRequestHeader("Content-Type", "application/json");
 
             // Perform text request
-            return RequestText(unityRequest, (text, error) =>
+            return RequestText(unityRequest, (jsonText, error) =>
             {
                 // Request error
-                if (!string.IsNullOrEmpty(error) && string.IsNullOrEmpty(text))
+                if (!string.IsNullOrEmpty(error) && string.IsNullOrEmpty(jsonText))
                 {
                     onComplete?.Invoke(default(TData), error);
                     return;
                 }
 
                 // Deserialize synchronously
-                var result = JsonConvert.DeserializeObject<TData>(text);
+                var result = JsonConvert.DeserializeObject<TData>(jsonText);
                 // Parse failed
                 if (result == null)
                 {
-                    onComplete?.Invoke(result, $"Failed to parse json\n{text}");
+                    onComplete?.Invoke(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
+                    return;
                 }
+
                 // Success
-                else
-                {
-                    onComplete?.Invoke(result, string.Empty);
-                }
+                onComplete?.Invoke(result, string.Empty);
             });
+        }
+
+        /// <summary>
+        /// Performs a request for text and decodes it into json asynchronously
+        /// </summary>
+        /// <param name="unityRequest">The unity request performing the post or get</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonAsync<TData>(UnityWebRequest unityRequest)
+        {
+            // Set request header for json
+            unityRequest.SetRequestHeader("Content-Type", "application/json");
+
+            // Perform text request
+            var textResponse = await RequestTextAsync(unityRequest);
+            if (!string.IsNullOrEmpty(textResponse.Error))
+            {
+                return new RequestCompleteResponse<TData>(default(TData), textResponse.Error);
+            }
+
+            // Deserialize
+            string jsonText = textResponse.Value;
+            TData result = await JsonConvert.DeserializeObjectAsync<TData>(textResponse.Value);
+            if (result == null)
+            {
+                return new RequestCompleteResponse<TData>(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
+            }
+
+            // Success
+            return new RequestCompleteResponse<TData>(result);
         }
 
         /// <summary>
@@ -963,15 +992,20 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="uri">The uri to be requested</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onProgress">The text download progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        /// <returns></returns>
         public bool RequestJsonGet<TData>(Uri uri,
-            RequestCompleteDelegate<TData> onComplete)
-        {
-            return RequestJson(UnityWebRequest.Get(uri), onComplete);
-        }
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJson(UnityWebRequest.Get(uri), onComplete);
+
+        /// <summary>
+        /// Perform a json get request with a specified uri asynchronously
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonGetAsync<TData>(Uri uri) =>
+            await RequestJsonAsync<TData>(UnityWebRequest.Get(uri));
 
         /// <summary>
         /// Performs a json request by posting byte data
@@ -986,9 +1020,23 @@ namespace Meta.WitAi.Requests
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            unityRequest.downloadHandler = new DownloadHandlerBuffer();
             return RequestJson(unityRequest, onComplete);
         }
+
+        /// <summary>
+        /// Performs a json request by posting byte data asynchronously
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="postData">The data to be uploaded</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, byte[] postData)
+        {
+            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
+            unityRequest.uploadHandler = new UploadHandlerRaw(postData);
+            return await RequestJsonAsync<TData>(unityRequest);
+        }
+
         /// <summary>
         /// Performs a json request by posting a string
         /// </summary>
@@ -998,9 +1046,21 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPost<TData>(Uri uri, string postText,
-            RequestCompleteDelegate<TData> onComplete)
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJsonPost(uri, EncodeText(postText), onComplete);
+
+        /// <summary>
+        /// Performs a json request by posting a string asynchronously
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="postText">The string to be uploaded</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, string postText)
         {
-            return RequestJsonPost(uri, Encoding.UTF8.GetBytes(postText), onComplete);
+            byte[] postData = null;
+            await Task.Run(() => postData = EncodeText(postText));
+            return await RequestJsonPostAsync<TData>(uri, postData);
         }
 
         /// <summary>
@@ -1016,22 +1076,51 @@ namespace Meta.WitAi.Requests
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
             unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            unityRequest.downloadHandler = new DownloadHandlerBuffer();
             return RequestJson(unityRequest, onComplete);
         }
+
         /// <summary>
-        /// Performs a json put request with a string
+        /// Performs a json put request with byte data asynchronously
         /// </summary>
         /// <param name="uri">The uri to be requested</param>
-        /// <param name="putText">The string to be uploaded</param>
+        /// <param name="putData">The data to be uploaded</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, byte[] putData)
+        {
+            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
+            unityRequest.uploadHandler = new UploadHandlerRaw(putData);
+            return await RequestJsonAsync<TData>(unityRequest);
+        }
+
+        /// <summary>
+        /// Performs a json put request with text
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="putText">The text to be uploaded</param>
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPut<TData>(Uri uri, string putText,
-            RequestCompleteDelegate<TData> onComplete)
+            RequestCompleteDelegate<TData> onComplete) =>
+            RequestJsonPut(uri, EncodeText(putText), onComplete);
+
+        /// <summary>
+        /// Performs a json put request with text asynchronously
+        /// </summary>
+        /// <param name="uri">The uri to be requested</param>
+        /// <param name="putText">The text to be uploaded</param>
+        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
+        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, string putText)
         {
-            return RequestJsonPut(uri, Encoding.UTF8.GetBytes(putText), onComplete);
+            byte[] putData = null;
+            await Task.Run(() => putData = EncodeText(putText));
+            return await RequestJsonPutAsync<TData>(uri, putData);
         }
+
+        // Internal helper method for encoding text
+        private byte[] EncodeText(string text) => Encoding.UTF8.GetBytes(text);
         #endregion
 
         #region AUDIO CLIPS
