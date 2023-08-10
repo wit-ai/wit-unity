@@ -11,5 +11,6 @@ using System.Runtime.CompilerServices;
 [assembly:InternalsVisibleTo("Meta.WitAi.Conduit")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Conduit.Editor")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Editor")]
+[assembly:InternalsVisibleTo("Meta.WitAi.TTS.Editor")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Tests.Editor")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

@@ -10,459 +10,474 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
+using UnityEngine;
 
 namespace Meta.WitAi.Lib
 {
-    public static class WitAppInfoUtility
+    /*
+     * We call UpdateInfo, directly on the configuration and then have a series of async functions which
+     * are performed together via the UpdateInfoAsync method.
+     *
+     * UpdateInfo, calls UpdateInfoAsync
+     * UpdateInfoAsync calls
+     * 1. UpdateAppId if server token is present to get the latest app id for the server token
+     * 1. UpdateClientToken if server token is present & app id was found in order to update the client token
+     * 3. UpdateEntities to perform a single request for all entity ids and then update each entity
+     * 4. UpdateIntents to perform a single request for all intent ids and then update each intent
+     * 5. UpdateTraits to perform a single request for all trait ids and then update each intent
+     * 6. UpdateVoices to update all tts voice info
+     * 7. UpdateVersionTags to update the version tag list
+     * 7. UpdateExportInfo to receive and update export data info
+     * then it returns any warnings that occured
+     */
+    internal static class WitAppInfoUtility
     {
-        // List of app ids for currently updating configurations
-        private static List<string> _updatingAppIds = new List<string>();
-        // Getter for configuration update state
-        public static bool IsUpdatingData(this IWitRequestConfiguration configuration)
+        #region SETUP
+        // Setup with server token and return on complete method
+        internal static void GetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete) =>
+            #pragma warning disable CS4014
+            WaitForGetAppInfo(serverToken, onComplete);
+
+        // Wait for update & return app info if possible
+        private static async Task WaitForGetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
         {
-            string appId = configuration.GetApplicationId();
-            return !string.IsNullOrEmpty(appId) && _updatingAppIds.Contains(appId);
-        }
-        // Setter for configuration update state
-        private static void SetUpdatingData(IWitRequestConfiguration configuration, bool toRefreshing)
-        {
-            string appId = configuration.GetApplicationId();
-            if (!string.IsNullOrEmpty(appId))
-            {
-                bool wasRefreshing = _updatingAppIds.Contains(appId);
-                if (toRefreshing && !wasRefreshing)
-                {
-                    _updatingAppIds.Add(appId);
-                }
-                else if (!toRefreshing && wasRefreshing)
-                {
-                    _updatingAppIds.Remove(appId);
-                }
-            }
+            WitServerRequestConfiguration tempConfig = new WitServerRequestConfiguration(serverToken);
+            string warnings = await UpdateAsync(tempConfig);
+            onComplete?.Invoke(tempConfig.GetClientAccessToken(), tempConfig.GetApplicationInfo(), warnings);
         }
 
-        // Determine if is a server token
-        public static VRequest CheckServerToken(string serverToken, Action<bool> onComplete)
+        // Attempts to obtain application id with server token
+        internal static VRequest CheckServerToken(string serverToken, Action<bool> onComplete)
         {
-            WitServerRequestConfiguration config = new WitServerRequestConfiguration(serverToken);
-            WitInfoVRequest request = GetRequest(config);
-            request.RequestAppId((appId, error) =>
-            {
-                bool success = string.IsNullOrEmpty(error);
-                onComplete?.Invoke(success);
-            });
+            var tempConfig = new WitServerRequestConfiguration(serverToken);
+            var request = new WitInfoVRequest(tempConfig, true);
+            #pragma warning disable CS4014
+            WaitForCheckServerToken(request, onComplete);
             return request;
         }
-
-        // Returns a vrequest
-        private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration, bool useServerToken = true) =>
-            new WitInfoVRequest(configuration, useServerToken);
-
-        /// <summary>
-        /// Get application info using server access token
-        /// </summary>
-        /// <param name="serverAccessToken">Server access token</param>
-        /// <param name="onUpdateComplete">On update completed callback</param>
-        public static void GetAppInfo(string serverAccessToken,
-            Action<string, WitAppInfo, string> onUpdateComplete)
+        // Perform id lookup
+        private static async Task WaitForCheckServerToken(WitInfoVRequest request, Action<bool> onComplete)
         {
-            WitServerRequestConfiguration config = new WitServerRequestConfiguration(serverAccessToken);
-            Update(config, (info, error) => onUpdateComplete?.Invoke(config.GetClientAccessToken(), info, error));
+            var result = await request.RequestAppIdAsync();
+            bool success = string.IsNullOrEmpty(result.Error) && !string.IsNullOrEmpty(result.Value);
+            onComplete?.Invoke(success);
         }
+        #endregion
 
-        /// <summary>
-        /// Update configuration directly & return an errors if applicable
-        /// </summary>
-        /// <param name="configInfo">Configuration info</param>
-        /// <param name="onComplete">Callback with string for error</param>
-        public static void Update(this IWitRequestConfiguration configuration,
-            Action<string> onComplete = null)
+        #region UPDATE
+        // List of ids being tracked for currently updating configurations
+        private static List<string> _updatingIds = new List<string>();
+
+        // Setter for configuration update state
+        private static void SetUpdatingInfo(string id, bool toRefreshing)
         {
-            Update(configuration, (info, error) =>
+            if (string.IsNullOrEmpty(id))
             {
-                configuration.SetApplicationInfo(info);
-                onComplete?.Invoke(error);
-            });
+                return;
+            }
+            int index = _updatingIds.IndexOf(id);
+            bool wasRefreshing = index != -1;
+            if (toRefreshing && !wasRefreshing)
+            {
+                _updatingIds.Add(id);
+            }
+            else if (!toRefreshing && wasRefreshing)
+            {
+                _updatingIds.RemoveAt(index);
+            }
         }
 
         /// <summary>
-        /// Update configuration info using
+        /// Extension method to determine if the current configuration's info is being updated
         /// </summary>
-        /// <param name="configInfo">Configuration info</param>
-        /// <param name="onUpdateComplete"></param>
-        public static void Update(IWitRequestConfiguration configuration,
-            Action<WitAppInfo, string> onUpdateComplete)
+        /// <param name="configuration">the configuration to perform all update requests</param>
+        /// <returns>True if already updating</returns>
+        internal static bool IsUpdatingData(this IWitRequestConfiguration configuration)
         {
-            // Get default application info
-            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            string clientToken = configuration.GetClientAccessToken();
+            string serverToken = configuration.GetServerAccessToken();
+            return (!string.IsNullOrEmpty(clientToken) && _updatingIds.Contains(clientToken)) ||
+                   (!string.IsNullOrEmpty(serverToken) && _updatingIds.Contains(serverToken));
+        }
+
+        /// <summary>
+        /// Performs an update on a specified configuration with app info
+        /// </summary>
+        /// <param name="configuration">the configuration to perform all update requests</param>
+        /// <param name="onComplete">The callback delegate which returns a string of all issues encountered.</param>
+        internal static void Update(this IWitRequestConfiguration configuration,
+            Action<string> onComplete = null) =>
+            WaitForUpdate(configuration, onComplete);
+
+        // Awaits an async method and then returns with a completion delegate
+        private static async void WaitForUpdate(IWitRequestConfiguration configuration,
+            Action<string> onComplete)
+        {
+            string result = await UpdateAsync(configuration);
+            onComplete?.Invoke(result);
+        }
+
+        /// <summary>
+        /// Performs an update on a specified configuration with app info
+        /// </summary>
+        /// <param name="configuration">the configuration to perform all update requests</param>
+        /// <returns>A string that details all issues encountered.</returns>
+        internal static async Task<string> UpdateAsync(this IWitRequestConfiguration configuration)
+        {
+            // Already updating data
+            if (configuration == null)
+            {
+                string error = "Cannot update a null configuration";
+                VLog.E($"Update Info - Failed\n{error}");
+                return error;
+            }
+
+            // If no client token & no app id or client token fail now
+            string serverToken = configuration.GetServerAccessToken();
+            bool hasServerToken = !string.IsNullOrEmpty(serverToken);
+            string clientToken = configuration.GetClientAccessToken();
+            bool hasClientToken = !string.IsNullOrEmpty(clientToken);
+            string appId = configuration.GetApplicationId();
+            if (!hasServerToken && !hasClientToken)
+            {
+                string error = "Cannot update configuration without a server access token or a client access token";
+                VLog.E($"Update Info - Failed\n{error}");
+                return error;
+            }
+
+            // Update begin
             StringBuilder warnings = new StringBuilder();
 
-            // Needs server access token
-            if (string.IsNullOrEmpty(configuration.GetServerAccessToken()))
+            // Update app id & client tokens
+            if (hasServerToken && Application.isEditor)
             {
-                // Update data without server access token
-                if (!string.IsNullOrEmpty(appInfo.id) && !string.IsNullOrEmpty(configuration.GetClientAccessToken()))
+                // Begin updating using server token
+                SetUpdatingInfo(serverToken, true);
+
+                // Update app id & set if possible
+                appId = await UpdateAppId(configuration, warnings);
+
+                // Update additional app info if possible
+                if (!string.IsNullOrEmpty(appId))
                 {
-                    SetUpdatingData(configuration, true);
-                    UpdateIntents(configuration, appInfo, warnings, false, onUpdateComplete);
-                    return;
+                    await UpdateAppInfo(configuration, warnings);
                 }
-                // Fail
-                else
-                {
-                    warnings.AppendLine("No server access tokens provided.");
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-                    return;
-                }
+
+                // Update client token & set if possible
+                clientToken = await UpdateClientToken(configuration, appId, warnings);
+
+                // Update all editor only data
+                await UpdateVersionTags(configuration, warnings);
+
+                // Done updating using server token
+                SetUpdatingInfo(serverToken, false);
             }
 
-            // Needs app id
-            if (string.IsNullOrEmpty(appInfo.id))
+            // Fail without client token
+            if (string.IsNullOrEmpty(clientToken))
             {
-                GetAppId(configuration, appInfo, warnings, onUpdateComplete);
-            }
-            // Update existing app info
-            else
-            {
-                SetUpdatingData(configuration, true);
-                UpdateAppInfo(configuration, appInfo, warnings, onUpdateComplete);
-            }
-        }
-
-        // Update all configuration specific data
-        private static void GetAppId(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration).RequestAppId((appId, error) =>
-            {
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine(error);
-                    UpdateComplete(configuration, configuration.GetApplicationInfo(), warnings, onUpdateComplete);
-                    return;
-                }
-
-                // Set app id
-                appInfo.id = appId;
-                SetUpdatingData(configuration, true);
-
-                // Update app data
-                UpdateAppInfo(configuration, appInfo, warnings, onUpdateComplete);
-            });
-        }
-
-        // Update all application specific data
-        private static void UpdateAppInfo(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration).RequestAppInfo(appInfo.id, (info, error) =>
-            {
-                // Failed to update application info
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Application info update failed ({error})");
-                }
-                // No app id
-                else if (string.IsNullOrEmpty(appInfo.id))
-                {
-                    warnings.AppendLine($"Application info does not include app id");
-                }
-                // Success
-                else
-                {
-                    appInfo = info;
-                }
-
-                // Invalid app id
-                if (string.IsNullOrEmpty(appInfo.id))
-                {
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-                    return;
-                }
-
-                // Update client token
-                UpdateClientToken(configuration, appInfo, warnings, onUpdateComplete);
-            });
-        }
-
-        private static void UpdateVersionTagList(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration).RequestAppVersionTags(appInfo.id, (versionTagsBySnapshot, error) =>
-            {
-                if (!String.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Could not determine export URI for {appInfo.id}.");
-                    UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-                    return;
-                }
-
-                int totalTagCount = versionTagsBySnapshot.Sum(snap =>snap.Length);
-                appInfo.versionTags = new WitVersionTagInfo[totalTagCount];
-
-                for (int snapshot = 0, currentTag = 0; snapshot < versionTagsBySnapshot.Length; snapshot++)
-                {
-                    for (var tag = 0; tag < versionTagsBySnapshot[snapshot].Length; tag++, currentTag++)
-                    {
-                        appInfo.versionTags[currentTag] = versionTagsBySnapshot[snapshot][tag];
-                    }
-                }
-                UpdateComplete(configuration, appInfo, warnings, onUpdateComplete);
-            });
-        }
-
-        // Update client token
-        private static void UpdateClientToken(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration).RequestClientAppToken(appInfo.id, (token, error) =>
-            {
-                // Failed to update client token
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Client token update failed ({error})");
-                }
-                // Got token
-                else
-                {
-                    configuration.SetClientAccessToken(token);
-                }
-
-                // Update intents
-                UpdateIntents(configuration, appInfo, warnings, true, onUpdateComplete);
-            });
-        }
-
-        // Update intents
-        private static void UpdateIntents(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration, useServerToken).RequestIntentList((intents, error) =>
-            {
-                // Failed to update intent list
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Intent list update failed ({error})");
-
-                }
-                // Successfully updated intent list
-                else
-                {
-                    appInfo.intents = intents;
-                }
-
-                // Update each intent
-                UpdateIntent(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-        // Perform each
-        private static void UpdateIntent(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            // Done
-            if (appInfo.intents == null || index >= appInfo.intents.Length)
-            {
-                UpdateEntities(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-                return;
+                warnings.AppendLine("Cannot update configuration info without client access token.");
+                VLog.E($"Update Info - Failed\n{warnings}");
+                return warnings.ToString();
             }
 
-            // Get original intent info
-            WitIntentInfo intent = appInfo.intents[index];
+            // Begin update
+            SetUpdatingInfo(clientToken, true);
 
-            // Perform update
-            GetRequest(configuration, useServerToken).RequestIntentInfo(intent.id, (result, error) =>
-            {
-                // Failed to update intent
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Intent[{index}] update failed ({error})");
-                }
-                // Successfully updated intent
-                else
-                {
-                    appInfo.intents[index] = result;
-                }
+            // Update all info for the configuration
+            await UpdateEntities(configuration, warnings);
+            await UpdateIntents(configuration, warnings);
+            await UpdateTraits(configuration, warnings);
+            await UpdateVoices(configuration, warnings);
 
-                // Next
-                UpdateIntent(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-
-        // Update entities
-        private static void UpdateEntities(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration, useServerToken).RequestEntityList((entities, error) =>
-            {
-                // Failed to update entity list
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Entity list update failed ({error})");
-
-                }
-                // Successfully updated entity list
-                else
-                {
-                    appInfo.entities = entities;
-                }
-
-                // Update each
-                UpdateEntity(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-        // Perform each
-        private static void UpdateEntity(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            // Done
-            if (appInfo.entities == null || index >= appInfo.entities.Length)
-            {
-                UpdateTraits(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-                return;
-            }
-
-            // Get original entity info
-            WitEntityInfo entity = appInfo.entities[index];
-
-            // Perform update
-            GetRequest(configuration, useServerToken).RequestEntityInfo(entity.id, (result, error) =>
-            {
-                // Failed to update entity
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Entity[{index}] update failed ({error})");
-                }
-                // Successfully updated intent
-                else
-                {
-                    appInfo.entities[index] = result;
-                }
-
-                // Next
-                UpdateEntity(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-
-        // Update traits
-        private static void UpdateTraits(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration, useServerToken).RequestTraitList((traits, error) =>
-            {
-                // Failed to update trait list
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Trait list update failed ({error})");
-                }
-                // Successfully updated trait list
-                else
-                {
-                    appInfo.traits = traits;
-                }
-
-                // Update each trait
-                UpdateTrait(0, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-        // Perform each
-        private static void UpdateTrait(int index, IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            // Done
-            if (appInfo.traits == null || index >= appInfo.traits.Length)
-            {
-                UpdateVoices(configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-                return;
-            }
-
-            // Get original trait info
-            WitTraitInfo trait = appInfo.traits[index];
-
-            // Perform update
-            GetRequest(configuration, useServerToken).RequestTraitInfo(trait.id, (result, error) =>
-            {
-                // Failed to update trait
-                if (!string.IsNullOrEmpty(error))
-                {
-                    warnings.AppendLine($"Trait[{index}] update failed ({error})");
-                }
-                // Successfully updated trait
-                else
-                {
-                    appInfo.traits[index] = result;
-                }
-
-                // Next
-                UpdateTrait(index + 1, configuration, appInfo, warnings, useServerToken, onUpdateComplete);
-            });
-        }
-
-        // Update tts voices
-        private static void UpdateVoices(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings, bool useServerToken,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            GetRequest(configuration, useServerToken).RequestVoiceList((voicesByLocale, error) =>
-                {
-                    // Failed
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        warnings.AppendLine($"Voice list update failed ({error})");
-                    }
-                    // Success
-                    else
-                    {
-                        List<WitVoiceInfo> voiceList = new List<WitVoiceInfo>();
-                        foreach (var voices in voicesByLocale.Values)
-                        {
-                            voiceList.AddRange(voices);
-                        }
-
-                        appInfo.voices = voiceList.ToArray();
-                    }
-
-                    // Complete
-                    UpdateVersionTagList(configuration, appInfo, warnings, onUpdateComplete);
-
-                });
-        }
-
-        // Completion
-        private static void UpdateComplete(IWitRequestConfiguration configuration,
-            WitAppInfo appInfo, StringBuilder warnings,
-            Action<WitAppInfo, string> onUpdateComplete)
-        {
-            // Get app name
-            string appNameLog = string.IsNullOrEmpty(appInfo.name) ? string.Empty : $"\nWit App: {appInfo.name}";
-
-            // No longer updating
-            SetUpdatingData(configuration, false);
-
-            // Success
+            // Log success
             if (warnings.Length == 0)
             {
-                VLog.D($"App Info Update Success{appNameLog}");
+                VLog.D($"Update Info - Complete\nApp: {configuration.GetApplicationInfo().name}");
             }
-            // Warnings
+            // Log warnings
             else
             {
-                VLog.W($"App Info Update Warnings{appNameLog}\n{warnings}");
+                VLog.W($"Update Info - Complete with Warnings\nApp: {configuration.GetApplicationInfo().name}\n\n{warnings}\n");
             }
 
-            // Callback
-            onUpdateComplete?.Invoke(appInfo, warnings.ToString());
+            // Update complete, return warnings
+            SetUpdatingInfo(clientToken, false);
+            return warnings.ToString();
         }
+
+        // Generates a wit request as specified
+        private static WitInfoVRequest GetRequest(IWitRequestConfiguration configuration, bool useServerToken) =>
+            new WitInfoVRequest(configuration, useServerToken);
+
+        // Handles results
+        private static TValue HandleResults<TValue>(VRequest.RequestCompleteResponse<TValue> result, string errorInfo, StringBuilder warnings)
+        {
+            // Failure: Appends error & returns default value
+            if (!string.IsNullOrEmpty(result.Error))
+            {
+                warnings.AppendLine(errorInfo);
+                warnings.Append($"\t{result.Error.Replace("\n", "\n\t")}");
+                return default(TValue);
+            }
+            // Failure: received empty string
+            if (typeof(TValue) == typeof(string) && string.IsNullOrEmpty(result.Value as string))
+            {
+                result.Error = "Resultant string is empty";
+                warnings.AppendLine(errorInfo);
+                warnings.Append($"\t{result.Error.Replace("\n", "\n\t")}");
+                return default(TValue);
+            }
+            // Failure: received null result value
+            if (result.Value == null)
+            {
+                result.Error = "Results are null";
+                warnings.AppendLine(errorInfo);
+                warnings.Append($"\t{result.Error.Replace("\n", "\n\t")}");
+                return default(TValue);
+            }
+            // Success: Returns value directly
+            return result.Value;
+        }
+
+        // Handle array update
+        private static async Task<TData[]> UpdateArray<TData>(IWitRequestConfiguration configuration, WitAppInfo appInfo, StringBuilder warnings,
+            Func<TData, string> arrayItemIdGetter,
+            Func<WitInfoVRequest, Task<VRequest.RequestCompleteResponse<TData[]>>> arrayRequestHandler,
+            Func<WitInfoVRequest, TData, Task<VRequest.RequestCompleteResponse<TData>>> arrayItemRequestHandler)
+        {
+            // Get request for all items in the array
+            var request = GetRequest(configuration, false);
+
+            // Perform request & return all items
+            var result = await arrayRequestHandler.Invoke(request);
+
+            // Get items & add warning if needed
+            string name = GetTypeName<TData>();
+            TData[] newItems = HandleResults(result, $"{name}[] update failed", warnings);
+
+            // Update each item
+            int total = newItems == null ? 0 : newItems.Length;
+            for (int e = 0; e < total; e++)
+            {
+                newItems[e] = await UpdateArrayItem(configuration, newItems[e], warnings, arrayItemIdGetter, arrayItemRequestHandler);
+            }
+
+            // Return new items
+            VLog.I($"Update Info - {name} update success (Total: {total})");
+            return newItems;
+        }
+
+        // Handle array item update
+        private static async Task<TData> UpdateArrayItem<TData>(IWitRequestConfiguration configuration, TData oldInfo, StringBuilder warnings,
+            Func<TData, string> arrayItemIdGetter,
+            Func<WitInfoVRequest, TData, Task<VRequest.RequestCompleteResponse<TData>>> arrayItemRequestHandler)
+        {
+            // Get request for additional info on a single item in the array
+            var request = GetRequest(configuration, false);
+
+            // Perform request & return item data
+            var result = await arrayItemRequestHandler.Invoke(request, oldInfo);
+
+            // Get new item info & add warning if needed
+            string oldId = arrayItemIdGetter.Invoke(oldInfo);
+            string name = $"{GetTypeName<TData>()}[{oldId}]";
+            TData newInfo = HandleResults(result, $"{name} update failed", warnings);
+
+            // Use old info if inconsistent
+            string newId = arrayItemIdGetter.Invoke(newInfo);
+            if (!string.Equals(oldId, newId))
+            {
+                // Log if not null
+                if (!string.IsNullOrEmpty(newId))
+                {
+                    warnings.AppendLine($"{name} request ignored due to inconsistent id: {newId}");
+                }
+                return oldInfo;
+            }
+
+            // Update success
+            return newInfo;
+        }
+        // Simple type name determinator
+        private static string GetTypeName<TData>() => typeof(TData).Name;
+        #endregion
+
+        #region EDITOR REQUESTS
+        // Performs an editor request for app id, appends any warnings and returns the app id if possible
+        private static async Task<string> UpdateAppId(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            // Get old application id
+            string oldAppId = configuration.GetApplicationId();
+
+            // Perform app id request
+            var result = await GetRequest(configuration, true).RequestAppIdAsync();
+
+            // Get new app id if possible
+            string newAppId = HandleResults(result, "App id update failed", warnings);
+            if (string.IsNullOrEmpty(newAppId))
+            {
+                VLog.I("Update Info - App id update failed");
+                return oldAppId;
+            }
+
+            // Apply new app id
+            var appInfo = configuration.GetApplicationInfo();
+            appInfo.id = newAppId;
+            configuration.SetApplicationInfo(appInfo);
+
+            // Return new app id
+            VLog.I($"Update Info - App id update success\nApp Id: {newAppId}");
+            return newAppId;
+        }
+
+        // Perform an update to app info
+        private static async Task<WitAppInfo> UpdateAppInfo(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            // Get old application info
+            WitAppInfo oldInfo = configuration.GetApplicationInfo();
+
+            // Perform request for app info
+            var result = await GetRequest(configuration, true).RequestAppInfoAsync(oldInfo.id);
+
+            // Get results & add warning if needed
+            WitAppInfo newInfo = HandleResults(result, "App info update failed", warnings);
+            if (string.IsNullOrEmpty(newInfo.id))
+            {
+                warnings.AppendLine($"App info update failed.\nOld Id: '{oldInfo.id}'");
+                VLog.I($"Update Info - App info update failed\nOld Id: {oldInfo.id}");
+                return oldInfo;
+            }
+
+            // Set & return new info
+            configuration.SetApplicationInfo(newInfo);
+            VLog.I($"Update Info - App info update success\nApp: {newInfo.name}\nId: {newInfo.id}");
+            return newInfo;
+        }
+
+        // Performs an editor request for client token, appends any warnings and returns the client token if possible.
+        private static async Task<string> UpdateClientToken(IWitRequestConfiguration configuration, string appId, StringBuilder warnings)
+        {
+            // Get old client id
+            string oldClientToken = configuration.GetClientAccessToken();
+
+            // Cannot request client token without an app id
+            if (string.IsNullOrEmpty(appId))
+            {
+                return oldClientToken;
+            }
+
+            // Perform a client token request
+            var result = await GetRequest(configuration, true).RequestClientTokenAsync(appId);
+            string newClientToken = HandleResults(result, "Client token request failed", warnings);
+            if (string.IsNullOrEmpty(newClientToken))
+            {
+                VLog.I($"Update Info - Client token update failed");
+                return oldClientToken;
+            }
+
+            // Apply new token
+            configuration.SetClientAccessToken(newClientToken);
+
+            // Success
+            VLog.I($"Update Info - Client token update success");
+            return newClientToken;
+        }
+
+        // Updates all version tags
+        private static async Task UpdateVersionTags(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            // Perform request for version tags
+            var result = await GetRequest(configuration, true).RequestAppVersionTagsAsync(configuration.GetApplicationId());
+
+            // Get results & add warning if needed
+            WitVersionTagInfo[][] versionTagsBySnapshot = HandleResults(result, "Version tags update failed", warnings);
+
+            // Get single array
+            int totalSnapshots = versionTagsBySnapshot != null ? versionTagsBySnapshot.Length : 0;
+            int totalTagCount = versionTagsBySnapshot != null ? versionTagsBySnapshot.Sum(snap =>snap.Length) : 0;
+            WitVersionTagInfo[] versionTags = new WitVersionTagInfo[totalTagCount];
+            for (int snapshot = 0, currentTag = 0; snapshot < totalSnapshots; snapshot++)
+            {
+                for (var tag = 0; tag < versionTagsBySnapshot[snapshot].Length; tag++, currentTag++)
+                {
+                    versionTags[currentTag] = versionTagsBySnapshot[snapshot][tag];
+                }
+            }
+
+            // Set new info
+            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            appInfo.versionTags = versionTags;
+            configuration.SetApplicationInfo(appInfo);
+            VLog.I($"Update Info -  Version tags update success (Total: {versionTags.Length})");
+        }
+        #endregion
+
+        #region RUNTIME REQUESTS
+        // Updates all entity info items
+        private static async Task UpdateEntities(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            appInfo.entities = await UpdateArray(configuration,
+                appInfo, warnings,
+                (info) => info.id,
+                (request) => request.RequestEntityListAsync(),
+                (request, info) => request.RequestEntityInfoAsync(info.id));
+            configuration.SetApplicationInfo(appInfo);
+        }
+
+        // Updates all intent info items
+        private static async Task UpdateIntents(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            appInfo.intents = await UpdateArray(configuration,
+                appInfo, warnings,
+                (info) => info.id,
+                (request) => request.RequestIntentListAsync(),
+                (request, info) => request.RequestIntentInfoAsync(info.id));
+            configuration.SetApplicationInfo(appInfo);
+        }
+
+        // Updates all trait info items
+        private static async Task UpdateTraits(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            appInfo.traits = await UpdateArray(configuration,
+                appInfo, warnings,
+                (info) => info.id,
+                (request) => request.RequestTraitListAsync(),
+                (request, info) => request.RequestTraitInfoAsync(info.id));
+            configuration.SetApplicationInfo(appInfo);
+        }
+
+        // Updates all tts voices within the configuration
+        private static async Task UpdateVoices(IWitRequestConfiguration configuration, StringBuilder warnings)
+        {
+            // Perform request for app info
+            var result = await GetRequest(configuration, false).RequestVoiceListAsync();
+
+            // Get results & add warning if needed
+            Dictionary<string, WitVoiceInfo[]> voicesByLocale = HandleResults(result, "TTS Voices update failed", warnings);
+
+            // Add all voices by locale
+            List<WitVoiceInfo> voiceList = new List<WitVoiceInfo>();
+            if (voicesByLocale != null)
+            {
+                foreach (var voices in voicesByLocale.Values)
+                {
+                    voiceList.AddRange(voices);
+                }
+            }
+
+            // Set new info
+            WitAppInfo appInfo = configuration.GetApplicationInfo();
+            appInfo.voices = voiceList.ToArray();
+            configuration.SetApplicationInfo(appInfo);
+            VLog.I($"Update Info -  TTS Voices update success (Total: {voiceList.Count})");
+        }
+        #endregion
     }
 }

@@ -67,21 +67,21 @@ namespace Meta.WitAi
     {
         private string _clientToken;
         private string _serverToken;
+        private WitAppInfo _appInfo;
         private WitConfigurationAssetData[] _configurationData =  Array.Empty<WitConfigurationAssetData>();
 
         public WitServerRequestConfiguration(string serverToken)
         {
             _serverToken = serverToken;
+            _appInfo = new WitAppInfo();
         }
 
         public string GetConfigurationId() => null;
-        public string GetApplicationId() => null;
-        public WitAppInfo GetApplicationInfo() => new WitAppInfo();
+        public string GetApplicationId() => _appInfo.id;
+        public WitAppInfo GetApplicationInfo() => _appInfo;
+        public void SetApplicationInfo(WitAppInfo newInfo) => _appInfo = newInfo;
         public WitConfigurationAssetData[] GetConfigData() => _configurationData;
 
-        public void SetApplicationInfo(WitAppInfo newInfo)
-        {
-        }
         public void SetConfigData(WitConfigurationAssetData[] configData)
         {
             _configurationData = configData;
