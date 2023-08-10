@@ -8,9 +8,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using Meta.WitAi;
+using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
 namespace Lib.Wit.Runtime.Data.Info
 {
@@ -48,19 +50,45 @@ namespace Lib.Wit.Runtime.Data.Info
 
             if (PendingCallbacksPerConfig[appId].Count == 1)
             {
-                new WitInfoVRequest(configuration, true).RequestAppExportInfo(configuration.GetApplicationId(), (exportInfo, error) =>
-                {
-                    if (!String.IsNullOrEmpty(error))
-                    {
-                        VLog.W($"Could not determine export URI for {configuration.GetApplicationId()}.");
-                        return;
-                    }
-                    var req = new WitInfoVRequest(configuration, false);
-                    req.RequestAppExportZip(exportInfo.uri,appId, OnPendingOnCompletes);
-                });
+                new WitInfoVRequest(configuration, true).RequestAppExportInfo(appId,
+                    (exportInfo, exportInfoError) =>
+                        OnExportInfoGetCompletion(appId, exportInfo, exportInfoError));
             }
         }
-        private static void OnPendingOnCompletes(string appId, ZipArchive result, string error)
+        // Callback following Wit request for app info
+        private static void OnExportInfoGetCompletion(string appId, WitExportInfo exportInfo, string exportInfoError)
+        {
+            if (!string.IsNullOrEmpty(exportInfoError))
+            {
+                OnExportZipLoadCompletion(appId, null, exportInfoError);
+                return;
+            }
+            new VRequest().RequestFile(new Uri(exportInfo.uri),
+                (exportZipData, exportZipError) =>
+                    OnExportZipLoadCompletion(appId, exportZipData, exportInfoError));
+        }
+
+        // Callback following zip file request
+        private static void OnExportZipLoadCompletion(string appId, byte[] exportZipData, string exportZipError)
+        {
+            if (!string.IsNullOrEmpty(exportZipError))
+            {
+                OnExportZipDecodeCompletion(appId, null, exportZipError);
+                return;
+            }
+            try
+            {
+                var zip = new ZipArchive(new MemoryStream(exportZipData));
+                OnExportZipDecodeCompletion(appId, zip, null);
+            }
+            catch (Exception e)
+            {
+                OnExportZipDecodeCompletion(appId, null, e.ToString());
+            }
+        }
+
+        // Callback following final export completion
+        private static void OnExportZipDecodeCompletion(string appId, ZipArchive result, string error)
         {
             foreach (var pending in PendingCallbacksPerConfig[appId])
             {

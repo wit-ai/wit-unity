@@ -85,27 +85,6 @@ namespace Meta.WitAi.Requests
                 onComplete);
         }
 
-        public delegate void RequestCompleteDelegateByAppId<TResult>(string appId, TResult result, string error);
-        // Download the export zip from provided url
-        public bool RequestAppExportZip(string downloadUri, string appId,
-            RequestCompleteDelegateByAppId<ZipArchive> onComplete)
-        {
-            var uri = new Uri(downloadUri);
-            var request = new VRequest();
-            request.RequestFile(uri, (result,error) =>
-            {
-                try
-                {
-                    var zip = new ZipArchive(new MemoryStream(result));
-                    onComplete(appId, zip, null);
-                }
-                catch (Exception e)
-                {
-                    onComplete(appId, null, e.ToString());
-                }
-            });
-            return true;
-        }
         // Retrieve the version tags for the app
         public bool RequestAppVersionTags(string applicationId,
             RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete)
