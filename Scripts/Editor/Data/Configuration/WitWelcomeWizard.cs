@@ -87,7 +87,7 @@ namespace Meta.WitAi.Windows
             _isCheckingToken = true;
 
             // Perform request
-            _request = WitConfigurationUtility.CheckServerToken(serverToken, (success) =>
+            _request = WitAppInfoUtility.CheckServerToken(serverToken, (success) =>
             {
                 _usingClientToken = !success;
                 _isCheckingToken = false;

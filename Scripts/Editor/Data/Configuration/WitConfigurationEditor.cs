@@ -95,17 +95,7 @@ namespace Meta.WitAi.Windows
             _serverToken = WitAuthUtility.GetAppServerToken(Configuration);
             if (CanConfigurationRefresh(Configuration) && WitConfigurationUtility.IsServerTokenValid(_serverToken))
             {
-                // Get client token if needed
-                _appID = Configuration.GetApplicationId();
-                if (string.IsNullOrEmpty(_appID))
-                {
-                    Configuration.SetServerToken(_serverToken);
-                }
-                // Refresh additional data
-                else
-                {
-                    SafeRefresh();
-                }
+                SafeRefresh();
             }
         }
 
@@ -125,7 +115,6 @@ namespace Meta.WitAi.Windows
 
             // Draw header
             WitEditorUI.LayoutHeaderText(target.name, HeaderUrl, DocsUrl);
-
 
             // Layout content
             LayoutContent();
@@ -230,7 +219,7 @@ namespace Meta.WitAi.Windows
 
             _foldout = WitEditorUI.LayoutFoldout(new GUIContent(foldoutText), _foldout);
             // Refresh button
-            if (CanConfigurationRefresh(Configuration))
+            if (Configuration != null)
             {
                 if (string.IsNullOrEmpty(_appName))
                 {
@@ -243,9 +232,8 @@ namespace Meta.WitAi.Windows
                 }
                 else
                 {
-                    bool isRefreshing = Configuration.IsUpdatingData();
-                    GUI.enabled = !isRefreshing;
-                    if (WitEditorUI.LayoutTextButton(isRefreshing ? WitTexts.Texts.ConfigurationRefreshingButtonLabel : WitTexts.Texts.ConfigurationRefreshButtonLabel))
+                    GUI.enabled = CanConfigurationRefresh(Configuration);
+                    if (WitEditorUI.LayoutTextButton(Configuration.IsUpdatingData() ? WitTexts.Texts.ConfigurationRefreshingButtonLabel : WitTexts.Texts.ConfigurationRefreshButtonLabel))
                     {
                         SafeRefresh();
                     }
@@ -344,7 +332,7 @@ namespace Meta.WitAi.Windows
         // Whether or not to allow a configuration to refresh
         protected virtual bool CanConfigurationRefresh(WitConfiguration configuration)
         {
-            return configuration;
+            return !Application.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode && configuration != null && !configuration.IsUpdatingData();
         }
         // Layout configuration data
         protected virtual void LayoutConfigurationData()
@@ -470,18 +458,23 @@ namespace Meta.WitAi.Windows
         // Safe refresh
         protected virtual void SafeRefresh()
         {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-
-            if (WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            if (!CanConfigurationRefresh(Configuration))
             {
-                Configuration.SetServerToken(_serverToken);
-                Configuration.UpdateDataAssets();
+                return;
+            }
+            if (WitConfigurationUtility.IsServerTokenValid(_serverToken) && !string.Equals(Configuration.GetServerAccessToken(), _serverToken))
+            {
+                Configuration.SetServerToken(_serverToken, (warnings) => OnRefreshComplete());
             }
             else if (WitConfigurationUtility.IsClientTokenValid(Configuration.GetClientAccessToken()))
             {
-                Configuration.RefreshAppInfo();
-                Configuration.UpdateDataAssets();
+                Configuration.Update((warnings) => OnRefreshComplete());
             }
+        }
+
+        private void OnRefreshComplete()
+        {
+            Configuration.UpdateDataAssets();
             if (Configuration.useConduit)
             {
                 CheckAutoTrainAvailabilityIfNeeded();

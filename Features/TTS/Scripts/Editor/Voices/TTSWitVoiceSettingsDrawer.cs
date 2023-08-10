@@ -246,7 +246,7 @@ namespace Meta.WitAi.TTS.Voices
         private void RefreshVoices(TTSService ttsService, SerializedProperty property)
         {
             // Ensure service exists
-            if (!(ttsService is TTSWit))
+            if (!(ttsService is TTSWit) || Application.isPlaying)
             {
                 return;
             }
@@ -285,7 +285,7 @@ namespace Meta.WitAi.TTS.Voices
                 // Perform update if possible
                 if (_configuration is WitConfiguration witConfig && !witConfig.IsUpdatingData())
                 {
-                    witConfig.RefreshAppInfo();
+                    witConfig.Update();
                 }
                 // Now updating
                 _configUpdating = true;

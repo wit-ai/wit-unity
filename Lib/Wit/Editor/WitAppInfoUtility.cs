@@ -73,6 +73,21 @@ namespace Meta.WitAi.Lib
         }
 
         /// <summary>
+        /// Update configuration directly & return an errors if applicable
+        /// </summary>
+        /// <param name="configInfo">Configuration info</param>
+        /// <param name="onComplete">Callback with string for error</param>
+        public static void Update(this IWitRequestConfiguration configuration,
+            Action<string> onComplete = null)
+        {
+            Update(configuration, (info, error) =>
+            {
+                configuration.SetApplicationInfo(info);
+                onComplete?.Invoke(error);
+            });
+        }
+
+        /// <summary>
         /// Update configuration info using
         /// </summary>
         /// <param name="configInfo">Configuration info</param>

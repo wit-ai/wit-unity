@@ -153,9 +153,9 @@ namespace Meta.WitAi.TTS
             }
 
             // Update app info
-            WitAppInfoUtility.Update(ttsWit.RequestSettings.configuration, (newInfo, r) =>
+            configuration.Update((warnings) =>
             {
-                configuration.SetApplicationInfo(newInfo);
+                WitAppInfo newInfo = configuration.GetApplicationInfo();
                 UpdatePresets(ttsWit, newInfo);
                 onUpdateComplete?.Invoke(newInfo);
             });

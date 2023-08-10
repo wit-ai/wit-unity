@@ -320,12 +320,9 @@ namespace Meta.WitAi.Data.Configuration
                 onSetComplete?.Invoke(error);
             });
         }
-        // Determine if is a server token
-        public static VRequest CheckServerToken(string serverToken, Action<bool> onComplete) => WitAppInfoUtility.CheckServerToken(serverToken, onComplete);
         #endregion
 
         #region APP DATA IMPORT
-
         /// <summary>
         /// Import supplied Manifest into WIT.ai.
         /// </summary>
@@ -361,30 +358,6 @@ namespace Meta.WitAi.Data.Configuration
             }
 
             return JsonConvert.SerializeObject(manifest);
-        }
-
-        #endregion
-
-        #region REFRESH
-        // Refreshes configuration data
-        public static void RefreshAppInfo(this WitConfiguration configuration, Action<string> onRefreshComplete = null)
-        {
-            // Ignore during runtime
-            if (Application.isPlaying)
-            {
-                onRefreshComplete?.Invoke(null);
-                return;
-            }
-
-            // Update application info
-            WitAppInfoUtility.Update(configuration, (info, s) =>
-            {
-                // Set application info
-                configuration.SetApplicationInfo(info);
-
-                // Complete
-                onRefreshComplete?.Invoke(s);
-            });
         }
         #endregion
     }
