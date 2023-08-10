@@ -180,20 +180,9 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
-        /// Clean the url prior to use
+        /// Adds 'file://' to url if no prefix is found
         /// </summary>
-        public virtual string CleanUrl(string url)
-        {
-            // Get url
-            string result = url;
-            // Add file:// if needed
-            if (!Regex.IsMatch(result, "(http:|https:|file:|jar:).*"))
-            {
-                result = $"file://{result}";
-            }
-            // Return url
-            return result;
-        }
+        public virtual string CleanUrl(string url) => !HasUriSchema(url) ? $"file://{url}" : url;
 
         // Override for custom headers
         protected virtual Dictionary<string, string> GetHeaders() => null;
@@ -636,7 +625,7 @@ namespace Meta.WitAi.Requests
             results.Value = false;
 
             // WebGL & web files, perform a header lookup
-            if (checkPath.StartsWith("http"))
+            if (IsWebUrl(checkPath))
             {
                 var headerResponse = await RequestFileHeadersAsync(new Uri(CleanUrl(checkPath)));
                 results.Error = headerResponse.Error;
@@ -648,20 +637,9 @@ namespace Meta.WitAi.Requests
                 return results;
             }
 
-            // Check if within a jar file
-            bool requiresRequest = checkPath.StartsWith("jar");
-
-#if UNITY_ANDROID && UNITY_EDITOR
-            // Android editor: simulate jar handling
-            requiresRequest = requiresRequest || (Application.isPlaying && checkPath.StartsWith(Application.streamingAssetsPath));
-#endif
-
             // Request required
-            if (requiresRequest)
+            if (IsJarPath(checkPath))
             {
-                // Setup
-                bool complete = false;
-
                 // Request received data
                 _onFirstResponse = () =>
                 {
@@ -677,7 +655,6 @@ namespace Meta.WitAi.Requests
                         results.Error = error;
                         results.Value = string.IsNullOrEmpty(error);
                     }
-                    complete = true;
                 };
 
                 // Request async & cancels on first response
@@ -717,6 +694,27 @@ namespace Meta.WitAi.Requests
             RequestCompleteResponse<bool> results = await RequestFileExistsAsync(checkPath);
             onComplete?.Invoke(results.Value, results.Error);
         }
+
+        // Determines if url is a web path or local path
+        private static bool IsWebUrl(string url)
+        {
+            return Regex.IsMatch(url, "(http:|https:).*");
+        }
+        // Determines if url is a web path or local path
+        private static bool IsJarPath(string url)
+        {
+            bool result = Regex.IsMatch(url, "(jar:).*");
+#if UNITY_ANDROID && UNITY_EDITOR
+            // Android editor: simulate jar handling
+            result = result || (Application.isPlaying && url.StartsWith(Application.streamingAssetsPath));
+#endif
+            return result;
+        }
+        // Determines if url is a web path or local path
+        private static bool HasUriSchema(string url)
+        {
+            return Regex.IsMatch(url, "(http:|https:|jar:|file:).*");
+        }
         #endregion
 
         #region DOWNLOADING
@@ -729,64 +727,142 @@ namespace Meta.WitAi.Requests
             RequestCompleteDelegate<bool> onComplete)
         {
             // Get temporary path for download
-            string tempDownloadPath = downloadPath + ".tmp";
+            string tempDownloadPath = GetTmpDownloadPath(downloadPath);
+
+            // Check for setup errors
+            string errors = SetupDownloadRequest(tempDownloadPath, unityRequest);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                onComplete?.Invoke(false, errors);
+                return false;
+            }
+
+            // Perform request
+            return Request(unityRequest, (response, error) =>
+                CoroutineUtility.StartCoroutine(WaitThenCleanup(downloadPath, tempDownloadPath, onComplete, error)));
+        }
+
+        // Wait a moment until request is done unloading & then perform cleanup
+        private IEnumerator WaitThenCleanup(string downloadPath, string tempDownloadPath,
+            RequestCompleteDelegate<bool> onComplete, string error)
+        {
+            yield return null;
+            string errors = CleanupDownloadRequest(downloadPath, tempDownloadPath, error);
+            onComplete?.Invoke(string.IsNullOrEmpty(errors), errors);
+        }
+
+        /// <summary>
+        /// Download a file using a unityrequest
+        /// </summary>
+        /// <param name="unityRequest">The unity request to add a download handler to</param>
+        public async Task<string> RequestFileDownloadAsync(string downloadPath, UnityWebRequest unityRequest)
+        {
+            // Get temporary path for download
+            string tempDownloadPath = GetTmpDownloadPath(downloadPath);
+
+            // Perform setup
+            string errors = SetupDownloadRequest(tempDownloadPath, unityRequest);
+            // Return setup errors
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return errors;
+            }
+
+            // Perform request
+            var response = await RequestAsync(unityRequest, (request) => string.IsNullOrEmpty(request.error));
+            errors = response.Error;
+
+            // Cleanup request on background thread due to file move
+            await Task.Run(() => errors = CleanupDownloadRequest(downloadPath, tempDownloadPath, errors));
+
+            // Return errors
+            return errors;
+        }
+
+        // The temporary file path used for download
+        private string GetTmpDownloadPath(string downloadPath) => $"{downloadPath}.tmp";
+
+        /// <summary>
+        /// Setup file download if possible
+        /// </summary>
+        /// <returns>Returns any errors encountered during setup</returns>
+        private string SetupDownloadRequest(string downloadPath, UnityWebRequest unityRequest)
+        {
+            // Invalid path
+            if (string.IsNullOrEmpty(downloadPath))
+            {
+                return "Null download path";
+            }
+            // Ensure valid directory
+            if (IsWebUrl(downloadPath) || IsJarPath(downloadPath))
+            {
+                return $"Cannot download to path:\n{downloadPath}";
+            }
+
             try
             {
-                // Delete temporary file if it already exists
-                if (File.Exists(tempDownloadPath))
+                // Check directory
+                FileInfo fileInfo = new FileInfo(downloadPath);
+                if (!Directory.Exists(fileInfo.DirectoryName))
                 {
-                    File.Delete(tempDownloadPath);
+                    return $"Cannot download to directory\nDirectory: {fileInfo.DirectoryName}";
+                }
+
+                // Delete existing file if applicable
+                if (File.Exists(downloadPath))
+                {
+                    File.Delete(downloadPath);
                 }
             }
             catch (Exception e)
             {
-                // Failed to delete file
-                string error = $"Deleting Download File Failed\nPath: {tempDownloadPath}\n\n{e}";
-                VLog.W(error);
-                onComplete?.Invoke(false, error);
-                return false;
+                return $"{e.GetType()} thrown during download setup\n{e}";
             }
 
-            // Add file download handler
-            DownloadHandlerFile fileHandler = new DownloadHandlerFile(tempDownloadPath, true);
+            // Add request handler
+            DownloadHandlerFile fileHandler = new DownloadHandlerFile(downloadPath, true);
             unityRequest.downloadHandler = fileHandler;
             unityRequest.disposeDownloadHandlerOnDispose = true;
 
-            // Perform request
-            return Request(unityRequest, (response, error) =>
-            {
-                try
-                {
-                    // Handle existing temp file
-                    if (File.Exists(tempDownloadPath))
-                    {
-                        // For error, remove
-                        if (!string.IsNullOrEmpty(error))
-                        {
-                            File.Delete(tempDownloadPath);
-                        }
-                        // For success, move to final path
-                        else
-                        {
-                            // File already at download path, delete it
-                            if (File.Exists(downloadPath))
-                            {
-                                File.Delete(downloadPath);
-                            }
+            // Success
+            return string.Empty;
+        }
 
-                            // Move to final path
-                            File.Move(tempDownloadPath, downloadPath);
+        /// <summary>
+        /// Finalize file download if possible
+        /// </summary>
+        /// <returns>Returns any errors encountered during setup</returns>
+        private string CleanupDownloadRequest(string downloadPath, string tempDownloadPath, string error)
+        {
+            try
+            {
+                // Handle existing temp file
+                if (File.Exists(tempDownloadPath))
+                {
+                    // For error, remove temp
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        File.Delete(tempDownloadPath);
+                    }
+                    // For success, move to final path
+                    else
+                    {
+                        // File already at download path, delete it
+                        if (File.Exists(downloadPath))
+                        {
+                            File.Delete(downloadPath);
                         }
+
+                        // Move to final path
+                        File.Move(tempDownloadPath, downloadPath);
                     }
                 }
-                catch (Exception e)
-                {
-                    VLog.W($"Moving Download File Failed\nFrom: {tempDownloadPath}\nTo: {downloadPath}\n\n{e}");
-                }
-
-                // Complete
-                onComplete?.Invoke(string.IsNullOrEmpty(error), error);
-            });
+            }
+            catch (Exception e)
+            {
+                return $"{e.GetType()} thrown during download cleanup\n{e}";
+            }
+            return error;
         }
         #endregion
 
