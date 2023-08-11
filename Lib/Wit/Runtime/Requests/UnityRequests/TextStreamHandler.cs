@@ -17,7 +17,7 @@ namespace Meta.WitAi.Requests
     /// as it is received and returns it via a partial response delegate.
     /// </summary>
     [Preserve]
-    public class TextStreamHandler : DownloadHandlerScript
+    public class TextStreamHandler : DownloadHandlerScript, IRequestDownloadHandler
     {
         /// <summary>
         /// The delegate for returning text from the text stream handler
@@ -62,6 +62,11 @@ namespace Meta.WitAi.Requests
 
         // Final length of text
         private int _finalLength;
+
+        /// <summary>
+        /// Whether or not complete
+        /// </summary>
+        public bool IsComplete { get; private set; } = false;
 
         // Generate with a specified delimiter
         public TextStreamHandler(TextStreamResponseDelegate partialResponseDelegate, string partialDelimiter = DEFAULT_PARTIAL_DELIMITER, string finalDelimiter = DEFAULT_FINAL_DELIMITER)
@@ -139,11 +144,21 @@ namespace Meta.WitAi.Requests
         [Preserve]
         protected override float GetProgress()
         {
+            if (IsComplete)
+            {
+                return 1f;
+            }
             if (_finalLength > 0)
             {
                 return (float)(_partialBuilder.Length + _finalBuilder.Length) / _finalLength;
             }
             return 0f;
+        }
+
+        [Preserve]
+        protected override byte[] GetData()
+        {
+            return Encoding.UTF8.GetBytes(_finalBuilder.ToString());
         }
 
         // Clean up clip with final sample count
@@ -155,6 +170,7 @@ namespace Meta.WitAi.Requests
                 HandlePartial(_partialBuilder.ToString());
                 _partialBuilder.Clear();
             }
+            IsComplete = true;
         }
 
         #region STATIC

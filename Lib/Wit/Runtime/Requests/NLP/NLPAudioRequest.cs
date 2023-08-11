@@ -57,16 +57,22 @@ namespace Meta.Voice
         /// </summary>
         /// <param name="responseData">Parsed json data returned from request</param>
         /// <param name="error">Error returned from a request</param>
-        protected virtual void HandlePartialNlpResponse(WitResponseNode responseData)
+        protected virtual void HandlePartialResponse(WitResponseNode responseData, string error)
         {
             // Ignore if not in correct state
             if (!IsActive)
             {
                 return;
             }
-            
+            // Ignore if failed
+            if (!string.IsNullOrEmpty(error))
+            {
+                return;
+            }
+
+            // Add response data
             if (null != responseData) responseData[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
-            
+
             // Apply response data
             ApplyResultResponseData(responseData);
 
@@ -93,7 +99,7 @@ namespace Meta.Voice
         /// </summary>
         /// <param name="responseData">Parsed json data returned from request</param>
         /// <param name="error">Error returned from a request</param>
-        protected virtual void HandleFinalNlpResponse(WitResponseNode responseData, string error)
+        protected virtual void HandleFinalResponse(WitResponseNode responseData, string error)
         {
             // Ignore if not in correct state
             if (!IsActive || _isFinalized)
@@ -101,13 +107,13 @@ namespace Meta.Voice
                 return;
             }
             _isFinalized = true;
-            
+
             if (null != responseData) responseData[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
 
             // Send partial data if not previously sent
             if (responseData != null && responseData != ResponseData)
             {
-                HandlePartialNlpResponse(responseData);
+                HandlePartialResponse(responseData, error);
             }
 
             // Error returned
@@ -158,7 +164,7 @@ namespace Meta.Voice
             // Handle success
             else
             {
-                HandleFinalNlpResponse(ResponseData, string.Empty);
+                HandleFinalResponse(ResponseData, string.Empty);
             }
         }
     }

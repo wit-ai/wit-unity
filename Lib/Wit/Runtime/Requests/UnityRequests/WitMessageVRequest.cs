@@ -8,11 +8,15 @@
 
 using System.Collections.Generic;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.WitAi.Requests
 {
     internal class WitMessageVRequest : WitVRequest
     {
+        // Partial response handler
+        private RequestCompleteDelegate<WitResponseNode> _onPartial;
+
         /// <summary>
         /// Constructor for wit based message VRequests
         /// </summary>
@@ -22,8 +26,12 @@ namespace Meta.WitAi.Requests
         /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
         public WitMessageVRequest(IWitRequestConfiguration configuration, string requestId,
             RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null)
-            : base(configuration, requestId, false, onDownloadProgress, onFirstResponse) {}
+            RequestFirstResponseDelegate onFirstResponse = null,
+            RequestCompleteDelegate<WitResponseNode> onPartial = null)
+            : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
+        {
+            _onPartial = onPartial;
+        }
 
         /// <summary>
         /// Voice message request
@@ -57,12 +65,12 @@ namespace Meta.WitAi.Requests
             if (!post)
             {
                 uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = text;
-                return RequestWitGet(endpoint, uriParams, onComplete);
+                return RequestWitGet(endpoint, uriParams, onComplete, _onPartial);
             }
             // Perform a post request
             else
             {
-                return RequestWitPost(endpoint, uriParams, text, onComplete);
+                return RequestWitPost(endpoint, uriParams, text, onComplete, _onPartial);
             }
         }
     }

@@ -51,7 +51,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Audio stream data has completed reception
         /// </summary>
-        public bool IsStreamComplete { get; private set; }
+        public bool IsComplete { get; private set; }
 
 
         // Leftover byte
@@ -76,7 +76,7 @@ namespace Meta.WitAi.Requests
             _decodingChunks = 0;
             _requestComplete = false;
             IsStreamReady = false;
-            IsStreamComplete = false;
+            IsComplete = false;
             _errorBytes = null;
             _errorDecoded = 0;
 
@@ -89,7 +89,7 @@ namespace Meta.WitAi.Requests
         protected override void ReceiveContentLengthHeader(ulong contentLength)
         {
             // Ignore if already complete
-            if (contentLength == 0 || IsStreamComplete)
+            if (contentLength == 0 || IsComplete)
             {
                 return;
             }
@@ -113,7 +113,7 @@ namespace Meta.WitAi.Requests
         protected override bool ReceiveData(byte[] receiveData, int dataLength)
         {
             // Exit if desired
-            if (!base.ReceiveData(receiveData, dataLength) || IsStreamComplete)
+            if (!base.ReceiveData(receiveData, dataLength) || IsComplete)
             {
                 return false;
             }
@@ -241,7 +241,7 @@ namespace Meta.WitAi.Requests
         private void TryToFinalize()
         {
             // Already finalized or not yet complete
-            if (IsStreamComplete || !_requestComplete || _decodingChunks > 0 || ClipStream == null)
+            if (IsComplete || !_requestComplete || _decodingChunks > 0 || ClipStream == null)
             {
                 return;
             }
@@ -256,7 +256,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Stream complete
-            IsStreamComplete = true;
+            IsComplete = true;
             ClipStream.SetTotalSamples(ClipStream.AddedSamples);
             VLog.D($"Clip Stream - Complete\nLength: {ClipStream.Length:0.00} secs");
 
@@ -275,7 +275,7 @@ namespace Meta.WitAi.Requests
         public void CleanUp()
         {
             // Already complete
-            if (IsStreamComplete)
+            if (IsComplete)
             {
                 _leftovers = null;
                 _errorBytes = null;
@@ -294,7 +294,7 @@ namespace Meta.WitAi.Requests
             Dispose();
 
             // Complete
-            IsStreamComplete = true;
+            IsComplete = true;
             VLog.D($"Clip Stream - Cleaned Up");
         }
 

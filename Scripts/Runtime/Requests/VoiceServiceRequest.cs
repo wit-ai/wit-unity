@@ -51,16 +51,16 @@ namespace Meta.WitAi.Requests
                 Results.StatusCode = newCode;
             }
         }
-        
+
         #region Simulation
         protected override bool OnSimulateResponse()
         {
             if (null == simulatedResponse) return false;
-            
+
 
             // Begin calling on main thread if needed
             WatchMainThreadCallbacks();
-            
+
             SimulateResponse();
             return true;
         }
@@ -75,7 +75,7 @@ namespace Meta.WitAi.Requests
                 var message = simulatedResponse.messages[i];
                 await System.Threading.Tasks.Task.Delay((int)(message.delay * 1000));
                 var partialResponse = WitResponseNode.Parse(message.responseBody);
-                HandlePartialNlpResponse(partialResponse);
+                HandlePartialResponse(partialResponse, partialResponse == null ? "Failed to parse" : string.Empty);
             }
 
             var lastMessage = simulatedResponse.messages.Last();
@@ -83,16 +83,18 @@ namespace Meta.WitAi.Requests
             var lastResponseData = WitResponseNode.Parse(lastMessage.responseBody);
             MainThreadCallback(() =>
             {
-                // Send partial data if not previously sent
-                if (!lastResponseData.HasResponse())
-                {
-                    HandlePartialNlpResponse(lastResponseData);
-                }
-
-                // Apply error if needed
                 if (null != lastResponseData)
                 {
+                    // Get error if possible
                     var error = lastResponseData["error"];
+
+                    // Send partial data if not previously sent
+                    if (lastResponseData.HasResponse())
+                    {
+                        HandlePartialResponse(lastResponseData, error);
+                    }
+
+                    // Append error to description
                     if (!string.IsNullOrEmpty(error))
                     {
                         statusDescription += $"\n{error}";
@@ -100,7 +102,7 @@ namespace Meta.WitAi.Requests
                 }
 
                 // Call completion delegate
-                HandleFinalNlpResponse(lastResponseData,
+                HandleFinalResponse(lastResponseData,
                     StatusCode == (int)HttpStatusCode.OK
                         ? string.Empty
                         : $"{statusDescription}\n\nStackTrace:\n{stackTrace}\n\n");
@@ -108,7 +110,7 @@ namespace Meta.WitAi.Requests
         }
 
         #endregion
-        
+
         #region Thread Safety
         // Check performing
         private CoroutineUtility.CoroutinePerformer _performer = null;

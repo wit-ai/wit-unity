@@ -52,7 +52,7 @@ namespace Meta.WitAi.Requests
             // Generate a message WitVRequest
             if (InputType == NLPRequestInputType.Text)
             {
-                _request = new WitMessageVRequest(Configuration, newOptions.RequestId, SetDownloadProgress);
+                _request = new WitMessageVRequest(Configuration, newOptions.RequestId, SetDownloadProgress, null, HandlePartialResponse);
                 Endpoint = Configuration.GetEndpointInfo().Message;
                 _request.Timeout = Mathf.RoundToInt(Configuration.timeoutMS / 1000f);
                 ShouldPost = false;
@@ -108,17 +108,17 @@ namespace Meta.WitAi.Requests
             {
                 messageRequest.MessageRequest(Endpoint, ShouldPost,
                     Options.Text, Options.QueryParams,
-                    HandleFinalNlpResponse);
+                    HandleFinalResponse);
             }
         }
 
         /// <summary>
         /// Set status code prior to handling response
         /// </summary>
-        protected override void HandleFinalNlpResponse(WitResponseNode responseData, string error)
+        protected override void HandleFinalResponse(WitResponseNode responseData, string error)
         {
             StatusCode = _request.ResponseCode;
-            base.HandleFinalNlpResponse(responseData, error);
+            base.HandleFinalResponse(responseData, error);
         }
 
         /// <summary>

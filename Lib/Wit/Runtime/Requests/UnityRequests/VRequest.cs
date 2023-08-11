@@ -21,12 +21,22 @@ using Meta.Voice.Audio;
 namespace Meta.WitAi.Requests
 {
     /// <summary>
+    /// Simple interface for custom download handlers so VRequest can tell when they are done
+    /// </summary>
+    public interface IRequestDownloadHandler
+    {
+        /// <summary>
+        /// Method for determining if
+        /// </summary>
+        bool IsComplete { get; }
+    }
+
+    /// <summary>
     /// Interface for custom download handler for streaming callbacks
     /// </summary>
-    public interface IVRequestStreamable
+    public interface IVRequestStreamable : IRequestDownloadHandler
     {
         bool IsStreamReady { get; }
-        bool IsStreamComplete { get; }
         void CleanUp();
     }
 
@@ -213,10 +223,11 @@ namespace Meta.WitAi.Requests
             // No error & download handler
             if (string.IsNullOrEmpty(_request.error) && _request.downloadHandler != null)
             {
-                // Stream is still finishing
-                if (_request.downloadHandler is IVRequestStreamable streamHandler)
+                // For custom download handler scripts (isDone always false)
+                if (_request.downloadHandler is DownloadHandlerScript)
                 {
-                    if (!streamHandler.IsStreamComplete)
+                    // If custom handler is not complete, don't stop
+                    if (_request.downloadHandler is IRequestDownloadHandler customHandler && !customHandler.IsComplete)
                     {
                         return false;
                     }

@@ -444,7 +444,7 @@ namespace Meta.WitAi
                     StatusCode = WitConstants.ERROR_CODE_GENERAL;
                     StatusDescription = $"Request canceled prior to start";
                 }
-                HandleFinalNlpResponse(null, StatusDescription);
+                HandleFinalResponse(null, StatusDescription);
                 return;
             }
             var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
@@ -493,7 +493,7 @@ namespace Meta.WitAi
                     VLog.W($"Timeout called early {elapsed:0.00} ms");
                 }
 
-                HandleFinalNlpResponse(null, StatusDescription);
+                HandleFinalResponse(null, StatusDescription);
             });
         }
 
@@ -548,7 +548,7 @@ namespace Meta.WitAi
                 StatusCode = (int) e.Status;
                 StatusDescription = e.Message;
                 VLog.W(e);
-                MainThreadCallback(() => HandleFinalNlpResponse(null, StatusDescription));
+                MainThreadCallback(() => HandleFinalResponse(null, StatusDescription));
             }
             catch (Exception e)
             {
@@ -563,7 +563,7 @@ namespace Meta.WitAi
                 StatusCode = WitConstants.ERROR_CODE_GENERAL;
                 StatusDescription = e.Message;
                 VLog.W(e);
-                MainThreadCallback(() => HandleFinalNlpResponse(null, StatusDescription));
+                MainThreadCallback(() => HandleFinalResponse(null, StatusDescription));
             }
         }
 
@@ -768,7 +768,7 @@ namespace Meta.WitAi
                 }
 
                 // Call completion delegate
-                HandleFinalNlpResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : $"{StatusDescription}\n\nStackTrace:\n{_stackTrace}\n\n");
+                HandleFinalResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : $"{StatusDescription}\n\nStackTrace:\n{_stackTrace}\n\n");
             });
         }
         // Check status
@@ -872,7 +872,7 @@ namespace Meta.WitAi
                 // Set response
                 if (hasResponse)
                 {
-                    HandlePartialNlpResponse(responseNode);
+                    HandlePartialResponse(responseNode, string.Empty);
                 }
             });
         }
