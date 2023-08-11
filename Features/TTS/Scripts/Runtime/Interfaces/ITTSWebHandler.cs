@@ -24,11 +24,12 @@ namespace Meta.WitAi.TTS.Interfaces
         TTSStreamEvents WebStreamEvents { get; }
 
         /// <summary>
-        /// Method for determining if text to speak is valid
+        /// Method for determining if there are problems that will arise
+        /// with performing a web request prior to doing so
         /// </summary>
-        /// <param name="textToSpeak">Text to be spoken by TTS</param>
-        /// <returns>Invalid error</returns>
-        string IsTextValid(string textToSpeak);
+        /// <param name="clipData">The clip data to be used for the request</param>
+        /// <returns>Invalid error(s).  It will be empty if there are none</returns>
+        string GetWebErrors(TTSClipData clipData);
 
         /// <summary>
         /// Method for performing a web load request

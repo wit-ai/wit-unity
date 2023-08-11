@@ -370,6 +370,12 @@ namespace Meta.WitAi.TTS
                 clipStream = CreateClipStream()
             };
 
+            // Null text is assumed loaded
+            if (string.IsNullOrEmpty(clipData.textToSpeak))
+            {
+                clipData.loadState = TTSClipLoadState.Loaded;
+            }
+
             // Return generated clip
             return clipData;
         }
@@ -494,14 +500,6 @@ namespace Meta.WitAi.TTS
             // Wait a moment and load
             CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
             {
-                // Check for invalid text
-                string invalidError = WebHandler.IsTextValid(clipData.textToSpeak);
-                if (!string.IsNullOrEmpty(invalidError))
-                {
-                    OnWebStreamError(clipData, invalidError);
-                    return;
-                }
-
                 // If should cache to disk, attempt to do so
                 if (ShouldCacheToDisk(clipData))
                 {
@@ -529,7 +527,28 @@ namespace Meta.WitAi.TTS
                         // Not in cache & cannot download
                         if (string.Equals(error, WitConstants.ERROR_TTS_CACHE_DOWNLOAD))
                         {
-                            WebHandler?.RequestStreamFromWeb(clipData);
+                            CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
+                            {
+                                // Stream was canceled before starting
+                                if (clipData.loadState != TTSClipLoadState.Preparing)
+                                {
+                                    OnWebStreamBegin(clipData);
+                                    OnWebStreamCancel(clipData);
+                                    return;
+                                }
+
+                                // Check for web errors
+                                string webErrors = WebHandler.GetWebErrors(clipData);
+                                if (!string.IsNullOrEmpty(webErrors))
+                                {
+                                    OnWebStreamBegin(clipData);
+                                    OnWebStreamError(clipData, webErrors);
+                                    return;
+                                }
+
+                                // Request stream
+                                WebHandler?.RequestStreamFromWeb(clipData);
+                            }));
                             return;
                         }
                         // Download failed, throw error
@@ -552,6 +571,15 @@ namespace Meta.WitAi.TTS
                     {
                         OnWebStreamBegin(clipData);
                         OnWebStreamCancel(clipData);
+                        return;
+                    }
+
+                    // Check for web errors
+                    string webErrors = WebHandler.GetWebErrors(clipData);
+                    if (!string.IsNullOrEmpty(webErrors))
+                    {
+                        OnWebStreamBegin(clipData);
+                        OnWebStreamError(clipData, webErrors);
                         return;
                     }
 
@@ -886,6 +914,14 @@ namespace Meta.WitAi.TTS
                 if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
                 {
                     onDownloadComplete?.Invoke(clipData, downloadPath, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
+                    return;
+                }
+
+                // Check for web issues
+                string webErrors = WebHandler.GetWebErrors(clipData);
+                if (!string.IsNullOrEmpty(webErrors))
+                {
+                    onDownloadComplete?.Invoke(clipData, downloadPath, webErrors);
                     return;
                 }
 

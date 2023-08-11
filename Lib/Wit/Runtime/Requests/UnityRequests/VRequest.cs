@@ -343,16 +343,15 @@ namespace Meta.WitAi.Requests
         {
             // Get error & return if empty
             string error = request.error;
-            string result = error;
-            if (string.IsNullOrEmpty(result))
+            if (string.IsNullOrEmpty(error))
             {
-                return result;
+                return error;
             }
 
             // Ignore without download handler
             if (request.downloadHandler == null)
             {
-                return result;
+                return error;
             }
 
             // Ignore without downloaded json
@@ -371,11 +370,11 @@ namespace Meta.WitAi.Requests
             }
             if (string.IsNullOrEmpty(downloadedJson))
             {
-                return result;
+                return error;
             }
 
-            // Set error to json
-            result = $"{error}\nServer Response: {downloadedJson}";
+            // Append json result
+            string result = $"{error}\nServer Response: {downloadedJson}";
 
             // Decode
             WitResponseNode downloadedNode = WitResponseNode.Parse(downloadedJson);

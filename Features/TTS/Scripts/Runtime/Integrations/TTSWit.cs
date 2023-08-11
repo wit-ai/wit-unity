@@ -144,8 +144,15 @@ namespace Meta.WitAi.TTS.Integrations
             }
             return string.Empty;
         }
-        // Ensures text can be sent to wit web service
-        public string IsTextValid(string textToSpeak) => string.IsNullOrEmpty(textToSpeak) ? WitConstants.ENDPOINT_TTS_NO_TEXT : string.Empty;
+
+        /// <summary>
+        /// Method for determining if there are problems that will arise
+        /// with performing a web request prior to doing so
+        /// </summary>
+        /// <param name="clipData">The clip data to be used for the request</param>
+        /// <returns>Invalid error(s).  It will be empty if there are none</returns>
+        public string GetWebErrors(TTSClipData clipData) =>
+            WitTTSVRequest.GetWebErrors(clipData?.textToSpeak, Configuration);
 
         /// <summary>
         /// Method for performing a web load request
