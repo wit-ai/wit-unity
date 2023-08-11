@@ -93,7 +93,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJson<TData>(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJson<TData>(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Perform a json get request with a specified uri
@@ -102,7 +103,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonGet<TData>(Uri uri, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJsonGet<TData>(Uri uri, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Performs a json request by posting byte data
@@ -112,7 +114,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPost<TData>(Uri uri, byte[] postData, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJsonPost<TData>(Uri uri, byte[] postData, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Performs a json request by posting byte data
@@ -123,7 +126,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestJsonPost<TData>(Uri uri, string postText, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJsonPost<TData>(Uri uri, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Performs a json request by posting byte data
@@ -133,7 +137,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPut<TData>(Uri uri, byte[] putData, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJsonPut<TData>(Uri uri, byte[] putData, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Performs a json request by putting string
@@ -143,7 +148,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPut<TData>(Uri uri, string putText, VRequest.RequestCompleteDelegate<TData> onComplete);
+        bool RequestJsonPut<TData>(Uri uri, string putText, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         Uri GetUri(string path, Dictionary<string, string> queryParams = null);
 
@@ -155,7 +161,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         bool RequestWitGet<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, VRequest.RequestCompleteDelegate<TData> onComplete);
+            Dictionary<string, string> uriParams, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Post text request to a wit endpoint
@@ -166,7 +173,8 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         bool RequestWitPost<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string postText, VRequest.RequestCompleteDelegate<TData> onComplete);
+            Dictionary<string, string> uriParams, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
         /// Put text request to a wit endpoint
@@ -177,6 +185,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         bool RequestWitPut<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string putText, VRequest.RequestCompleteDelegate<TData> onComplete);
+            Dictionary<string, string> uriParams, string putText, VRequest.RequestCompleteDelegate<TData> onComplete,
+            VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
     }
 }

@@ -928,33 +928,21 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJson<TData>(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<TData> onComplete)
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
-            // Set request header for json
-            unityRequest.SetRequestHeader("Content-Type", "application/json");
+            #pragma warning disable CS4014
+            WaitRequestJsonAsync(unityRequest, onComplete, onPartial);
+            #pragma warning restore CS4014
+            return true;
+        }
 
-            // Perform text request
-            return RequestText(unityRequest, (jsonText, error) =>
-            {
-                // Request error
-                if (!string.IsNullOrEmpty(error) && string.IsNullOrEmpty(jsonText))
-                {
-                    onComplete?.Invoke(default(TData), error);
-                    return;
-                }
-
-                // Deserialize synchronously
-                var result = JsonConvert.DeserializeObject<TData>(jsonText);
-                // Parse failed
-                if (result == null)
-                {
-                    onComplete?.Invoke(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
-                    return;
-                }
-
-                // Success
-                onComplete?.Invoke(result, string.Empty);
-            });
+        private async Task WaitRequestJsonAsync<TData>(UnityWebRequest unityRequest,
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial)
+        {
+            var result = await RequestJsonAsync(unityRequest, onPartial);
+            onComplete?.Invoke(result.Value, result.Error);
         }
 
         /// <summary>
@@ -963,10 +951,31 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonAsync<TData>(UnityWebRequest unityRequest)
+        public async Task<RequestCompleteResponse<TData>> RequestJsonAsync<TData>(UnityWebRequest unityRequest,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             // Set request header for json
             unityRequest.SetRequestHeader("Content-Type", "application/json");
+
+            // Set partial download handler
+            if (onPartial != null)
+            {
+                if (unityRequest.downloadHandler != null)
+                {
+                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
+                }
+                else
+                {
+                    unityRequest.downloadHandler = new TextStreamHandler((jsonText) =>
+                        {
+                            #pragma warning disable CS4014
+                            // Decode async and then call partial
+                            DecodePartialJsonAsync(jsonText, onPartial);
+                            #pragma warning restore CS4014
+                        },
+                        WitConstants.ENDPOINT_JSON_DELIMITER);
+                }
+            }
 
             // Perform text request
             var textResponse = await RequestTextAsync(unityRequest);
@@ -975,16 +984,24 @@ namespace Meta.WitAi.Requests
                 return new RequestCompleteResponse<TData>(default(TData), textResponse.Error);
             }
 
-            // Deserialize
-            string jsonText = textResponse.Value;
-            TData result = await JsonConvert.DeserializeObjectAsync<TData>(textResponse.Value);
+            // Return decoded json
+            return await DecodeJsonAsync<TData>(textResponse.Value);
+        }
+        // Decodes json & returns value
+        private async Task<RequestCompleteResponse<TData>> DecodeJsonAsync<TData>(string jsonText)
+        {
+            TData result = await JsonConvert.DeserializeObjectAsync<TData>(jsonText);
             if (result == null)
             {
                 return new RequestCompleteResponse<TData>(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
             }
-
-            // Success
             return new RequestCompleteResponse<TData>(result);
+        }
+        // Decodes json & performs partial callback
+        private async Task DecodePartialJsonAsync<TData>(string jsonText, RequestCompleteDelegate<TData> onPartial)
+        {
+            var result = await DecodeJsonAsync<TData>(jsonText);
+            onPartial?.Invoke(result.Value, result.Error);
         }
 
         /// <summary>
@@ -995,8 +1012,9 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonGet<TData>(Uri uri,
-            RequestCompleteDelegate<TData> onComplete) =>
-            RequestJson(UnityWebRequest.Get(uri), onComplete);
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null) =>
+            RequestJson(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onComplete, onPartial);
 
         /// <summary>
         /// Perform a json get request with a specified uri asynchronously
@@ -1004,8 +1022,9 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to be requested</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonGetAsync<TData>(Uri uri) =>
-            await RequestJsonAsync<TData>(UnityWebRequest.Get(uri));
+        public async Task<RequestCompleteResponse<TData>> RequestJsonGetAsync<TData>(Uri uri,
+            RequestCompleteDelegate<TData> onPartial = null) =>
+            await RequestJsonAsync<TData>(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onPartial);
 
         /// <summary>
         /// Performs a json request by posting byte data
@@ -1016,11 +1035,12 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPost<TData>(Uri uri, byte[] postData,
-            RequestCompleteDelegate<TData> onComplete)
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            return RequestJson(unityRequest, onComplete);
+            return RequestJson(unityRequest, onComplete, onPartial);
         }
 
         /// <summary>
@@ -1030,11 +1050,12 @@ namespace Meta.WitAi.Requests
         /// <param name="postData">The data to be uploaded</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, byte[] postData)
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, byte[] postData,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
             unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            return await RequestJsonAsync<TData>(unityRequest);
+            return await RequestJsonAsync<TData>(unityRequest, onPartial);
         }
 
         /// <summary>
@@ -1046,8 +1067,9 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPost<TData>(Uri uri, string postText,
-            RequestCompleteDelegate<TData> onComplete) =>
-            RequestJsonPost(uri, EncodeText(postText), onComplete);
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null) =>
+            RequestJsonPost(uri, EncodeText(postText), onComplete, onPartial);
 
         /// <summary>
         /// Performs a json request by posting a string asynchronously
@@ -1056,11 +1078,12 @@ namespace Meta.WitAi.Requests
         /// <param name="postText">The string to be uploaded</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, string postText)
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, string postText,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             byte[] postData = null;
             await Task.Run(() => postData = EncodeText(postText));
-            return await RequestJsonPostAsync<TData>(uri, postData);
+            return await RequestJsonPostAsync<TData>(uri, postData, onPartial);
         }
 
         /// <summary>
@@ -1072,11 +1095,12 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPut<TData>(Uri uri, byte[] putData,
-            RequestCompleteDelegate<TData> onComplete)
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
             unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            return RequestJson(unityRequest, onComplete);
+            return RequestJson(unityRequest, onComplete, onPartial);
         }
 
         /// <summary>
@@ -1086,11 +1110,12 @@ namespace Meta.WitAi.Requests
         /// <param name="putData">The data to be uploaded</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, byte[] putData)
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, byte[] putData,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
             unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            return await RequestJsonAsync<TData>(unityRequest);
+            return await RequestJsonAsync<TData>(unityRequest, onPartial);
         }
 
         /// <summary>
@@ -1102,8 +1127,9 @@ namespace Meta.WitAi.Requests
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonPut<TData>(Uri uri, string putText,
-            RequestCompleteDelegate<TData> onComplete) =>
-            RequestJsonPut(uri, EncodeText(putText), onComplete);
+            RequestCompleteDelegate<TData> onComplete,
+            RequestCompleteDelegate<TData> onPartial = null) =>
+            RequestJsonPut(uri, EncodeText(putText), onComplete, onPartial);
 
         /// <summary>
         /// Performs a json put request with text asynchronously
@@ -1112,11 +1138,12 @@ namespace Meta.WitAi.Requests
         /// <param name="putText">The text to be uploaded</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, string putText)
+        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, string putText,
+            RequestCompleteDelegate<TData> onPartial = null)
         {
             byte[] putData = null;
             await Task.Run(() => putData = EncodeText(putText));
-            return await RequestJsonPutAsync<TData>(uri, putData);
+            return await RequestJsonPutAsync<TData>(uri, putData, onPartial);
         }
 
         // Internal helper method for encoding text
