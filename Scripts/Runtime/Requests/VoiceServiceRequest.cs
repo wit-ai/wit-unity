@@ -229,5 +229,15 @@ namespace Meta.WitAi.Requests
         {
             eventCallback?.Invoke(this);
         }
+
+        protected override void HandleFinalResponse(WitResponseNode responseData, string error)
+        {
+            if (!string.IsNullOrEmpty(error) && error.Contains(WitConstants.ERROR_NO_TRANSCRIPTION))
+            {
+                responseData = new WitResponseClass();
+                error = string.Empty;
+            }
+            base.HandleFinalResponse(responseData, error);
+        }
     }
 }

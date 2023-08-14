@@ -60,6 +60,9 @@ namespace Meta.WitAi
         public const string ENDPOINT_COMPOSER_SPEECH = "converse";
         public const string ENDPOINT_COMPOSER_MESSAGE = "event";
 
+        // Used for error checking
+        public const string ERROR_NO_TRANSCRIPTION = "Empty transcription.";
+
         // Reusable constants
         public const string CANCEL_ERROR = "Cancelled";
         public const string CANCEL_MESSAGE_DEFAULT = "Request was cancelled.";

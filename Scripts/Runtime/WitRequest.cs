@@ -659,7 +659,6 @@ namespace Meta.WitAi
                 _stackTrace = e.StackTrace;
                 StatusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
                 StatusDescription = "Server returned invalid data.";
-                VLog.W(e);
             }
             catch (WebException e)
             {
@@ -670,7 +669,6 @@ namespace Meta.WitAi
                     _stackTrace = e.StackTrace;
                     StatusCode = (int) e.Status;
                     StatusDescription = e.Message;
-                    VLog.W(e);
 
                     // Attempt additional parse
                     if (e.Response is HttpWebResponse errorResponse)
@@ -712,7 +710,6 @@ namespace Meta.WitAi
                 _stackTrace = e.StackTrace;
                 StatusCode = WitConstants.ERROR_CODE_GENERAL;
                 StatusDescription = e.Message;
-                VLog.W(e);
             }
 
             // Close request stream if possible
