@@ -385,12 +385,17 @@ namespace Meta.WitAi.Lib
         private void StartMicrophone()
         {
 #if !UNITY_WEBGL || UNITY_EDITOR
-            VLog.I("Reserved mic " + CurrentDeviceName);
             AudioClip = Microphone.Start(CurrentDeviceName, MIC_CLIP_LOOP, MIC_CLIP_CHANNELS, AudioClipSampleRate);
-            AudioClip.name = CurrentDeviceName;
-            // Init the num of channels from AudioClip in
-            // the AudioEncoding
-            AudioEncoding.numChannels = AudioClip.channels;
+            if (AudioClip != null)
+            {
+                VLog.I("Reserved mic " + CurrentDeviceName);
+                AudioClip.name = CurrentDeviceName;
+                AudioEncoding.numChannels = AudioClip.channels;
+            }
+            else
+            {
+                VLog.W($"Cannot access the microphone '{CurrentDeviceName}'.  Please ensure that it is enabled.");
+            }
 #endif
         }
 
