@@ -260,8 +260,6 @@ namespace Meta.WitAi.Data.Configuration
 
         private void RefreshPlugins()
         {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
             // Find all derived data types
             List<Type> dataPlugins =  typeof(WitConfigurationAssetData).GetSubclassTypes();
 

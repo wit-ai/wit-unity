@@ -414,7 +414,7 @@ namespace Meta.WitAi.Windows
                     : string.Empty;
                 if (!string.IsNullOrEmpty(propertyID) && Configuration != null)
                 {
-                    var newConfigData = Array.Find(Configuration.GetConfigData(), d => d.GetType() == _tabs[_requestTab].DataType);
+                    var newConfigData = Array.Find(Configuration.GetConfigData(), d => d != null && d.GetType() == _tabs[_requestTab].DataType);
 
                     SerializedObject serializedObj;
                     if (newConfigData == null)

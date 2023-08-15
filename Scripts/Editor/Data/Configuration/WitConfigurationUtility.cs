@@ -306,6 +306,7 @@ namespace Meta.WitAi.Data.Configuration
                 {
                     WitAuthUtility.SetAppServerToken(info.id, serverToken);
                 }
+                configuration.UpdateDataAssets(); //get any plugin data before completing
 
                 // Complete
                 if (!string.IsNullOrEmpty(error))
