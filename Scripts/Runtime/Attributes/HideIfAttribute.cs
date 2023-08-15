@@ -15,7 +15,7 @@ namespace Meta.WitAi.Attributes
     /// Controls if a field is visible based on another boolean field/property's current value.
     /// </summary>
     [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
-    public class ShowIfAttribute : PropertyAttribute
+    public class HideIfAttribute : PropertyAttribute
     {
         public string conditionFieldName;
 
@@ -23,7 +23,7 @@ namespace Meta.WitAi.Attributes
         ///  Controls if a field is visible based on another boolean field/property's current value.
         /// </summary>
         /// <param name="conditionFieldName">The name of a boolean field or property to use for visibility</param>
-        public ShowIfAttribute(string conditionFieldName)
+        public HideIfAttribute(string conditionFieldName)
         {
             this.conditionFieldName = conditionFieldName;
         }
