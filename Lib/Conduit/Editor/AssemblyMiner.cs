@@ -143,7 +143,7 @@ namespace Meta.Conduit.Editor
 
         private ManifestParameter GetManifestParameters(ParameterInfo parameter, Type attributeType, string actionID)
         {
-            
+
             List<string> aliases;
             List<string> examples;
 
@@ -208,7 +208,7 @@ namespace Meta.Conduit.Editor
                     // This method was declared elsewhere, so we should process it where it's declared only.
                     continue;
                 }
-                
+
                 var attributes = method.GetCustomAttributes(typeof(ConduitActionAttribute), false);
                 if (attributes.Length == 0)
                 {
@@ -285,7 +285,7 @@ namespace Meta.Conduit.Editor
                 {
                     continue;
                 }
-                
+
                 var parameters = new List<ManifestParameter>();
 
                 var action = new ManifestErrorHandler()
@@ -320,7 +320,7 @@ namespace Meta.Conduit.Editor
                     VLog.E("Second parameter must be an exception for error handler " + method.Name);
                     continue;
                 }
-                
+
                 foreach (var parameter in methodParameters)
                 {
                     var supported = _parameterValidator.IsSupportedParameterType(parameter.ParameterType);
@@ -330,10 +330,10 @@ namespace Meta.Conduit.Editor
                         VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
                         continue;
                     }
-                    
+
                     parameters.Add(GetManifestParameters(parameter, attributeType, action.ID));
                 }
-               
+
                 if (compatibleParameters)
                 {
                     action.Parameters = parameters;
@@ -358,7 +358,7 @@ namespace Meta.Conduit.Editor
 
         public List<ManifestErrorHandler> ExtractErrorHandlers(IConduitAssembly assembly)
         {
-            return ExtractErrorHandlersInternal(typeof(HandleEntityResolutionFailureAttribute), assembly);
+            return ExtractErrorHandlersInternal(typeof(HandleEntityResolutionFailure), assembly);
         }
 
         /// <summary>
