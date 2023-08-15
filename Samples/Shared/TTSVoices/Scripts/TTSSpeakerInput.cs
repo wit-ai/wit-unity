@@ -139,9 +139,9 @@ namespace Meta.Voice.Samples.TTSVoices
         private void Update()
         {
             // On preset voice id update
-            if (!string.Equals(_voice, _speaker.presetVoiceID))
+            if (!string.Equals(_voice, _speaker.VoiceID))
             {
-                _voice = _speaker.presetVoiceID;
+                _voice = _speaker.VoiceID;
                 _input.placeholder.GetComponent<Text>().text = $"Write something to say in {_voice}'s voice";
             }
             // On state changes

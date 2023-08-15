@@ -22,7 +22,7 @@ using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Utilities
 {
-    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider
+    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker
     {
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]
@@ -59,11 +59,17 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         [Tooltip("Preset voice setting id of TTSService voice settings")]
-        [HideInInspector] [SerializeField] public string presetVoiceID;
+        [HideInInspector] [SerializeField] private string presetVoiceID;
 
         [Tooltip("Custom wit specific voice settings used if the preset is null or empty")]
         [HideInInspector] [SerializeField] public TTSWitVoiceSettings customWitVoiceSettings;
 
+        public string VoiceID
+        {
+            get => presetVoiceID;
+            set => presetVoiceID = value;
+        }
+        
         // Override voice settings
         private TTSVoiceSettings _overrideVoiceSettings;
 

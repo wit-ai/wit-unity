@@ -81,7 +81,7 @@ namespace Meta.WitAi.TTS.Utilities
             foreach (var phrase in _phrases)
             {
                 _clipsLoading++;
-                TTSClipData clip = TTSService.Instance.Load(phrase, Speaker.presetVoiceID, null, OnClipReady);
+                TTSClipData clip = TTSService.Instance.Load(phrase, Speaker.VoiceID, null, OnClipReady);
                 list.Add(clip);
             }
             _clips = list.ToArray();

@@ -51,7 +51,7 @@ namespace Meta.WitAi.TTS
             TTSVoiceSettings[] settings = tts?.GetAllPresetVoiceSettings();
             if (_voicePresetIds == null
                 || (settings != null && _voicePresetIds.Length != settings.Length + 1)
-                || (_voiceIndex >= 0 && _voiceIndex < _voicePresetIds.Length - 1 && !string.Equals(_speaker.presetVoiceID, _voicePresetIds[_voiceIndex])))
+                || (_voiceIndex >= 0 && _voiceIndex < _voicePresetIds.Length - 1 && !string.Equals(_speaker.VoiceID, _voicePresetIds[_voiceIndex])))
             {
                 RefreshVoices(settings);
             }
@@ -108,7 +108,7 @@ namespace Meta.WitAi.TTS
             // Get all ids
             List<string> presetIds = settings.Select(s => s.SettingsId).ToList();
             // Get voice index
-            _voiceIndex = presetIds.IndexOf(_speaker.presetVoiceID);
+            _voiceIndex = presetIds.IndexOf(_speaker.VoiceID);
             if (_voiceIndex == -1)
             {
                 _voiceIndex = presetIds.Count;

@@ -236,9 +236,9 @@ namespace Meta.WitAi.TTS
             string defaultVoiceID = service.VoiceProvider.VoiceDefaultSettings?.SettingsId;
             foreach (var speaker in GameObject.FindObjectsOfType<TTSSpeaker>())
             {
-                if (string.IsNullOrEmpty(speaker.presetVoiceID))
+                if (string.IsNullOrEmpty(speaker.VoiceID))
                 {
-                    speaker.presetVoiceID = defaultVoiceID;
+                    speaker.VoiceID = defaultVoiceID;
                 }
             }
         }
@@ -264,7 +264,7 @@ namespace Meta.WitAi.TTS
             // TTS Speaker
             string goName = typeof(TTSSpeaker).Name;
             TTSSpeaker speaker = GenerateGameObject(goName, parent).AddComponent<TTSSpeaker>();
-            speaker.presetVoiceID = string.Empty;
+            speaker.VoiceID = string.Empty;
 
             // Audio Source
             AudioSource audio = GenerateGameObject($"{goName}Audio", speaker.transform).AddComponent<AudioSource>();

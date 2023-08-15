@@ -74,7 +74,7 @@ namespace Meta.Voice.Samples.TTSVoices
             _dropdown.LoadDropdown(voiceNames);
 
             // Get selected voice &
-            _dropdown.SelectOption(Speaker.presetVoiceID);
+            _dropdown.SelectOption(Speaker.VoiceID);
         }
 
         // Apply voice on option select
@@ -85,7 +85,7 @@ namespace Meta.Voice.Samples.TTSVoices
                 VLog.W("No speaker found");
                 return;
             }
-            Speaker.presetVoiceID = newOption;
+            Speaker.VoiceID = newOption;
         }
     }
 }
