@@ -1398,8 +1398,7 @@ namespace Meta.WitAi.Requests
                 else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
                 {
                     byte[] data = rawDownloader.data;
-                    float[] samples = AudioStreamHandler.DecodeAudio(data,
-                        AudioStreamHandler.GetDecodeType(audioType));
+                    float[] samples = AudioStreamHandler.DecodeAudio(AudioStreamHandler.GetDecodeType(audioType), data);
                     clipStream.SetTotalSamples(samples.Length);
                     clipStream.AddSamples(samples);
                 }

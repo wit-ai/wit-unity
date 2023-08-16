@@ -9,10 +9,12 @@
 using System;
 using System.Collections;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
-using Meta.Voice.Audio;
 using UnityEngine.Scripting;
+using Meta.Voice.Audio;
+using Meta.Voice.Audio.Decoding;
 
 namespace Meta.WitAi.Requests
 {
@@ -42,6 +44,7 @@ namespace Meta.WitAi.Requests
         /// The audio stream decode option
         /// </summary>
         public AudioStreamDecodeType DecodeType { get; private set; }
+        private IAudioDecoder _decoder;
 
         /// <summary>
         /// Audio stream data is ready to be played
@@ -53,10 +56,6 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public bool IsComplete { get; private set; }
 
-
-        // Leftover byte
-        private bool _hasLeftover = false;
-        private byte[] _leftovers = new byte[2];
         // Current samples received
         private int _decodingChunks = 0;
         private bool _requestComplete = false;
@@ -70,9 +69,10 @@ namespace Meta.WitAi.Requests
             // Apply parameters
             ClipStream = newClipStream;
             DecodeType = GetDecodeType(newDecodeType);
+            _decoder = GetDecoder(DecodeType);
+            _decoder?.Setup(ClipStream.Channels, ClipStream.SampleRate);
 
             // Setup data
-            _hasLeftover = false;
             _decodingChunks = 0;
             _requestComplete = false;
             IsStreamReady = false;
@@ -81,7 +81,7 @@ namespace Meta.WitAi.Requests
             _errorDecoded = 0;
 
             // Begin stream
-            VLog.D($"Clip Stream - Began\nClip Stream: {ClipStream.GetType()}\nFile Type: {DecodeType}");
+            VLog.I($"Clip Stream - Began\nClip Stream: {ClipStream.GetType()}\nFile Type: {DecodeType}");
         }
 
         // If size is provided, generate clip using size
@@ -104,7 +104,7 @@ namespace Meta.WitAi.Requests
 
             // Apply size
             int newSamples = GetClipSamplesFromContentLength(contentLength, DecodeType);
-            VLog.D($"Clip Stream - Received Size\nTotal Samples: {newSamples}");
+            VLog.I($"Clip Stream - Received Size\nTotal Samples: {newSamples}");
             ClipStream.SetTotalSamples(newSamples);
         }
 
@@ -131,46 +131,42 @@ namespace Meta.WitAi.Requests
 
             // Decode data async
             _decodingChunks++;
-            ThreadUtility.PerformInBackground(() => DecodeData(receiveData, dataLength), OnDecodeComplete);
+            DecodeDataAsync(receiveData, dataLength);
 
             // Return data
             return true;
         }
         // Decode data
-        private float[] DecodeData(byte[] receiveData, int dataLength)
+        private async Task DecodeDataAsync(byte[] receiveData, int dataLength)
         {
-            // Next decoded samples
-            float[] newSamples = null;
-
-            // Decode PCM chunk
-            if (DecodeType == AudioStreamDecodeType.PCM16)
+            // Perform decode async
+            float[] samples = null;
+            string newError = null;
+            await Task.Run(() =>
             {
-                newSamples = DecodeChunkPCM16(receiveData, dataLength, ref _hasLeftover, ref _leftovers);
-            }
-            // TODO: Decode MP3 chunk
-            else if (DecodeType == AudioStreamDecodeType.MP3)
-            {
+                try
+                {
+                    samples = _decoder?.Decode(receiveData, dataLength);
+                }
+                catch (Exception e)
+                {
+                    newError = e.ToString();
+                }
+            });
 
-            }
-            // TODO: Decode WAV chunk
-            else if (DecodeType == AudioStreamDecodeType.WAV)
-            {
-
-            }
-
-            // Failed
-            return newSamples;
+            // Decode complete
+            OnDecodeComplete(samples, newError);
         }
         // Decode complete
-        private void OnDecodeComplete(float[] newSamples, string error)
+        private void OnDecodeComplete(float[] newSamples, string decodeError)
         {
             // Complete
             _decodingChunks--;
 
             // Fail with error
-            if (!string.IsNullOrEmpty(error))
+            if (!string.IsNullOrEmpty(decodeError))
             {
-                VLog.W($"Decode Chunk Failed\n{error}");
+                VLog.W($"Decode Chunk Failed\n{decodeError}");
                 TryToFinalize();
                 return;
             }
@@ -186,14 +182,14 @@ namespace Meta.WitAi.Requests
             if (newSamples.Length > 0)
             {
                 ClipStream.AddSamples(newSamples);
-                VLog.D($"Clip Stream - Decoded {newSamples.Length} Samples");
+                VLog.I($"Clip Stream - Decoded {newSamples.Length} Samples");
             }
 
             // Stream is now ready
             if (!IsStreamReady && ClipStream.IsReady)
             {
                 IsStreamReady = true;
-                VLog.D($"Clip Stream - Stream Ready");
+                VLog.I($"Clip Stream - Stream Ready");
             }
 
             // Try to finalize
@@ -250,7 +246,7 @@ namespace Meta.WitAi.Requests
             if (!IsStreamReady)
             {
                 IsStreamReady = true;
-                VLog.D($"Clip Stream - Stream Ready");
+                VLog.I($"Clip Stream - Stream Ready");
                 CoroutineUtility.StartCoroutine(FinalWait());
                 return;
             }
@@ -258,7 +254,7 @@ namespace Meta.WitAi.Requests
             // Stream complete
             IsComplete = true;
             ClipStream.SetTotalSamples(ClipStream.AddedSamples);
-            VLog.D($"Clip Stream - Complete\nLength: {ClipStream.Length:0.00} secs");
+            VLog.I($"Clip Stream - Complete\nLength: {ClipStream.Length:0.00} secs");
 
             // Dispose
             Dispose();
@@ -277,7 +273,7 @@ namespace Meta.WitAi.Requests
             // Already complete
             if (IsComplete)
             {
-                _leftovers = null;
+                _decoder = null;
                 _errorBytes = null;
                 ClipStream = null;
                 return;
@@ -295,7 +291,7 @@ namespace Meta.WitAi.Requests
 
             // Complete
             IsComplete = true;
-            VLog.D($"Clip Stream - Cleaned Up");
+            VLog.I($"Clip Stream - Cleaned Up");
         }
 
         #region STATIC
@@ -313,75 +309,69 @@ namespace Meta.WitAi.Requests
             }
             return AudioStreamDecodeType.PCM16;
         }
+
         /// <summary>
-        /// Currently can only decode pcm
+        /// Returns the class type of a decoder for specified audio type
         /// </summary>
-        public static bool CanDecodeType(AudioType audioType)
+        private static Type GetDecoderType(AudioStreamDecodeType audioType)
         {
-            switch (GetDecodeType(audioType))
+            #if !UNITY_WEBGL
+            switch (audioType)
             {
                 case AudioStreamDecodeType.PCM16:
-                    return true;
+                    return typeof(AudioDecoderPcm);
             }
-            return false;
+            #endif
+            return null;
         }
-        // Decode raw pcm data
-        public static AudioClip GetClipFromRawData(byte[] rawData, AudioStreamDecodeType decodeType, string clipName, int channels, int sampleRate)
-        {
-            // Decode data
-            float[] samples = DecodeAudio(rawData, decodeType);
-            if (samples == null)
-            {
-                return null;
-            }
-            // Generate clip
-            return GetClipFromSamples(samples, clipName, channels, sampleRate);
-        }
-        // Decode raw pcm data
-        public static void GetClipFromRawDataAsync(byte[] rawData, AudioStreamDecodeType decodeType, string clipName, int channels, int sampleRate, Action<AudioClip, string> onComplete)
-        {
-            // Perform in background
-            ThreadUtility.PerformInBackground(() => DecodeAudio(rawData, decodeType), (samples, error) =>
-            {
-                if (!string.IsNullOrEmpty(error))
-                {
-                    error = $"Audio decode async failed\n{error}";
-                    VLog.E(error);
-                    onComplete?.Invoke(null, error);
-                }
-                else if (rawData == null)
-                {
-                    error = "Audio decode async results missing";
-                    VLog.E(error);
-                    onComplete?.Invoke(null, error);
-                }
-                else
-                {
-                    AudioClip result = GetClipFromSamples(samples, clipName, channels, sampleRate);
-                    onComplete?.Invoke(result, error);
-                }
-            });
-        }
-        // Decode raw pcm data
-        public static float[] DecodeAudio(byte[] rawData, AudioStreamDecodeType decodeType)
-        {
-            // Samples to be decoded
-            float[] samples = null;
 
-            // Decode raw data
-            if (decodeType == AudioStreamDecodeType.PCM16)
+        /// <summary>
+        /// Successful if a decoder type exists for the specified type
+        /// </summary>
+        public static bool CanDecodeType(AudioStreamDecodeType audioType) => GetDecoderType(audioType) != null;
+
+        /// <summary>
+        /// Successful if a decoder type exists for the specified type
+        /// </summary>
+        public static bool CanDecodeType(AudioType audioType) => CanDecodeType(GetDecodeType(audioType));
+
+        /// <summary>
+        /// Instantiates an audio decoder if possible
+        /// </summary>
+        public static IAudioDecoder GetDecoder(AudioStreamDecodeType audioType)
+        {
+            Type decodeType = GetDecoderType(audioType);
+            if (decodeType != null)
             {
-                samples = DecodePCM16(rawData);
+                return Activator.CreateInstance(decodeType) as IAudioDecoder;
             }
-            // Not supported
-            else
+            return null;
+        }
+
+        /// <summary>
+        /// Decodes full raw data
+        /// </summary>
+        public static float[] DecodeAudio(AudioStreamDecodeType decodeType, int channels, int sampleRate, byte[] rawData)
+        {
+            // Get decoder if possible
+            IAudioDecoder decoder = GetDecoder(decodeType);
+            if (decoder != null)
             {
-                VLog.E($"Not Supported Decode File Type\nType: {decodeType}");
+                decoder.Setup(channels, sampleRate);
+                return decoder.Decode(rawData, rawData.Length);
             }
 
-            // Return samples
-            return samples;
+            // Return nothing
+            return null;
         }
+
+        /// <summary>
+        /// Decodes full raw data & assumes wit tts
+        /// </summary>
+        public static float[] DecodeAudio(AudioStreamDecodeType decodeType, byte[] rawData)
+            => DecodeAudio(decodeType, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE,
+                rawData);
+
         // Get audio clip from samples
         private static AudioClip GetClipFromSamples(float[] samples, string clipName, int channels, int sampleRate)
         {
@@ -389,6 +379,7 @@ namespace Meta.WitAi.Requests
             result.SetData(samples, 0);
             return result;
         }
+
         // Determines clip sample count via content length dependent on file type
         public static int GetClipSamplesFromContentLength(ulong contentLength, AudioStreamDecodeType decodeType)
         {
@@ -399,70 +390,6 @@ namespace Meta.WitAi.Requests
             }
             return 0;
         }
-        #endregion
-
-        #region PCM DECODE
-        // Decode an entire array
-        public static float[] DecodePCM16(byte[] rawData)
-        {
-            float[] samples = new float[Mathf.FloorToInt(rawData.Length / 2f)];
-            for (int i = 0; i < samples.Length; i++)
-            {
-                samples[i] = DecodeSamplePCM16(rawData, i * 2);
-            }
-            return samples;
-        }
-        // Decode a single chunk
-        private static float[] DecodeChunkPCM16(byte[] chunkData, int chunkLength, ref bool hasLeftover, ref byte[] leftovers)
-        {
-            // Determine if previous chunk had a leftover or if newest chunk contains one
-            bool prevLeftover = hasLeftover;
-            bool nextLeftover = (chunkLength - (prevLeftover ? 1 : 0)) % 2 != 0;
-            hasLeftover = nextLeftover;
-
-            // Generate sample array
-            int startOffset = prevLeftover ? 1 : 0;
-            int endOffset = nextLeftover ? 1 : 0;
-            int newSampleCount = (chunkLength + startOffset - endOffset) / 2;
-            float[] newSamples = new float[newSampleCount];
-
-            // Append first byte to previous array
-            if (prevLeftover)
-            {
-                // Append first byte to leftover array
-                leftovers[1] = chunkData[0];
-                // Decode first sample
-                newSamples[0] = DecodeSamplePCM16(leftovers, 0);
-            }
-
-            // Store last byte
-            if (nextLeftover)
-            {
-                leftovers[0] = chunkData[chunkLength - 1];
-            }
-
-            // Decode remaining samples
-            for (int i = 0; i < newSamples.Length - startOffset; i++)
-            {
-                newSamples[startOffset + i] = DecodeSamplePCM16(chunkData, startOffset + i * 2);
-            }
-
-            // Return samples
-            return newSamples;
-        }
-        // Decode a single sample
-        private static float DecodeSamplePCM16(byte[] rawData, int index)
-        {
-            return (float)BitConverter.ToInt16(rawData, index) / (float)Int16.MaxValue;
-        }
-        #endregion
-
-        #region MPEG DECODE
-
-        #endregion
-
-        #region WAV DECODE
-
         #endregion
     }
 }
