@@ -365,6 +365,7 @@ namespace Meta.WitAi.TTS
                 diskCacheSettings = diskCacheSettings,
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
+                loadDuration = 0f,
                 queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
                 queryStream = false,
                 clipStream = CreateClipStream()

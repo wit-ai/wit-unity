@@ -61,21 +61,32 @@ namespace Meta.Voice.Samples.TTSVoices
         private void RefreshLabel()
         {
             StringBuilder status = new StringBuilder();
-            int count = 1;
             if (Speaker.IsSpeaking)
             {
-                status.Append($"Speaking[{count}]: '{Speaker.SpeakingClip.textToSpeak}'");
-                status.AppendLine("\n");
-                count++;
+                AppendClipText(status, Speaker.SpeakingClip, "Speaking");
             }
+            int count = 1;
             foreach (var clip in Speaker.QueuedClips)
             {
-                status.Append($"{clip.loadState.ToString()}[{count}]: '{clip.textToSpeak}'");
-                status.AppendLine("\n");
+                AppendClipText(status, clip, $"Queue[{count}]");
                 count++;
             }
             _label.text = status.ToString();
             _label.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, _label.preferredHeight);
+        }
+
+        private void AppendClipText(StringBuilder status, TTSClipData clipData, string clipKey)
+        {
+            status.AppendLine(clipKey);
+            status.AppendLine($"\tText: '{clipData.textToSpeak}'");
+            status.AppendLine($"\tVoice: {(clipData.voiceSettings == null ? "" : clipData.voiceSettings.SettingsId)}");
+            status.AppendLine($"\tType: {clipData.audioType}");
+            status.AppendLine($"\tStatus: {clipData.loadState}");
+            if (clipData.loadState == TTSClipLoadState.Loaded)
+            {
+                status.AppendLine($"\tLoad Time: {clipData.loadDuration:0.000} seconds");
+            }
+            status.Append("\n");
         }
     }
 }

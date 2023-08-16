@@ -181,7 +181,7 @@ namespace Meta.WitAi.TTS.Integrations
             WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
 
             // Whether to stream
-            bool stream = Application.isPlaying && RequestSettings.audioStream;
+            DateTime startTime = DateTime.UtcNow;
 
             // Request tts
             WitTTSVRequest request = GetTtsRequest(clipData);
@@ -193,6 +193,7 @@ namespace Meta.WitAi.TTS.Integrations
 
                     // Set new clip stream
                     clipData.clipStream = clipStream;
+                    clipData.loadDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
 
                     // Unloaded
                     if (clipData.loadState == TTSClipLoadState.Unloaded)
