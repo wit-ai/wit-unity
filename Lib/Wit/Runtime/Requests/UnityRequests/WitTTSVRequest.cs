@@ -380,25 +380,6 @@ namespace Meta.WitAi.Requests
         }
         // Whether streamed audio is allowed by unity
         public static bool CanStreamAudio(TTSWitAudioType witAudioType)
-        {
-            switch (witAudioType)
-            {
-                // Raw PCM: Supported by Wit.ai & custom unity implementation (AudioDow)
-                case TTSWitAudioType.PCM:
-                    return true;
-                #if OGG_SUPPORT
-                // OGG: Supported by Unity (DownloadHandlerAudioClip) but not by Wit.ai
-                case TTSWitAudioType.OGG:
-                    return true;
-                #endif
-                // MP3: Supported by Wit.ai but not by Unity (DownloadHandlerAudioClip)
-                case TTSWitAudioType.MPEG:
-                    return false;
-                // WAV: does not support streaming
-                case TTSWitAudioType.WAV:
-                default:
-                    return false;
-            }
-        }
+            => CanStreamAudio(GetAudioType(witAudioType));
     }
 }
