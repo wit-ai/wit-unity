@@ -95,5 +95,20 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Resume playback for current and future audio clips
         /// </summary>
         void Resume();
+
+        /// <summary>
+        /// Call before sending speech data to warm up TTS system
+        /// </summary>
+        void PrepareToSpeak();
+
+        /// <summary>
+        /// Call at the start of a larger text block to indicate many queued requests will be coming
+        /// </summary>
+        void StartTextBlock();
+
+        /// <summary>
+        /// Call at the end of a larger text block to indicate a block of text is complete.
+        /// </summary>
+        void EndTextBlock();
     }
 }

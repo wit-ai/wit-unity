@@ -1404,6 +1404,30 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         public void Resume() => SetPause(false);
 
+        /// <summary>
+        /// Call before sending speech data to warm up TTS system
+        /// </summary>
+        public void PrepareToSpeak()
+        {
+            // Not currently needed
+        }
+
+        /// <summary>
+        /// Call at the start of a larger text block to indicate many queued requests will be coming
+        /// </summary>
+        public void StartTextBlock()
+        {
+            // Not currently needed
+        }
+
+        /// <summary>
+        /// Call at the end of a larger text block to indicate a block of text is complete.
+        /// </summary>
+        public void EndTextBlock()
+        {
+            // Not currently needed
+        }
+
         // Set's the current pause state
         protected virtual void SetPause(bool toPaused)
         {
