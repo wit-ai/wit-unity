@@ -320,8 +320,6 @@ namespace Meta.WitAi.Requests
             {
                 case AudioStreamDecodeType.PCM16:
                     return typeof(AudioDecoderPcm);
-                case AudioStreamDecodeType.MP3:
-                    return typeof(AudioDecoderMp3);
             }
             #endif
             return null;
