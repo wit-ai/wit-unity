@@ -42,8 +42,9 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool MessageRequest(string text,
             Dictionary<string, string> queryParams,
-            RequestCompleteDelegate<WitResponseNode> onComplete) =>
-            MessageRequest(WitConstants.ENDPOINT_MESSAGE, false, text, queryParams, onComplete);
+            RequestCompleteDelegate<WitResponseNode> onComplete,
+            RequestCompleteDelegate<WitResponseNode> onPartial = null) =>
+            MessageRequest(WitConstants.ENDPOINT_MESSAGE, false, text, queryParams, onComplete, onPartial);
 
         /// <summary>
         /// Voice message request
@@ -56,7 +57,8 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool MessageRequest(string endpoint, bool post, string text,
             Dictionary<string, string> queryParams,
-            RequestCompleteDelegate<WitResponseNode> onComplete)
+            RequestCompleteDelegate<WitResponseNode> onComplete, 
+            RequestCompleteDelegate<WitResponseNode> onPartial = null)
         {
             // Add text to uri parameters
             Dictionary<string, string> uriParams = queryParams ?? new Dictionary<string, string>();
@@ -65,12 +67,12 @@ namespace Meta.WitAi.Requests
             if (!post)
             {
                 uriParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = text;
-                return RequestWitGet(endpoint, uriParams, onComplete, _onPartial);
+                return RequestWitGet(endpoint, uriParams, onComplete, onPartial == null ? _onPartial : onPartial);
             }
             // Perform a post request
             else
             {
-                return RequestWitPost(endpoint, uriParams, text, onComplete, _onPartial);
+                return RequestWitPost(endpoint, uriParams, text, onComplete, onPartial == null ? _onPartial : onPartial);
             }
         }
     }

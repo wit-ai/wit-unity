@@ -145,6 +145,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uriParams">Endpoint url parameters</param>
         /// <param name="postText">Text to be sent to endpoint</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
+        /// <param name="onPartial">The callback delegate when a partial response is received</param>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
@@ -171,6 +172,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uriParams">Endpoint url parameters</param>
         /// <param name="putText">Text to be sent to endpoint</param>
         /// <param name="onComplete">The delegate upon completion</param>
+        /// <param name="onPartial">The callback delegate when a partial response is received</param>
         /// <param name="onProgress">The upload progress</param>
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestWitPut<TData>(string uriEndpoint,
