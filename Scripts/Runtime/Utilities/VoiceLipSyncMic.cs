@@ -63,11 +63,13 @@ namespace Meta.WitAi.Lib
             {
                 return;
             }
+            #if !UNITY_WEBGL
             // Get mic from audio buffer & get audio clip
             if (AudioBuffer.Instance?.MicInput is Mic mic)
             {
                 AudioSource.clip = mic.AudioClip;
             }
+            #endif
             buffer.Events.OnSampleReady += OnMicSampleReady;
             buffer.StartRecording(this);
         }

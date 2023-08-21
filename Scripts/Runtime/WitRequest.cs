@@ -22,6 +22,7 @@ using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using Meta.WitAi.Utilities;
 using UnityEngine;
+using UnityEngine.Networking;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -356,7 +357,7 @@ namespace Meta.WitAi
             // Allow overrides
             onPreSendRequest?.Invoke(ref uri, out headers);
 
-            #if UNITY_WEBGL && !UNITY_EDITOR
+            #if UNITY_WEBGL && !UNITY_EDITOR || WEBGL_DEBUG
             StartUnityRequest(uri, headers);
             #else
             #if UNITY_WEBGL && UNITY_EDITOR
@@ -450,6 +451,85 @@ namespace Meta.WitAi
             var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
             ThreadPool.RegisterWaitForSingleObject(asyncResult.AsyncWaitHandle, HandleTimeoutMsTimer, _request, TimeoutMs, true);
         }
+
+        #region Unity Request (WebGL)
+        private void StartUnityRequest(Uri uri, Dictionary<string, string> headers)
+        {
+            UnityWebRequest request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET);
+
+            if (forcedHttpMethodType != null) {
+                request.method = forcedHttpMethodType;
+            }
+
+            if (null != postContentType)
+            {
+                if (forcedHttpMethodType == null)
+                {
+                    request.method = UnityWebRequest.kHttpVerbPOST;
+                }
+
+                request.uploadHandler = new UploadHandlerRaw(postData);
+                request.uploadHandler.contentType = postContentType;
+            }
+
+            // Configure additional headers
+            if (IsPost)
+            {
+                request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
+                    UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
+                request.SetRequestHeader("Content-Type", audioEncoding.ToString());
+            }
+            
+            // Apply all wit headers
+            foreach (var header in headers)
+            {
+                request.SetRequestHeader(header.Key, header.Value);
+            }
+
+            StatusCode = 0;
+            request.timeout = TimeoutMs;
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            if (request.method == UnityWebRequest.kHttpVerbPOST || request.method == UnityWebRequest.kHttpVerbPUT)
+            {
+                throw new NotImplementedException("Not yet implemented.");
+            }
+
+            SetState(VoiceRequestState.Transmitting);
+            VRequest performer = new VRequest();
+            performer.RequestText(request, OnUnityRequestComplete);
+        }
+
+        private void OnUnityRequestComplete(string response, string error)
+        {
+            HasResponseStarted = true;
+            StatusCode = string.IsNullOrEmpty(error) ? 200 : 500;
+            var responseString = response;
+            _lastResponseData = WitResponseNode.Parse(responseString);
+            try
+            {
+                onRawResponse?.Invoke(responseString);
+                onPartialResponse?.Invoke(this);
+                if (!string.IsNullOrEmpty(_lastResponseData.GetTranscription()))
+                {
+                    onFullTranscription?.Invoke(_lastResponseData.GetTranscription());
+                }
+
+                SetState(VoiceRequestState.Successful);
+            }
+            catch (Exception e)
+            {
+                VLog.E("Error parsing response: " + e + "\n" + responseString);
+                StatusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                StatusDescription = "Error parsing response: " + e + "\n" + responseString;
+
+                SetState(VoiceRequestState.Failed);
+            }
+            
+
+            onResponse?.Invoke(this);
+        }
+        #endregion
 
         // Handle timeout callback
         private void HandleTimeoutMsTimer(object state, bool timeout)

@@ -73,5 +73,14 @@ namespace Meta.WitAi.Lib
             // silently fail under webGL.
             return 0;
         }
+        
+        public int AudioClipSampleRate
+        {
+            get => 16000;
+            set
+            {
+               VLog.E("Cannot set sample rate on gl mic"); 
+            }
+        }
     }
 }
