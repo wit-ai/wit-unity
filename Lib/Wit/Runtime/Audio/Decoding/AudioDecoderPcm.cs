@@ -34,6 +34,13 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
+        /// Gets pcm sample count from byte content length (1 sample = 2 bytes)
+        /// </summary>
+        /// <param name="contentLength">The provided number of bytes</param>
+        public int GetTotalSamples(ulong contentLength)
+            => GetTotalSamplesPCM16(contentLength);
+
+        /// <summary>
         /// A method for returning decoded bytes into audio data
         /// </summary>
         /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>
@@ -49,7 +56,7 @@ namespace Meta.Voice.Audio.Decoding
             // Generate sample array
             int startOffset = prevLeftover ? 1 : 0;
             int endOffset = nextLeftover ? 1 : 0;
-            int newSampleCount = (chunkLength + startOffset - endOffset) / 2;
+            int newSampleCount = GetTotalSamplesPCM16(chunkLength + startOffset - endOffset);
             float[] newSamples = new float[newSampleCount];
 
             // Append first byte to previous array
@@ -79,10 +86,25 @@ namespace Meta.Voice.Audio.Decoding
         #endregion
 
         #region STATIC
+        /// <summary>
+        /// Gets pcm sample count from byte content length (1 sample = 2 bytes)
+        /// </summary>
+        /// <param name="contentLength">The provided number of bytes</param>
+        public static int GetTotalSamplesPCM16(ulong contentLength) =>
+            Mathf.FloorToInt(contentLength / 2f);
+
+        /// <summary>
+        /// Gets pcm sample count from byte content length
+        /// </summary>
+        /// <param name="contentLength">The provided number of bytes</param>
+        public static int GetTotalSamplesPCM16(int contentLength) =>
+            GetTotalSamplesPCM16((ulong)contentLength);
+
         // Decode an entire array
         public static float[] DecodePCM16(byte[] rawData)
         {
-            float[] samples = new float[Mathf.FloorToInt(rawData.Length / 2f)];
+            int totalSamples = GetTotalSamplesPCM16(rawData.Length);
+            float[] samples = new float[totalSamples];
             for (int i = 0; i < samples.Length; i++)
             {
                 samples[i] = DecodeSamplePCM16(rawData, i * 2);

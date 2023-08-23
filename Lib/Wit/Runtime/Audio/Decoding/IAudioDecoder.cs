@@ -21,6 +21,12 @@ namespace Meta.Voice.Audio.Decoding
         void Setup(int channels, int sampleRate);
 
         /// <summary>
+        /// Determines audio sample length based on content length if possible
+        /// </summary>
+        /// <param name="contentLength">The provided number of bytes</param>
+        int GetTotalSamples(ulong contentLength);
+
+        /// <summary>
         /// A method for returning decoded bytes into audio data
         /// </summary>
         /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>

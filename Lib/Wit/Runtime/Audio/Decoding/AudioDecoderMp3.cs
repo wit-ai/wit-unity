@@ -34,6 +34,12 @@ namespace Meta.Voice.Audio.Decoding
         public void Setup(int channels, int sampleRate) {}
 
         /// <summary>
+        /// Mp3 sample count cannot be determined from content length, return -1
+        /// </summary>
+        /// <param name="contentLength">The provided number of bytes</param>
+        public int GetTotalSamples(ulong contentLength) => -1;
+
+        /// <summary>
         /// A method for returning decoded bytes into audio data
         /// </summary>
         /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>

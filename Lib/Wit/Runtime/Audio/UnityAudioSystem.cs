@@ -40,6 +40,7 @@ namespace Meta.Voice.Audio
             }
 
             // Total samples to preload
+            ChunkBufferLength = Mathf.Max(0.05f, ChunkBufferLength);
             int totalSamples = Mathf.CeilToInt(ChunkBufferLength *
                                                WitConstants.ENDPOINT_TTS_CHANNELS *
                                                WitConstants.ENDPOINT_TTS_SAMPLE_RATE);

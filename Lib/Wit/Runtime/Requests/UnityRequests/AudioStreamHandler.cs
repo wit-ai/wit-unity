@@ -102,10 +102,13 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // Apply size
-            int newSamples = GetClipSamplesFromContentLength(contentLength, DecodeType);
-            VLog.I($"Clip Stream - Received Size\nTotal Samples: {newSamples}");
-            ClipStream.SetTotalSamples(newSamples);
+            // Apply size if possible
+            int totalSamples = _decoder.GetTotalSamples(contentLength);
+            if (totalSamples > 0)
+            {
+                VLog.I($"Clip Stream - Received Size\nTotal Samples: {totalSamples}\nContent Length: {contentLength}");
+                ClipStream.SetTotalSamples(totalSamples);
+            }
         }
 
         // Receive data
@@ -380,17 +383,6 @@ namespace Meta.WitAi.Requests
             AudioClip result = AudioClip.Create(clipName, samples.Length, channels, sampleRate, false);
             result.SetData(samples, 0);
             return result;
-        }
-
-        // Determines clip sample count via content length dependent on file type
-        public static int GetClipSamplesFromContentLength(ulong contentLength, AudioStreamDecodeType decodeType)
-        {
-            switch (decodeType)
-            {
-                    case AudioStreamDecodeType.PCM16:
-                        return Mathf.FloorToInt(contentLength / 2f);
-            }
-            return 0;
         }
         #endregion
     }
