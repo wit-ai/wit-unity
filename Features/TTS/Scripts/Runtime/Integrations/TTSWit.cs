@@ -250,10 +250,6 @@ namespace Meta.WitAi.TTS.Integrations
             request?.Cancel();
             request = null;
 
-            // Call delegate
-            WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
-            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
-
             // Success
             return true;
         }
@@ -298,15 +294,23 @@ namespace Meta.WitAi.TTS.Integrations
                 (success, error) =>
                 {
                     _webDownloads.Remove(clipData.clipID);
-                    if (string.IsNullOrEmpty(error))
+                    if (!string.IsNullOrEmpty(error))
                     {
-                        WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
-                        WebRequestEvents?.OnRequestReady?.Invoke(clipData);
+                        if (string.Equals(error, WitConstants.CANCEL_ERROR))
+                        {
+                            WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
+                            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
+                        }
+                        else
+                        {
+                            WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
+                            WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
+                        }
                     }
                     else
                     {
-                        WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
-                        WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
+                        WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
+                        WebRequestEvents?.OnRequestReady?.Invoke(clipData);
                     }
                     WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
                 });
@@ -331,10 +335,6 @@ namespace Meta.WitAi.TTS.Integrations
             // Destroy immediately
             request?.Cancel();
             request = null;
-
-            // Download cancelled
-            WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
-            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
 
             // Success
             return true;

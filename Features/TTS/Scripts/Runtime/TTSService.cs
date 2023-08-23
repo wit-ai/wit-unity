@@ -436,11 +436,6 @@ namespace Meta.WitAi.TTS
                 return null;
             }
 
-            if (string.IsNullOrEmpty(clipData.textToSpeak))
-            {
-                clipData.loadState = TTSClipLoadState.Loaded;
-            }
-
             // From Runtime Cache
             if (clipData.loadState != TTSClipLoadState.Unloaded)
             {
@@ -455,8 +450,11 @@ namespace Meta.WitAi.TTS
                     // Call after return
                     else
                     {
-                        CoroutineUtility.StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData,
-                            clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error")));
+                        CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
+                        {
+                            onStreamReady(clipData,
+                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
+                        }));
                     }
                 }
 
@@ -504,98 +502,83 @@ namespace Meta.WitAi.TTS
                 // If should cache to disk, attempt to do so
                 if (ShouldCacheToDisk(clipData))
                 {
-                    // Download was canceled before starting
-                    if (clipData.loadState != TTSClipLoadState.Preparing)
-                    {
-                        string downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
-                        OnWebDownloadBegin(clipData, downloadPath);
-                        OnWebDownloadCancel(clipData, downloadPath);
-                        OnWebStreamBegin(clipData);
-                        OnWebStreamCancel(clipData);
-                        return;
-                    }
-
-                    // Download
-                    DownloadToDiskCache(clipData, (clipData2, downloadPath, error) =>
-                    {
-                        // Download was canceled before starting
-                        if (string.Equals(error, WitConstants.CANCEL_ERROR))
-                        {
-                            OnWebStreamBegin(clipData);
-                            OnWebStreamCancel(clipData);
-                            return;
-                        }
-                        // Not in cache & cannot download
-                        if (string.Equals(error, WitConstants.ERROR_TTS_CACHE_DOWNLOAD))
-                        {
-                            CoroutineUtility.StartCoroutine(CallAfterAMoment(() =>
-                            {
-                                // Stream was canceled before starting
-                                if (clipData.loadState != TTSClipLoadState.Preparing)
-                                {
-                                    OnWebStreamBegin(clipData);
-                                    OnWebStreamCancel(clipData);
-                                    return;
-                                }
-
-                                // Check for web errors
-                                string webErrors = WebHandler.GetWebErrors(clipData);
-                                if (!string.IsNullOrEmpty(webErrors))
-                                {
-                                    OnWebStreamBegin(clipData);
-                                    OnWebStreamError(clipData, webErrors);
-                                    return;
-                                }
-
-                                // Request stream
-                                WebHandler?.RequestStreamFromWeb(clipData);
-                            }));
-                            return;
-                        }
-                        // Download failed, throw error
-                        if (!string.IsNullOrEmpty(error))
-                        {
-                            OnWebStreamBegin(clipData);
-                            OnWebStreamError(clipData, error);
-                            return;
-                        }
-
-                        // Stream from Cache
-                        DiskCacheHandler?.StreamFromDiskCache(clipData);
-                    });
+                    PerformDownloadAndStream(clipData);
                 }
                 // Simply stream from the web
                 else
                 {
-                    // Stream was canceled before starting
-                    if (clipData.loadState != TTSClipLoadState.Preparing)
-                    {
-                        OnWebStreamBegin(clipData);
-                        OnWebStreamCancel(clipData);
-                        return;
-                    }
-
-                    // Check for web errors
-                    string webErrors = WebHandler.GetWebErrors(clipData);
-                    if (!string.IsNullOrEmpty(webErrors))
-                    {
-                        OnWebStreamBegin(clipData);
-                        OnWebStreamError(clipData, webErrors);
-                        return;
-                    }
-
-                    // Stream
-                    WebHandler?.RequestStreamFromWeb(clipData);
+                    PerformStreamFromWeb(clipData);
                 }
             }));
 
             // Return data
             return clipData;
         }
+        // Perform download & stream following error checks
+        private void PerformDownloadAndStream(TTSClipData clipDataParam)
+        {
+            // Download if possible
+            DownloadToDiskCache(clipDataParam, (clipDataResult, downloadPath, error) =>
+            {
+                // Not in cache & cannot download, stream from web
+                if (string.Equals(error, WitConstants.ERROR_TTS_CACHE_DOWNLOAD))
+                {
+                    PerformStreamFromWeb(clipDataResult);
+                }
+                // Download failed, throw error
+                else if (!string.IsNullOrEmpty(error))
+                {
+                    OnDiskStreamBegin(clipDataResult);
+                    OnDiskStreamError(clipDataResult, error);
+                }
+                // Stream from disk
+                else
+                {
+                    PerformStreamFromDisk(clipDataResult);
+                }
+            });
+        }
+        // Perform stream from web following error check
+        private void PerformStreamFromWeb(TTSClipData clipData)
+        {
+            // Stream was canceled before starting
+            if (clipData.loadState != TTSClipLoadState.Preparing)
+            {
+                OnWebStreamBegin(clipData);
+                OnWebStreamCancel(clipData);
+                return;
+            }
+
+            // Check for web errors
+            string webErrors = WebHandler.GetWebErrors(clipData);
+            if (!string.IsNullOrEmpty(webErrors))
+            {
+                OnWebStreamBegin(clipData);
+                OnWebStreamError(clipData, webErrors);
+                return;
+            }
+
+            // Stream
+            WebHandler?.RequestStreamFromWeb(clipData);
+        }
+        // Perform stream from disk following cancel check
+        private void PerformStreamFromDisk(TTSClipData clipData)
+        {
+            // Stream was canceled while downloading
+            if (clipData.loadState != TTSClipLoadState.Preparing)
+            {
+                OnDiskStreamBegin(clipData);
+                OnDiskStreamCancel(clipData);
+                return;
+            }
+
+            // Stream from Cache
+            DiskCacheHandler?.StreamFromDiskCache(clipData);
+        }
         // Wait a moment
         private IEnumerator CallAfterAMoment(Action call)
         {
-            if (Application.isPlaying)
+            if (Application.isPlaying && !Application.isBatchMode)
             {
                 yield return new WaitForEndOfFrame();
             }
@@ -636,6 +619,9 @@ namespace Meta.WitAi.TTS
         private void OnWebStreamCancel(TTSClipData clipData) => OnStreamCancel(clipData, false);
         private void OnStreamCancel(TTSClipData clipData, bool fromDisk)
         {
+            // Ignore unless preparing
+            bool unloaded = clipData.loadState == TTSClipLoadState.Unloaded;
+
             // Handled as an error
             SetClipLoadState(clipData, TTSClipLoadState.Error);
 
@@ -648,7 +634,15 @@ namespace Meta.WitAi.TTS
             Events?.Stream?.OnStreamCancel?.Invoke(clipData);
 
             // Unload clip
-            Unload(clipData);
+            if (!unloaded)
+            {
+                Unload(clipData);
+            }
+            // Set back to unloaded
+            else
+            {
+                SetClipLoadState(clipData, TTSClipLoadState.Unloaded);
+            }
         }
         // Handle disk cache streaming error
         private void OnDiskStreamError(TTSClipData clipData, string error) => OnStreamError(clipData, error, true);
@@ -804,6 +798,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Unloads clip stream
+            clipData.clipStream?.Unload();
             clipData.clipStream = null;
 
             // Clip is now unloaded
@@ -892,45 +887,58 @@ namespace Meta.WitAi.TTS
         }
 
         // Performs download to disk cache
-        protected virtual void DownloadToDiskCache(TTSClipData clipData, Action<TTSClipData, string, string> onDownloadComplete)
+        protected virtual void DownloadToDiskCache(TTSClipData clipDataParam, Action<TTSClipData, string, string> onDownloadComplete)
         {
             // Add delegates if needed
             AddDelegates();
 
             // Check if cached to disk & log
-            string downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
-            DiskCacheHandler.CheckCachedToDisk(clipData, (clip, found) =>
+            string downloadPath = DiskCacheHandler.GetDiskCachePath(clipDataParam);
+            DiskCacheHandler.CheckCachedToDisk(clipDataParam, (clipDataResult, found) =>
             {
                 // Cache checked
-                VLog.I(GetClipLog($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipData));
+                VLog.I(GetClipLog($"Disk Cache {(found ? "Found" : "Missing")}\nPath: {downloadPath}", clipDataResult));
 
                 // Already downloaded, return successful
                 if (found)
                 {
-                    onDownloadComplete?.Invoke(clipData, downloadPath, string.Empty);
+                    onDownloadComplete?.Invoke(clipDataResult, downloadPath, string.Empty);
                     return;
                 }
 
                 // Preload selected but not in disk cache, return an error
-                if (Application.isPlaying && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
+                if (Application.isPlaying && clipDataResult.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
                 {
-                    onDownloadComplete?.Invoke(clipData, downloadPath, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
+                    OnWebDownloadBegin(clipDataResult, downloadPath);
+                    OnWebDownloadError(clipDataResult, downloadPath, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
+                    onDownloadComplete?.Invoke(clipDataResult, downloadPath, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
+                    return;
+                }
+
+                // Cancelled while checking cache
+                if (clipDataResult.loadState != TTSClipLoadState.Preparing)
+                {
+                    OnWebDownloadBegin(clipDataResult, downloadPath);
+                    OnWebDownloadCancel(clipDataResult, downloadPath);
+                    onDownloadComplete?.Invoke(clipDataResult, downloadPath, WitConstants.CANCEL_ERROR);
                     return;
                 }
 
                 // Check for web issues
-                string webErrors = WebHandler.GetWebErrors(clipData);
+                string webErrors = WebHandler.GetWebErrors(clipDataResult);
                 if (!string.IsNullOrEmpty(webErrors))
                 {
-                    onDownloadComplete?.Invoke(clipData, downloadPath, webErrors);
+                    OnWebDownloadBegin(clipDataResult, downloadPath);
+                    OnWebDownloadError(clipDataResult, downloadPath, webErrors);
+                    onDownloadComplete?.Invoke(clipDataResult, downloadPath, webErrors);
                     return;
                 }
 
                 // Add download completion callback
-                clipData.onDownloadComplete += (error) => onDownloadComplete?.Invoke(clipData, downloadPath, error);
+                clipDataResult.onDownloadComplete += (error) => onDownloadComplete?.Invoke(clipDataResult, downloadPath, error);
 
                 // Download to cache
-                WebHandler.RequestDownloadFromWeb(clipData, downloadPath);
+                WebHandler.RequestDownloadFromWeb(clipDataResult, downloadPath);
             });
         }
         // On web download begin
