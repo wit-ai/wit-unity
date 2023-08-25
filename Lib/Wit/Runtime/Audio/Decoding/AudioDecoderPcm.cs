@@ -24,6 +24,11 @@ namespace Meta.Voice.Audio.Decoding
         private byte[] _overflow = new byte[2];
 
         /// <summary>
+        /// PCM can be decoded in any order prior to merging back in
+        /// </summary>
+        public bool RequireSequentialDecode => false;
+
+        /// <summary>
         /// Initial setup of the decoder
         /// </summary>
         /// <param name="channels">Total channels of audio data</param>

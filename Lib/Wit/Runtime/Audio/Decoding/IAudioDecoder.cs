@@ -14,6 +14,12 @@ namespace Meta.Voice.Audio.Decoding
     public interface IAudioDecoder
     {
         /// <summary>
+        /// A property for whether the decoder can decode chunks on separate threads
+        /// simultaneously or if they need to be performed sequentially.
+        /// </summary>
+        bool RequireSequentialDecode { get; }
+
+        /// <summary>
         /// Initial setup of the decoder
         /// </summary>
         /// <param name="channels">Total channels of audio data</param>

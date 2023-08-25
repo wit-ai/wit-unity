@@ -43,7 +43,8 @@ namespace Meta.WitAi.Requests
         // The script responsible for decoding incoming data into audio
         private IAudioDecoder _decoder;
         // Current samples received
-        private int _decodingChunks = 0;
+        private int _receivedChunks = 0;
+        private int _decodedChunks = 0;
         private bool _requestComplete = false;
         // Error handling
         private int _errorDecoded;
@@ -58,7 +59,8 @@ namespace Meta.WitAi.Requests
             _decoder?.Setup(ClipStream.Channels, ClipStream.SampleRate);
 
             // Setup data
-            _decodingChunks = 0;
+            _receivedChunks = 0;
+            _decodedChunks = 0;
             _requestComplete = false;
             IsStreamReady = false;
             IsComplete = false;
@@ -118,15 +120,27 @@ namespace Meta.WitAi.Requests
             }
 
             // Decode data async
-            _decodingChunks++;
+            #pragma warning disable CS4014
             DecodeDataAsync(receiveData, dataLength);
+            #pragma warning restore CS4014
 
-            // Return data
+            // Success
             return true;
         }
-        // Decode data
+        // Decode data asynchronously
         private async Task DecodeDataAsync(byte[] receiveData, int dataLength)
         {
+            // Increment receive chunk count
+            int current = _receivedChunks;
+            _receivedChunks++;
+
+            // If must decode in sequence, wait for previous to complete
+            bool sequentialDecode = _decoder.RequireSequentialDecode;
+            if (sequentialDecode && _decodedChunks < current)
+            {
+                await Task.Delay(100);
+            }
+
             // Perform decode async
             float[] samples = null;
             string newError = null;
@@ -142,15 +156,21 @@ namespace Meta.WitAi.Requests
                 }
             });
 
+            // Needs to wait for sequential prior to returning if not done previously
+            while (!sequentialDecode && _decodedChunks < current)
+            {
+                await Task.Delay(100);
+            }
+
+            // Increment decoded chunk count
+            _decodedChunks++;
+
             // Decode complete
             OnDecodeComplete(samples, newError);
         }
         // Decode complete
         private void OnDecodeComplete(float[] newSamples, string decodeError)
         {
-            // Complete
-            _decodingChunks--;
-
             // Fail with error
             if (!string.IsNullOrEmpty(decodeError))
             {
@@ -170,7 +190,6 @@ namespace Meta.WitAi.Requests
             if (newSamples.Length > 0)
             {
                 ClipStream.AddSamples(newSamples);
-                VLog.I($"Clip Stream - Decoded {newSamples.Length} Samples");
             }
 
             // Stream is now ready
@@ -225,7 +244,7 @@ namespace Meta.WitAi.Requests
         private void TryToFinalize()
         {
             // Already finalized or not yet complete
-            if (IsComplete || !_requestComplete || _decodingChunks > 0 || ClipStream == null)
+            if (IsComplete || !_requestComplete || _receivedChunks != _decodedChunks || ClipStream == null)
             {
                 return;
             }

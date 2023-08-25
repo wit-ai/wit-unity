@@ -23,8 +23,11 @@ namespace Meta.Voice.Audio.Decoding
         /// </summary>
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
 
-        // Thread lock to ensure only one is decoded at a time
-        private object _lock = new object();
+        /// <summary>
+        /// Mp3 must be decoded sequentially in since frame data could be
+        /// carried over to the next chunk
+        /// </summary>
+        public bool RequireSequentialDecode => true;
 
         /// <summary>
         /// Initial setup of the decoder
@@ -53,19 +56,16 @@ namespace Meta.Voice.Audio.Decoding
             List<float> results = new List<float>();
 
             // Iterate until chunk is complete
-            lock (_lock)
+            while (start < chunkLength)
             {
-                while (start < chunkLength)
-                {
-                    // Decode a single frame, return samples if possible & update start position
-                    int length = chunkLength - start;
-                    float[] samples = _frame.Decode(chunkData, ref start, length);
+                // Decode a single frame, return samples if possible & update start position
+                int length = chunkLength - start;
+                float[] samples = _frame.Decode(chunkData, ref start, length);
 
-                    // Add all newly decoded samples
-                    if (samples != null)
-                    {
-                        results.AddRange(samples);
-                    }
+                // Add all newly decoded samples
+                if (samples != null)
+                {
+                    results.AddRange(samples);
                 }
             }
 
