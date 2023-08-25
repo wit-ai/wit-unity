@@ -149,7 +149,7 @@ namespace Meta.WitAi.Requests
             {
                 try
                 {
-                    samples = _decoder?.Decode(receiveData, dataLength);
+                    samples = _decoder?.Decode(receiveData, 0 /*chunkStart*/, dataLength);
                 }
                 catch (Exception e)
                 {
@@ -363,7 +363,7 @@ namespace Meta.WitAi.Requests
             if (decoder != null)
             {
                 decoder.Setup(channels, sampleRate);
-                return decoder.Decode(rawData, rawData.Length);
+                return decoder.Decode(rawData, 0, rawData.Length);
             }
 
             // Return nothing

@@ -43,12 +43,13 @@ namespace Meta.Voice.Audio.Decoding
         /// A method for returning decoded bytes into audio data
         /// </summary>
         /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>
+        /// <param name="chunkStart">The array start index into account when decoding</param>
         /// <param name="chunkLength">The total number of bytes to be used within chunkData</param>
         /// <returns>Returns an array of audio data from 0-1</returns>
-        public float[] Decode(byte[] chunkData, int chunkLength)
+        public float[] Decode(byte[] chunkData, int chunkStart, int chunkLength)
         {
             // Resultant float array
-            int start = 0;
+            int start = chunkStart;
             List<float> results = new List<float>();
 
             // Iterate until chunk is complete
