@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
 using Meta.Voice.Audio;
+using Meta.Voice.Audio.Decoding;
 
 namespace Meta.WitAi.Requests
 {
@@ -1163,12 +1164,68 @@ namespace Meta.WitAi.Requests
 
         #region AUDIO
         /// <summary>
-        /// Check if stream is possible with a specified audio type
+        /// Get audio extension from audio type
         /// </summary>
-        public static bool CanStreamAudio(AudioType audioType)
+        /// <param name="audioType">The specified audio type</param>
+        /// <returns>Audio extension without period.</returns>
+        public static string GetAudioExtension(AudioType audioType)
         {
-            return CanUnityStreamAudio(audioType) || AudioStreamHandler.CanDecodeType(audioType);
+            switch (audioType)
+            {
+                // PCM
+                case AudioType.UNKNOWN:
+                    return "raw";
+                // OGG
+                case AudioType.OGGVORBIS:
+                    return "ogg";
+                // MP3
+                case AudioType.MPEG:
+                    return "mp3";
+                // WAV
+                case AudioType.WAV:
+                    return "wav";
+                default:
+                    VLog.W($"Attempting to process unsupported audio type: {audioType}");
+                    return audioType.ToString().ToLower();
+            }
         }
+
+        // Get audio decoder type based on audio type
+        public static Type GetAudioDecoderType(AudioType audioType)
+        {
+            switch (audioType)
+            {
+                // Assume PCM16 decoder
+                case AudioType.UNKNOWN:
+                    return typeof(AudioDecoderPcm);
+                // MP3 decoder
+                case AudioType.MPEG:
+                    return typeof(AudioDecoderMp3);
+            }
+            // Not handled
+            return null;
+        }
+
+        /// <summary>
+        /// Instantiate an audio decoder based on the audio type to allow for
+        /// complex streaming scenarios
+        /// </summary>
+        /// <param name="audioType">Audio decoder type allowed</param>
+        /// <returns>Instantiated audio decoder</returns>
+        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType)
+        {
+            Type decoderType = GetAudioDecoderType(audioType);
+            if (decoderType != null)
+            {
+                return Activator.CreateInstance(decoderType) as IAudioDecoder;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Whether or not a specific audio type can be decoded
+        /// </summary>
+        public static bool CanDecodeAudio(AudioType audioType) => GetAudioDecoderType(audioType) != null;
 
         /// <summary>
         /// Default DownloadHandlerAudioClip stream compatibility
@@ -1183,6 +1240,12 @@ namespace Meta.WitAi.Requests
             // Not supported by Unity
             return false;
         }
+
+        /// <summary>
+        /// Whether or not audio can be streamed for a specific audio type
+        /// </summary>
+        public static bool CanStreamAudio(AudioType audioType) =>
+            CanUnityStreamAudio(audioType) || CanDecodeAudio(audioType);
 
         /// <summary>
         /// Request audio clip with audio data, uri & completion delegate
@@ -1328,23 +1391,16 @@ namespace Meta.WitAi.Requests
             AudioType audioType, bool audioStream,
             UnityWebRequest unityRequest)
         {
-            // Audio streaming
-            if (audioStream && !CanStreamAudio(audioType))
-            {
-                VLog.W($"Audio streaming not currently supported by for {(audioType == AudioType.UNKNOWN ? "PCM" : audioType.ToString())}");
-                audioStream = false;
-            }
-
             // Add audio download handler
             if (unityRequest.downloadHandler == null)
             {
                 // Use buffer stream handler if pcm & not streaming
-                if (!audioStream && AudioStreamHandler.GetDecodeType(audioType) == AudioStreamDecodeType.PCM16)
+                if (!audioStream && CanDecodeAudio(audioType))
                 {
                     unityRequest.downloadHandler = new DownloadHandlerBuffer();
                 }
                 // If streamed, audio stream handler can decode & unity cannot then use audio stream handler
-                else if (audioStream && AudioStreamHandler.CanDecodeType(audioType) && !CanUnityStreamAudio(audioType))
+                else if (audioStream && CanDecodeAudio(audioType) && !CanUnityStreamAudio(audioType))
                 {
                     // Cannot download via audio stream handler without clip stream info
                     if (clipStream == null)
@@ -1353,7 +1409,7 @@ namespace Meta.WitAi.Requests
                     }
 
                     // Use custom audio stream handler
-                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, audioType);
+                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType));
                 }
                 // Use audio clip download handler
                 else
@@ -1398,7 +1454,7 @@ namespace Meta.WitAi.Requests
                 else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
                 {
                     byte[] data = rawDownloader.data;
-                    float[] samples = AudioStreamHandler.DecodeAudio(AudioStreamHandler.GetDecodeType(audioType), data);
+                    float[] samples = GetAudioDecoder(audioType).Decode(data, 0, data.Length);
                     clipStream.SetTotalSamples(samples.Length);
                     clipStream.AddSamples(samples);
                 }

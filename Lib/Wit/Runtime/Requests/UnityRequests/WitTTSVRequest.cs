@@ -354,32 +354,10 @@ namespace Meta.WitAi.Requests
                     return $"audio/{witAudioType.ToString().ToLower()}";
             }
         }
-        // Get audio extension
-        public static string GetAudioExtension(TTSWitAudioType witAudioType) => GetAudioExtension(GetAudioType(witAudioType));
-        // Get audio extension
-        public static string GetAudioExtension(AudioType audioType)
-        {
-            switch (audioType)
-            {
-                // PCM
-                case AudioType.UNKNOWN:
-                    return "raw";
-                // OGG
-                case AudioType.OGGVORBIS:
-                    return "ogg";
-                // MP3
-                case AudioType.MPEG:
-                    return "mp3";
-                // WAV
-                case AudioType.WAV:
-                    return "wav";
-                default:
-                    VLog.W($"Attempting to process unsupported audio type: {audioType}");
-                    return audioType.ToString().ToLower();
-            }
-        }
-        // Whether streamed audio is allowed by unity
-        public static bool CanStreamAudio(TTSWitAudioType witAudioType)
-            => CanStreamAudio(GetAudioType(witAudioType));
+        /// <summary>
+        /// Performs a check on whether audio can be streamed or not
+        /// </summary>
+        public static bool CanStreamAudio(TTSWitAudioType witAudioType) =>
+            CanStreamAudio(GetAudioType(witAudioType));
     }
 }

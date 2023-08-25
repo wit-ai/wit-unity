@@ -356,10 +356,11 @@ namespace Meta.WitAi.TTS
             }
 
             // Generate new clip data
+            AudioType audioType = GetAudioType();
             clipData = new TTSClipData()
             {
                 clipID = clipID,
-                audioType = GetAudioType(),
+                audioType = audioType,
                 textToSpeak = GetFinalText(textToSpeak, voiceSettings),
                 voiceSettings = voiceSettings,
                 diskCacheSettings = diskCacheSettings,
@@ -367,7 +368,7 @@ namespace Meta.WitAi.TTS
                 loadProgress = 0f,
                 loadDuration = 0f,
                 queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
-                queryStream = false,
+                queryStream = GetShouldAudioStream(audioType),
                 clipStream = CreateClipStream()
             };
 
@@ -393,11 +394,14 @@ namespace Meta.WitAi.TTS
             return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,
                 WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
         }
-        // Get audio type
-        protected virtual AudioType GetAudioType()
-        {
-            return AudioType.WAV;
-        }
+
+        // Returns current audio type setting for initial TTSClipData setup
+        protected virtual AudioType GetAudioType() => AudioType.WAV;
+
+        // Returns current audio stream setting for initial TTSClipData setup
+        protected virtual bool GetShouldAudioStream(AudioType audioType) =>
+            VRequest.CanStreamAudio(audioType);
+
         // Set clip state
         protected virtual void SetClipLoadState(TTSClipData clipData, TTSClipLoadState loadState)
         {

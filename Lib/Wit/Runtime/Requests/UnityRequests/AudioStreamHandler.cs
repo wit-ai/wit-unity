@@ -19,16 +19,6 @@ using Meta.Voice.Audio.Decoding;
 namespace Meta.WitAi.Requests
 {
     /// <summary>
-    /// The various supported audio decode options
-    /// </summary>
-    public enum AudioStreamDecodeType
-    {
-        PCM16,
-        MP3,
-        WAV
-    }
-
-    /// <summary>
     /// A download handler for UnityWebRequest that decodes audio data, passes
     /// the data into an iAudioClipStream & provides download state information.
     /// </summary>
@@ -41,12 +31,6 @@ namespace Meta.WitAi.Requests
         public IAudioClipStream ClipStream { get; private set; }
 
         /// <summary>
-        /// The audio stream decode option
-        /// </summary>
-        public AudioStreamDecodeType DecodeType { get; private set; }
-        private IAudioDecoder _decoder;
-
-        /// <summary>
         /// Audio stream data is ready to be played
         /// </summary>
         public bool IsStreamReady { get; private set; }
@@ -56,6 +40,8 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public bool IsComplete { get; private set; }
 
+        // The script responsible for decoding incoming data into audio
+        private IAudioDecoder _decoder;
         // Current samples received
         private int _decodingChunks = 0;
         private bool _requestComplete = false;
@@ -64,12 +50,11 @@ namespace Meta.WitAi.Requests
         private byte[] _errorBytes;
 
         // Generate
-        public AudioStreamHandler(IAudioClipStream newClipStream, AudioType newDecodeType)
+        public AudioStreamHandler(IAudioClipStream newClipStream, IAudioDecoder newDecoder)
         {
             // Apply parameters
             ClipStream = newClipStream;
-            DecodeType = GetDecodeType(newDecodeType);
-            _decoder = GetDecoder(DecodeType);
+            _decoder = newDecoder;
             _decoder?.Setup(ClipStream.Channels, ClipStream.SampleRate);
 
             // Setup data
@@ -81,7 +66,7 @@ namespace Meta.WitAi.Requests
             _errorDecoded = 0;
 
             // Begin stream
-            VLog.I($"Clip Stream - Began\nClip Stream: {ClipStream.GetType()}\nFile Type: {DecodeType}");
+            VLog.I($"Clip Stream - Began\nClip Stream: {ClipStream.GetType()}\nDecoder: {(newDecoder == null ? "NULL" : newDecoder.GetType().Name)}");
         }
 
         // If size is provided, generate clip using size
@@ -296,94 +281,5 @@ namespace Meta.WitAi.Requests
             IsComplete = true;
             VLog.I($"Clip Stream - Cleaned Up");
         }
-
-        #region STATIC
-        /// <summary>
-        /// Determine decode type based on audio type
-        /// </summary>
-        public static AudioStreamDecodeType GetDecodeType(AudioType audioType)
-        {
-            switch (audioType)
-            {
-                case AudioType.WAV:
-                    return AudioStreamDecodeType.WAV;
-                case AudioType.MPEG:
-                    return AudioStreamDecodeType.MP3;
-            }
-            return AudioStreamDecodeType.PCM16;
-        }
-
-        /// <summary>
-        /// Returns the class type of a decoder for specified audio type
-        /// </summary>
-        private static Type GetDecoderType(AudioStreamDecodeType audioType)
-        {
-            #if !UNITY_WEBGL
-            switch (audioType)
-            {
-                case AudioStreamDecodeType.PCM16:
-                    return typeof(AudioDecoderPcm);
-                case AudioStreamDecodeType.MP3:
-                    return typeof(AudioDecoderMp3);
-            }
-            #endif
-            return null;
-        }
-
-        /// <summary>
-        /// Successful if a decoder type exists for the specified type
-        /// </summary>
-        public static bool CanDecodeType(AudioStreamDecodeType audioType) => GetDecoderType(audioType) != null;
-
-        /// <summary>
-        /// Successful if a decoder type exists for the specified type
-        /// </summary>
-        public static bool CanDecodeType(AudioType audioType) => CanDecodeType(GetDecodeType(audioType));
-
-        /// <summary>
-        /// Instantiates an audio decoder if possible
-        /// </summary>
-        public static IAudioDecoder GetDecoder(AudioStreamDecodeType audioType)
-        {
-            Type decodeType = GetDecoderType(audioType);
-            if (decodeType != null)
-            {
-                return Activator.CreateInstance(decodeType) as IAudioDecoder;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Decodes full raw data
-        /// </summary>
-        public static float[] DecodeAudio(AudioStreamDecodeType decodeType, int channels, int sampleRate, byte[] rawData)
-        {
-            // Get decoder if possible
-            IAudioDecoder decoder = GetDecoder(decodeType);
-            if (decoder != null)
-            {
-                decoder.Setup(channels, sampleRate);
-                return decoder.Decode(rawData, 0, rawData.Length);
-            }
-
-            // Return nothing
-            return null;
-        }
-
-        /// <summary>
-        /// Decodes full raw data & assumes wit tts
-        /// </summary>
-        public static float[] DecodeAudio(AudioStreamDecodeType decodeType, byte[] rawData)
-            => DecodeAudio(decodeType, WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE,
-                rawData);
-
-        // Get audio clip from samples
-        private static AudioClip GetClipFromSamples(float[] samples, string clipName, int channels, int sampleRate)
-        {
-            AudioClip result = AudioClip.Create(clipName, samples.Length, channels, sampleRate, false);
-            result.SetData(samples, 0);
-            return result;
-        }
-        #endregion
     }
 }

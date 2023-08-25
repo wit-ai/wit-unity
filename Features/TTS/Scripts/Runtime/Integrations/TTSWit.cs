@@ -71,25 +71,21 @@ namespace Meta.WitAi.TTS.Integrations
         // Configuration provider
         public WitConfiguration Configuration => RequestSettings.configuration;
 
-        // Use wit tts vrequest type
-        protected override AudioType GetAudioType()
-        {
-            return WitTTSVRequest.GetAudioType(RequestSettings.audioType);
-        }
-        // Get tts request prior to transmission
-        private WitTTSVRequest GetTtsRequest(TTSClipData clipData)
-        {
-            // Apply audio type
-            clipData.audioType = GetAudioType();
-            clipData.queryStream = RequestSettings.audioStream;
+        // Returns current audio type setting for initial TTSClipData setup
+        protected override AudioType GetAudioType() =>
+            WitTTSVRequest.GetAudioType(RequestSettings.audioType);
 
-            // Return request
-            return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
+        // Returns current audio stream setting for initial TTSClipData setup
+        protected override bool GetShouldAudioStream(AudioType audioType) =>
+            RequestSettings.audioStream && base.GetShouldAudioStream(audioType);
+
+        // Get tts request prior to transmission
+        private WitTTSVRequest GetTtsRequest(TTSClipData clipData) =>
+            new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
                 clipData.textToSpeak, clipData.queryParameters,
                 RequestSettings.audioType, clipData.queryStream,
                 (progress) => OnRequestProgressUpdated(clipData, progress),
                 () => OnRequestFirstResponse(clipData));
-        }
 
         // Download progress callbacks
         private void OnRequestProgressUpdated(TTSClipData clipData, float newProgress)
@@ -221,7 +217,7 @@ namespace Meta.WitAi.TTS.Integrations
                     {
                         WebStreamEvents?.OnStreamReady?.Invoke(clipData);
                         WebRequestEvents?.OnRequestReady?.Invoke(clipData);
-                        if (!RequestSettings.audioStream || !WitTTSVRequest.CanStreamAudio(RequestSettings.audioType))
+                        if (!clipData.queryStream)
                         {
                             WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
                             WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
