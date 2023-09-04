@@ -37,7 +37,7 @@ namespace Meta.Voice.TelemetryUtilities
             return -1;
         }
 
-        internal static void LogInstantEvent(TelemetryEventId eventId,
+        public static void LogInstantEvent(TelemetryEventId eventId,
             Dictionary<AnnotationKey, string> annotations = null)
         {
         }
@@ -78,6 +78,7 @@ namespace Meta.Voice.TelemetryUtilities
             ClickButton = 0,
             GenerateManifest = 0,
             LoadManifest = 0,
+            OpenUi = 0
         }
 
         /// <summary>
@@ -91,6 +92,7 @@ namespace Meta.Voice.TelemetryUtilities
             ControlId,
             Value,
             Type,
+            PageId
         }
     }
     
