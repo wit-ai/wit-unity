@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Data;
@@ -32,7 +33,7 @@ namespace Meta.Voice
         #region SIMULATION
         public static SimulatedResponse simulatedResponse;
         #endregion
-        
+
         /// <summary>
         /// The states of a voice request
         /// </summary>
@@ -41,6 +42,12 @@ namespace Meta.Voice
         /// Active if not currently canceled, failed or successful
         /// </summary>
         public bool IsActive => State == VoiceRequestState.Initialized || State == VoiceRequestState.Transmitting;
+
+        /// <summary>
+        /// Whether transmission should hold prior to send
+        /// </summary>
+        public bool OnHold = false;
+
         /// <summary>
         /// Download progress of the current request transmission
         /// if available
@@ -117,11 +124,7 @@ namespace Meta.Voice
                     OnInit();
                     break;
                 case VoiceRequestState.Transmitting:
-                    OnSend();
-                    if (!OnSimulateResponse())
-                    {
-                        HandleSend();
-                    }
+                    CoroutineUtility.StartCoroutine(WaitForHold(OnCanSend));
                     break;
                 case VoiceRequestState.Canceled:
                     HandleCancel();
@@ -138,6 +141,31 @@ namespace Meta.Voice
                     break;
             }
         }
+
+        // Wait for hold to complete and then perform an action
+        protected virtual IEnumerator WaitForHold(Action onReady)
+        {
+            while (OnHold)
+            {
+                yield return null;
+            }
+            onReady?.Invoke();
+        }
+
+        // Once hold is complete, begin send process
+        protected virtual void OnCanSend()
+        {
+            if (State != VoiceRequestState.Transmitting)
+            {
+                return;
+            }
+            OnSend();
+            if (!OnSimulateResponse())
+            {
+                HandleSend();
+            }
+        }
+
         /// <summary>
         /// Set current request download progress
         /// </summary>
@@ -271,7 +299,7 @@ namespace Meta.Voice
             Log($"Request Transmitting");
             RaiseEvent(Events?.OnSend);
         }
-        
+
         /// <summary>
         /// Child class send implementation
         /// Call HandleFailure, HandleCancel from this class
@@ -279,7 +307,7 @@ namespace Meta.Voice
         protected abstract void HandleSend();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns>True if the response was simulated</returns>
         protected virtual bool OnSimulateResponse()

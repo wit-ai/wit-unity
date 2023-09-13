@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Text;
 using Meta.WitAi;
 using UnityEngine.Events;
@@ -80,8 +81,7 @@ namespace Meta.Voice
             switch (AudioInputState)
             {
                 case VoiceAudioInputState.Activating:
-                    OnAudioActivation();
-                    HandleAudioActivation();
+                    CoroutineUtility.StartCoroutine(WaitForHold(OnCanActivate));
                     break;
                 case VoiceAudioInputState.On:
                     OnStartListening();
@@ -95,6 +95,18 @@ namespace Meta.Voice
                     break;
             }
         }
+
+        // Once hold is complete, begin activation process
+        protected virtual void OnCanActivate()
+        {
+            if (AudioInputState != VoiceAudioInputState.Activating)
+            {
+                return;
+            }
+            OnAudioActivation();
+            HandleAudioActivation();
+        }
+
         /// <summary>
         /// Append request specific data to log
         /// </summary>
