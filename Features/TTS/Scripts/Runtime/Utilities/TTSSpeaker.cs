@@ -69,7 +69,7 @@ namespace Meta.WitAi.TTS.Utilities
             get => presetVoiceID;
             set => presetVoiceID = value;
         }
-        
+
         // Override voice settings
         private TTSVoiceSettings _overrideVoiceSettings;
 
@@ -1134,7 +1134,7 @@ namespace Meta.WitAi.TTS.Utilities
         {
             // Generate request data
             TTSSpeakerRequestData requestData = new TTSSpeakerRequestData();
-            requestData.StartTime = DateTime.Now;
+            requestData.StartTime = DateTime.UtcNow;
             requestData.StopQueueOnLoad = !addToQueue;
             requestData.PlaybackEvents = playbackEvents ?? new TTSSpeakerClipEvents();
 
@@ -1551,7 +1551,7 @@ namespace Meta.WitAi.TTS.Utilities
             log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
             log.AppendLine($"Audio Player Type: {(_audioPlayer == null ? "NULL" : _audioPlayer.GetType().ToString())}");
             log.AppendLine($"Audio Clip Stream Type: {(requestData.ClipData?.clipStream == null ? "NULL" : requestData.ClipData?.clipStream.GetType().ToString())}");
-            log.AppendLine($"Elapsed: {(DateTime.Now - requestData.StartTime).TotalMilliseconds:0.0}ms");
+            log.AppendLine($"Elapsed: {(DateTime.UtcNow - requestData.StartTime).TotalMilliseconds:0.0}ms");
             if (warning)
             {
                 VLog.W(LogCategory, log);

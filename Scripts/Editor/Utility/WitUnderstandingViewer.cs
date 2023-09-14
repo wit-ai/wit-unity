@@ -113,7 +113,7 @@ namespace Meta.WitAi.Windows
 
         private void ResetStartTime()
         {
-            _submitStart = System.DateTime.Now;
+            _submitStart = System.DateTime.UtcNow;
             Repaint();
         }
 
@@ -370,7 +370,7 @@ namespace Meta.WitAi.Windows
             {
                 _status = WitTexts.Texts.UnderstandingViewerLoadingLabel;
                 _responseText = _status;
-                _submitStart = System.DateTime.Now;
+                _submitStart = System.DateTime.UtcNow;
                 _request = witConfiguration.CreateMessageRequest(new WitRequestOptions(), new VoiceServiceRequestEvents());
                 _request.Options.Text = _utterance;
                 _request.Events.OnSend.AddListener(OnSend);
@@ -410,7 +410,7 @@ namespace Meta.WitAi.Windows
         {
             _response = r;
             _responseText = _response.ToString();
-            _requestLength = DateTime.Now - _submitStart;
+            _requestLength = DateTime.UtcNow - _submitStart;
             _status = $"{(isPartial ? "Partial" : "Full")}Response time: {_requestLength}";
         }
 

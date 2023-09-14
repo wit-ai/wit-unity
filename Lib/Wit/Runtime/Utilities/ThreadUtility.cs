@@ -99,7 +99,7 @@ namespace Meta.WitAi
                 #endif
 
                 // Wait while running
-                DateTime start = DateTime.Now;
+                DateTime start = DateTime.UtcNow;
                 while (IsRunning && !IsTimedOut(start))
                 {
                     yield return null;
@@ -126,7 +126,7 @@ namespace Meta.WitAi
                     return false;
                 }
                 // Timed out
-                return (DateTime.Now - start).TotalSeconds >= _timeout;
+                return (DateTime.UtcNow - start).TotalSeconds >= _timeout;
             }
 
             // Quit running thread
@@ -155,4 +155,3 @@ namespace Meta.WitAi
         }
     }
 }
-
