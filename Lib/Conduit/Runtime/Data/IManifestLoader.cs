@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Threading.Tasks;
+
 namespace Meta.Conduit
 {
     internal interface IManifestLoader
@@ -22,6 +24,20 @@ namespace Meta.Conduit
         /// </summary>
         /// <param name="manifestText">Plain text content of Manifest.</param>
         /// <returns>The loaded manifest object.</returns>
-        Manifest LoadManifestFromString(string manifestText);
+        Manifest LoadManifestFromJson(string manifestText);
+
+        /// <summary>
+        /// Loads the manifest from file and into a <see cref="Manifest"/> structure asynchronously.
+        /// </summary>
+        /// <param name="filePath">The path to the manifest file.</param>
+        /// <returns>The loaded manifest object.</returns>
+        Task<Manifest> LoadManifestAsync(string filePath);
+
+        /// <summary>
+        /// Loads the manifest from an input string into a <see cref="Manifest"/> structure asynchronously.
+        /// </summary>
+        /// <param name="manifestText">Plain text content of Manifest.</param>
+        /// <returns>The loaded manifest object.</returns>
+        Task<Manifest> LoadManifestFromJsonAsync(string manifestText);
     }
 }

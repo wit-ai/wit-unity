@@ -17,10 +17,15 @@ namespace Meta.Conduit
     internal interface IConduitDispatcher
     {
         /// <summary>
+        /// Whether the manifest file is loaded and ready to be used
+        /// </summary>
+        bool IsManifestReady { get; }
+
+        /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
         /// </summary>
         Manifest Manifest { get; }
-        
+
         /// <summary>
         /// Parses the manifest provided and registers its callbacks for dispatching.
         /// </summary>
@@ -39,7 +44,7 @@ namespace Meta.Conduit
         /// <returns>True if all invocations succeeded. False if at least one failed or no callbacks were found.</returns>
         bool InvokeAction(IParameterProvider parameterProvider, string actionId, bool relaxed, float confidence = 1f,
             bool partial = false);
-        
+
         /// <summary>
         /// True if all the error handlers are called and received the action ID and exception.
         /// </summary>

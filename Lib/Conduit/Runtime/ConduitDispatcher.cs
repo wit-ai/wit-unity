@@ -9,9 +9,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Meta.WitAi;
+using UnityEngine;
 
 namespace Meta.Conduit
 {
@@ -21,6 +22,13 @@ namespace Meta.Conduit
     /// </summary>
     internal class ConduitDispatcher : IConduitDispatcher
     {
+        /// <summary>
+        /// Whether the manifest file is loaded and ready to be used
+        /// </summary>
+        public bool IsManifestReady => Manifest != null;
+        // Used to ensure loading does not begin multiple times
+        private bool _loading = false;
+
         /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
         /// </summary>
@@ -59,14 +67,22 @@ namespace Meta.Conduit
         /// <param name="manifestFilePath">The path to the manifest file.</param>
         public void Initialize(string manifestFilePath)
         {
-            if (Manifest != null)
+            if (Manifest != null || _loading)
             {
                 return;
             }
+            Debug.Log("Init Async");
+            InitAsync(manifestFilePath);
+        }
+        protected async Task InitAsync(string manifestFilePath)
+        {
+            // Loading manifest
+            _loading = true;
+            Manifest = await _manifestLoader.LoadManifestAsync(manifestFilePath);
+            _loading = false;
 
-            Manifest = _manifestLoader.LoadManifest(manifestFilePath);
-
-            if (Manifest == null)
+            // Failed
+            if (!IsManifestReady)
             {
                 return;
             }
@@ -98,6 +114,12 @@ namespace Meta.Conduit
         public bool InvokeAction(IParameterProvider parameterProvider, string actionId, bool relaxed,
             float confidence = 1f, bool partial = false)
         {
+            if (!IsManifestReady)
+            {
+                VLog.W("Conduit Manifest is not yet loaded");
+                return false;
+            }
+
             if (!Manifest.ContainsAction(actionId))
             {
                 var hasBeenHandledWithoutConduit = Manifest.WitResponseMatcherIntents.Contains(actionId);
@@ -153,6 +175,10 @@ namespace Meta.Conduit
 
         public bool InvokeError(string actionId, Exception exception)
         {
+            if (!IsManifestReady)
+            {
+                return false;
+            }
             var contexts = Manifest.GetErrorHandlerContexts();
             foreach (var context in contexts)
             {
@@ -162,7 +188,6 @@ namespace Meta.Conduit
 
                 InvokeMethod(context, parameterProvider, true);
             }
-
             return true;
         }
 

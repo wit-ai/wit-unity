@@ -602,7 +602,7 @@ namespace Meta.WitAi.Windows
         {
             var appInfo = configuration.GetApplicationInfo();
             var manifestText = _conduitManifestGenerationManager.GenerateEmptyManifest(appInfo.name, appInfo.id);
-            var manifest = ManifestLoader.LoadManifestFromString(manifestText);
+            var manifest = ManifestLoader.LoadManifestFromJson(manifestText);
             configuration.ImportData(manifest, (result, error) => onComplete(result), true);
         }
 
