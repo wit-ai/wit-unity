@@ -17,6 +17,6 @@ namespace Meta.WitAi.Attributes
     /// </summary>
     public class HiddenTextAttribute : PropertyAttribute
     {
-        
+
     }
 }
