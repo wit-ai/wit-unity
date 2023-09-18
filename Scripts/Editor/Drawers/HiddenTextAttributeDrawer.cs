@@ -16,7 +16,7 @@ namespace Meta.WitAi.Drawers
     /// <summary>
     /// Hides text with a Password field unless the user clicks the visibility icon to toggle between password and text mode.
     ///
-    /// NOTE: Like any password inspector field, this is serialized in plain text. This is purely about visual obfuscation 
+    /// NOTE: Like any password inspector field, this is serialized in plain text. This is purely about visual obfuscation
     /// </summary>
     [CustomPropertyDrawer(typeof(HiddenTextAttribute))]
     public class HiddenTextAttributeDrawer : PropertyDrawer
@@ -53,5 +53,4 @@ namespace Meta.WitAi.Drawers
             }
         }
     }
-
 }

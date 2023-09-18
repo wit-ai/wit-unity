@@ -71,8 +71,9 @@ namespace Meta.Conduit
             {
                 return;
             }
-            Debug.Log("Init Async");
+            #pragma warning disable CS4014
             InitAsync(manifestFilePath);
+            #pragma warning restore CS4014
         }
         protected async Task InitAsync(string manifestFilePath)
         {
