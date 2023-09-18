@@ -47,6 +47,14 @@ namespace Meta.WitAi.TTS.Interfaces
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        void Speak(string textToSpeak, TTSSpeakerClipEvents playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
+        /// speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         void SpeakQueued(string textToSpeak, TTSSpeakerClipEvents playbackEvents);
 
         /// <summary>

@@ -107,5 +107,26 @@ namespace Meta.WitAi
 
         public const string ERROR_RESPONSE_EMPTY_TRANSCRIPTION = "empty-transcription";
         public const string ERROR_RESPONSE_TIMEOUT = "timeout";
+        
+        // Wit TTS Settings Nodes
+        /// <summary>
+        /// /synthesize parameter: The voice id to use when speaking via a voice preset.
+        /// </summary>
+        public static string TTS_VOICE = "voice";
+
+        /// <summary>
+        /// /synthesize parameter: Adjusts the pitch at which a TTS voice will speak
+        /// </summary>
+        public static string TTS_PITCH = "pitch";
+
+        /// <summary>
+        /// /synthesize parameter: Adjusts the speed at which a TTS voice will speak
+        /// </summary>,
+        public static string TTS_SPEED = "speed";
+
+        /// <summary>
+        /// /synthesize parameter: Adjusts the style used when speaking with a tts voice
+        /// </summary>
+        public static string TTS_STYLE = "style";
     }
 }
