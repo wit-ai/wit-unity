@@ -593,13 +593,13 @@ namespace Meta.WitAi.TTS
             call();
         }
         // Load begin
-        private void OnLoadBegin(TTSClipData clipData)
+        private void OnLoadBegin(TTSClipData clipData, bool download = false)
         {
             // Now preparing
             SetClipLoadState(clipData, TTSClipLoadState.Preparing);
 
             // Begin load
-            VLog.I(GetClipLog("Load Clip", clipData));
+            VLog.I(GetClipLog($"{(download ? "Download" : "Load")} Clip", clipData));
             Events?.OnClipCreated?.Invoke(clipData);
         }
         // Handle begin of disk cache streaming
@@ -885,17 +885,23 @@ namespace Meta.WitAi.TTS
         public TTSClipData DownloadToDiskCache(string textToSpeak, string clipID, TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string, string> onDownloadComplete = null)
         {
+            // Add delegates if needed
+            AddDelegates();
+
+            // Generate clip & perform load callback
             TTSClipData clipData = CreateClipData(textToSpeak, clipID, voiceSettings, diskCacheSettings);
+            OnLoadBegin(clipData, true);
+
+            // Handle download
             DownloadToDiskCache(clipData, onDownloadComplete);
+
+            // Return clip data for tracking
             return clipData;
         }
 
         // Performs download to disk cache
         protected virtual void DownloadToDiskCache(TTSClipData clipDataParam, Action<TTSClipData, string, string> onDownloadComplete)
         {
-            // Add delegates if needed
-            AddDelegates();
-
             // Check if cached to disk & log
             string downloadPath = DiskCacheHandler.GetDiskCachePath(clipDataParam);
             DiskCacheHandler.CheckCachedToDisk(clipDataParam, (clipDataResult, found) =>
