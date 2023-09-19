@@ -366,6 +366,7 @@ namespace Meta.WitAi.TTS.Integrations
         public void SetVoiceSettings(TTSWitVoiceSettings[] newVoiceSettings)
         {
             _presetVoiceSettings = newVoiceSettings;
+            UnityEditor.EditorUtility.SetDirty(this);
         }
         #endif
 
