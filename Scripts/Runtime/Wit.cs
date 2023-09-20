@@ -41,7 +41,7 @@ namespace Meta.WitAi
 
         #region Voice Service Methods
 
-        protected override string GetSendError()
+        public override string GetSendError()
         {
             if (!RuntimeConfiguration?.witConfiguration)
             {
@@ -65,23 +65,20 @@ namespace Meta.WitAi
 
         public override VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            VoiceServiceRequest request = witService.Activate(text, requestOptions, requestEvents);
-            OnTextRequestCreated(request);
-            return request;
+            SetupRequestParameters(ref requestOptions, ref requestEvents);
+            return witService.Activate(text, requestOptions, requestEvents);
         }
 
         public override VoiceServiceRequest Activate(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            VoiceServiceRequest request = witService.Activate(requestOptions, requestEvents);
-            OnAudioRequestCreated(request);
-            return request;
+            SetupRequestParameters(ref requestOptions, ref requestEvents);
+            return witService.Activate(requestOptions, requestEvents);
         }
 
         public override VoiceServiceRequest ActivateImmediately(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            VoiceServiceRequest request = witService.ActivateImmediately(requestOptions, requestEvents);
-            OnAudioRequestCreated(request);
-            return request;
+            SetupRequestParameters(ref requestOptions, ref requestEvents);
+            return witService.ActivateImmediately(requestOptions, requestEvents);
         }
 
         public override void Deactivate()

@@ -218,6 +218,10 @@ namespace Meta.WitAi.Requests
             {
                 Results = new VoiceServiceRequestResults();
             }
+            if (newData != null)
+            {
+                newData[WitConstants.HEADER_REQUEST_ID] = Options?.RequestId;
+            }
             Results.ResponseData = newData;
         }
 

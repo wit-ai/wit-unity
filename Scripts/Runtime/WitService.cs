@@ -115,32 +115,20 @@ namespace Meta.WitAi
             {
                 if (null != _activeTranscriptionProvider)
                 {
-                    _activeTranscriptionProvider.OnFullTranscription.RemoveListener(
-                        OnFullTranscription);
                     _activeTranscriptionProvider.OnPartialTranscription.RemoveListener(
                         OnPartialTranscription);
                     _activeTranscriptionProvider.OnMicLevelChanged.RemoveListener(
                         OnTranscriptionMicLevelChanged);
-                    _activeTranscriptionProvider.OnStartListening.RemoveListener(
-                        OnMicStartListening);
-                    _activeTranscriptionProvider.OnStoppedListening.RemoveListener(
-                        OnMicStoppedListening);
                 }
 
                 _activeTranscriptionProvider = value;
 
                 if (null != _activeTranscriptionProvider)
                 {
-                    _activeTranscriptionProvider.OnFullTranscription.AddListener(
-                        OnFullTranscription);
                     _activeTranscriptionProvider.OnPartialTranscription.AddListener(
                         OnPartialTranscription);
                     _activeTranscriptionProvider.OnMicLevelChanged.AddListener(
                         OnTranscriptionMicLevelChanged);
-                    _activeTranscriptionProvider.OnStartListening.AddListener(
-                        OnMicStartListening);
-                    _activeTranscriptionProvider.OnStoppedListening.AddListener(
-                        OnMicStoppedListening);
                 }
             }
         }
@@ -271,7 +259,6 @@ namespace Meta.WitAi
             {
                 requestOptions = new WitRequestOptions();
             }
-            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
 
             // Now active
             _isActive = true;
@@ -365,15 +352,10 @@ namespace Meta.WitAi
 
             // Add events
             _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
-            _recordingRequest.Events.OnFullTranscription.AddListener(OnFullTranscription);
-            _recordingRequest.Events.OnPartialResponse.AddListener(HandlePartialResult);
             _recordingRequest.Events.OnCancel.AddListener(HandleResult);
             _recordingRequest.Events.OnFailed.AddListener(HandleResult);
             _recordingRequest.Events.OnSuccess.AddListener(HandleResult);
             _recordingRequest.Events.OnComplete.AddListener(HandleComplete);
-
-            // Call service events
-            VoiceEvents.OnRequestInitialized?.Invoke(_recordingRequest);
         }
         /// <summary>
         /// Execute a wit request immediately
@@ -390,8 +372,6 @@ namespace Meta.WitAi
             newRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
                 newRequest.AudioEncoding);
             #pragma warning disable CS0618
-            VoiceEvents.OnRequestCreated?.Invoke(_recordingRequest);
-            VoiceEvents.OnSend?.Invoke(_recordingRequest);
             _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             newRequest.Send();
         }
@@ -417,8 +397,8 @@ namespace Meta.WitAi
             {
                 requestOptions = new WitRequestOptions();
             }
+            // Set request option text
             requestOptions.Text = text;
-            VoiceEvents.OnRequestOptionSetup?.Invoke(requestOptions);
 
             // Generate request
             VoiceServiceRequest request = Configuration.CreateMessageRequest(requestOptions, requestEvents, _dynamicEntityProviders);
@@ -427,12 +407,6 @@ namespace Meta.WitAi
             request.Events.OnSuccess.AddListener(HandleResult);
             request.Events.OnComplete.AddListener(HandleComplete);
             _transmitRequests.Add(request);
-
-            // Call on create delegates
-            VoiceEvents?.OnRequestInitialized?.Invoke(request);
-            #pragma warning disable CS0618
-            VoiceEvents?.OnRequestCreated?.Invoke(null);
-            VoiceEvents?.OnSend?.Invoke(request);
 
             // Send & return
             request.Send();
@@ -478,16 +452,6 @@ namespace Meta.WitAi
 
             // Start recording
             AudioBuffer.Instance.StartRecording(this);
-        }
-        // Callback for mic start
-        private void OnMicStartListening()
-        {
-            VoiceEvents?.OnStartListening?.Invoke();
-        }
-        // Callback for mic end
-        private void OnMicStoppedListening()
-        {
-            VoiceEvents?.OnStoppedListening?.Invoke();
         }
         // Callback for mic byte data ready
         private void OnByteDataReady(byte[] buffer, int offset, int length)
@@ -713,87 +677,38 @@ namespace Meta.WitAi
         }
         #endregion
 
-        #region TRANSCRIPTION
+        #region RESPONSE
+        // Tracks transcription
         private void OnPartialTranscription(string transcription)
         {
             _receivedTranscription = true;
             _lastWordTime = _time;
-            VoiceEvents?.OnPartialTranscription.Invoke(transcription);
         }
-        private void OnFullTranscription(string transcription)
-        {
-            VoiceEvents?.OnFullTranscription?.Invoke(transcription);
-        }
-        #endregion
 
-        #region RESPONSE
-        /// <summary>
-        /// Main thread call to handle partial response callbacks
-        /// </summary>
-        private void HandlePartialResult(WitResponseNode response)
-        {
-            if (response != null)
-            {
-                VoiceEvents?.OnPartialResponse?.Invoke(response);
-            }
-        }
-        /// <summary>
-        /// Main thread call to handle result callbacks
-        /// </summary>
+        // If result is obtained before transcription
         private void HandleResult(VoiceServiceRequest request)
         {
-            // If result is obtained before transcription
             if (request == _recordingRequest)
             {
                 DeactivateRequest(null, false);
             }
-
-            // Handle Success
-            if (request.State == VoiceRequestState.Successful)
-            {
-                VLog.I("Request Success");
-                VoiceEvents?.OnResponse?.Invoke(request.Results.ResponseData);
-                VoiceEvents?.OnRequestCompleted?.Invoke();
-            }
-            // Handle Cancellation
-            else if (request.State == VoiceRequestState.Canceled)
-            {
-                VLog.I($"Request Canceled\nReason: {request.Results.Message}");
-                VoiceEvents?.OnCanceled?.Invoke(request.Results.Message);
-                if (!string.Equals(request.Results.Message, WitConstants.CANCEL_MESSAGE_PRE_SEND))
-                {
-                    VoiceEvents?.OnAborted?.Invoke();
-                }
-            }
-            // Handle Failure
-            else if (request.State == VoiceRequestState.Failed)
-            {
-                VLog.D($"Request Failed\nError: {request.Results.Message}");
-                VoiceEvents?.OnError?.Invoke("HTTP Error " + request.Results.StatusCode, request.Results.Message);
-                VoiceEvents?.OnRequestCompleted?.Invoke();
-            }
-            // Remove from transmit list, missing if aborted
-            if ( _transmitRequests.Contains(request))
-            {
-                _transmitRequests.Remove(request);
-            }
         }
-        /// <summary>
-        /// Handle request completion
-        /// </summary>
+
+        // Removes service events
         private void HandleComplete(VoiceServiceRequest request)
         {
             // Remove all event listeners
             request.Events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
-            request.Events.OnFullTranscription.RemoveListener(OnFullTranscription);
-            request.Events.OnPartialResponse.RemoveListener(HandlePartialResult);
             request.Events.OnCancel.RemoveListener(HandleResult);
             request.Events.OnFailed.RemoveListener(HandleResult);
             request.Events.OnSuccess.RemoveListener(HandleResult);
             request.Events.OnComplete.RemoveListener(HandleComplete);
 
-            // Complete
-            VoiceEvents?.OnComplete?.Invoke(request);
+            // Remove from transmit list, missing if aborted
+            if ( _transmitRequests.Contains(request))
+            {
+                _transmitRequests.Remove(request);
+            }
         }
         #endregion
     }
