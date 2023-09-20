@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Meta.WitAi
 {
-    public class Wit : VoiceService, IWitRuntimeConfigProvider
+    public class Wit : VoiceService, IWitRuntimeConfigProvider, IWitRuntimeConfigSetter
     {
         [SerializeField] private WitRuntimeConfiguration witRuntimeConfiguration;
 

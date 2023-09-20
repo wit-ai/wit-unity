@@ -803,6 +803,11 @@ namespace Meta.WitAi
         WitRuntimeConfiguration RuntimeConfiguration { get; }
     }
 
+    public interface IWitRuntimeConfigSetter
+    {
+        WitRuntimeConfiguration RuntimeConfiguration { set; }
+    }
+
     public interface IVoiceEventProvider
     {
         VoiceEvents VoiceEvents { get; }
