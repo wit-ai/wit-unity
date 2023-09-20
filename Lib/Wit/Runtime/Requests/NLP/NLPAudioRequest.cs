@@ -70,9 +70,6 @@ namespace Meta.Voice
                 return;
             }
 
-            // Add response data
-            if (null != responseData) responseData[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
-
             // Apply response data
             ApplyResultResponseData(responseData);
 
@@ -107,8 +104,6 @@ namespace Meta.Voice
                 return;
             }
             _isFinalized = true;
-
-            if (null != responseData) responseData[WitConstants.HEADER_REQUEST_ID] = Options.RequestId;
 
             // Send partial data if not previously sent
             if (responseData != null && responseData != ResponseData)

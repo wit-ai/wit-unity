@@ -10,6 +10,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using UnityEngine;
 
 namespace Meta.Conduit
@@ -57,7 +58,7 @@ namespace Meta.Conduit
             var jsonRequest = Resources.LoadAsync<TextAsset>(manifestPath);
             while (!jsonRequest.isDone)
             {
-                await Task.Delay(10);
+                await Task.Delay(VRequest.ASYNC_DELAY_MS);
             }
 
             // Success

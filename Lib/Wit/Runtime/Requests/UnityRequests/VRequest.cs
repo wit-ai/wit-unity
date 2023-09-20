@@ -54,6 +54,11 @@ namespace Meta.WitAi.Requests
         // Currently transmitting requests
         private static int _requestCount = 0;
 
+        /// <summary>
+        /// Wait delay for async methods
+        /// </summary>
+        public const int ASYNC_DELAY_MS = 10;
+
         // Request progress delegate
         public delegate void RequestProgressDelegate(float progress);
         // Request first response
@@ -482,7 +487,7 @@ namespace Meta.WitAi.Requests
             // Continue while request exists & is not complete
             while (!IsRequestComplete())
             {
-                await Task.Delay(100);
+                await Task.Delay(ASYNC_DELAY_MS);
                 Update();
             }
 
@@ -969,6 +974,11 @@ namespace Meta.WitAi.Requests
             // Set request header for json
             unityRequest.SetRequestHeader("Content-Type", "application/json");
 
+            // Partial data if possible
+            string partialJson = null;
+            bool partialDecoding = false;
+            RequestCompleteResponse<TData> partialResponse = new RequestCompleteResponse<TData>();
+
             // Set partial download handler
             if (onPartial != null)
             {
@@ -980,9 +990,16 @@ namespace Meta.WitAi.Requests
                 {
                     unityRequest.downloadHandler = new TextStreamHandler((jsonText) =>
                         {
-                            #pragma warning disable CS4014
                             // Decode async and then call partial
-                            DecodePartialJsonAsync(jsonText, onPartial);
+                            #pragma warning disable CS4014
+                            partialJson = jsonText;
+                            partialDecoding = true;
+                            DecodePartialJsonAsync<TData>(jsonText, (response) =>
+                            {
+                                onPartial?.Invoke(response.Value, response.Error);
+                                partialResponse = response;
+                                partialDecoding = false;
+                            });
                             #pragma warning restore CS4014
                         },
                         WitConstants.ENDPOINT_JSON_DELIMITER);
@@ -996,7 +1013,19 @@ namespace Meta.WitAi.Requests
                 return new RequestCompleteResponse<TData>(default(TData), textResponse.Error);
             }
 
-            // Return decoded json
+            // Wait for partial decode to complete
+            while (partialDecoding)
+            {
+                await Task.Delay(ASYNC_DELAY_MS);
+            }
+
+            // Return previously decoded json
+            if (string.Equals(partialJson, textResponse.Value))
+            {
+                return partialResponse;
+            }
+
+            // Decode new text
             return await DecodeJsonAsync<TData>(textResponse.Value);
         }
         // Decodes json & returns value
@@ -1010,10 +1039,10 @@ namespace Meta.WitAi.Requests
             return new RequestCompleteResponse<TData>(result);
         }
         // Decodes json & performs partial callback
-        private async Task DecodePartialJsonAsync<TData>(string jsonText, RequestCompleteDelegate<TData> onPartial)
+        private async Task DecodePartialJsonAsync<TData>(string jsonText, Action<RequestCompleteResponse<TData>> onPartial)
         {
             var result = await DecodeJsonAsync<TData>(jsonText);
-            onPartial?.Invoke(result.Value, result.Error);
+            onPartial?.Invoke(result);
         }
 
         /// <summary>
@@ -1379,7 +1408,7 @@ namespace Meta.WitAi.Requests
             // Wait for stream to be ready or error
             while (!IsStreamReady && string.IsNullOrEmpty(results.Error))
             {
-                await Task.Delay(100);
+                await Task.Delay(ASYNC_DELAY_MS);
             }
 
             // Return results
