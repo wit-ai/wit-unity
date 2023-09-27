@@ -1,8 +1,9 @@
 {
     "name": "Meta.Voice.Samples.TTSVoices",
+    "rootNamespace": "",
     "references": [
-        "GUID:8bbcefc153e1f1b4a98680670797dd16",
-        "GUID:1c28d8b71ced07540b7c271537363cc6"
+        "Meta.WitAi.TTS",
+        "Meta.WitAi.Lib"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
