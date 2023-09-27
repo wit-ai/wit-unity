@@ -1,0 +1,21 @@
+{
+    "name": "Meta.Wit.Overrides",
+    "rootNamespace": "",
+    "references": [
+        "Meta.WitAi.Lib",
+        "Meta.WitAi",
+        "Meta.WitAi.Editor",
+        "Meta.WitAi.TTS.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
