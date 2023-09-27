@@ -9,10 +9,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
 using Meta.WitAi;
-using UnityEngine;
 
 namespace Meta.Conduit
 {
@@ -22,13 +24,6 @@ namespace Meta.Conduit
     /// </summary>
     internal class ConduitDispatcher : IConduitDispatcher
     {
-        /// <summary>
-        /// Whether the manifest file is loaded and ready to be used
-        /// </summary>
-        public bool IsManifestReady => Manifest != null;
-        // Used to ensure loading does not begin multiple times
-        private bool _loading = false;
-
         /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
         /// </summary>
@@ -43,6 +38,10 @@ namespace Meta.Conduit
         /// Resolves instances (objects) based on their type.
         /// </summary>
         private readonly IInstanceResolver _instanceResolver;
+
+        private bool _isInitialized = false;
+
+        private string _manifestFilePath;
 
         /// <summary>
         /// Maps internal parameter names to fully qualified parameter names (roles/slots).
@@ -65,29 +64,22 @@ namespace Meta.Conduit
         /// Parses the manifest provided and registers its callbacks for dispatching.
         /// </summary>
         /// <param name="manifestFilePath">The path to the manifest file.</param>
-        public void Initialize(string manifestFilePath)
+        public async Task Initialize(string manifestFilePath)
         {
-            if (Manifest != null || _loading)
+            _manifestFilePath = manifestFilePath;
+            
+            if (Manifest != null)
             {
                 return;
             }
-            #pragma warning disable CS4014
-            InitAsync(manifestFilePath);
-            #pragma warning restore CS4014
-        }
-        protected async Task InitAsync(string manifestFilePath)
-        {
-            // Loading manifest
-            _loading = true;
+
             Manifest = await _manifestLoader.LoadManifestAsync(manifestFilePath);
-            _loading = false;
 
-            // Failed
-            if (!IsManifestReady)
+            if (Manifest == null)
             {
                 return;
             }
-
+            
             // Map fully qualified role names to internal parameters.
             foreach (var action in Manifest.Actions)
             {
@@ -99,6 +91,8 @@ namespace Meta.Conduit
                     }
                 }
             }
+            
+            _isInitialized = true;
         }
 
         /// <summary>
@@ -115,9 +109,9 @@ namespace Meta.Conduit
         public bool InvokeAction(IParameterProvider parameterProvider, string actionId, bool relaxed,
             float confidence = 1f, bool partial = false)
         {
-            if (!IsManifestReady)
+            if (!_isInitialized)
             {
-                VLog.W("Conduit Manifest is not yet loaded");
+                VLog.W("Conduit Manifest is not yet initialized");
                 return false;
             }
 
@@ -176,10 +170,12 @@ namespace Meta.Conduit
 
         public bool InvokeError(string actionId, Exception exception)
         {
-            if (!IsManifestReady)
+            if (!_isInitialized)
             {
+                VLog.E($"Attempting to invoke error {actionId} ({exception}) with no initialized manifest.");
                 return false;
             }
+            
             var contexts = Manifest.GetErrorHandlerContexts();
             foreach (var context in contexts)
             {
@@ -189,6 +185,7 @@ namespace Meta.Conduit
 
                 InvokeMethod(context, parameterProvider, true);
             }
+
             return true;
         }
 

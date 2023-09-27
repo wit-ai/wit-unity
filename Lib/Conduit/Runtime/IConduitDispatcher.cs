@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 
 namespace Meta.Conduit
 {
@@ -17,11 +18,6 @@ namespace Meta.Conduit
     internal interface IConduitDispatcher
     {
         /// <summary>
-        /// Whether the manifest file is loaded and ready to be used
-        /// </summary>
-        bool IsManifestReady { get; }
-
-        /// <summary>
         /// The Conduit manifest which captures the structure of the voice-enabled methods.
         /// </summary>
         Manifest Manifest { get; }
@@ -30,7 +26,7 @@ namespace Meta.Conduit
         /// Parses the manifest provided and registers its callbacks for dispatching.
         /// </summary>
         /// <param name="manifestFilePath">The path to the manifest file.</param>
-        void Initialize(string manifestFilePath);
+        Task Initialize(string manifestFilePath);
 
         /// <summary>
         /// Invokes the method matching the specified action ID.

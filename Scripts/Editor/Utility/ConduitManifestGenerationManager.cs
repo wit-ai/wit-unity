@@ -102,10 +102,16 @@ namespace Meta.WitAi.Windows
             return ConfigurationToManagerMap[configurationKey];
         }
 
-        static ConduitManifestGenerationManager()
+        /// <summary>
+        /// This will execute BEFORE the playmode changed event, so allows us to generate before any logic runs.
+        /// </summary>
+        /// <param name="options">The playmode options.</param>
+        [InitializeOnEnterPlayMode]
+        static void OnEnterPlaymodeInEditor(EnterPlayModeOptions options)
         {
-            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            OnEnteredPlayMode();
         }
+
 
         /// <summary>
         /// This default constructor is intended to be used by Unity only. Do not call it directly.
@@ -138,12 +144,8 @@ namespace Meta.WitAi.Windows
             _codeChanged = true;
         }
 
-        private static void OnPlayModeChanged(PlayModeStateChange state)
+        private static void OnEnteredPlayMode()
         {
-            if (state != PlayModeStateChange.EnteredPlayMode)
-            {
-                return;
-            }
             if (_codeChanged)
             {
                 GenerateAllManifests();
