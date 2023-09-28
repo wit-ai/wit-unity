@@ -29,6 +29,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -52,6 +53,25 @@ MonoBehaviour:
     OnClipUnloaded:
       m_PersistentCalls:
         m_Calls: []
+    WebRequest:
+      OnRequestBegin:
+        m_PersistentCalls:
+          m_Calls: []
+      OnRequestCancel:
+        m_PersistentCalls:
+          m_Calls: []
+      OnRequestError:
+        m_PersistentCalls:
+          m_Calls: []
+      OnRequestFirstResponse:
+        m_PersistentCalls:
+          m_Calls: []
+      OnRequestReady:
+        m_PersistentCalls:
+          m_Calls: []
+      OnRequestComplete:
+        m_PersistentCalls:
+          m_Calls: []
     Stream:
       OnStreamBegin:
         m_PersistentCalls:
@@ -88,9 +108,6 @@ MonoBehaviour:
     configuration: {fileID: 11400000, guid: 6329e25e1005d4845b580a523e588979, type: 2}
     audioType: 0
     audioStream: 1
-    audioStreamReadyDuration: 0.1
-    audioStreamChunkLength: 5
-    audioStreamPreloadCount: 3
   _presetVoiceSettings:
   - SettingsId: CAEL
     PrependedText: 
@@ -194,6 +211,13 @@ MonoBehaviour:
     PrependedText: 
     AppendedText: 
     voice: Rosie
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: HAROLD
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: Prospector
     style: default
     speed: 100
     pitch: 100
