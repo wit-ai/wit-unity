@@ -96,9 +96,7 @@ namespace Meta.WitAi.Windows
             {
                 ConfigurationToManagerMap[configurationKey] = new ConduitManifestGenerationManager(configuration);
             }
-            
-            ConfigurationToManagerMap[configurationKey].GenerateManifestIfNeeded(configuration);
-            
+
             return ConfigurationToManagerMap[configurationKey];
         }
 
