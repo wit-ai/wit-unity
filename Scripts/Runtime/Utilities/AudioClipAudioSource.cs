@@ -40,31 +40,6 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         }
     }
 
-    private void SendSample(float[] sample)
-    {
-        var len = Math.Min(_audioQueue.Dequeue(), activeClip.Length - activeClipIndex);
-
-        try
-        {
-            VLog.D("Sending length: " + len);
-            activeClipBuffer = new float[len];
-            Array.Copy(activeClip, activeClipIndex, activeClipBuffer, 0, len);
-            activeClipIndex += len;
-        }
-        catch (ArgumentException e)
-        {
-            VLog.D(e);
-        }
-
-        var max = float.MinValue;
-        foreach (var f in activeClipBuffer)
-        {
-            max = Mathf.Max(f, max);
-        }
-
-        OnSampleReady?.Invoke(activeClipBuffer.Length, activeClipBuffer, max);
-    }
-
     public event Action OnStartRecording;
     public event Action OnStartRecordingFailed;
     public event Action<int, float[], float> OnSampleReady;
@@ -77,6 +52,11 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             return;
         }
         _isRecording = true;
+        PlayNextClip();
+    }
+
+    private void PlayNextClip()
+    {
         if (clipIndex >= _audioClips.Count && _loopRequests)
         {
             clipIndex = 0;
@@ -118,8 +98,17 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             OnSampleReady?.Invoke(data.Length, data, max);
             yield return null;
         }
-        StopRecording();
-        clipIndex++;
+
+        if (_loopRequests)
+        {
+            StopRecording();
+            PlayNextClip();
+        }
+        else
+        {
+            StopRecording();
+            clipIndex++;
+        }
     }
 
     public void StopRecording()
