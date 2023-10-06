@@ -1219,7 +1219,19 @@ namespace Meta.WitAi.Requests
             }
         }
 
-        // Get audio decoder type based on audio type
+        /// <summary>
+        /// Get audio extension from audio type
+        /// </summary>
+        /// <param name="audioType">The specified audio type</param>
+        /// <param name="textStream">Whether data includes text</param>
+        /// <returns>Audio extension without period.</returns>
+        public static string GetAudioExtension(AudioType audioType, bool textStream) =>
+            GetAudioExtension(audioType) + (textStream ? "v" : "");
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="audioType">The specified audio type</param>
         public static Type GetAudioDecoderType(AudioType audioType)
         {
             switch (audioType)
@@ -1232,22 +1244,6 @@ namespace Meta.WitAi.Requests
                     return typeof(AudioDecoderMp3);
             }
             // Not handled
-            return null;
-        }
-
-        /// <summary>
-        /// Instantiate an audio decoder based on the audio type to allow for
-        /// complex streaming scenarios
-        /// </summary>
-        /// <param name="audioType">Audio decoder type allowed</param>
-        /// <returns>Instantiated audio decoder</returns>
-        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType)
-        {
-            Type decoderType = GetAudioDecoderType(audioType);
-            if (decoderType != null)
-            {
-                return Activator.CreateInstance(decoderType) as IAudioDecoder;
-            }
             return null;
         }
 
@@ -1277,21 +1273,48 @@ namespace Meta.WitAi.Requests
             CanUnityStreamAudio(audioType) || CanDecodeAudio(audioType);
 
         /// <summary>
+        /// Instantiate an audio decoder based on the audio type to allow for
+        /// complex streaming scenarios
+        /// </summary>
+        /// <param name="audioType">Audio decoder type allowed</param>
+        /// <param name="textStream">Whether or not text will be returned within the stream</param>
+        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <returns>Instantiated audio decoder</returns>
+        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType, bool textStream = false,
+            AudioTextDecodeDelegate onTextDecoded = null)
+        {
+            Type decoderType = GetAudioDecoderType(audioType);
+            if (decoderType == null)
+            {
+                return null;
+            }
+            IAudioDecoder audioDecoder =  Activator.CreateInstance(decoderType) as IAudioDecoder;
+            if (textStream)
+            {
+                return new AudioDecoderText(audioDecoder, onTextDecoded);
+            }
+            return audioDecoder;
+        }
+
+        /// <summary>
         /// Request audio clip with audio data, uri & completion delegate
         /// </summary>
         /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="uri">The url to be called</param>
         /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
+        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
+        /// <param name="audioStream">Whether or not audio should be streamed</param>
+        /// <param name="textStream">Whether or not text will be returned within the stream</param>
+        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             Uri uri,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
-            AudioType audioType, bool audioStream) =>
+            AudioType audioType, bool audioStream,
+            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null) =>
             RequestAudioStream(clipStream,
                 new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
                 onClipStreamReady,
-                audioType, audioStream);
+                audioType, audioStream, textStream, onTextDecoded);
 
         /// <summary>
         /// Request audio clip with audio data, web request & completion delegate
@@ -1301,13 +1324,16 @@ namespace Meta.WitAi.Requests
         /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
+        /// <param name="textStream">Whether or not text will be returned within the stream</param>
+        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             UnityWebRequest unityRequest,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
-            AudioType audioType, bool audioStream)
+            AudioType audioType, bool audioStream,
+            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null)
         {
             // Setup failed
-            string errors = SetupAudioRequest(clipStream, audioType, audioStream, unityRequest);
+            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onTextDecoded);
             if (!string.IsNullOrEmpty(errors))
             {
                 onClipStreamReady?.Invoke(clipStream, errors);
@@ -1320,7 +1346,7 @@ namespace Meta.WitAi.Requests
                 // Finalize audio request stream
                 if (string.IsNullOrEmpty(error))
                 {
-                    error = FinalizeAudioRequest(ref clipStream, audioType, request);
+                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onTextDecoded);
                 }
 
                 // Unload clip stream if error
@@ -1345,34 +1371,40 @@ namespace Meta.WitAi.Requests
         /// Request audio clip with audio data, uri & completion delegate
         /// </summary>
         /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
+        /// <param name="uri">The url to be called</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="uri">The url to be called</param>
+        /// <param name="textStream">Whether or not text will be returned within the stream</param>
+        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
         /// <returns>Returns the resultant audio clip stream</returns>
         public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
+            Uri uri,
             AudioType audioType, bool audioStream,
-            Uri uri) =>
-            await RequestAudioStreamAsync(clipStream, audioType, audioStream,
-                new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET));
+            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null) =>
+            await RequestAudioStreamAsync(clipStream,
+                new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
+                audioType, audioStream, textStream, onTextDecoded);
 
         /// <summary>
         /// Request audio clip with audio data, web request & completion delegate
         /// </summary>
         /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
+        /// <param name="unityRequest">The unity request to add a download handler to</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
+        /// <param name="textStream">Whether or not text will be returned within the stream</param>
+        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
         /// <returns>Returns the resultant audio clip stream</returns>
         public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
-            AudioType audioType, bool audioStream,
-            UnityWebRequest unityRequest)
+            UnityWebRequest unityRequest, AudioType audioType, bool audioStream, bool textStream = false,
+            AudioTextDecodeDelegate onTextDecoded = null)
         {
             // Results
             RequestCompleteResponse<IAudioClipStream> results = new RequestCompleteResponse<IAudioClipStream>();
             results.Value = clipStream;
 
             // Setup failed
-            string errors = SetupAudioRequest(clipStream, audioType, audioStream, unityRequest);
+            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onTextDecoded);
             if (!string.IsNullOrEmpty(errors))
             {
                 results.Error = errors;
@@ -1385,7 +1417,7 @@ namespace Meta.WitAi.Requests
                 // Finalize audio request stream
                 if (string.IsNullOrEmpty(error))
                 {
-                    error = FinalizeAudioRequest(ref clipStream, audioType, request);
+                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onTextDecoded);
                     results.Value = clipStream;
                 }
 
@@ -1417,8 +1449,9 @@ namespace Meta.WitAi.Requests
 
         // Sets up audio request & returns any errors encountered during setup process
         private string SetupAudioRequest(IAudioClipStream clipStream,
+            UnityWebRequest unityRequest,
             AudioType audioType, bool audioStream,
-            UnityWebRequest unityRequest)
+            bool textStream, AudioTextDecodeDelegate onTextDecoded)
         {
             // Add audio download handler
             if (unityRequest.downloadHandler == null)
@@ -1438,7 +1471,7 @@ namespace Meta.WitAi.Requests
                     }
 
                     // Use custom audio stream handler
-                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType));
+                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType, textStream, onTextDecoded));
                 }
                 // Use audio clip download handler
                 else
@@ -1458,7 +1491,8 @@ namespace Meta.WitAi.Requests
         }
 
         // Called on audio ready to be decoded
-        private string FinalizeAudioRequest(ref IAudioClipStream clipStream, AudioType audioType, UnityWebRequest request)
+        private string FinalizeAudioRequest(ref IAudioClipStream clipStream, UnityWebRequest request, AudioType audioType,
+            bool textStream, AudioTextDecodeDelegate onTextDecoded)
         {
             // Update stream if applicable
             try
@@ -1483,7 +1517,7 @@ namespace Meta.WitAi.Requests
                 else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
                 {
                     byte[] data = rawDownloader.data;
-                    float[] samples = GetAudioDecoder(audioType).Decode(data, 0, data.Length);
+                    float[] samples = GetAudioDecoder(audioType, textStream, onTextDecoded).Decode(data, 0, data.Length);
                     clipStream.SetTotalSamples(samples.Length);
                     clipStream.AddSamples(samples);
                 }

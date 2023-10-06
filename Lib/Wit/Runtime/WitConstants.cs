@@ -44,6 +44,7 @@ namespace Meta.WitAi
         // TTS Endpoint
         public const string ENDPOINT_TTS = "synthesize";
         public const string ENDPOINT_TTS_PARAM = "q";
+        public const string ENDPOINT_TTS_EVENTS = "viseme";
         public const string ENDPOINT_TTS_NO_CLIP = "No tts clip provided";
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;

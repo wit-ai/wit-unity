@@ -14,6 +14,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.Voice.Audio;
+using Meta.Voice.Audio.Decoding;
 using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -46,6 +47,11 @@ namespace Meta.WitAi.Requests
         // Whether audio should stream or not
         public bool Stream { get; private set; }
 
+        // Whether audio data should include events
+        public bool UseTextStream { get; }
+        // Callback when events are decoded within audio stream
+        public AudioTextDecodeDelegate OnTextDecoded { get; }
+
         /// <summary>
         /// Constructor for wit based text-to-speech VRequests
         /// </summary>
@@ -57,16 +63,21 @@ namespace Meta.WitAi.Requests
         /// <param name="audioStream">Whether the audio should be played while streaming or should wait until completion.</param>
         /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
         /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
+        /// <param name="useEvents">Whether or not events should be requested with this audio request</param>
+        /// <param name="onTextDecoded">Whether or not events should be requested with this audio request</param>
         public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string textToSpeak,
             Dictionary<string, string> ttsData, TTSWitAudioType audioFileType, bool audioStream = false,
             RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null)
+            RequestFirstResponseDelegate onFirstResponse = null,
+            bool useTextStream = false, AudioTextDecodeDelegate onTextDecoded = null)
             : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
         {
             TextToSpeak = textToSpeak;
             TtsData = ttsData;
             FileType = audioFileType;
             Stream = audioStream;
+            UseTextStream = useTextStream;
+            OnTextDecoded = onTextDecoded;
             Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
         }
 
@@ -146,7 +157,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, TtsData);
+            byte[] bytes = EncodePostData(TextToSpeak, UseTextStream, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -155,10 +166,10 @@ namespace Meta.WitAi.Requests
             }
 
             // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+            UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform an audio stream request
-            if (!RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream))
+            if (!RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream, UseTextStream, OnTextDecoded))
             {
                 return "Failed to start audio stream";
             }
@@ -184,7 +195,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Async encode
-            var bytes = await EncodePostBytesAsync(TextToSpeak, TtsData);
+            var bytes = await EncodePostBytesAsync(TextToSpeak, UseTextStream, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -192,10 +203,10 @@ namespace Meta.WitAi.Requests
             }
 
             // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+            UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform request async
-            return await RequestAudioStreamAsync(clipStream, GetAudioType(FileType), Stream, unityRequest);
+            return await RequestAudioStreamAsync(clipStream, unityRequest, GetAudioType(FileType), Stream, UseTextStream, OnTextDecoded);
         }
 
         /// <summary>
@@ -218,7 +229,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, TtsData);
+            byte[] bytes = EncodePostData(TextToSpeak, UseTextStream, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -227,7 +238,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+            UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform an audio download request
             if (!RequestFileDownload(downloadPath, unityRequest, onComplete))
@@ -254,37 +265,38 @@ namespace Meta.WitAi.Requests
             }
 
             // Async encode
-            byte[] bytes = await EncodePostBytesAsync(TextToSpeak, TtsData);
+            byte[] bytes = await EncodePostBytesAsync(TextToSpeak, UseTextStream, TtsData);
             if (bytes == null)
             {
                 return WitConstants.ERROR_TTS_DECODE;
             }
 
             // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(FileType, bytes);
+            UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform request async
             return await RequestFileDownloadAsync(downloadPath, unityRequest);
         }
 
         // Encode post bytes async
-        private async Task<byte[]> EncodePostBytesAsync(string textToSpeak, Dictionary<string, string> ttsData)
+        private async Task<byte[]> EncodePostBytesAsync(string textToSpeak, bool useEvents, Dictionary<string, string> ttsData)
         {
             byte[] results = null;
-            await Task.Run(() => results = EncodePostData(textToSpeak, ttsData));
+            await Task.Run(() => results = EncodePostData(textToSpeak, useEvents, ttsData));
             return results;
         }
 
         // Encode tts post bytes
-        private byte[] EncodePostData(string textToSpeak, Dictionary<string, string> ttsData)
+        private byte[] EncodePostData(string textToSpeak, bool useEvents, Dictionary<string, string> ttsData)
         {
             ttsData[WitConstants.ENDPOINT_TTS_PARAM] = textToSpeak;
+            ttsData[WitConstants.ENDPOINT_TTS_EVENTS] = useEvents.ToString().ToLower();
             string jsonString = JsonConvert.SerializeObject(ttsData);
             return Encoding.UTF8.GetBytes(jsonString);
         }
 
         // Internal base method for tts request
-        private UnityWebRequest GetUnityRequest(TTSWitAudioType audioType, byte[] postData)
+        private UnityWebRequest GetUnityRequest(byte[] postData)
         {
             // Get uri
             Uri uri = GetUri(Configuration.GetEndpointInfo().Synthesize);
