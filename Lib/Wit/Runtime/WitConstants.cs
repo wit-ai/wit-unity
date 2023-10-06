@@ -50,7 +50,7 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
-        public const string ERROR_TTS_CACHE_DOWNLOAD = "File is not Preloaded";
+        public const string ERROR_TTS_CACHE_DOWNLOAD = "Preloaded files cannot be downloaded at runtime.";
         public const string ERROR_TTS_DECODE = "Data failed to encode";
 
         // Dictation Endpoint

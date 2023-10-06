@@ -102,10 +102,6 @@ namespace Meta.Voice.Samples.TTSVoices
             StringBuilder prepend = new StringBuilder();
             StringBuilder append = new StringBuilder();
 
-            // Add ssml tags
-            prepend.Append("<speak>");
-            append.Append("</speak>");
-
             // Get character & environment ids
             string characterId = _characterDropdown.SelectedOption;
             if (string.Equals(characterId, NONE_ID))
@@ -123,6 +119,10 @@ namespace Meta.Voice.Samples.TTSVoices
             bool hasEnvironment = !string.IsNullOrEmpty(environmentId);
             if (hasCharacter || hasEnvironment)
             {
+                // Add ssml tags
+                prepend.Append("<speak>");
+                append.Append("</speak>");
+
                 // Add prefix & postfix
                 prepend.Append("<sfx");
                 append.Insert(0, "</sfx>");
