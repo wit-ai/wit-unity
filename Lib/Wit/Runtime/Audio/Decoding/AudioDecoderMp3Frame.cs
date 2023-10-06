@@ -481,7 +481,7 @@ namespace Meta.Voice.Audio.Decoding
             for (int b = 31; b >= 0; b--)
             {
                 sb.Append(BitRShift(headerData, b) & 1);
-                if (b % 8 == 0)
+                if (b % 8 == 0 && b > 0)
                 {
                     sb.Append(" ");
                 }
