@@ -32,7 +32,7 @@ namespace Meta.WitAi.Json
             DefaultValue = null;
         }
         /// <summary>
-        /// Construct for property name & default value
+        /// Construct for property name and default value
         /// </summary>
         /// <param name="propertyName">Name to be read from json</param>
         /// <param name="defaultValue">Default value when the json object is missing</param>

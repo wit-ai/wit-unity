@@ -12,7 +12,7 @@ namespace Meta.WitAi.Json
 {
     public class DateTimeConverter : JsonConverter
     {
-        // Reads & Writes
+        // Reads and Writes
         public override bool CanRead => true;
         public override bool CanWrite => true;
 
@@ -40,4 +40,3 @@ namespace Meta.WitAi.Json
         }
     }
 }
-

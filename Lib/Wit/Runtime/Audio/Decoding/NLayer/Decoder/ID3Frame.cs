@@ -92,7 +92,7 @@ namespace Meta.Audio.NLayer.Decoder
                         // finally, check to make sure that all the right bits are cleared
                         if (!(((buf[2] & flagsMask) | (buf[3] & 0x80) | (buf[4] & 0x80) | (buf[5] & 0x80) | (buf[6] & 0x80)) != 0 || buf[1] == 0xFF))
                         {
-                            return size + 10;   // don't forget the sync, flag & size bytes!
+                            return size + 10;   // don't forget the sync, flag and size bytes!
                         }
                     }
                     break;

@@ -165,7 +165,7 @@ namespace Meta.Audio.NLayer.Decoder
 
             internal void Apply(float[] fsIn, int channel, int blockType, bool doMixed)
             {
-                // get the previous & next blocks so we can overlap correctly
+                // get the previous and next blocks so we can overlap correctly
                 //  NB: we swap each pass so we can add the previous block in a single pass
                 float[] prevblck, nextblck;
                 GetPrevBlock(channel, out prevblck, out nextblck);

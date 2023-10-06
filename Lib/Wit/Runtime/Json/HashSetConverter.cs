@@ -14,7 +14,7 @@ namespace Meta.WitAi.Json
 {
     public class HashSetConverter<T> : JsonConverter
     {
-        // Reads & Writes
+        // Reads and Writes
         public override bool CanRead => true;
         public override bool CanWrite => true;
 

@@ -36,7 +36,7 @@ namespace Meta.WitAi.Requests
         /// Submits a keyword to be added to an entity on the current wit app
         /// </summary>
         /// <param name="entityId">The entity this keyword should be added to</param>
-        /// <param name="keywordInfo">The keyword & synonyms submitted</param>
+        /// <param name="keywordInfo">The keyword and synonyms submitted</param>
         /// <param name="onComplete">On completion that returns updated entity if successful</param>
         /// <returns>False if fails to make request</returns>
         bool RequestAddEntityKeyword(string entityId,
