@@ -215,56 +215,65 @@ namespace Meta.Conduit.Editor
                     continue;
                 }
 
-                var actionAttribute = attributes.First() as ConduitActionAttribute;
-                var actionName = actionAttribute?.Intent;
-                if (string.IsNullOrEmpty(actionName))
+                foreach (ConduitActionAttribute actionAttribute in attributes)
                 {
-                    actionName = $"{method.Name}";
-                }
-
-                var parameters = new List<ManifestParameter>();
-
-                var action = new ManifestAction()
-                {
-                    ID = $"{method.DeclaringType.FullName}.{method.Name}",
-                    Name = actionName,
-                    Assembly = assembly.FullName,
-                };
-
-                var compatibleParameters = true;
-
-                var signature = GetMethodSignature(method);
-
-                // We track this first regardless of whether or not Conduit supports it to identify gaps.
-                SignatureFrequency.TryGetValue(signature, out var currentFrequency);
-                SignatureFrequency[signature] = currentFrequency + 1;
-
-                foreach (var parameter in method.GetParameters())
-                {
-                    var supported = _parameterValidator.IsSupportedParameterType(parameter.ParameterType);
-                    if (!supported)
-                    {
-                        compatibleParameters = false;
-                        VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
-                        continue;
-                    }
-                    parameters.Add(GetManifestParameters(parameter, attributeType, action.ID));
-                }
-
-                if (compatibleParameters)
-                {
-                    action.Parameters = parameters;
-                    actions.Add(action);
-                }
-                else
-                {
-                    VLog.W($"{method} has Conduit-Incompatible Parameters");
-                    IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
-                    IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
+                    ExtractAction(attributeType, assembly, actionAttribute, method, actions);    
                 }
             }
 
             return actions;
+        }
+
+        private void ExtractAction(Type attributeType, IConduitAssembly assembly,
+            ConduitActionAttribute actionAttribute, MethodInfo method, ICollection<ManifestAction> actions)
+        {
+            var actionName = actionAttribute?.Intent;
+            if (string.IsNullOrEmpty(actionName))
+            {
+                actionName = $"{method.Name}";
+            }
+
+            var parameters = new List<ManifestParameter>();
+
+            var action = new ManifestAction()
+            {
+                ID = $"{method.DeclaringType.FullName}.{method.Name}",
+                Name = actionName,
+                Assembly = assembly.FullName,
+            };
+
+            var compatibleParameters = true;
+
+            var signature = GetMethodSignature(method);
+
+            // We track this first regardless of whether or not Conduit supports it to identify gaps.
+            SignatureFrequency.TryGetValue(signature, out var currentFrequency);
+            SignatureFrequency[signature] = currentFrequency + 1;
+
+            foreach (var parameter in method.GetParameters())
+            {
+                var supported = _parameterValidator.IsSupportedParameterType(parameter.ParameterType);
+                if (!supported)
+                {
+                    compatibleParameters = false;
+                    VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
+                    continue;
+                }
+
+                parameters.Add(GetManifestParameters(parameter, attributeType, action.ID));
+            }
+
+            if (compatibleParameters)
+            {
+                action.Parameters = parameters;
+                actions.Add(action);
+            }
+            else
+            {
+                VLog.W($"{method} has Conduit-Incompatible Parameters");
+                IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
+                IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
+            }
         }
 
         private List<ManifestErrorHandler> ExtractErrorHandlersInternal(Type attributeType, IConduitAssembly assembly)
