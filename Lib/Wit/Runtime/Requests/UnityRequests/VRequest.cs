@@ -1546,7 +1546,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Invalid clip
-            if (clipStream != null && clipStream.TotalSamples == 0)
+            if (clipStream != null && clipStream.Length == 0)
             {
                 return "Clip has no samples";
             }

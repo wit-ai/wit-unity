@@ -97,24 +97,25 @@ namespace Meta.Voice.Audio
         /// <param name="offsetSamples">The starting offset of the clip</param>
         protected override void Play(int offsetSamples = 0)
         {
-            // Play audio
+            // Get new clip
+            AudioClip newClip = null;
             if (ClipStream is IAudioClipProvider uacs)
             {
-                AudioSource.loop = false;
-                AudioSource.clip = uacs.Clip;
-                AudioSource.timeSamples = offsetSamples;
-                AudioSource.Play();
+                newClip = uacs.Clip;
             }
-            // Null stream
-            else if (ClipStream == null)
+
+            // Null clip
+            if (newClip == null)
             {
-                VLog.E($"{GetType()} cannot play null clip stream");
+                VLog.E($"{GetType()} cannot play null AudioClip");
+                return;
             }
-            // Log error
-            else
-            {
-                VLog.E($"{GetType()} cannot play {ClipStream.GetType()} clips");
-            }
+
+            // Play audio clip
+            AudioSource.loop = false;
+            AudioSource.clip = newClip;
+            AudioSource.timeSamples = offsetSamples;
+            AudioSource.Play();
         }
 
         /// <summary>
