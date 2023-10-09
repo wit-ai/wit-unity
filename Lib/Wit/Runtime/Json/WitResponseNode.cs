@@ -247,7 +247,11 @@ namespace Meta.WitAi.Json
 
             // Cast each node
             string typeName = typeof(T).ToString();
-            if (string.Equals(typeName, typeof(string).ToString()))
+            if (string.Equals(typeName, typeof(WitResponseNode).ToString()))
+            {
+                result = this;
+            }
+            else if (string.Equals(typeName, typeof(string).ToString()))
             {
                 result = this.Value;
             }

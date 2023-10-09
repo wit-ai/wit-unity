@@ -15,6 +15,13 @@ using UnityEditor;
 
 namespace Meta.WitAi.Events.Editor
 {
+    /// <summary>
+    /// Draws a dropdown of categories of events denoted with the EventCategory attribute,
+    /// followed by a dropdown of events of those categories, with the ability to add an action
+    /// handler for the any selected event.
+    /// All this is wrapped in an 'Events' foldout.
+    /// </summary>
+    /// <typeparam name="T">The class type to inspect for tagged events.</typeparam>
     public abstract class EventPropertyDrawer<T> : PropertyDrawer
     {
         private const int CONTROL_SPACING = 5;
@@ -36,6 +43,9 @@ namespace Meta.WitAi.Events.Editor
 
         private const BindingFlags FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+        /// <summary>
+        /// Uses reflection to internally load tagged event fields from the given type and its base type.
+        /// </summary>
         private void InitializeEventCategories(Type eventsType)
         {
             // Get all category events in type & base type
@@ -56,6 +66,13 @@ namespace Meta.WitAi.Events.Editor
                 _eventCategories[category] = categoryLists[category].ToArray();
             }
         }
+
+        /// <summary>
+        /// Retrieves all the events tagged with an EventCategory attribute and adds them
+        /// to their corresponding category marked in the attribute
+        /// </summary>
+        /// <param name="field">the field containing the EventCategory tagged events</param>
+        /// <param name="categoryLists">the collection of events by category</param>
         private void AddCustomField(FieldInfo field, Dictionary<string, List<string>> categoryLists)
         {
             if (!ShouldShowField(field))
@@ -79,6 +96,7 @@ namespace Meta.WitAi.Events.Editor
                 categoryLists[eventCategory.Category] = values;
             }
         }
+
         private bool ShouldShowField(FieldInfo field)
         {
             if (field.IsStatic)
@@ -95,6 +113,7 @@ namespace Meta.WitAi.Events.Editor
             }
             return Attribute.IsDefined(field, typeof(EventCategoryAttribute));
         }
+
         private string GetDisplayFieldName(FieldInfo field)
         {
             string result = field.Name.TrimStart('_');
@@ -150,27 +169,7 @@ namespace Meta.WitAi.Events.Editor
         {
             showEvents = EditorGUI.Foldout(new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight), showEvents, "Events");
 
-            string url = DocumentationUrl;
-            if (!string.IsNullOrEmpty(url))
-            {
-                Texture texture = WitStyles.HelpIcon.image;
-                if (texture != null)
-                {
-                    // Add a ? button
-                    Vector2 textureSize = WitStyles.IconButton.CalcSize(WitStyles.HelpIcon);
-                    Rect buttonRect = new Rect(position.x + position.width - textureSize.x, position.y, textureSize.x, textureSize.y);
-                    if (GUI.Button(buttonRect,
-                        new GUIContent(WitStyles.HelpIcon.image, DocumentationTooltip), WitStyles.IconButton))
-                    {
-                        Application.OpenURL(url);
-                    }
-                    // Add a tooltip
-                    if (!string.IsNullOrEmpty(DocumentationTooltip))
-                    {
-                        GUI.Label(buttonRect, GUI.tooltip);
-                    }
-                }
-            }
+            ShowDocumentationButton(position);
 
             if (showEvents && Selection.activeTransform)
             {
@@ -190,73 +189,139 @@ namespace Meta.WitAi.Events.Editor
                 selectedCategoryIndex = EditorGUI.Popup(position, "Event Category",
                     selectedCategoryIndex, eventCategoriesKeyArray);
 
-                if (selectedCategoryIndex != UNSELECTED)
-                {
-                    var eventsArray = _eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]];
+                DrawEventsDropdownForCategory(position, eventCategoriesKeyArray, eventObject);
 
-                    if (selectedEventIndex >= eventsArray.Length)
-                        selectedEventIndex = 0;
-
-                    // Create a new rectangle to position the events dropdown and Add button.
-                    var selectedEventDropdownPosition = new Rect(position);
-
-                    selectedEventDropdownPosition.y += EditorGUIUtility.singleLineHeight + 2;
-                    selectedEventDropdownPosition.width = position.width - (BUTTON_WIDTH + (int)WitStyles.TextButtonPadding);
-
-                    selectedEventIndex = EditorGUI.Popup(selectedEventDropdownPosition, "Event", selectedEventIndex,
-                        eventsArray);
-
-                    var selectedEventButtonPosition = new Rect(selectedEventDropdownPosition);
-
-                    selectedEventButtonPosition.width = BUTTON_WIDTH;
-                    selectedEventButtonPosition.x =
-                        selectedEventDropdownPosition.x + selectedEventDropdownPosition.width + CONTROL_SPACING;
-
-                    if (GUI.Button(selectedEventButtonPosition, "Add"))
-                    {
-                        var eventName = _eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]][
-                            selectedEventIndex];
-
-                        if (eventObject != null && selectedEventIndex != UNSELECTED &&
-                            !eventObject.IsCallbackOverridden(eventName))
-                        {
-                            var fieldName = GetFieldNameFromDisplay(eventName);
-                            if (eventObject.IsCallbackOverridden(fieldName))
-                            {
-                                eventObject.RemoveOverriddenCallback(fieldName);
-                            }
-                            fieldName = GetFieldNameFromDisplay(eventName).Substring(1);
-                            if (eventObject.IsCallbackOverridden(fieldName))
-                            {
-                                eventObject.RemoveOverriddenCallback(fieldName);
-                            }
-                            eventObject.RegisterOverriddenCallback(eventName);
-                        }
-                    }
-                }
-
-                // If any overrides have been added to the property, allow them to be edited
-                if (eventObject != null && eventObject.OverriddenCallbacks.Count != 0)
-                {
-                    var propertyRect = new Rect(position.x, position.y + propertyOffset, position.width, 0);
-
-                    foreach (var callback in eventObject.OverriddenCallbacks)
-                    {
-                        var fieldProperty = GetPropertyFromDisplayFieldName(property, callback);
-                        if (fieldProperty == null)
-                        {
-                            continue;
-                        }
-
-                        propertyRect.height = EditorGUI.GetPropertyHeight(fieldProperty, true);
-
-                        EditorGUI.PropertyField(propertyRect, fieldProperty);
-
-                        propertyRect.y += propertyRect.height + CONTROL_SPACING;
-                    }
-                }
+                ShowOverriddenCallbacks(position, property, eventObject);
 
                 EditorGUI.indentLevel--;
+            }
+        }
+
+        /// <summary>
+        /// Draws the dropdown containing the events for the selected category
+        /// </summary>
+        /// <param name="position">Where to draw it</param>
+        /// <param name="eventCategoriesKeyArray">collection of the category names</param>
+        /// <param name="eventRegistry">the registry to which new callbacks should be added</param>
+        private void DrawEventsDropdownForCategory(Rect position, string[] eventCategoriesKeyArray, EventRegistry eventRegistry)
+        {
+            if (selectedCategoryIndex == UNSELECTED)
+                return;
+
+            var eventsArray = _eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]];
+
+            if (selectedEventIndex >= eventsArray.Length)
+                selectedEventIndex = 0;
+
+            // Create a new rectangle to position the events dropdown and Add button.
+            var selectedEventDropdownPosition = new Rect(position);
+
+            selectedEventDropdownPosition.y += EditorGUIUtility.singleLineHeight + 2;
+            selectedEventDropdownPosition.width = position.width - (BUTTON_WIDTH + (int)WitStyles.TextButtonPadding);
+
+            selectedEventIndex = EditorGUI.Popup(selectedEventDropdownPosition, "Event", selectedEventIndex,
+                eventsArray);
+
+            var selectedEventButtonPosition = new Rect(selectedEventDropdownPosition);
+
+            selectedEventButtonPosition.width = BUTTON_WIDTH;
+            selectedEventButtonPosition.x =
+                selectedEventDropdownPosition.x + selectedEventDropdownPosition.width + CONTROL_SPACING;
+
+            var eventName = _eventCategories[eventCategoriesKeyArray[selectedCategoryIndex]][selectedEventIndex];
+
+            if (eventRegistry.IsCallbackOverridden(eventName))
+            {
+                if (eventRegistry.IsCallbackOverridden(eventName) && GUI.Button(selectedEventButtonPosition, "Remove"))
+                {
+                    eventRegistry.RemoveOverriddenCallback(eventName);
+                }
+            }
+            else
+            {
+                if (GUI.Button(selectedEventButtonPosition, "Add"))
+                {
+                    RegisterCallbackOverride(eventName, eventRegistry);
+                }
+            }
+        }
+
+        /// <summary>
+        /// If any overrides have been added to the property, show them for editing
+        /// </summary>
+        /// <param name="position">where to show them</param>
+        /// <param name="property">the property which this drawer is drawing</param>
+        /// <param name="eventRegistry">where the events are stored </param>
+        private void ShowOverriddenCallbacks(Rect position, SerializedProperty property, EventRegistry eventRegistry)
+        {
+            if (eventRegistry == null || eventRegistry.OverriddenCallbacks.Count == 0)
+                return;
+
+            var propertyRect = new Rect(position.x, position.y + propertyOffset, position.width, 0);
+
+            foreach (var callback in eventRegistry.OverriddenCallbacks)
+            {
+                var fieldProperty = GetPropertyFromDisplayFieldName(property, callback);
+                if (fieldProperty == null)
+                {
+                    continue;
+                }
+
+                propertyRect.height = EditorGUI.GetPropertyHeight(fieldProperty, true);
+
+                EditorGUI.PropertyField(propertyRect, fieldProperty);
+
+                propertyRect.y += propertyRect.height + CONTROL_SPACING;
+            }
+        }
+
+        /// <summary>
+        /// Registers the given callback event to the given registry so that it'll be displayed as
+        /// a thing to which a callback may be added
+        /// </summary>
+        /// <param name="eventName">name of the event to show</param>
+        /// <param name="eventRegistry">the registry to use.</param>
+        private void RegisterCallbackOverride(string eventName, EventRegistry eventRegistry)
+        {
+            if (eventRegistry != null && selectedEventIndex != UNSELECTED &&
+                !eventRegistry.IsCallbackOverridden(eventName))
+            {
+                var fieldName = GetFieldNameFromDisplay(eventName);
+                if (eventRegistry.IsCallbackOverridden(fieldName))
+                {
+                    eventRegistry.RemoveOverriddenCallback(fieldName);
+                }
+                fieldName = GetFieldNameFromDisplay(eventName).Substring(1);
+                if (eventRegistry.IsCallbackOverridden(fieldName))
+                {
+                    eventRegistry.RemoveOverriddenCallback(fieldName);
+                }
+                eventRegistry.RegisterOverriddenCallback(eventName);
+            }
+        }
+
+        private void ShowDocumentationButton(Rect position)
+        {
+            string url = DocumentationUrl;
+            if (string.IsNullOrEmpty(url))
+                return;
+
+            Texture texture = WitStyles.HelpIcon.image;
+            if (texture == null)
+                return;
+
+            // Add a ? button
+            Vector2 textureSize = WitStyles.IconButton.CalcSize(WitStyles.HelpIcon);
+            Rect buttonRect = new Rect(position.x + position.width - textureSize.x, position.y, textureSize.x, textureSize.y);
+            if (GUI.Button(buttonRect,
+                new GUIContent(WitStyles.HelpIcon.image, DocumentationTooltip), WitStyles.IconButton))
+            {
+                Application.OpenURL(url);
+            }
+            // Add a tooltip
+            if (!string.IsNullOrEmpty(DocumentationTooltip))
+            {
+                GUI.Label(buttonRect, GUI.tooltip);
             }
         }
         private SerializedProperty GetPropertyFromDisplayFieldName(SerializedProperty property, string fieldName)

@@ -8,35 +8,29 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Events
 {
+    /// <summary>
+    /// This class tracks which callbacks are being used.
+    /// </summary>
     public class EventRegistry
     {
         [SerializeField]
-        private List<string> _overriddenCallbacks = new List<string>();
-        private HashSet<string> _overriddenCallbacksHash;
+        private readonly HashSet<string> _overriddenCallbacks = new HashSet<string>();
 
         public HashSet<string> OverriddenCallbacks
         {
             get
             {
-                if (_overriddenCallbacksHash == null)
-                {
-                    _overriddenCallbacksHash = new HashSet<string>(_overriddenCallbacks);
-                }
-
-                return _overriddenCallbacksHash;
+                return _overriddenCallbacks;
             }
         }
 
         public void RegisterOverriddenCallback(string callback)
         {
-            if (!_overriddenCallbacks.Contains(callback))
-            {
-                _overriddenCallbacks.Add(callback);
-                _overriddenCallbacksHash.Add(callback);
-            }
+            _overriddenCallbacks.Add(callback);
         }
 
         public void RemoveOverriddenCallback(string callback)
@@ -44,7 +38,6 @@ namespace Meta.WitAi.Events
             if (_overriddenCallbacks.Contains(callback))
             {
                 _overriddenCallbacks.Remove(callback);
-                _overriddenCallbacksHash.Remove(callback);
             }
         }
 
