@@ -9,6 +9,8 @@
 #if !UNITY_2021_1_OR_NEWER
 using System.Collections.Generic;
 #endif
+using System;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace Meta.Conduit
@@ -37,6 +39,14 @@ namespace Meta.Conduit
         {
             return UnderscoreSplitter.Replace(input, "_$1");
         }
+        
+        /// <summary>
+        /// An extension method that returns true if the type is nullable.
+        /// This is local version of the implementation in the Castle library to prevent build issues.
+        /// </summary>
+        /// <param name="type">The type to check</param>
+        /// <returns>True if the type is nullable.</returns>
+        public static bool IsNullableType(this Type type) => type.GetTypeInfo().IsGenericType && (object) type.GetGenericTypeDefinition() == (object) typeof (Nullable<>);
 
         /// <summary>
         /// Returns true if <paramref name="stringToSearch"/> contains <paramref name="value"/> when ignoring whitespace.

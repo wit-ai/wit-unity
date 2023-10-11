@@ -10,10 +10,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-
 using Meta.WitAi;
 
 namespace Meta.Conduit
@@ -209,7 +207,7 @@ namespace Meta.Conduit
                 parameterObjects[i] = parameterProvider.GetParameterValue(formalParametersInfo[i],
                     invocationContext.ParameterMap, relaxed);
 
-                if (parameterObjects[i] == null)
+                if (parameterObjects[i] == null && !formalParametersInfo[i].ParameterType.IsNullableType())
                 {
                     InvokeError( invocationContext.MethodInfo.Name, new Exception(
                             $"Failed to find method param while invoking\nType: {invocationContext.Type.FullName}\nMethod: {invocationContext.MethodInfo.Name}\nParameter Issues\n{log}"
@@ -329,7 +327,6 @@ namespace Meta.Conduit
 
                 if (invocationContext.MinConfidence > confidence || confidence > invocationContext.MaxConfidence)
                 {
-                    //todo: throw error for out of confidence
                     return false;
                 }
 
@@ -342,6 +339,12 @@ namespace Meta.Conduit
                     if (_parameterProvider.ContainsParameter(parameter, log))
                     {
                         exactMatches.Add(parameter.Name);
+                        continue;
+                    }
+
+                    if (parameter.ParameterType.IsNullableType())
+                    {
+                        // We can ignore nullable types
                         continue;
                     }
 
@@ -365,6 +368,12 @@ namespace Meta.Conduit
                 }
 
                 var actualTypes = new HashSet<Type>();
+                return ResolveByType(invocationContext, parameters, exactMatches, actualTypes, parameterMap);
+            }
+
+            private bool ResolveByType(InvocationContext invocationContext, ParameterInfo[] parameters, ICollection<string> exactMatches,
+                ISet<Type> actualTypes, Dictionary<string, string> parameterMap)
+            {
                 foreach (var parameter in parameters)
                 {
                     if (exactMatches.Contains(parameter.Name))

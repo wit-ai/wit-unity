@@ -13,7 +13,6 @@ using System.Reflection;
 using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Json;
-using Meta.Conduit;
 
 namespace Meta.Conduit
 {
@@ -216,42 +215,73 @@ namespace Meta.Conduit
             {
                 return null;
             }
-            
-            if (ActualParameters.TryGetValue(actualParameterName, out var parameterValue))
+
+            var formalType = formalParameter.ParameterType;
+            if (formalType.IsNullableType())
             {
-                if (formalParameter.ParameterType == typeof(string))
+                formalType = Nullable.GetUnderlyingType(formalType);
+                if (formalType == null)
                 {
-                    return parameterValue.ToString();
-                }
-                else if (formalParameter.ParameterType.IsEnum)
-                {
-
-                    try
-                    {
-                        return Enum.Parse(formalParameter.ParameterType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
-                    }
-                    catch (Exception e)
-                    {
-                        VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
-                        throw;
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        return Convert.ChangeType(parameterValue, formalParameter.ParameterType);
-                    }
-                    catch (Exception e)
-                    {
-                        VLog.E($"Parameter Provider - Parameter '{parameterValue}' could not be cast\nType: {formalParameter.ParameterType.FullName}\n{e}");
-                        return null;
-                    }
-
+                    VLog.E($"Got null underlying type for nullable parameter of type {formalParameter.ParameterType}");
+                    return null;
                 }
             }
 
-            return null;
+            if (!ActualParameters.TryGetValue(actualParameterName, out var parameterValue) || parameterValue == null)
+            {
+                return null;
+            }
+
+            if (formalType == typeof(string))
+            {
+                return parameterValue.ToString();
+            }
+            else if (formalType.IsEnum)
+            {
+                try
+                {
+                    return Enum.Parse(formalType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
+                }
+                catch (Exception e)
+                {
+                    VLog.E($"Parameter Provider - Parameter value '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
+                    throw;
+                }
+            }
+            else
+            {
+                try
+                {
+                    return Convert.ChangeType(parameterValue, formalType);
+                }
+                catch (Exception e)
+                {
+                    VLog.E($"Parameter Provider - Nullable parameter value '{parameterValue}' could not be cast to {formalParameter.ParameterType.FullName}\n{e}");
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Converts an object to Nullable. If the object is already Nullable, then it returns it as-is.
+        /// </summary>
+        /// <param name="obj">Object to convert.</param>
+        /// <returns>A nullable version of the object</returns>
+        private static object ToNullable(object obj)
+        {
+            if (obj == null)
+            {
+                return null;
+            }
+
+            var sourceType = obj.GetType();
+            if (sourceType.IsNullableType())
+            {
+                return obj;
+            }
+
+            var targetType = typeof(Nullable<>).MakeGenericType(sourceType);
+            return Convert.ChangeType(obj, targetType);
         }
 
         /// <summary>
@@ -271,7 +301,12 @@ namespace Meta.Conduit
 
             foreach (var parameter in ActualParameters)
             {
-                if (parameter.Value.GetType() == targetType)
+                var actualParameterType = parameter.Value.GetType();
+                if (actualParameterType == targetType)
+                {
+                    parameters.Add(parameter.Key);
+                }
+                else if (targetType.IsNullableType() && actualParameterType == Nullable.GetUnderlyingType(targetType))
                 {
                     parameters.Add(parameter.Key);
                 }
@@ -406,17 +441,30 @@ namespace Meta.Conduit
                 }
             }
 
+            if (formalParameter.ParameterType.IsNullableType())
+            {
+                // We didn't find an actual parameter that matches, but this is nullable anyway. So we can skip silently.
+                return null;
+            }
+            
             if (!relaxed)
             {
                 VLog.E($"Parameter '{formalParameterName}' is missing");
                 return null;
             }
 
-            var possibleNames = GetParameterNamesOfType(formalParameter.ParameterType);
-            if (possibleNames.Count != 1)
+            var parameterType = formalParameter.ParameterType;
+
+            var possibleNames = GetParameterNamesOfType(parameterType);
+            if (possibleNames.Count >= 1)
             {
                 VLog.E(
-                    $"Got multiple parameters of type {formalParameter.ParameterType} but none with the correct name");
+                    $"Got multiple parameters of type {parameterType} but none with the correct name");
+                return null;
+            }
+            else if (possibleNames.Count == 0)
+            {
+                VLog.E($"Got zero parameters of type {parameterType}.");
                 return null;
             }
 

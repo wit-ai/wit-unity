@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.Conduit;
 using Meta.WitAi.Data;
 using Meta.WitAi.Json;
 using Meta.Conduit.Editor;
@@ -30,9 +31,23 @@ namespace Meta.WitAi.Windows
         /// </summary>
         /// <param name="type">The data type.</param>
         /// <returns>True if the parameter type is supported. False otherwise.</returns>
-        public bool IsSupportedParameterType(Type type)
+        public bool IsSupportedParameterType(Type originalType)
         {
+            var type = originalType;
+            if (type.IsNullableType())
+            {
+                type = Nullable.GetUnderlyingType(type);
+            }
+
+            if (type == null)
+            {
+                VLog.E($"Got a null type as the underlying type of {originalType.FullName}");
+                return false;
+            }
+
             return type.IsEnum || _builtInTypes.Contains(type) || type == typeof(WitResponseNode) || type == typeof(VoiceSession) || type == typeof(Exception);
+
+
         }
     }
 }
