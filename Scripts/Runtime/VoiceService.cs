@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Conduit;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
@@ -325,22 +326,27 @@ namespace Meta.WitAi
         {
             if (UseConduit)
             {
-                ConduitDispatcher.Initialize(_witConfiguration.ManifestLocalPath);
-                if (_witConfiguration.relaxedResolution)
-                {
-                    if (!ConduitDispatcher.Manifest.ResolveEntities())
-                    {
-                        VLog.E("Failed to resolve Conduit entities");
-                    }
-
-                    foreach (var entity in ConduitDispatcher.Manifest.CustomEntityTypes)
-                    {
-                        _conduitParameterProvider.AddCustomType(entity.Key, entity.Value);
-                    }
-                }
+                InitializeConduit();
             }
             TranscriptionProvider?.OnFullTranscription.AddListener(OnFinalTranscription);
             VoiceEvents.OnResponse.AddListener(HandleResponse);
+        }
+
+        private async Task InitializeConduit()
+        {
+            await ConduitDispatcher.Initialize(_witConfiguration.ManifestLocalPath);
+            if (_witConfiguration.relaxedResolution)
+            {
+                if (!ConduitDispatcher.Manifest.ResolveEntities())
+                {
+                    VLog.E("Failed to resolve Conduit entities");
+                }
+
+                foreach (var entity in ConduitDispatcher.Manifest.CustomEntityTypes)
+                {
+                    _conduitParameterProvider.AddCustomType(entity.Key, entity.Value);
+                }
+            }
         }
 
         protected virtual void OnDisable()

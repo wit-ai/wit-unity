@@ -305,11 +305,35 @@ namespace Meta.Conduit
                 if (actualParameterType == targetType)
                 {
                     parameters.Add(parameter.Key);
+                    continue;
                 }
-                else if (targetType.IsNullableType() && actualParameterType == Nullable.GetUnderlyingType(targetType))
+
+                if (!targetType.IsNullableType())
+                {
+                    continue;
+                }
+
+                var underlyingType = Nullable.GetUnderlyingType(targetType);
+                if (underlyingType == null)
+                {
+                    VLog.E($"Got a null underlying type from nullable type {targetType}");
+                    continue;
+                }
+                
+                if (actualParameterType == underlyingType)
                 {
                     parameters.Add(parameter.Key);
                 }
+                
+#if UNITY_2021_1_OR_NEWER                
+                else if (underlyingType.IsEnum && parameter.Value is string valueString)
+                {
+                    if (Enum.TryParse(underlyingType, valueString, out _))
+                    {
+                        parameters.Add(parameter.Key);
+                    }
+                }
+#endif
             }
 
             return _parametersOfType[targetType] = parameters;
@@ -440,15 +464,15 @@ namespace Meta.Conduit
                     return roleName;
                 }
             }
-
-            if (formalParameter.ParameterType.IsNullableType())
-            {
-                // We didn't find an actual parameter that matches, but this is nullable anyway. So we can skip silently.
-                return null;
-            }
             
             if (!relaxed)
             {
+                if (formalParameter.ParameterType.IsNullableType())
+                {
+                    // We didn't find an actual parameter that matches, but this is nullable anyway. So we can skip silently.
+                    return null;
+                }
+                
                 VLog.E($"Parameter '{formalParameterName}' is missing");
                 return null;
             }
@@ -456,7 +480,7 @@ namespace Meta.Conduit
             var parameterType = formalParameter.ParameterType;
 
             var possibleNames = GetParameterNamesOfType(parameterType);
-            if (possibleNames.Count >= 1)
+            if (possibleNames.Count > 1)
             {
                 VLog.E(
                     $"Got multiple parameters of type {parameterType} but none with the correct name");
@@ -464,7 +488,13 @@ namespace Meta.Conduit
             }
             else if (possibleNames.Count == 0)
             {
-                VLog.E($"Got zero parameters of type {parameterType}.");
+                
+                if (!formalParameter.ParameterType.IsNullableType())
+                {
+                    // Only log if this is not a nullable type, otherwise we skip silently as it's optional. 
+                    VLog.E($"Got zero parameters of type {parameterType}.");
+                }
+                
                 return null;
             }
 
