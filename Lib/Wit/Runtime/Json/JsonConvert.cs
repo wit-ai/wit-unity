@@ -26,7 +26,7 @@ namespace Meta.WitAi.Json
         public static JsonConverter[] DefaultConverters => _defaultConverters;
         private static JsonConverter[] _defaultConverters = new JsonConverter[] { new ColorConverter(), new DateTimeConverter(), new HashSetConverter<string>() };
         // Binding flags to be used for encoding/decoding
-        private const BindingFlags BIND_FLAGS = BindingFlags.Public | BindingFlags.Instance;
+        private const BindingFlags BIND_FLAGS = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
         // Ensure object exists
         private static object EnsureExists(Type objType, object obj)
