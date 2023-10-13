@@ -136,7 +136,7 @@ namespace Meta.WitAi.Requests
 
             // If must decode in sequence, wait for previous to complete
             bool sequentialDecode = _decoder.RequireSequentialDecode;
-            if (sequentialDecode && _decodedChunks < current)
+            while (sequentialDecode && _decodedChunks < current)
             {
                 await Task.Delay(VRequest.ASYNC_DELAY_MS);
             }
