@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Meta.WitAi.TTS.Interfaces
 {
-    public interface ISpeaker 
+    public interface ISpeaker
     {
         /// <summary>
         /// The id of the voice to use for speech
@@ -24,12 +24,17 @@ namespace Meta.WitAi.TTS.Interfaces
             get;
             set;
         }
-        
+
         /// <summary>
         /// Whether a clip is currently playing for this speaker
         /// </summary>
         bool IsSpeaking { get; }
-        
+
+        /// <summary>
+        /// Whether a clip is currently paused
+        /// </summary>
+        bool IsPaused { get; }
+
         /// <summary>
         /// Events related to the playback of TTS
         /// </summary>
@@ -93,7 +98,7 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Stops loading & playback immediately
         /// </summary>
         void Stop();
-        
+
         /// <summary>
         /// Pause any current or future loaded audio playback
         /// </summary>
