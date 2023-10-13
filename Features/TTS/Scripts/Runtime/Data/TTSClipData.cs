@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Meta.Voice.Audio;
 using UnityEngine;
 
@@ -91,6 +92,16 @@ namespace Meta.WitAi.TTS.Data
         public Action<TTSClipData, TTSClipLoadState> onStateChange;
 
         /// <summary>
+        /// Whether or not this tts clip data is requesting event data
+        /// with tts stream.
+        /// </summary>
+        public bool useEvents;
+        /// <summary>
+        /// The currently set tts events
+        /// </summary>
+        public TTSEventContainer Events { get; } = new TTSEventContainer();
+
+        /// <summary>
         /// A callback when clip stream is ready
         /// Returns an error if there was an issue
         /// </summary>
@@ -135,6 +146,23 @@ namespace Meta.WitAi.TTS.Data
             var hash = 17;
             hash = hash * 31 + clipID.GetHashCode();
             return hash;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder result = new StringBuilder();
+            result.AppendLine($"Voice: {(voiceSettings == null ? "Default" : voiceSettings.SettingsId)}");
+            result.AppendLine($"Text: {textToSpeak}");
+            result.AppendLine($"ID: {clipID}");
+            result.AppendLine($"Audio Type: {audioType}");
+            result.AppendLine($"Stream: {queryStream}");
+            result.AppendLine($"Cache: {diskCacheSettings?.DiskCacheLocation}");
+            result.AppendLine($"Events: {Events?.ToString()}");
+            if (clipStream != null)
+            {
+                result.AppendLine($"Length: {clipStream.Length:0.00} seconds");
+            }
+            return result.ToString();
         }
     }
 }

@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using Meta.WitAi.TTS.Data;
 using UnityEditor;
 using UnityEngine;
@@ -122,6 +121,34 @@ namespace Meta.WitAi.TTS
             // Additional Settings
             WitEditorUI.LayoutKeyObjectLabels("Voice Settings", clip.voiceSettings);
             WitEditorUI.LayoutKeyObjectLabels("Cache Settings", clip.diskCacheSettings);
+
+            // Events
+            DrawAudioEventAnimation(clip.Events);
+        }
+
+        private static void DrawAudioEventAnimation(TTSEventContainer eventContainer)
+        {
+            if (eventContainer == null)
+            {
+                return;
+            }
+            bool foldout = WitEditorUI.LayoutFoldout(new GUIContent("Audio Events"), eventContainer);
+            if (!foldout)
+            {
+                return;
+            }
+            EditorGUI.indentLevel++;
+            var events = eventContainer.Events;
+            if (events != null)
+            {
+                int count = 0;
+                foreach (var ttsEvent in events)
+                {
+                    WitEditorUI.LayoutKeyObjectLabels($"[{count}] - {ttsEvent.GetType().Name}", ttsEvent);
+                    count++;
+                }
+            }
+            EditorGUI.indentLevel--;
         }
     }
 }

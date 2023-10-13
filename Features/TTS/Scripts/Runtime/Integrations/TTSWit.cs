@@ -27,9 +27,25 @@ namespace Meta.WitAi.TTS.Integrations
     [Serializable]
     public struct TTSWitRequestSettings
     {
+        /// <summary>
+        /// The configuration used for audio requests
+        /// </summary>
         public WitConfiguration configuration;
+
+        /// <summary>
+        /// The desired audio type from wit
+        /// </summary>
         public TTSWitAudioType audioType;
+
+        /// <summary>
+        /// Whether or not audio should be streamed from wit if possible
+        /// </summary>
         public bool audioStream;
+
+        /// <summary>
+        /// Whether or not events should be requested along with audio data
+        /// </summary>
+        public bool useEvents;
     }
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
@@ -79,22 +95,18 @@ namespace Meta.WitAi.TTS.Integrations
         protected override bool GetShouldAudioStream(AudioType audioType) =>
             RequestSettings.audioStream && base.GetShouldAudioStream(audioType);
 
+        // Returns true provided audio type can be decoded
+        protected override bool ShouldUseEvents(AudioType audioType) =>
+            RequestSettings.useEvents && base.ShouldUseEvents(audioType);
+
         // Get tts request prior to transmission
         private WitTTSVRequest GetTtsRequest(TTSClipData clipData) =>
             new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
                 clipData.textToSpeak, clipData.queryParameters,
                 RequestSettings.audioType, clipData.queryStream,
                 (progress) => OnRequestProgressUpdated(clipData, progress),
-                () => OnRequestFirstResponse(clipData));
-
-        // Download progress callbacks
-        private void OnRequestProgressUpdated(TTSClipData clipData, float newProgress)
-        {
-            if (clipData != null)
-            {
-                clipData.loadProgress = newProgress;
-            }
-        }
+                () => OnRequestFirstResponse(clipData),
+                clipData.useEvents, clipData.Events.AppendEvents);
 
         // Progress callbacks
         private void OnRequestFirstResponse(TTSClipData clipData)

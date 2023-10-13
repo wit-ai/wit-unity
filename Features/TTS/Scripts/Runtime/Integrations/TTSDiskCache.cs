@@ -15,7 +15,6 @@ using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Utilities;
 using Meta.WitAi.Requests;
-using Meta.Voice.Audio;
 
 namespace Meta.WitAi.TTS.Integrations
 {
@@ -105,7 +104,7 @@ namespace Meta.WitAi.TTS.Integrations
             }
 
             // Return clip path
-            return Path.Combine(directory, clipData.clipID + "." + WitTTSVRequest.GetAudioExtension(clipData.audioType));
+            return Path.Combine(directory, clipData.clipID + "." + WitTTSVRequest.GetAudioExtension(clipData.audioType, clipData.useEvents));
         }
 
         /// <summary>
@@ -140,7 +139,7 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Performs async load request
         /// </summary>
-        public void StreamFromDiskCache(TTSClipData clipData)
+        public void StreamFromDiskCache(TTSClipData clipData, Action<TTSClipData, float> onProgress)
         {
             // Invoke begin
             DiskStreamEvents?.OnStreamBegin?.Invoke(clipData);
@@ -149,7 +148,7 @@ namespace Meta.WitAi.TTS.Integrations
             string filePath = GetDiskCachePath(clipData);
 
             // Load clip async
-            VRequest request = new VRequest((progress) => clipData.loadProgress = progress);
+            VRequest request = new VRequest((progress) => onProgress?.Invoke(clipData, progress));
             bool canPerform = request.RequestAudioStream(clipData.clipStream, new Uri(request.CleanUrl(filePath)),
                 (clipStream, error) =>
                 {
@@ -163,7 +162,8 @@ namespace Meta.WitAi.TTS.Integrations
                         clipData.clipStream = clipStream;
                         OnStreamComplete(clipData, error);
                     }
-                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk);
+                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk, clipData.useEvents,
+                clipData.Events.AppendEvents);
             if (canPerform)
             {
                 _streamRequests[clipData.clipID] = request;

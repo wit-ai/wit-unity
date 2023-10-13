@@ -72,7 +72,7 @@ namespace Meta.WitAi
             {
                 if (field.IsPublic && !field.IsStatic)
                 {
-                    LayoutKeyLabel(field.Name, field.GetValue(obj).ToString());
+                    LayoutKeyLabel(field.Name, field.GetValue(obj)?.ToString());
                 }
             }
             EditorGUI.indentLevel--;

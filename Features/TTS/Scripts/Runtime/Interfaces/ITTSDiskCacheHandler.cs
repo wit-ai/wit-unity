@@ -49,7 +49,8 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Method for streaming from disk cache
         /// </summary>
         /// <param name="clipData">Clip request data</param>
-        void StreamFromDiskCache(TTSClipData clipData);
+        /// <param name="onProgress">Callbacks for stream progress</param>
+        void StreamFromDiskCache(TTSClipData clipData, Action<TTSClipData, float> onProgress);
 
         /// <summary>
         /// Method for cancelling a running cache load request

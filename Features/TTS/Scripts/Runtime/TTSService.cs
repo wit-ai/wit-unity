@@ -11,7 +11,6 @@ using System.Collections;
 using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
-using System.Linq;
 using Meta.Voice.Audio;
 using Meta.WitAi.Requests;
 using UnityEngine;
@@ -220,28 +219,7 @@ namespace Meta.WitAi.TTS
             builder.AppendLine(logMessage);
             if (clipData != null)
             {
-                builder.AppendLine($"Voice: {(clipData.voiceSettings == null ? "Default" : clipData.voiceSettings.SettingsId)}");
-                builder.AppendLine($"Text: {clipData.textToSpeak}");
-                builder.AppendLine($"ID: {clipData.clipID}");
-                TTSDiskCacheLocation cacheLocation = TTSDiskCacheLocation.Stream;
-                if (DiskCacheHandler != null)
-                {
-                    TTSDiskCacheSettings settings = clipData.diskCacheSettings;
-                    if (settings == null)
-                    {
-                        settings = DiskCacheHandler.DiskCacheDefaultSettings;
-                    }
-                    if (settings != null)
-                    {
-                        cacheLocation = settings.DiskCacheLocation;
-                    }
-                }
-                builder.AppendLine($"Cache: {cacheLocation}");
-                builder.AppendLine($"Type: {clipData.audioType}");
-                if (clipData.clipStream != null)
-                {
-                    builder.AppendLine($"Length: {clipData.clipStream.Length:0.00} seconds");
-                }
+                builder.AppendLine(clipData.ToString());
             }
             return builder.ToString();
         }
@@ -369,7 +347,8 @@ namespace Meta.WitAi.TTS
                 loadDuration = 0f,
                 queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
                 queryStream = GetShouldAudioStream(audioType),
-                clipStream = CreateClipStream()
+                clipStream = CreateClipStream(),
+                useEvents = ShouldUseEvents(audioType)
             };
 
             // Null text is assumed loaded
@@ -401,6 +380,10 @@ namespace Meta.WitAi.TTS
         // Returns current audio stream setting for initial TTSClipData setup
         protected virtual bool GetShouldAudioStream(AudioType audioType) =>
             VRequest.CanStreamAudio(audioType);
+
+        // Returns true provided audio type can be decoded
+        protected virtual bool ShouldUseEvents(AudioType audioType) =>
+            VRequest.CanDecodeAudio(audioType);
 
         // Set clip state
         protected virtual void SetClipLoadState(TTSClipData clipData, TTSClipLoadState loadState)
@@ -577,7 +560,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Stream from Cache
-            DiskCacheHandler?.StreamFromDiskCache(clipData);
+            DiskCacheHandler?.StreamFromDiskCache(clipData, OnRequestProgressUpdated);
         }
         // Wait a moment
         private IEnumerator CallAfterAMoment(Action call)
@@ -592,6 +575,16 @@ namespace Meta.WitAi.TTS
             }
             call();
         }
+
+        // On progress update, apply to clip
+        protected virtual void OnRequestProgressUpdated(TTSClipData clipData, float newProgress)
+        {
+            if (clipData != null)
+            {
+                clipData.loadProgress = newProgress;
+            }
+        }
+
         // Load begin
         private void OnLoadBegin(TTSClipData clipData, bool download = false)
         {
