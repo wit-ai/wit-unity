@@ -12,7 +12,7 @@ using Meta.Voice;
 
 namespace Meta.WitAi.Requests
 {
-    public class VoiceServiceRequestOptions : INLPAudioRequestOptions, INLPTextRequestOptions
+    public class VoiceServiceRequestOptions : INLPRequestOptions
     {
         /// <summary>
         /// Unique request id used for request tracking internally & externally
@@ -28,6 +28,10 @@ namespace Meta.WitAi.Requests
             public string value;
         }
 
+        /// <summary>
+        /// The input type to be used for VoiceServiceRequests
+        /// </summary>
+        public NLPRequestInputType InputType { get; set; }
         /// <summary>
         /// The text to be submitted for a text request
         /// </summary>

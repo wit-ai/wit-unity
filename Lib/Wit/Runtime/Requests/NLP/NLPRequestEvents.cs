@@ -7,16 +7,36 @@
  */
 
 using System;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
 {
     [Serializable]
     public class NLPRequestEvents<TUnityEvent>
-        : NLPAudioRequestEvents<TUnityEvent>,
-            INLPTextRequestEvents<TUnityEvent>
+        : TranscriptionRequestEvents<TUnityEvent>,
+        INLPRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
+        /// <summary>
+        /// Called on request language processing raw text received
+        /// </summary>
+        public TranscriptionRequestEvent OnRawResponse => _onRawResponse;
+        [Header("NLP Events")] [Tooltip("Called on every request response text.")]
+        [SerializeField] private TranscriptionRequestEvent _onRawResponse = Activator.CreateInstance<TranscriptionRequestEvent>();
 
+        /// <summary>
+        /// Called on request language processing while audio is still being analyzed
+        /// </summary>
+        public NLPRequestResponseEvent OnPartialResponse => _onPartialResponse;
+        [Tooltip("Called for partially decoded request responses.")]
+        [SerializeField] private NLPRequestResponseEvent _onPartialResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
+
+        /// <summary>
+        /// Called on request language processing once completely analyzed
+        /// </summary>
+        public NLPRequestResponseEvent OnFullResponse => _onFullResponse;
+        [Tooltip("Called on request language processing once completely analyzed.")]
+        [SerializeField] private NLPRequestResponseEvent _onFullResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
     }
 }

@@ -14,7 +14,7 @@ namespace Meta.Voice
     /// Interface for NLP request results
     /// </summary>
     /// <typeparam name="TResultData">Type of NLP data received from the request</typeparam>
-    public interface INLPRequestResults : IVoiceRequestResults
+    public interface INLPRequestResults : ITranscriptionRequestResults
     {
         /// <summary>
         /// Processed data from the request

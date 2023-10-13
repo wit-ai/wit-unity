@@ -62,11 +62,11 @@ namespace Meta.Voice
         /// <summary>
         /// Options sent as the request parameters
         /// </summary>
-        public TOptions Options { get; private set; }
+        public TOptions Options { get; protected set; }
         /// <summary>
         /// Events specific to this voice request
         /// </summary>
-        public TEvents Events { get; private set; }
+        public TEvents Events { get; protected set; }
         /// <summary>
         /// Results returned from the request
         /// </summary>

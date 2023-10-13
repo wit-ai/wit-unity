@@ -11,8 +11,7 @@ using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Requests
 {
-    public class VoiceServiceRequestResults
-        : INLPTextRequestResults, INLPAudioRequestResults
+    public class VoiceServiceRequestResults : INLPRequestResults
     {
         /// <summary>
         /// Request status code if applicable

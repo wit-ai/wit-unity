@@ -17,12 +17,12 @@ namespace Meta.Voice
     /// <typeparam name="TOptions">The type containing all specific options to be passed to the end service.</typeparam>
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
-    public interface INLPAudioRequest<TUnityEvent, TOptions, TEvents, TResults>
+    public interface INLPRequest<TUnityEvent, TOptions, TEvents, TResults>
         : ITranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
-        where TOptions : INLPAudioRequestOptions
-        where TEvents : INLPAudioRequestEvents<TUnityEvent>
-        where TResults : INLPAudioRequestResults
+        where TOptions : INLPRequestOptions
+        where TEvents : INLPRequestEvents<TUnityEvent>
+        where TResults : INLPRequestResults
     {
     }
 }

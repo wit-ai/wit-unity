@@ -12,15 +12,29 @@ using UnityEngine.Events;
 
 namespace Meta.Voice
 {
+    /// <summary>
+    /// A unity event that returns a decoded WitResponseNode
+    /// </summary>
     [Serializable]
     public class NLPRequestResponseEvent : UnityEvent<WitResponseNode> {}
 
     /// <summary>
     /// Interface for NLP request events callbacks
     /// </summary>
-    public interface INLPRequestEvents<TUnityEvent> : IVoiceRequestEvents<TUnityEvent>
+    public interface INLPRequestEvents<TUnityEvent>
+        : ITranscriptionRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
+        /// <summary>
+        /// Called on request language processing raw text received
+        /// </summary>
+        TranscriptionRequestEvent OnRawResponse { get; }
+
+        /// <summary>
+        /// Called on request language processing when received early
+        /// </summary>
+        NLPRequestResponseEvent OnPartialResponse { get; }
+
         /// <summary>
         /// Called on request language processing once completely analyzed
         /// </summary>

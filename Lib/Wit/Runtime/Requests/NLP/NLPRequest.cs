@@ -6,20 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Text;
+using Meta.WitAi.Json;
 using UnityEngine.Events;
 
 namespace Meta.Voice
 {
-    /// <summary>
-    /// The various types of NLP request datas
-    /// </summary>
-    public enum NLPRequestInputType
-    {
-        Text,
-        Audio
-    }
-
     /// <summary>
     /// Abstract class for NLP text & audio requests
     /// </summary>
@@ -28,37 +21,50 @@ namespace Meta.Voice
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
     public abstract class NLPRequest<TUnityEvent, TOptions, TEvents, TResults>
-        : NLPAudioRequest<TUnityEvent, TOptions, TEvents, TResults>,
-            INLPTextRequest<TUnityEvent, TOptions, TEvents, TResults>
+        : TranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>,
+            INLPRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
-        where TOptions : INLPAudioRequestOptions,
-            INLPTextRequestOptions
-        where TEvents : NLPAudioRequestEvents<TUnityEvent>,
-            INLPTextRequestEvents<TUnityEvent>
-        where TResults : INLPAudioRequestResults,
-            INLPTextRequestResults
+        where TOptions : INLPRequestOptions
+        where TEvents : NLPRequestEvents<TUnityEvent>
+        where TResults : INLPRequestResults
     {
         /// <summary>
-        /// The request data input type to be used
+        /// Getter for request input type
         /// </summary>
-        public NLPRequestInputType InputType { get; private set; }
+        public NLPRequestInputType InputType => Options == null ? NLPRequestInputType.Audio : Options.InputType;
 
         /// <summary>
-        /// Constructor for NLP text & audio requests
+        /// Getter for response data
         /// </summary>
-        /// <param name="newOptions">The request parameters to be used</param>
+        public WitResponseNode ResponseData => Results?.ResponseData;
+
+        // Ensure initialized only once
+        private bool _initialized = false;
+        // Ensure final is not called multiple times
+        private bool _finalized = false;
+
+        /// <summary>
+        /// Constructor for NLP requests
+        /// </summary>
+        /// <param name="newInputType">The input type for nlp request transmission</param>
+        /// <param name="newOptions">The request parameters sent to the backend service</param>
         /// <param name="newEvents">The request events to be called throughout it's lifecycle</param>
-        protected NLPRequest(NLPRequestInputType newInputType, TOptions newOptions, TEvents newEvents) : base(newOptions,
-            newEvents)
+        protected NLPRequest(NLPRequestInputType inputType, TOptions options, TEvents newEvents) : base(options, newEvents)
         {
-            InputType = newInputType;
+            // Set option input type & bools
+            var opt = Options;
+            opt.InputType = inputType;
+            Options = opt;
             _initialized = true;
+            _finalized = false;
+
+            // Finalize
             SetState(VoiceRequestState.Initialized);
         }
+
         /// <summary>
-        /// Ignore state changes unless setup
+        /// Sets the NLPRequest object to the given state, but only after being initialized
         /// </summary>
-        private bool _initialized = false;
         protected override void SetState(VoiceRequestState newState)
         {
             if (_initialized)
@@ -66,6 +72,7 @@ namespace Meta.Voice
                 base.SetState(newState);
             }
         }
+
         /// <summary>
         /// Append NLP request specific data to log
         /// </summary>
@@ -74,8 +81,7 @@ namespace Meta.Voice
         protected override void AppendLogData(StringBuilder log, bool warning)
         {
             base.AppendLogData(log, warning);
-            // Append nlp input
-            log.AppendLine($"NLP Input Type: {InputType}");
+            log.AppendLine($"Input Type: {InputType}");
         }
 
         /// <summary>
@@ -100,6 +106,112 @@ namespace Meta.Voice
                 return "Cannot send audio without activation";
             }
             return base.GetSendError();
+        }
+
+        /// <summary>
+        /// Method to be called when an NLP request had completed
+        /// </summary>
+        /// <param name="responseData">Parsed json data returned from request</param>
+        /// <param name="error">Error returned from a request</param>
+        protected virtual void HandlePartialResponse(WitResponseNode responseData, string error)
+        {
+            // Ignore if not in correct state
+            if (!IsActive)
+            {
+                return;
+            }
+            // Ignore if failed
+            if (!string.IsNullOrEmpty(error))
+            {
+                return;
+            }
+
+            // Apply response data
+            ApplyResultResponseData(responseData);
+
+            // Partial response called
+            OnPartialResponse();
+        }
+
+        /// <summary>
+        /// Sets response data to the current results object
+        /// </summary>
+        protected abstract void ApplyResultResponseData(WitResponseNode newData);
+
+        /// <summary>
+        /// Called when response data has been updated
+        /// </summary>
+        protected virtual void OnPartialResponse() =>
+            Events?.OnPartialResponse?.Invoke(ResponseData);
+
+        /// <summary>
+        /// Method to be called when an NLP request had completed
+        /// </summary>
+        /// <param name="responseData">Parsed json data returned from request</param>
+        /// <param name="error">Error returned from a request</param>
+        protected virtual void HandleFinalResponse(WitResponseNode responseData, string error)
+        {
+            // Ignore if not in correct state
+            if (!IsActive || _finalized)
+            {
+                return;
+            }
+            _finalized = true;
+
+            // Send partial data if not previously sent
+            if (responseData != null && responseData != ResponseData)
+            {
+                HandlePartialResponse(responseData, error);
+            }
+
+            // Error returned
+            if (!string.IsNullOrEmpty(error))
+            {
+                HandleFailure(error);
+            }
+            // No response
+            else if (responseData == null)
+            {
+                HandleFailure("No response returned");
+            }
+            // Success
+            else
+            {
+                // Callback for final response
+                OnFullResponse();
+
+                // Handle success
+                HandleSuccess(Results);
+            }
+        }
+
+        /// <summary>
+        /// Called when full response has completed
+        /// </summary>
+        protected virtual void OnFullResponse() =>
+            Events?.OnFullResponse?.Invoke(ResponseData);
+
+        /// <summary>
+        /// Cancels the current request but handles success immediately if possible
+        /// </summary>
+        public virtual void CompleteEarly()
+        {
+            // Ignore if not in correct state
+            if (!IsActive || _finalized)
+            {
+                return;
+            }
+
+            // Cancel instead
+            if (ResponseData == null)
+            {
+                Cancel("Cannot complete early without response data");
+            }
+            // Handle success
+            else
+            {
+                HandleFinalResponse(ResponseData, string.Empty);
+            }
         }
     }
 }
