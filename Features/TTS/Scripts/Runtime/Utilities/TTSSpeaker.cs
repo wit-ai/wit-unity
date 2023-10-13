@@ -22,7 +22,7 @@ using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Utilities
 {
-    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker
+    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer
     {
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]
@@ -379,8 +379,30 @@ namespace Meta.WitAi.TTS.Utilities
                 request.PlaybackEvents.OnComplete.AddListener(onComplete);
             }
 
-            // Wait for active requests to be complete
-            yield return new WaitWhile(() => activeRequests > 0);
+            // Wait for active requests to be complete and update current sample/events
+            int events = -1;
+            int sample = -1;
+            while (activeRequests > 0)
+            {
+                var newEvents = CurrentEvents;
+                var newEventCount = newEvents?.Events == null ? 0 : newEvents.Events.Count;
+                if (events != newEventCount)
+                {
+                    events = newEventCount;
+                    OnPlaybackEventsUpdated(newEvents);
+                }
+                var newSample = CurrentSample;
+                if (sample != newSample)
+                {
+                    sample = newSample;
+                    OnPlaybackSampleUpdated(sample);
+                }
+                yield return new WaitForEndOfFrame();
+            }
+
+            // Reset playback event data
+            OnPlaybackEventsUpdated(null);
+            OnPlaybackSampleUpdated(0);
 
             // Remove event delegates
             for (int r = 0; r < count; r++)
@@ -393,7 +415,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region TEXT
         /// <summary>
-        /// Gets final text following prepending/appending & any special formatting
+        /// Gets final text following prepending/appending and any special formatting
         /// </summary>
         /// <param name="textToSpeak">The base text to be spoken</param>
         /// <returns>Returns an array of split texts to be spoken</returns>
@@ -415,7 +437,7 @@ namespace Meta.WitAi.TTS.Utilities
                 }
             }
 
-            // Add prepend & appended text to each item
+            // Add prepend and appended text to each item
             for (int i = 0; i < phrases.Count; i++)
             {
                 if (string.IsNullOrEmpty(phrases[i].Trim())) continue;
@@ -438,7 +460,7 @@ namespace Meta.WitAi.TTS.Utilities
             return phrases;
         }
         /// <summary>
-        /// Obtain final text list from format & text list
+        /// Obtain final text list from format and text list
         /// </summary>
         /// <param name="format">The format to be used</param>
         /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
@@ -468,8 +490,8 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region REQUESTS
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events.
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text, disk cache settings and playback events.
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -478,8 +500,8 @@ namespace Meta.WitAi.TTS.Utilities
             Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events.  Cancels all previous clips
-        /// when loaded & then plays.
+        /// Load a tts clip using the specified text and playback events.  Cancels all previous clips
+        /// when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
@@ -487,8 +509,8 @@ namespace Meta.WitAi.TTS.Utilities
             Speak(textToSpeak, null, playbackEvents);
 
         /// <summary>
-        /// Load a tts clip using the specified text & disk cache settings.  Cancels all previous clips
-        /// when loaded & then plays.
+        /// Load a tts clip using the specified text and disk cache settings.  Cancels all previous clips
+        /// when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -496,14 +518,14 @@ namespace Meta.WitAi.TTS.Utilities
             Speak(textToSpeak, diskCacheSettings, null);
 
         /// <summary>
-        /// Load a tts clip using the specified text.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         public void Speak(string textToSpeak) =>
             Speak(textToSpeak, null, null);
 
         /// <summary>
-        /// Loads a formated phrase to be spoken.  Cancels all previous clips when loaded & then plays.
+        /// Loads a formated phrase to be spoken.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="format">Format string to be filled in with texts</param>
         /// <param name="textsToSpeak">Texts to be inserted into the formatter</param>
@@ -511,8 +533,8 @@ namespace Meta.WitAi.TTS.Utilities
             Speak(GetFormattedText(format, textsToSpeak), null, null);
 
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text, disk cache settings and playback events and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -526,8 +548,8 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text and playback events and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
@@ -537,8 +559,8 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text & disk cache settings and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text and disk cache settings and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -548,8 +570,8 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text and then waits for the file to load & play.
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text and then waits for the file to load and play.
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         public IEnumerator SpeakAsync(string textToSpeak)
@@ -558,7 +580,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events.
+        /// Load a tts clip using the specified text, disk cache settings and playback events.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
@@ -568,7 +590,7 @@ namespace Meta.WitAi.TTS.Utilities
             Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
+        /// Load a tts clip using the specified text and playback events.  Adds clip to playback queue and will
         /// speak once queue has completed all playback.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
@@ -577,7 +599,7 @@ namespace Meta.WitAi.TTS.Utilities
             SpeakQueued(textToSpeak, null, playbackEvents);
 
         /// <summary>
-        /// Load a tts clip using the specified text & disk cache settings events.  Adds clip
+        /// Load a tts clip using the specified text and disk cache settings events.  Adds clip
         /// to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
@@ -603,8 +625,8 @@ namespace Meta.WitAi.TTS.Utilities
             SpeakQueued(GetFormattedText(format, textsToSpeak), null, null);
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases, disk cache settings & playback events and then
-        /// waits for the files to load & play.  Adds clip to playback queue and will speak once queue has
+        /// Load a tts clip using the specified text phrases, disk cache settings and playback events and then
+        /// waits for the files to load and play.  Adds clip to playback queue and will speak once queue has
         /// completed all playback.
         /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
@@ -627,7 +649,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
+        /// Load a tts clip using the specified text phrases and playback events and then waits for the files to load &
         /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
@@ -638,8 +660,8 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases & disk cache settings and then waits for the files to
-        /// load & play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// Load a tts clip using the specified text phrases and disk cache settings and then waits for the files to
+        /// load and play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -649,7 +671,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases and then waits for the files to load & play.
+        /// Load a tts clip using the specified text phrases and then waits for the files to load and play.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
@@ -659,7 +681,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Loads a tts clip & handles playback
+        /// Loads a tts clip and handles playback
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
@@ -709,9 +731,9 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Stop load & playback of a specific clip
+        /// Stop load and playback of a specific clip
         /// </summary>
-        /// <param name="clipData">The clip to be stopped & removed from the queue</param>
+        /// <param name="clipData">The clip to be stopped and removed from the queue</param>
         /// <param name="allInstances">Whether to remove the first instance of this clip or all instances</param>
         public virtual void Stop(string textToSpeak, bool allInstances = false)
         {
@@ -722,7 +744,7 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Find all clips that match & stop them
+            // Find all clips that match and stop them
             foreach (var clipData in QueuedClips)
             {
                 if (string.Equals(clipData?.textToSpeak, textToSpeak))
@@ -737,9 +759,9 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Stop load & playback of a specific clip
+        /// Stop load and playback of a specific clip
         /// </summary>
-        /// <param name="clipData">The clip to be stopped & removed from the queue</param>
+        /// <param name="clipData">The clip to be stopped and removed from the queue</param>
         /// <param name="allInstances">Whether to remove the first instance of this clip or all instances</param>
         public virtual void Stop(TTSClipData clipData, bool allInstances = false)
         {
@@ -808,7 +830,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Stops loading & playback immediately
+        /// Stops loading and playback immediately
         /// </summary>
         public virtual void Stop()
         {
@@ -840,7 +862,7 @@ namespace Meta.WitAi.TTS.Utilities
         ///    "voice": "Charlie
         /// }
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="textToSpeak">The text to be spoken output</param>
         /// <param name="voiceSettings">The output for voice settings</param>
         /// <returns>True if decode was successful</returns>
@@ -866,8 +888,8 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified response node, disk cache settings & playback events.
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified response node, disk cache settings and playback events.
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
@@ -884,17 +906,17 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified response node, disk cache settings & playback events.
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified response node, disk cache settings and playback events.
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool Speak(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents)
         {
-            // Decode text to speak & voice settings
+            // Decode text to speak and voice settings
             if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 return false;
@@ -905,36 +927,36 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified response node & disk cache settings
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified response node and disk cache settings
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool Speak(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings) =>
             Speak(responseNode, diskCacheSettings, null);
 
         /// <summary>
-        /// Load a tts clip using the specified response node & playback events
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified response node and playback events
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool Speak(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents) =>
             Speak(responseNode, null, playbackEvents);
 
         /// <summary>
-        /// Load a tts clip using the specified response node & playback events
-        /// Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified response node and playback events
+        /// Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool Speak(WitResponseNode responseNode) => Speak(responseNode, null, null);
 
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text, disk cache settings and playback events and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="overrideVoiceSettings">Custom voice settings to be used for this and upcoming requests</param>
@@ -950,15 +972,15 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text, disk cache settings and playback events and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
-            // Decode text to speak & voice settings
+            // Decode text to speak and voice settings
             if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 yield break;
@@ -969,10 +991,10 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text and playback events and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents)
         {
@@ -980,10 +1002,10 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text & disk cache settings and then waits
-        /// for the file to load & play.  Cancels all previous clips when loaded & then plays.
+        /// Load a tts clip using the specified text and disk cache settings and then waits
+        /// for the file to load and play.  Cancels all previous clips when loaded and then plays.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings)
         {
@@ -991,7 +1013,7 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified response node, disk cache settings & playback events.
+        /// Load a tts clip using the specified response node, disk cache settings and playback events.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
@@ -1009,17 +1031,17 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text, disk cache settings & playback events.
+        /// Load a tts clip using the specified text, disk cache settings and playback events.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool SpeakQueued(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents)
         {
-            // Decode text to speak & voice settings
+            // Decode text to speak and voice settings
             if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 return false;
@@ -1030,20 +1052,20 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
+        /// Load a tts clip using the specified text and playback events.  Adds clip to playback queue and will
         /// speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool SpeakQueued(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents) =>
             SpeakQueued(responseNode, null, playbackEvents);
 
         /// <summary>
-        /// Load a tts clip using the specified text & disk cache settings events.  Adds clip
+        /// Load a tts clip using the specified text and disk cache settings events.  Adds clip
         /// to playback queue and will speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool SpeakQueued(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings) =>
@@ -1053,14 +1075,14 @@ namespace Meta.WitAi.TTS.Utilities
         /// Load a tts clip using the specified text.  Adds clip to playback queue and will speak
         /// once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <returns>True if responseNode is decoded successfully</returns>
         public bool SpeakQueued(WitResponseNode responseNode) =>
             SpeakQueued(responseNode, null, null);
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases, disk cache settings & playback events and then
-        /// waits for the files to load & play.  Adds clip to playback queue and will speak once queue has
+        /// Load a tts clip using the specified text phrases, disk cache settings and playback events and then
+        /// waits for the files to load and play.  Adds clip to playback queue and will speak once queue has
         /// completed all playback.
         /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
@@ -1075,16 +1097,16 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases, disk cache settings & playback events and then
-        /// waits for the files to load & play.  Adds clip to playback queue and will speak once queue has
+        /// Load a tts clip using the specified text phrases, disk cache settings and playback events and then
+        /// waits for the files to load and play.  Adds clip to playback queue and will speak once queue has
         /// completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
-            // Decode text to speak & voice settings
+            // Decode text to speak and voice settings
             if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 yield break;
@@ -1094,10 +1116,10 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
+        /// Load a tts clip using the specified text phrases and playback events and then waits for the files to load &
         /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents)
         {
@@ -1105,10 +1127,10 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases & disk cache settings and then waits for the files to
-        /// load & play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// Load a tts clip using the specified text phrases and disk cache settings and then waits for the files to
+        /// load and play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings)
         {
@@ -1116,10 +1138,10 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
-        /// Load a tts clip using the specified text phrases and then waits for the files to load & play.
+        /// Load a tts clip using the specified text phrases and then waits for the files to load and play.
         /// Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
         public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode)
         {
             yield return SpeakQueuedAsync(responseNode, null, null);
@@ -1151,7 +1173,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Enqueue
             _queuedRequests.Enqueue(requestData);
 
-            // Initialized, possibly started queue & load began
+            // Initialized, possibly started queue and load began
             OnInit(requestData);
             RefreshQueueEvents();
             OnLoadBegin(requestData);
@@ -1205,7 +1227,7 @@ namespace Meta.WitAi.TTS.Utilities
                 OnPlaybackReady(requestData);
             }
 
-            // Stop previously spoken clip & play next
+            // Stop previously spoken clip and play next
             if (requestData.StopQueueOnLoad && IsSpeaking)
             {
                 StopSpeaking();
@@ -1272,7 +1294,7 @@ namespace Meta.WitAi.TTS.Utilities
                     return;
                 }
 
-                // Dequeue & apply
+                // Dequeue and apply
                 _speakingRequest = _queuedRequests.Dequeue();
 
                 // Started speaking
@@ -1546,11 +1568,8 @@ namespace Meta.WitAi.TTS.Utilities
         {
             StringBuilder log = new StringBuilder();
             log.AppendLine(comment);
-            log.AppendLine($"Voice: {requestData.ClipData?.voiceSettings?.SettingsId}");
-            log.AppendLine($"Cache: {requestData.ClipData?.diskCacheSettings?.DiskCacheLocation.ToString()}");
-            log.AppendLine($"Text: {requestData.ClipData?.textToSpeak}");
             log.AppendLine($"Audio Player Type: {(_audioPlayer == null ? "NULL" : _audioPlayer.GetType().ToString())}");
-            log.AppendLine($"Audio Clip Stream Type: {(requestData.ClipData?.clipStream == null ? "NULL" : requestData.ClipData?.clipStream.GetType().ToString())}");
+            log.AppendLine(requestData.ClipData.ToString());
             log.AppendLine($"Elapsed: {(DateTime.UtcNow - requestData.StartTime).TotalMilliseconds:0.0}ms");
             if (warning)
             {
@@ -1735,6 +1754,49 @@ namespace Meta.WitAi.TTS.Utilities
         {
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
+        }
+        #endregion
+
+        #region ITTSEventPlayer
+        /// <summary>
+        /// The current sample of the playing audio data if applicable
+        /// </summary>
+        public int CurrentSample => IsSpeaking ? _audioPlayer.ElapsedSamples : 0;
+
+        /// <summary>
+        /// The total samples available for the current tts events
+        /// </summary>
+        public int TotalSamples => IsSpeaking ? SpeakingClip.clipStream.TotalSamples : 0;
+
+        /// <summary>
+        /// The callback following the change of the current sample
+        /// </summary>
+        public TTSEventSampleDelegate OnSampleUpdated { get; set; }
+
+        /// <summary>
+        /// Updates callback sample
+        /// </summary>
+        protected virtual void OnPlaybackSampleUpdated(int sample)
+        {
+            OnSampleUpdated?.Invoke(sample);
+        }
+
+        /// <summary>
+        /// The current tts events available
+        /// </summary>
+        public TTSEventContainer CurrentEvents => SpeakingClip?.Events;
+
+        /// <summary>
+        /// The callback following a tts event update
+        /// </summary>
+        public TTSEventContainerDelegate OnEventsUpdated { get; set; }
+
+        /// <summary>
+        /// Updates event callback
+        /// </summary>
+        protected virtual void OnPlaybackEventsUpdated(TTSEventContainer events)
+        {
+            OnEventsUpdated?.Invoke(events);
         }
         #endregion
     }
