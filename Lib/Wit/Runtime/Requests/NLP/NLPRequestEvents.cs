@@ -7,15 +7,21 @@
  */
 
 using System;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
 {
+    /// <summary>
+    /// A unity event that returns a decoded nlp WitResponseNode
+    /// </summary>
+    [Serializable]
+    public class NLPRequestResponseEvent : UnityEvent<WitResponseNode> {}
+
     [Serializable]
     public class NLPRequestEvents<TUnityEvent>
-        : TranscriptionRequestEvents<TUnityEvent>,
-        INLPRequestEvents<TUnityEvent>
+        : TranscriptionRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
         /// <summary>

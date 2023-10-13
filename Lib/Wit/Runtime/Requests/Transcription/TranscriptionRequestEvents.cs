@@ -12,10 +12,15 @@ using UnityEngine.Events;
 
 namespace Meta.Voice
 {
+    /// <summary>
+    /// A unity event that returns a string
+    /// </summary>
+    [Serializable]
+    public class TranscriptionRequestEvent : UnityEvent<string> {}
+
     [Serializable]
     public class TranscriptionRequestEvents<TUnityEvent>
-        : VoiceRequestEvents<TUnityEvent>,
-            ITranscriptionRequestEvents<TUnityEvent>
+        : VoiceRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
         /// <summary>

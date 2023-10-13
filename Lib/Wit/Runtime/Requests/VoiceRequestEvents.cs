@@ -14,7 +14,6 @@ namespace Meta.Voice
 {
     [Serializable]
     public class VoiceRequestEvents<TUnityEvent>
-        : IVoiceRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
         /// <summary>

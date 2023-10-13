@@ -24,7 +24,6 @@ namespace Meta.Voice
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
     public abstract class VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
-        : IVoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
         where TOptions : IVoiceRequestOptions
         where TEvents : VoiceRequestEvents<TUnityEvent>
