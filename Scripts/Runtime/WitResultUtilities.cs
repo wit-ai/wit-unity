@@ -36,7 +36,7 @@ namespace Meta.WitAi
             : string.Empty;
 
         /// <summary>
-        /// Get whether this response is a 'final' response
+        /// Get whether this response contains partial data
         /// </summary>
         public static bool HasResponse(this WitResponseNode witResponse)
         {
@@ -90,6 +90,16 @@ namespace Meta.WitAi
             && witResponse.AsObject.HasChild(WIT_KEY_FINAL)
             && witResponse[WIT_KEY_FINAL].AsBool;
 
+        // Used for multiple lookups
+        private static WitResponseArray GetArray(WitResponseNode witResponse, string key)
+        {
+            var response = witResponse?.AsObject;
+            if (response != null && response.HasChild(key))
+            {
+                return response[key].AsArray;
+            }
+            return null;
+        }
         #endregion
 
         #region Entity methods
@@ -291,7 +301,8 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static string GetIntentName(this WitResponseNode witResponse)
         {
-            return witResponse == null || !witResponse.AsObject.HasChild(WIT_KEY_INTENTS) ? null : witResponse[WIT_KEY_INTENTS][0]?["name"]?.Value;
+            var firstIntent = witResponse.GetFirstIntent();
+            return firstIntent == null ? null : firstIntent["name"]?.Value;
         }
 
         /// <summary>
@@ -301,7 +312,8 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitResponseNode GetFirstIntent(this WitResponseNode witResponse)
         {
-            return witResponse == null || !witResponse.AsObject.HasChild(WIT_KEY_INTENTS) ? null : witResponse[WIT_KEY_INTENTS][0];
+            var array = GetArray(witResponse, WIT_KEY_INTENTS);
+            return array == null || array.Count == 0 ? null : array[0];
         }
 
         /// <summary>
@@ -311,8 +323,8 @@ namespace Meta.WitAi
         /// <returns>WitIntentData or null if no intents are found</returns>
         public static WitIntentData GetFirstIntentData(this WitResponseNode witResponse)
         {
-            var array = witResponse == null || !witResponse.AsObject.HasChild(WIT_KEY_INTENTS) ? null : witResponse[WIT_KEY_INTENTS]?.AsArray;
-            return array?.Count > 0 ? array[0].AsWitIntent() : null;
+            var firstIntent = witResponse.GetFirstIntent();
+            return firstIntent == null ? null : firstIntent["name"]?.AsWitIntent();
         }
 
         /// <summary>
@@ -322,13 +334,12 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitIntentData[] GetIntents(this WitResponseNode witResponse)
         {
-            var intentResponseArray = witResponse == null || !witResponse.AsObject.HasChild(WIT_KEY_INTENTS) ? null : witResponse[WIT_KEY_INTENTS]?.AsArray;
-            var intents = new WitIntentData[intentResponseArray?.Count ?? 0];
+            var array = GetArray(witResponse, WIT_KEY_INTENTS);
+            var intents = new WitIntentData[array?.Count ?? 0];
             for (int i = 0; i < intents.Length; i++)
             {
-                intents[i] = intentResponseArray[i].AsWitIntent();
+                intents[i] = array[i].AsWitIntent();
             }
-
             return intents;
         }
         #endregion
