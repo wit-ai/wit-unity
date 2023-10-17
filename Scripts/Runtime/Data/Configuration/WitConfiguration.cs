@@ -215,14 +215,6 @@ namespace Meta.WitAi.Data.Configuration
         }
         #if UNITY_EDITOR
         /// <summary>
-        /// Editor only setter
-        /// </summary>
-        public void SetClientAccessToken(string newToken)
-        {
-            _clientAccessToken = newToken;
-            SaveConfiguration();
-        }
-        /// <summary>
         /// Returns server access token (Editor Only)
         /// </summary>
         /// <returns></returns>
@@ -286,6 +278,18 @@ namespace Meta.WitAi.Data.Configuration
             AssetDatabase.SaveAssets();
         }
         #endif
+
+        /// <summary>
+        /// Editor only setter
+        /// </summary>
+        public void SetClientAccessToken(string newToken)
+        {
+            _clientAccessToken = newToken;
+#if UNITY_EDITOR
+            SaveConfiguration();
+#endif
+        }
+
         #endregion
     }
 }
