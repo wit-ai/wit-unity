@@ -280,11 +280,17 @@ namespace Meta.Conduit
         /// <summary>
         /// Returns true if the manifest contains the specified action.
         /// </summary>
-        /// <param name="action"></param>
+        /// <param name="actionId">The action ID to check for.</param>
         /// <returns>True if the action exists, false otherwise.</returns>
-        public bool ContainsAction(string @action)
+        public bool ContainsAction(string actionId)
         {
-            return _methodLookup.ContainsKey(action);
+            if (string.IsNullOrEmpty(actionId))
+            {
+                VLog.E("Null or empty action ID supplied");
+                return false;
+            }
+
+            return _methodLookup.ContainsKey(actionId);
         }
 
         /// <summary>
