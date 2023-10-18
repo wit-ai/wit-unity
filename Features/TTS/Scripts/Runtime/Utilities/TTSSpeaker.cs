@@ -379,30 +379,11 @@ namespace Meta.WitAi.TTS.Utilities
                 request.PlaybackEvents.OnComplete.AddListener(onComplete);
             }
 
-            // Wait for active requests to be complete and update current sample/events
-            int events = -1;
-            int sample = -1;
+            // Wait for active requests to complete
             while (activeRequests > 0)
             {
-                var newEvents = CurrentEvents;
-                var newEventCount = newEvents?.Events == null ? 0 : newEvents.Events.Count;
-                if (events != newEventCount)
-                {
-                    events = newEventCount;
-                    OnPlaybackEventsUpdated(newEvents);
-                }
-                var newSample = CurrentSample;
-                if (sample != newSample)
-                {
-                    sample = newSample;
-                    OnPlaybackSampleUpdated(sample);
-                }
                 yield return new WaitForEndOfFrame();
             }
-
-            // Reset playback event data
-            OnPlaybackEventsUpdated(null);
-            OnPlaybackSampleUpdated(0);
 
             // Remove event delegates
             for (int r = 0; r < count; r++)
@@ -1325,6 +1306,8 @@ namespace Meta.WitAi.TTS.Utilities
         {
             // Use delta time to wait for completion
             float elapsedTime = 0f;
+            int events = -1;
+            int sample = -1;
             while (!IsPlaybackComplete(elapsedTime))
             {
                 yield return new WaitForEndOfFrame();
@@ -1341,6 +1324,23 @@ namespace Meta.WitAi.TTS.Utilities
                     {
                         AudioPlayer.Resume();
                     }
+                }
+
+                // Update current event list if needed
+                var newEvents = CurrentEvents;
+                var newEventCount = newEvents?.Events == null ? 0 : newEvents.Events.Count;
+                if (events != newEventCount)
+                {
+                    events = newEventCount;
+                    OnPlaybackEventsUpdated(newEvents);
+                }
+
+                // Update current sample if needed
+                var newSample = CurrentSample;
+                if (sample != newSample)
+                {
+                    sample = newSample;
+                    OnPlaybackSampleUpdated(sample);
                 }
 
                 // Only increment if playing
@@ -1375,6 +1375,10 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Stop audio source playback
             AudioPlayer.Stop();
+
+            // Reset playback event data
+            OnPlaybackEventsUpdated(null);
+            OnPlaybackSampleUpdated(0);
 
             // Stopped
             if (stopped)
