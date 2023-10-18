@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Meta.Voice.TelemetryUtilities;
 using UnityEditor;
 using UnityEngine;
@@ -68,12 +69,9 @@ namespace Meta.WitAi
             }
             // Iterate fields
             EditorGUI.indentLevel++;
-            foreach (var field in obj.GetType().GetFields())
+            foreach (var field in obj.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                if (field.IsPublic && !field.IsStatic)
-                {
-                    LayoutKeyLabel(field.Name, field.GetValue(obj)?.ToString());
-                }
+                LayoutKeyLabel(field.Name, field.GetValue(obj)?.ToString());
             }
             EditorGUI.indentLevel--;
         }

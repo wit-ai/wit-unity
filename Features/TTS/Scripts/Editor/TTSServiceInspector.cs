@@ -139,14 +139,33 @@ namespace Meta.WitAi.TTS
             }
             EditorGUI.indentLevel++;
             var events = eventContainer.Events;
-            if (events != null)
+            if (events != null && events.Count > 0)
             {
                 int count = 0;
                 foreach (var ttsEvent in events)
                 {
-                    WitEditorUI.LayoutKeyObjectLabels($"[{count}] - {ttsEvent.GetType().Name}", ttsEvent);
+                    string key = $"{ttsEvent.GetType().Name}[{count}]";
+                    if (ttsEvent is TTSVisemeEvent visemeEvent)
+                    {
+                        WitEditorUI.LayoutKeyObjectLabels(key, visemeEvent);
+                    }
+                    else if (ttsEvent is TTSStringEvent stringEvent)
+                    {
+                        WitEditorUI.LayoutKeyObjectLabels(key, stringEvent);
+                    }
+                    else
+                    {
+                        if (WitEditorUI.LayoutFoldout(new GUIContent(key), ttsEvent))
+                        {
+                            WitEditorUI.LayoutLabel("Unsupported Type");
+                        }
+                    }
                     count++;
                 }
+            }
+            else
+            {
+                WitEditorUI.LayoutLabel("No TTSEvents");
             }
             EditorGUI.indentLevel--;
         }
