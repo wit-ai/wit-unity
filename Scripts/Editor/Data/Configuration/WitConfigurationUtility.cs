@@ -82,6 +82,10 @@ namespace Meta.WitAi.Data.Configuration
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 WitConfiguration config = AssetDatabase.LoadAssetAtPath<WitConfiguration>(path);
+                if (config == null)
+                {
+                    continue;
+                }
                 if (!config.isDemoOnly || loaded.Contains(config))
                 {
                     found.Add(config);
