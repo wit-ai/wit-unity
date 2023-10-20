@@ -326,7 +326,7 @@ namespace Meta.WitAi
         {
             if (UseConduit)
             {
-                InitializeConduit();
+                _ = InitializeConduit();
             }
             TranscriptionProvider?.OnFullTranscription.AddListener(OnFinalTranscription);
             VoiceEvents.OnResponse.AddListener(HandleResponse);
