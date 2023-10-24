@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi;
 using UnityEngine;
 
 namespace Meta.Voice.Audio
@@ -79,7 +80,7 @@ namespace Meta.Voice.Audio
         /// <param name="newChannels">The channels to be used for streaming</param>
         /// <param name="newSampleRate">The new sample rate</param>
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
-        protected AudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength)
+        protected AudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH)
         {
             // Set parameters
             Channels = newChannels;

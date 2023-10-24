@@ -63,6 +63,10 @@ namespace Meta.WitAi.TTS.Integrations
                 if (_runtimeCache == null)
                 {
                     _runtimeCache = gameObject.GetComponent<ITTSRuntimeCacheHandler>();
+                    if (_runtimeCache == null)
+                    {
+                        _runtimeCache = gameObject.AddComponent<TTSRuntimeCache>();
+                    }
                 }
                 return _runtimeCache;
             }

@@ -101,6 +101,8 @@ namespace Meta.WitAi.TTS
             WitEditorUI.LayoutKeyLabel("Text", clip.textToSpeak);
             EditorGUILayout.TextField("Clip ID", clip.clipID);
             EditorGUILayout.ObjectField("Clip", clip.clip, typeof(AudioClip), true);
+            EditorGUILayout.LabelField("Length", (clip.clipStream == null ? 0 : clip.clipStream.Length).ToString());
+            EditorGUILayout.LabelField("Samples", (clip.clipStream == null ? 0 : clip.clipStream.TotalSamples).ToString());
 
             // Loaded
             TTSClipLoadState loadState = clip.loadState;

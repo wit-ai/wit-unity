@@ -25,14 +25,14 @@ namespace Meta.WitAi.TTS.Integrations
         [Header("Runtime Cache Settings")]
         [Tooltip("Whether or not to unload clip data after the clip capacity is hit")]
         [FormerlySerializedAs("_clipLimit")]
-        public bool ClipLimit = true;
+        public bool ClipLimit = false;
 
         /// <summary>
         /// The maximum clips allowed in the runtime cache
         /// </summary>
         [Tooltip("The maximum clips allowed in the runtime cache")]
         [FormerlySerializedAs("_clipCapacity")]
-        [Min(1)] public int ClipCapacity = 20;
+        [Min(1)] public int ClipCapacity = 5;
 
         /// <summary>
         /// Whether or not to unload clip data after the ram capacity is hit
@@ -44,9 +44,9 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// The maximum amount of RAM allowed in the runtime cache.  In KBs
         /// </summary>
-        [Tooltip("The maximum amount of RAM allowed in the runtime cache.  In KBs")]
+        [Tooltip("The maximum amount of RAM allowed in the runtime cache in KBs.  For example, 24k samples per second * 2bits per sample * 10 minutes (600 seconds) = 3600KBs")]
         [FormerlySerializedAs("_ramCapacity")]
-        [Min(1)] public int RamCapacity = 32768;
+        [Min(1)] public int RamCapacity = 3600;
 
         /// <summary>
         /// On clip added callback

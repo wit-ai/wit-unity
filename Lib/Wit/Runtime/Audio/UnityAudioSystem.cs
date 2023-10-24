@@ -24,12 +24,12 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// Audio clip ready length in seconds
         /// </summary>
-        public float AudioClipReadyLength = 1f;
+        public float AudioClipReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH;
 
         /// <summary>
         /// Chunk buffer length in seconds
         /// </summary>
-        public int AudioClipPreloadCount = 3;
+        public int AudioClipPreloadCount = 5;
 
         // Preload clips if desired
         private void Awake()

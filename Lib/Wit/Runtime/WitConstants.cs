@@ -49,6 +49,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
+        public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
         public const string ERROR_TTS_CACHE_DOWNLOAD = "Preloaded files cannot be downloaded at runtime.";
