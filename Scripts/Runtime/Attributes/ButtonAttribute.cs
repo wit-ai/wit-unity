@@ -10,14 +10,30 @@ namespace Meta.WitAi.Attributes
 {
     using System;
 
+    /// <summary>
+    /// An attribute to show a Button in the inspector for a method in a MonoBehaviour script.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class ButtonAttribute : Attribute
     {
         public readonly string displayName;
+        public readonly string label;
+        public readonly string tooltip;
+        public readonly bool isRuntimeOnly;
 
-        public ButtonAttribute(string displayName = null)
+        /// <summary>
+        /// An attribute to show a Button in the inspector for a method in a MonoBehaviour script. 
+        /// </summary>
+        /// <param name="displayName">The name to be shown on the button. If not provided the function name will be used.</param>
+        /// <param name="label">The label to be used for the foldout. If not provided displayName will be shown.</param>
+        /// <param name="tooltip">Tooltip to show on the button</param>
+        /// <param name="isRuntimeOnly">Only show if the game is running.</param>
+        public ButtonAttribute(string displayName = null, string label = null, string tooltip = null, bool isRuntimeOnly = false)
         {
             this.displayName = displayName;
+            this.label = label;
+            this.tooltip = tooltip;
+            this.isRuntimeOnly = isRuntimeOnly;
         }
     }
 }
