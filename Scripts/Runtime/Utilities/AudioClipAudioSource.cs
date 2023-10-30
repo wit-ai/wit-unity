@@ -25,8 +25,6 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
     private Queue<int> _audioQueue = new Queue<int>();
     private int clipIndex = 0;
-    private int activeClipIndex;
-    private float[] activeClipBuffer = new float[0];
 
     private List<float[]> clipData = new List<float[]>();
 
@@ -62,7 +60,6 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         }
         if (clipIndex < _audioClips.Count)
         {
-            activeClipIndex = 0;
             VLog.D($"Starting clip {clipIndex}");
             _isRecording = true;
             VLog.D($"Playing {_audioClips[clipIndex].name}");
