@@ -11,8 +11,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using Lib.Wit.Editor;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
+using Meta.WitAi.Lib;
 using Meta.WitAi.Requests;
 namespace Lib.Wit.Runtime.Data.Info
 {
@@ -21,8 +23,10 @@ namespace Lib.Wit.Runtime.Data.Info
     /// </summary>
     public abstract class WitExportRetriever
     {
-        // tracks which callbacks have already been registered for a specific export retrieval
-        // this is necessary as the equality checks on delegates don't work
+        /// <summary>
+        /// Tracks which callbacks have already been registered for a specific export retrieval
+        /// this is necessary as the equality checks on delegates don't work
+        /// </summary>
         private static readonly Dictionary<string, List<MethodInfo>> CallbacksPerConfig =  new Dictionary<string, List<MethodInfo>>();
 
         //tracks the delegates to call for each config
@@ -50,52 +54,73 @@ namespace Lib.Wit.Runtime.Data.Info
 
             if (PendingCallbacksPerConfig[appId].Count == 1)
             {
-                new WitInfoVRequest(configuration, true).RequestAppExportInfo(appId,
-                    (exportInfo, exportInfoError) =>
-                        OnExportInfoGetCompletion(appId, exportInfo, exportInfoError));
+                new WitInfoVRequest(configuration, true).RequestAppExportInfo((exportInfo, exportInfoError) =>
+                        OnExportInfoGetCompletion(configuration, exportInfo, exportInfoError));
             }
         }
-        // Callback following Wit request for app info
-        private static void OnExportInfoGetCompletion(string appId, WitExportInfo exportInfo, string exportInfoError)
+        /// <summary>
+        /// Callback following Wit request for app info
+        /// </summary>
+        /// <param name="appId">Id of hte app being exported</param>
+        /// <param name="exportInfo">the info about what export to download</param>
+        /// <param name="exportInfoError">any errors which may have occurred during export; may be null or empty</param>
+        private static void OnExportInfoGetCompletion(IWitRequestConfiguration configuration, WitExportInfo exportInfo, string exportInfoError)
         {
             if (!string.IsNullOrEmpty(exportInfoError))
             {
-                OnExportZipLoadCompletion(appId, null, exportInfoError);
+                OnExportZipLoadCompletion(configuration, null, exportInfoError);
                 return;
             }
             new VRequest().RequestFile(new Uri(exportInfo.uri),
                 (exportZipData, exportZipError) =>
-                    OnExportZipLoadCompletion(appId, exportZipData, exportInfoError));
+                    OnExportZipLoadCompletion(configuration, exportZipData, exportInfoError));
         }
 
-        // Callback following zip file request
-        private static void OnExportZipLoadCompletion(string appId, byte[] exportZipData, string exportZipError)
+        /// <summary>
+        /// Callback following zip file request
+        /// </summary>
+        /// <param name="appConfig">app ID which was exported</param>
+        /// <param name="exportZipData">the raw data which was downloaded</param>
+        /// <param name="exportZipError">string of any errors which may have occurred</param>
+        private static void OnExportZipLoadCompletion(IWitRequestConfiguration appConfig, byte[] exportZipData, string exportZipError)
         {
             if (!string.IsNullOrEmpty(exportZipError))
             {
-                OnExportZipDecodeCompletion(appId, null, exportZipError);
+                OnExportZipDecodeCompletion(appConfig, null, exportZipError);
                 return;
             }
             try
             {
                 var zip = new ZipArchive(new MemoryStream(exportZipData));
-                OnExportZipDecodeCompletion(appId, zip, null);
+                OnExportZipDecodeCompletion(appConfig, zip, null);
             }
             catch (Exception e)
             {
-                OnExportZipDecodeCompletion(appId, null, e.ToString());
+                OnExportZipDecodeCompletion(appConfig, null, e.ToString());
             }
         }
 
-        // Callback following final export completion
-        private static void OnExportZipDecodeCompletion(string appId, ZipArchive result, string error)
+        /// <summary>
+        /// Callback following final export completion
+        /// </summary>
+        /// <param name="appId">app ID which was exported</param>
+        /// <param name="result">the formatted and decoded Zip archive which was downloaded</param>
+        /// <param name="error">the errors which occurred, if any</param>
+        private static void OnExportZipDecodeCompletion(IWitRequestConfiguration appConfig, ZipArchive result, string error)
         {
+            string appId = appConfig.GetApplicationId();
             foreach (var pending in PendingCallbacksPerConfig[appId])
             {
                 pending.Invoke(result, error);
             }
             PendingCallbacksPerConfig[appId].Clear();
             CallbacksPerConfig[appId].Clear();
+
+            if (!string.IsNullOrEmpty(error))
+                return;
+
+            // now call any hooks connected to a completed export download
+            ExportParser.ProcessExtensions(appConfig ,result);
         }
     }
 }

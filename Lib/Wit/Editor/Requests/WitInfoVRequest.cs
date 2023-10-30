@@ -150,8 +150,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="applicationId">The application's unique identifier</param>
         /// <returns>Returns false if request cannot be made</returns>
-        public bool RequestAppExportInfo(string applicationId,
-            RequestCompleteDelegate<WitExportInfo> onComplete) =>
+        public bool RequestAppExportInfo(RequestCompleteDelegate<WitExportInfo> onComplete) =>
             RequestWitGet(WitEditorConstants.ENDPOINT_EXPORT, null, onComplete);
 
         /// <summary>

@@ -7,14 +7,11 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
-using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Lib
@@ -29,6 +26,16 @@ namespace Meta.WitAi.Lib
 
         public ExportParser()
         {
+            CheckSetupPlugins();
+        }
+
+        /// <summary>
+        /// Checks whether we've already cached the loaded plugins and
+        /// reloads them if we've had code changes (ie the static editor code
+        /// has been updated).
+        /// </summary>
+        private static void CheckSetupPlugins()
+        {
             if (_plugins != null)
                 return;
 
@@ -36,14 +43,21 @@ namespace Meta.WitAi.Lib
             AutoRegisterPlugins();
         }
 
-        private void AutoRegisterPlugins()
+        /// <summary>
+        /// Explicitly reloads all the plugin types from current assemblies
+        /// in case the assemblies and code have changed.
+        /// </summary>
+        private static void AutoRegisterPlugins()
         {
             // Get all loaded assemblies in the current domain
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             // Find all types that implement the IPlugin interface
-            List<Type> pluginTypes = typeof(IExportParserPlugin).GetSubclassTypes();
 
+            Type[] pluginTypes = assemblies
+                .SelectMany(assembly => assembly.GetTypes())
+                .Where(type => typeof(IExportParserPlugin).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+                .ToArray();
             // Create instances of the plugin types and register them
             foreach (Type pluginType in pluginTypes)
             {
@@ -90,8 +104,15 @@ namespace Meta.WitAi.Lib
             return null;
         }
 
-        public void ProcessExtensions(IWitRequestConfiguration config, ZipArchive zip)
+        /// <summary>
+        /// Calls Process on all IExportParserPlugin objects within the project's
+        /// loaded assemblies
+        /// </summary>
+        /// <param name="config">the config to pass to the Process function</param>
+        /// <param name="zip">the zip archive to pass ot the Process function</param>
+        public static void ProcessExtensions(IWitRequestConfiguration config, ZipArchive zip)
         {
+            CheckSetupPlugins();
             foreach (IExportParserPlugin plugin in _plugins)
             {
                 plugin.Process(config, zip);

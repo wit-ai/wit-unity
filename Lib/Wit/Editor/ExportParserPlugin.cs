@@ -8,7 +8,6 @@
 
 
 using System.IO.Compression;
-using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi.Lib
 {
