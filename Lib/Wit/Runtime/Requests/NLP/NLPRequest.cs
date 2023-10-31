@@ -8,6 +8,7 @@
 
 using System;
 using System.Text;
+using Meta.WitAi;
 using Meta.WitAi.Json;
 using UnityEngine.Events;
 
@@ -77,9 +78,9 @@ namespace Meta.Voice
         /// </summary>
         /// <param name="log">Building log</param>
         /// <param name="warning">True if this is a warning log</param>
-        protected override void AppendLogData(StringBuilder log, bool warning)
+        protected override void AppendLogData(StringBuilder log, VLogLevel logLevel)
         {
-            base.AppendLogData(log, warning);
+            base.AppendLogData(log, logLevel);
             log.AppendLine($"Input Type: {InputType}");
         }
 

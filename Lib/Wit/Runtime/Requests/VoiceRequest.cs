@@ -116,28 +116,79 @@ namespace Meta.Voice
             State = newState;
             RaiseEvent(Events?.OnStateChange);
 
+            // Handle completion
+            bool shouldComplete = false;
+
             // Perform state specific event
             switch (State)
             {
                 case VoiceRequestState.Initialized:
-                    OnInit();
+                    try
+                    {
+                        OnInit();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE(e);
+                    }
                     break;
                 case VoiceRequestState.Transmitting:
                     CoroutineUtility.StartCoroutine(WaitForHold(OnCanSend));
                     break;
                 case VoiceRequestState.Canceled:
-                    HandleCancel();
-                    OnCancel();
-                    OnComplete();
+                    try
+                    {
+                        HandleCancel();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE(e);
+                    }
+                    try
+                    {
+                        OnCancel();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE(e);
+                    }
+                    shouldComplete = true;
                     break;
                 case VoiceRequestState.Failed:
-                    OnFailed();
-                    OnComplete();
+                    try
+                    {
+                        OnFailed();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE(e);
+                    }
+                    shouldComplete = true;
                     break;
                 case VoiceRequestState.Successful:
-                    OnSuccess();
-                    OnComplete();
+                    try
+                    {
+                        OnSuccess();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE(e);
+                    }
+                    shouldComplete = true;
                     break;
+            }
+
+            // Handle completion
+            if (shouldComplete)
+            {
+                try
+                {
+                    OnComplete();
+                }
+                catch (Exception e)
+                {
+                    LogE(e);
+                }
             }
         }
 
@@ -158,10 +209,24 @@ namespace Meta.Voice
             {
                 return;
             }
-            OnSend();
+            try
+            {
+                OnSend();
+            }
+            catch (Exception e)
+            {
+                LogE(e);
+            }
             if (!OnSimulateResponse())
             {
-                HandleSend();
+                try
+                {
+                    HandleSend();
+                }
+                catch (Exception e)
+                {
+                    LogE(e);
+                }
             }
         }
 
@@ -206,36 +271,26 @@ namespace Meta.Voice
         /// <summary>
         /// Internal method for
         /// </summary>
-        protected void Log(string log, bool warning = false)
+        protected void Log(string log, VLogLevel logLevel = VLogLevel.Info)
         {
             // Start log
             StringBuilder requestLog = new StringBuilder();
-            // Append type of request
-            requestLog.Append($"{GetType().Name} ");
             // Append sent log
             requestLog.AppendLine(log);
             // Append any request specific data
-            AppendLogData(requestLog, warning);
-
-            // Log warning
-            if (warning)
-            {
-                VLog.W(requestLog);
-            }
-            // Log debug
-            else
-            {
-                VLog.D(requestLog);
-            }
+            AppendLogData(requestLog, logLevel);
+            // Log
+            VLog.Log(logLevel, GetType().Name, requestLog);
         }
-        protected void LogW(string log) => Log(log, true);
+        protected void LogW(string log) => Log(log, VLogLevel.Warning);
+        protected void LogE(Exception e) => Log(e.ToString(), VLogLevel.Error);
 
         /// <summary>
         /// Append request specific data to log
         /// </summary>
         /// <param name="log">Building log</param>
         /// <param name="warning">True if this is a warning log</param>
-        protected virtual void AppendLogData(StringBuilder log, bool warning)
+        protected virtual void AppendLogData(StringBuilder log, VLogLevel logLevel)
         {
             #if UNITY_EDITOR
             // Append request id

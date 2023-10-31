@@ -110,10 +110,9 @@ namespace Meta.Voice
         /// Append request specific data to log
         /// </summary>
         /// <param name="log">Building log</param>
-        /// <param name="warning">True if this is a warning log</param>
-        protected override void AppendLogData(StringBuilder log, bool warning)
+        protected override void AppendLogData(StringBuilder log, VLogLevel logLevel)
         {
-            base.AppendLogData(log, warning);
+            base.AppendLogData(log, logLevel);
             // Append audio input state
             log.AppendLine($"Audio Input State: {AudioInputState}");
             // Append current transcription

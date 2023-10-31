@@ -116,7 +116,7 @@ namespace Meta.WitAi
         /// <param name="logType"></param>
         /// <param name="log"></param>
         /// <param name="category"></param>
-        private static void Log(VLogLevel logType, string logCategory, object log)
+        public static void Log(VLogLevel logType, string logCategory, object log)
         {
             #if UNITY_EDITOR
             // Skip logs with higher log type then global log level
@@ -242,4 +242,3 @@ namespace Meta.WitAi
         }
     }
 }
-
