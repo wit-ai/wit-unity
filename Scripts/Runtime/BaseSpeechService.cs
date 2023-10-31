@@ -6,21 +6,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Text;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Events;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Meta.WitAi.Requests
+namespace Meta.WitAi
 {
     /// <summary>
     /// A simple base class for wrapping VoiceServiceRequest event callbacks
     /// </summary>
-    public class VoiceServiceRequestWrapper : MonoBehaviour
+    public abstract class BaseSpeechService : MonoBehaviour
     {
         /// <summary>
         /// Whether this script should wrap all request event setups
@@ -41,6 +41,11 @@ namespace Meta.WitAi.Requests
         /// Returns true if this voice service is currently active, listening with the mic or performing a networked request
         /// </summary>
         public virtual bool Active => Requests != null && Requests.Count > 0;
+
+        /// <summary>
+        /// If applicable, get all speech events
+        /// </summary>
+        protected virtual SpeechEvents GetSpeechEvents() => null;
 
         /// <summary>
         /// Check for error that will occur if attempting to send data
@@ -100,7 +105,7 @@ namespace Meta.WitAi.Requests
             // Cannot track
             if (request == null)
             {
-                VLog.E("Cannot wrap a null VoiceServiceRequest");
+                Log(null, "Cannot wrap a null VoiceServiceRequest", true);
                 return false;
             }
 
@@ -138,11 +143,6 @@ namespace Meta.WitAi.Requests
             // Success
             return true;
         }
-
-        /// <summary>
-        /// If applicable, get all speech events
-        /// </summary>
-        protected virtual SpeechEvents GetSpeechEvents() => null;
 
         // The desired log method for this script.  Ensures request id is included in every call
         protected virtual void Log(VoiceServiceRequest request, string log, bool warn = false)

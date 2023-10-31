@@ -24,7 +24,7 @@ using UnityEngine;
 
 namespace Meta.WitAi
 {
-    public abstract class VoiceService : VoiceServiceRequestWrapper, IVoiceService, IInstanceResolver, IAudioEventProvider
+    public abstract class VoiceService : BaseSpeechService, IVoiceService, IInstanceResolver, IAudioEventProvider
     {
         /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
