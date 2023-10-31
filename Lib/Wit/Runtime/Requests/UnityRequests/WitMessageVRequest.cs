@@ -15,7 +15,7 @@ namespace Meta.WitAi.Requests
     internal class WitMessageVRequest : WitVRequest
     {
         // Partial response handler
-        private RequestCompleteDelegate<WitResponseNode> _onPartial;
+        private RequestCompleteDelegate<string> _onPartial;
 
         /// <summary>
         /// Constructor for wit based message VRequests
@@ -27,7 +27,7 @@ namespace Meta.WitAi.Requests
         public WitMessageVRequest(IWitRequestConfiguration configuration, string requestId,
             RequestProgressDelegate onDownloadProgress = null,
             RequestFirstResponseDelegate onFirstResponse = null,
-            RequestCompleteDelegate<WitResponseNode> onPartial = null)
+            RequestCompleteDelegate<string> onPartial = null)
             : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
         {
             _onPartial = onPartial;
@@ -42,8 +42,8 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool MessageRequest(string text,
             Dictionary<string, string> queryParams,
-            RequestCompleteDelegate<WitResponseNode> onComplete,
-            RequestCompleteDelegate<WitResponseNode> onPartial = null) =>
+            RequestCompleteDelegate<string> onComplete,
+            RequestCompleteDelegate<string> onPartial = null) =>
             MessageRequest(WitConstants.ENDPOINT_MESSAGE, false, text, queryParams, onComplete, onPartial);
 
         /// <summary>
@@ -57,8 +57,8 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool MessageRequest(string endpoint, bool post, string text,
             Dictionary<string, string> queryParams,
-            RequestCompleteDelegate<WitResponseNode> onComplete, 
-            RequestCompleteDelegate<WitResponseNode> onPartial = null)
+            RequestCompleteDelegate<string> onComplete,
+            RequestCompleteDelegate<string> onPartial = null)
         {
             // Add text to uri parameters
             Dictionary<string, string> uriParams = queryParams ?? new Dictionary<string, string>();

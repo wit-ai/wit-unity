@@ -197,11 +197,19 @@ namespace Meta.Voice
             // Wait for previous decodes to complete
             while (rawDecodeIndex > _rawDecodesComplete)
             {
-                await Task.Delay(20);
+                await Task.Delay(2);
             }
+
+            // Apply
+            ApplyDecodedResponseData(responseData, final);
+        }
+        // Call application of data
+        protected virtual void ApplyDecodedResponseData(TResponseData responseData, bool final)
+        {
+            // Allow next decode to complete
             _rawDecodesComplete++;
 
-            // Ignore if no longer active
+            // No longer active
             if (!IsActive)
             {
                 return;
@@ -265,9 +273,18 @@ namespace Meta.Voice
             // Apply new response data
             Results.SetResponseData(responseData);
 
+            // Apply partial transcription if changed & exists
+            string transcription = ResponseDecoder?.GetResponseTranscription(responseData);
+            bool hasTranscription = ResponseDecoder != null && ResponseDecoder.GetResponseHasTranscription(responseData);
+            bool isTranscriptionFull = ResponseDecoder != null && ResponseDecoder.GetResponseIsTranscriptionFull(responseData);
+            if (InputType == NLPRequestInputType.Audio && hasChanged && hasTranscription)
+            {
+                ApplyTranscription(transcription, isTranscriptionFull);
+            }
+
             // Call partial response if changed & exists
             bool hasPartial = ResponseDecoder != null && ResponseDecoder.GetResponseHasPartial(responseData);
-            if ((hasChanged && hasPartial) || (final && !hasPartial))
+            if (hasChanged && hasPartial)
             {
                 OnPartialResponse();
             }
@@ -275,7 +292,19 @@ namespace Meta.Voice
             // Final was called, handle success
             if (final)
             {
+                // Call final transcription if not previously called
+                if (InputType == NLPRequestInputType.Audio && (!hasTranscription || !isTranscriptionFull))
+                {
+                    ApplyTranscription(transcription, true);
+                }
+                // Call partial response if not previously called
+                if (!hasPartial)
+                {
+                    OnPartialResponse();
+                }
+                // Call final response
                 OnFullResponse();
+                // Handle success
                 HandleSuccess();
             }
         }

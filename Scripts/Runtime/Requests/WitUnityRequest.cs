@@ -39,6 +39,11 @@ namespace Meta.WitAi.Requests
         public bool ShouldPost { get; set; }
 
         /// <summary>
+        /// Decode raw responses
+        /// </summary>
+        protected override bool DecodeRawResponses => true;
+
+        /// <summary>
         /// Apply configuration
         /// </summary>
         /// <param name="newConfiguration"></param>
@@ -114,11 +119,11 @@ namespace Meta.WitAi.Requests
         }
 
         // Set error and apply
-        private void HandlePartialResponse(WitResponseNode responseData, string error) =>
-            HandleResponse(responseData, error, false);
-        private void HandleFinalResponse(WitResponseNode responseData, string error) =>
-            HandleResponse(responseData, error, true);
-        protected void HandleResponse(WitResponseNode responseData, string error, bool final)
+        private void HandlePartialResponse(string rawResponse, string error) =>
+            HandleResponse(rawResponse, error, false);
+        private void HandleFinalResponse(string rawResponse, string error) =>
+            HandleResponse(rawResponse, error, true);
+        protected void HandleResponse(string rawResponse, string error, bool final)
         {
             // Handle errors
             if (!string.IsNullOrEmpty(error))
@@ -131,8 +136,8 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // Apply response data
-            ApplyResponseData(responseData, final);
+            // Apply raw response data
+            HandleRawResponse(rawResponse, final);
         }
 
         /// <summary>

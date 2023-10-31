@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
@@ -82,6 +83,8 @@ namespace Meta.WitAi.Requests
         private CoroutineUtility.CoroutinePerformer _performer = null;
         // All actions
         private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+        // Main thread
+        private static Thread _main;
 
         // While active, perform any sent callbacks
         protected void WatchMainThreadCallbacks()
@@ -92,6 +95,9 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
+            // Main thread
+            _main = Thread.CurrentThread;
+
             // Check callbacks every frame (editor or runtime)
             _performer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
         }
@@ -101,16 +107,8 @@ namespace Meta.WitAi.Requests
             // While checking, continue
             while (HasMainThreadCallbacks())
             {
-                // Wait for frame
-                if (Application.isPlaying && !Application.isBatchMode)
-                {
-                    yield return new WaitForEndOfFrame();
-                }
                 // Wait for a tick
-                else
-                {
-                    yield return null;
-                }
+                yield return null;
 
                 // Perform if possible
                 while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
@@ -130,6 +128,11 @@ namespace Meta.WitAi.Requests
         {
             if (action == null)
             {
+                return;
+            }
+            if (Thread.CurrentThread == _main)
+            {
+                action.Invoke();
                 return;
             }
             _mainThreadCallbacks.Enqueue(action);

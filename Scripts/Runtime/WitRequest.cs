@@ -106,6 +106,9 @@ namespace Meta.WitAi
         public byte[] postData;
         public string postContentType;
         public string forcedHttpMethodType = null;
+
+        // Decode in NLPRequest
+        protected override bool DecodeRawResponses => true;
         #endregion PARAMETERS
 
         #region REQUEST
@@ -137,11 +140,6 @@ namespace Meta.WitAi
         /// Simply return the Path to be called
         /// </summary>
         public override string ToString() => Path;
-
-        /// <summary>
-        /// Last response data parsed
-        /// </summary>
-        private WitResponseNode _lastResponseData;
         #endregion RESULTS
 
         #region EVENTS
@@ -514,15 +512,9 @@ namespace Meta.WitAi
             HasResponseStarted = true;
 
             // Decode
-            _lastResponseData = WitResponseNode.Parse(response);
             try
             {
                 HandleRawResponse(response, true);
-                if (!string.IsNullOrEmpty(_lastResponseData.GetTranscription()))
-                {
-                    onFullTranscription?.Invoke(_lastResponseData.GetTranscription());
-                }
-                ApplyResponseData(_lastResponseData, true);
             }
             catch (Exception e)
             {
@@ -654,11 +646,11 @@ namespace Meta.WitAi
                     audioDurationTracker.AddBytes(length);
                 }
             }
-            catch (ObjectDisposedException e)
+            catch (ObjectDisposedException)
             {
                 _writeStream = null;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return;
             }
@@ -703,10 +695,11 @@ namespace Meta.WitAi
                         {
                             using (var responseReader = new StreamReader(responseStream))
                             {
-                                stringResponse = responseReader.ReadToEnd();
-                                if (!string.IsNullOrEmpty(stringResponse))
+                                string chunk;
+                                while ((chunk = ReadToDelimiter(responseReader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
                                 {
-                                    ProcessStringResponses(stringResponse);
+                                    stringResponse = chunk;
+                                    ProcessStringResponse(stringResponse);
                                 }
                             }
                         }
@@ -788,7 +781,7 @@ namespace Meta.WitAi
                     HandleFailure(statusCode, error);
                 }
                 // No response
-                else if (ResponseData == null)
+                else if (ResponseData == null && !IsDecoding)
                 {
                     error = $"Server did not return a valid json response.";
 #if UNITY_EDITOR
@@ -799,13 +792,60 @@ namespace Meta.WitAi
                 // Success
                 else
                 {
-                    if (!ResponseData.GetIsFinal())
-                    {
-                        ApplyTranscription(Transcription, true);
-                    }
                     MakeLastResponseFinal();
                 }
             });
+        }
+        // Read stream until delimiter is hit
+        private string ReadToDelimiter(StreamReader reader, string delimiter)
+        {
+            // Allocate all vars
+            StringBuilder results = new StringBuilder();
+            int delLength = delimiter.Length;
+            int i;
+            bool found;
+            char nextChar;
+
+            // Iterate each byte in the stream
+            while (reader != null && !reader.EndOfStream)
+            {
+                // Continue until found
+                if (reader.Peek() == 0)
+                {
+                    continue;
+                }
+
+                // Append next character
+                nextChar = (char)reader.Read();
+                results.Append(nextChar);
+
+                // Continue until long as delimiter
+                if (results.Length < delLength)
+                {
+                    continue;
+                }
+
+                // Check if string builder ends with delimiter
+                found = true;
+                for (i=0;i<delLength;i++)
+                {
+                    // Stop checking if not delimiter
+                    if (delimiter[i] != results[results.Length - delLength + i])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+
+                // Found delimiter
+                if (found)
+                {
+                    return results.ToString(0, results.Length - delLength);
+                }
+            }
+
+            // If no delimiter is found, return the rest of the chunk
+            return results.Length == 0 ? null : results.ToString();
         }
         // Process individual piece
         private void ProcessStringResponses(string stringResponse)
@@ -816,37 +856,24 @@ namespace Meta.WitAi
                 ProcessStringResponse(stringPart);
             }
         }
-        // Safely handles
+        // Handles raw response
         private void ProcessStringResponse(string stringResponse)
         {
-            // Call raw response for every received response
             HandleRawResponse(stringResponse, false);
-
-            // Decode full response
-            WitResponseNode responseNode = WitResponseNode.Parse(stringResponse);
-            bool isTranscriptionOnly = responseNode.IsTranscriptionOnly();
-            bool isFinal = responseNode.GetIsFinal();
-            string transcription = responseNode.GetTranscription();
-            _lastResponseData = responseNode;
-
-            // Apply on main thread
-            MainThreadCallback(() =>
-            {
-                // Set transcription
-                if (!string.IsNullOrEmpty(transcription) && (isTranscriptionOnly || isFinal))
-                {
-                    ApplyTranscription(transcription, isFinal);
-                }
-
-                // Set response
-                ApplyResponseData(responseNode, false);
-            });
         }
-        // On raw response callback
+        // On raw response callback, ensure on main thread
         protected override void OnRawResponse(string rawResponse)
         {
-            base.OnRawResponse(rawResponse);
-            onRawResponse?.Invoke(rawResponse);
+            MainThreadCallback(() =>
+            {
+                base.OnRawResponse(rawResponse);
+                onRawResponse?.Invoke(rawResponse);
+            });
+        }
+        // Merge back onto main thread following decode
+        protected override void ApplyDecodedResponseData(WitResponseNode responseData, bool final)
+        {
+            MainThreadCallback(() => base.ApplyDecodedResponseData(responseData, final));
         }
         // On text change callback
         protected override void OnPartialTranscription()
