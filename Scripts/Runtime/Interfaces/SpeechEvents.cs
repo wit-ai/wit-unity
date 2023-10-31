@@ -112,6 +112,12 @@ namespace Meta.WitAi.Events
         protected const string EVENT_CATEGORY_ACTIVATION_RESPONSE = "Activation Response Events";
 
         [EventCategory(EVENT_CATEGORY_ACTIVATION_RESPONSE)]
+        [Tooltip("Called when raw text response is returned from Wit.ai")]
+        [FormerlySerializedAs("OnRawResponse")] [SerializeField] [HideInInspector]
+        private WitTranscriptionEvent _onRawResponse = new WitTranscriptionEvent();
+        public WitTranscriptionEvent OnRawResponse => _onRawResponse;
+
+        [EventCategory(EVENT_CATEGORY_ACTIVATION_RESPONSE)]
         [Tooltip("Called when response from Wit.ai has been received from partial transcription")]
         [FormerlySerializedAs("OnPartialResponse")] [SerializeField] [HideInInspector]
         private WitResponseEvent _onPartialResponse = new WitResponseEvent();

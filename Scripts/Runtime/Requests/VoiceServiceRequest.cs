@@ -36,13 +36,9 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public int StatusCode => Results.StatusCode;
 
-        // Getter for response decoding
-        protected override int GetResponseStatusCode(WitResponseNode responseData) =>
-            responseData == null ? 0 : responseData.GetStatusCode();
-        protected override string GetResponseError(WitResponseNode responseData) =>
-            responseData?.GetError();
-        protected override bool GetResponseHasPartial(WitResponseNode responseData) =>
-            responseData != null && responseData.HasResponse();
+        // Use a wit response decoder to obtain WitResponseNode from text
+        protected override INLPRequestResponseDecoder<WitResponseNode> ResponseDecoder => _responseDecoder;
+        private static WitResponseDecoder _responseDecoder = new WitResponseDecoder();
 
         #region Simulation
         protected override bool OnSimulateResponse()

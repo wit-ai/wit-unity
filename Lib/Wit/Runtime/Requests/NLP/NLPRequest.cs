@@ -8,6 +8,7 @@
 
 using System.Text;
 using Meta.WitAi;
+using System.Threading.Tasks;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -106,20 +107,113 @@ namespace Meta.Voice
             return base.GetSendError();
         }
 
+        #region DECODING
         /// <summary>
-        /// Getter for status code from response data
+        /// The response decoder used to decode response json & provide vars for response data
         /// </summary>
-        protected abstract int GetResponseStatusCode(TResponseData responseData);
+        protected virtual INLPRequestResponseDecoder<TResponseData> ResponseDecoder => null;
 
         /// <summary>
-        /// Getter for error from response data if applicable
+        /// Whether or not raw responses should be decoded within this script.  Defaults to false
         /// </summary>
-        protected abstract string GetResponseError(TResponseData responseData);
+        protected virtual bool DecodeRawResponses => false;
 
         /// <summary>
-        /// Getter for whether response data contains partial (early) response data
+        /// Whether currently decoding a raw response
         /// </summary>
-        protected abstract bool GetResponseHasPartial(TResponseData responseData);
+        public virtual bool IsDecoding => _rawDecodesStarted != _rawDecodesComplete;
+
+        // Last raw response received
+        private string _rawResponseLast;
+        // Total raw response decodes began
+        private int _rawDecodesStarted;
+        // Total raw response decodes complete
+        private int _rawDecodesComplete;
+        // Whether the currently decoding raw response should be considered final
+        private bool _rawDecodeFinal;
+
+        /// <summary>
+        /// Performs callbacks for raw response &
+        /// </summary>
+        /// <param name="rawResponse"></param>
+        /// <param name="final"></param>
+        protected virtual void HandleRawResponse(string rawResponse, bool final)
+        {
+            // Ignore if not active
+            if (!IsActive)
+            {
+                return;
+            }
+            // Ignore null partials, handle failure if should decode final
+            if (string.IsNullOrEmpty(rawResponse))
+            {
+                if (final && DecodeRawResponses)
+                {
+                    HandleFailure("Final response is empty");
+                }
+                return;
+            }
+            // Ignore same partials, finalize if should decode final
+            if (string.Equals(_rawResponseLast, rawResponse))
+            {
+                if (final && DecodeRawResponses)
+                {
+                    MakeLastResponseFinal();
+                }
+                return;
+            }
+
+            // Apply last raw response
+            _rawResponseLast = rawResponse;
+
+            // Perform callback
+            OnRawResponse(rawResponse);
+
+            // Decode raw response on background thread
+            if (DecodeRawResponses)
+            {
+#pragma warning disable CS4014
+                DecodeRawResponseAsync(rawResponse, final);
+#pragma warning restore CS4014
+            }
+        }
+
+        /// <summary>
+        /// Called when raw response data has been received
+        /// </summary>
+        protected virtual void OnRawResponse(string rawResponse) =>
+            Events?.OnRawResponse?.Invoke(rawResponse);
+
+        /// <summary>
+        /// Decodes asynchronously and then passes into appropriate locations
+        /// </summary>
+        protected virtual async Task DecodeRawResponseAsync(string rawResponse, bool final)
+        {
+            // Decode immediately
+            int rawDecodeIndex = _rawDecodesStarted;
+            _rawDecodesStarted++;
+            TResponseData responseData = await ResponseDecoder.DecodeAsync(rawResponse);
+
+            // Wait for previous decodes to complete
+            while (rawDecodeIndex > _rawDecodesComplete)
+            {
+                await Task.Delay(20);
+            }
+            _rawDecodesComplete++;
+
+            // Ignore if no longer active
+            if (!IsActive)
+            {
+                return;
+            }
+
+            // Adjust final if no longer decoding
+            final |= !IsDecoding && _rawDecodeFinal;
+
+            // Handle decoded raw response
+            ApplyResponseData(responseData, final);
+        }
+        #endregion DECODING
 
         /// <summary>
         /// Sets response data to the current results object
@@ -152,12 +246,15 @@ namespace Meta.Voice
                 return;
             }
             // Handle error
-            string error = GetResponseError(responseData);
+            string error = ResponseDecoder?.GetResponseError(responseData);
             if (!string.IsNullOrEmpty(error))
             {
                 if (final)
                 {
-                    HandleFailure(GetResponseStatusCode(responseData), error);
+                    int errorStatusCode = ResponseDecoder == null
+                        ? WitConstants.ERROR_CODE_GENERAL
+                        : ResponseDecoder.GetResponseStatusCode(responseData);
+                    HandleFailure(errorStatusCode, error);
                 }
                 return;
             }
@@ -169,7 +266,7 @@ namespace Meta.Voice
             Results.SetResponseData(responseData);
 
             // Call partial response if changed & exists
-            bool hasPartial = GetResponseHasPartial(responseData);
+            bool hasPartial = ResponseDecoder != null && ResponseDecoder.GetResponseHasPartial(responseData);
             if ((hasChanged && hasPartial) || (final && !hasPartial))
             {
                 OnPartialResponse();
@@ -226,8 +323,13 @@ namespace Meta.Voice
             {
                 return;
             }
-
-            // Return previous data
+            // Still decoding, enable flag to be handled on completion
+            if (IsDecoding)
+            {
+                _rawDecodeFinal = true;
+                return;
+            }
+            // Apply previous data as final
             ApplyResponseData(ResponseData, true);
         }
     }

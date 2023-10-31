@@ -163,6 +163,7 @@ namespace Meta.WitAi
         /// values or other interactions from this callback. This is intended to be used for demo
         /// and test UI, not for regular use.
         /// </summary>
+        [Obsolete("Deprecated for Events.OnRawResponse")]
         public Action<string> onRawResponse;
 
         /// <summary>
@@ -516,7 +517,7 @@ namespace Meta.WitAi
             _lastResponseData = WitResponseNode.Parse(response);
             try
             {
-                onRawResponse?.Invoke(response);
+                HandleRawResponse(response, true);
                 if (!string.IsNullOrEmpty(_lastResponseData.GetTranscription()))
                 {
                     onFullTranscription?.Invoke(_lastResponseData.GetTranscription());
@@ -819,10 +820,7 @@ namespace Meta.WitAi
         private void ProcessStringResponse(string stringResponse)
         {
             // Call raw response for every received response
-            if (!string.IsNullOrEmpty(stringResponse))
-            {
-                MainThreadCallback(() => onRawResponse?.Invoke(stringResponse));
-            }
+            HandleRawResponse(stringResponse, false);
 
             // Decode full response
             WitResponseNode responseNode = WitResponseNode.Parse(stringResponse);
@@ -844,27 +842,28 @@ namespace Meta.WitAi
                 ApplyResponseData(responseNode, false);
             });
         }
+        // On raw response callback
+        protected override void OnRawResponse(string rawResponse)
+        {
+            base.OnRawResponse(rawResponse);
+            onRawResponse?.Invoke(rawResponse);
+        }
         // On text change callback
         protected override void OnPartialTranscription()
         {
-            onPartialTranscription?.Invoke(Transcription);
             base.OnPartialTranscription();
+            onPartialTranscription?.Invoke(Transcription);
         }
         protected override void OnFullTranscription()
         {
-            onFullTranscription?.Invoke(Transcription);
             base.OnFullTranscription();
+            onFullTranscription?.Invoke(Transcription);
         }
         // On response data change callback
         protected override void OnPartialResponse()
         {
-            onPartialResponse?.Invoke(this);
             base.OnPartialResponse();
-        }
-        // On full response
-        protected override void OnFullResponse()
-        {
-            base.OnFullResponse();
+            onPartialResponse?.Invoke(this);
         }
         // Check if data has been written to post stream while still receiving data
         private bool WaitingForPost()

@@ -249,6 +249,12 @@ namespace Meta.WitAi
         }
 
         // Called when VoiceServiceRequest OnPartialTranscription is returned with early ASR
+        protected virtual void OnRequestRawResponse(VoiceServiceRequest request, string rawResponse)
+        {
+            GetSpeechEvents()?.OnRawResponse?.Invoke(rawResponse);
+        }
+
+        // Called when VoiceServiceRequest OnPartialTranscription is returned with early ASR
         protected virtual void OnRequestPartialTranscription(VoiceServiceRequest request)
         {
             GetSpeechEvents()?.OnPartialTranscription?.Invoke(request?.Transcription);
@@ -324,6 +330,7 @@ namespace Meta.WitAi
             WrapRequestEvent(events.OnStartListening, OnRequestStartListening, add);
             WrapRequestEvent(events.OnStopListening, OnRequestStopListening, add);
             WrapRequestEvent(events.OnSend, OnRequestSend, add);
+            WrapRequestEvent(events.OnRawResponse, (text) => OnRequestRawResponse(request, text), add);
             WrapRequestEvent(events.OnPartialTranscription, (text) => OnRequestPartialTranscription(request), add);
             WrapRequestEvent(events.OnFullTranscription, (text) => OnRequestFullTranscription(request), add);
             WrapRequestEvent(events.OnPartialResponse, (results) => OnRequestPartialResponse(request), add);
