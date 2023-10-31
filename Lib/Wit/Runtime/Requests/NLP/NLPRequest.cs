@@ -109,81 +109,87 @@ namespace Meta.Voice
         }
 
         /// <summary>
-        /// Method to be called when an NLP request had completed
+        /// Getter for status code from response data
         /// </summary>
-        /// <param name="responseData">Parsed json data returned from request</param>
-        /// <param name="error">Error returned from a request</param>
-        protected virtual void HandlePartialResponse(WitResponseNode responseData, string error)
-        {
-            // Ignore if not in correct state
-            if (!IsActive)
-            {
-                return;
-            }
-            // Ignore if failed
-            if (!string.IsNullOrEmpty(error))
-            {
-                return;
-            }
+        protected abstract int GetResponseStatusCode(WitResponseNode responseData);
 
-            // Apply response data
-            ApplyResultResponseData(responseData);
+        /// <summary>
+        /// Getter for error from response data if applicable
+        /// </summary>
+        protected abstract string GetResponseError(WitResponseNode responseData);
 
-            // Partial response called
-            OnPartialResponse();
-        }
+        /// <summary>
+        /// Getter for whether response data contains partial (early) response data
+        /// </summary>
+        protected abstract bool GetResponseHasPartial(WitResponseNode responseData);
 
         /// <summary>
         /// Sets response data to the current results object
         /// </summary>
-        protected abstract void ApplyResultResponseData(WitResponseNode newData);
+        /// <param name="responseData">Parsed json data returned from request</param>
+        /// <param name="final">Whether or not this response should be considered final</param>
+        protected virtual void ApplyResponseData(WitResponseNode responseData, bool final)
+        {
+            // Ignore if not active
+            if (!IsActive)
+            {
+                return;
+            }
+            // Only perform final once
+            if (final)
+            {
+                if (_finalized)
+                {
+                    return;
+                }
+                _finalized = true;
+            }
+            // Handle null response
+            if (responseData == null)
+            {
+                if (final)
+                {
+                    HandleFailure($"Failed to decode partial raw response");
+                }
+                return;
+            }
+            // Handle error
+            string error = GetResponseError(responseData);
+            if (!string.IsNullOrEmpty(error))
+            {
+                if (final)
+                {
+                    HandleFailure(GetResponseStatusCode(responseData), error);
+                }
+                return;
+            }
+
+            // Store whether data is changing
+            bool hasChanged = !responseData.Equals(Results.ResponseData);
+
+            // Apply new response data
+            Results.SetResponseData(responseData);
+
+            // Call partial response if changed & exists
+            bool hasPartial = GetResponseHasPartial(responseData);
+            if ((hasChanged && hasPartial) || (final && !hasPartial))
+            {
+                OnPartialResponse();
+            }
+
+            // Final was called, handle success
+            if (final)
+            {
+                OnFullResponse();
+                HandleSuccess();
+            }
+        }
 
         /// <summary>
         /// Called when response data has been updated
         /// </summary>
         protected virtual void OnPartialResponse() =>
             Events?.OnPartialResponse?.Invoke(ResponseData);
-
-        /// <summary>
-        /// Method to be called when an NLP request had completed
-        /// </summary>
-        /// <param name="responseData">Parsed json data returned from request</param>
-        /// <param name="error">Error returned from a request</param>
-        protected virtual void HandleFinalResponse(WitResponseNode responseData, string error)
-        {
-            // Ignore if not in correct state
-            if (!IsActive || _finalized)
-            {
-                return;
-            }
-            _finalized = true;
-
-            // Send partial data if not previously sent
-            if (responseData != null && responseData != ResponseData)
-            {
-                HandlePartialResponse(responseData, error);
-            }
-
-            // Error returned
-            if (!string.IsNullOrEmpty(error))
-            {
-                HandleFailure(error);
-            }
-            // No response
-            else if (responseData == null)
-            {
-                HandleFailure("No response returned");
-            }
-            // Success
-            else
-            {
-                // Callback for final response
-                OnFullResponse();
-
-                // Handle success
-                HandleSuccess(Results);
-            }
-        }
 
         /// <summary>
         /// Called when full response has completed
@@ -210,8 +216,21 @@ namespace Meta.Voice
             // Handle success
             else
             {
-                HandleFinalResponse(ResponseData, string.Empty);
+                MakeLastResponseFinal();
             }
+        }
+
+        // Make current response final if possible
+        protected virtual void MakeLastResponseFinal()
+        {
+            // Ignore if not active
+            if (!IsActive)
+            {
+                return;
+            }
+
+            // Return previous data
+            ApplyResponseData(ResponseData, true);
         }
     }
 }

@@ -304,19 +304,14 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest returns successfully, with an error or is cancelled
         protected virtual void OnRequestComplete(VoiceServiceRequest request)
         {
-            // Ignore unless in hash set
-            if (!Requests.Contains(request))
+            // Remove from set & unwrap if found
+            if (Requests.Contains(request))
             {
-                return;
+                Requests.Remove(request);
+                WrapRequestEvents(request, false);
             }
 
-            // Remove events
-            WrapRequestEvents(request, false);
-
-            // Remove from set
-            Requests.Remove(request);
-
-            // Complete
+            // Perform log & event callbacks
             Log(request, $"Request Complete\nRemaining: {Requests.Count}");
             GetSpeechEvents()?.OnComplete?.Invoke(request);
         }

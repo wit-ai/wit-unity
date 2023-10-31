@@ -113,13 +113,26 @@ namespace Meta.WitAi.Requests
             }
         }
 
-        /// <summary>
-        /// Set status code prior to handling response
-        /// </summary>
-        protected override void HandleFinalResponse(WitResponseNode responseData, string error)
+        // Set error and apply
+        private void HandlePartialResponse(WitResponseNode responseData, string error) =>
+            HandleResponse(responseData, error, false);
+        private void HandleFinalResponse(WitResponseNode responseData, string error) =>
+            HandleResponse(responseData, error, true);
+        protected void HandleResponse(WitResponseNode responseData, string error, bool final)
         {
-            StatusCode = _request.ResponseCode;
-            base.HandleFinalResponse(responseData, error);
+            // Handle errors
+            if (!string.IsNullOrEmpty(error))
+            {
+                if (final)
+                {
+                    int errorCode = _request == null ? WitConstants.ERROR_CODE_GENERAL : _request.ResponseCode;
+                    HandleFailure(errorCode, error);
+                }
+                return;
+            }
+
+            // Apply response data
+            ApplyResponseData(responseData, final);
         }
 
         /// <summary>

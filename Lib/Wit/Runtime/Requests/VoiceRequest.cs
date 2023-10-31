@@ -88,10 +88,19 @@ namespace Meta.Voice
             Options = newOptions != null ? newOptions : Activator.CreateInstance<TOptions>();
             // Apply events if they exist, otherwise generate
             Events = newEvents != null ? newEvents : Activator.CreateInstance<TEvents>();
+            // Generate results and apply changes throughout lifecycle
+            Results = GetNewResults();
 
             // Initialized
             SetState(VoiceRequestState.Initialized);
         }
+
+        /// <summary>
+        /// Method for generating results, can be overwritten for custom generation
+        /// </summary>
+        protected virtual TResults GetNewResults() =>
+            Activator.CreateInstance<TResults>();
+
         /// <summary>
         /// Call after initialization
         /// </summary>
@@ -372,46 +381,38 @@ namespace Meta.Voice
 
         #region RESULTS
         /// <summary>
-        /// Returns an empty result object with a specific message
-        /// </summary>
-        /// <param name="newMessage">The message to be set on the results</param>
-        protected abstract TResults GetResultsWithMessage(string newMessage);
-        /// <summary>
         /// Method for handling failure with only an error string
         /// </summary>
         /// <param name="error">The error to be returned</param>
-        protected virtual void HandleFailure(string error)
-        {
-            if (!string.IsNullOrEmpty(error)) error += "\n\n";
-            error += $"[Request id: {Options.RequestId}]";
-            HandleFailure(GetResultsWithMessage(error));
-        }
+        protected virtual void HandleFailure(string error) =>
+            HandleFailure(WitConstants.ERROR_CODE_GENERAL, error);
 
         /// <summary>
-        /// Method for handling failure with a full result object
+        /// Method for handling failure that takes an error status code or an error itself
         /// </summary>
+        /// <param name="errorStatusCode">The error status code if applicable</param>
         /// <param name="error">The error to be returned</param>
-        protected virtual void HandleFailure(TResults results)
+        protected virtual void HandleFailure(int errorStatusCode, string error)
         {
             // Ignore if not in correct state
-            if (State != VoiceRequestState.Initialized && State != VoiceRequestState.Transmitting)
+            if (!IsActive)
             {
                 LogW($"Request Failure Ignored\nReason: Request is already complete");
                 return;
             }
 
             // Apply results with error
-            Results = results;
+            Results.SetError(errorStatusCode, error);
 
             // Set failure state
             SetState(VoiceRequestState.Failed);
         }
+
         /// <summary>
         /// Call after failure state set
         /// </summary>
         protected virtual void OnFailed()
         {
-            LogW($"Request Failed\nError: {Results?.Message}");
             RaiseEvent(Events?.OnFailed);
         }
 
@@ -419,22 +420,14 @@ namespace Meta.Voice
         /// Method for handling success with a full result object
         /// </summary>
         /// <param name="error">The error to be returned</param>
-        protected virtual void HandleSuccess(TResults results)
+        protected virtual void HandleSuccess()
         {
             // Ignore if not in correct state
-            if (State != VoiceRequestState.Initialized && State != VoiceRequestState.Transmitting)
+            if (!IsActive)
             {
                 LogW($"Request Success Ignored\nReason: Request is already complete");
                 return;
             }
-
-            // Generate results if needed
-            if (results == null)
-            {
-                results = Activator.CreateInstance<TResults>();
-            }
-            // Apply results
-            Results = results;
 
             // Set success state
             SetState(VoiceRequestState.Successful);
@@ -454,14 +447,14 @@ namespace Meta.Voice
         public virtual void Cancel(string reason = WitConstants.CANCEL_MESSAGE_DEFAULT)
         {
             // Ignore if cannot cancel
-            if (State != VoiceRequestState.Initialized && State != VoiceRequestState.Transmitting)
+            if (!IsActive)
             {
                 LogW($"Request Cancel Ignored\nReason: Request is already complete");
                 return;
             }
 
             // Set cancellation reason
-            Results = GetResultsWithMessage(reason);
+            Results.SetCancel(reason);
 
             // Set cancellation state
             SetState(VoiceRequestState.Canceled);
@@ -478,7 +471,6 @@ namespace Meta.Voice
         protected virtual void OnCancel()
         {
             // Log & callbacks
-            Log($"Request Cancelled\nReason: {Results?.Message}");
             RaiseEvent(Events?.OnCancel);
         }
 

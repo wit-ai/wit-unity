@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using System.Collections;
 using System.Text;
 using Meta.WitAi;
 using UnityEngine.Events;
@@ -129,38 +127,49 @@ namespace Meta.Voice
             get => Results?.Transcription;
         }
         /// <summary>
-        /// Whether the current transcription is a final transcription or not
-        /// </summary>
-        public bool IsFinalTranscription
-        {
-            get => Results != null && Results.IsFinalTranscription;
-        }
-        /// <summary>
         /// An array of all finalized transcriptions
         /// </summary>
         public string[] FinalTranscriptions
         {
             get => Results?.FinalTranscriptions;
         }
+
         /// <summary>
         /// Applies a transcription to the current results
         /// </summary>
-        /// <param name="newTranscription">The transcription returned</param>
-        protected abstract void ApplyTranscription(string newTranscription, bool newIsFinal);
-
-        /// <summary>
-        /// Called when transcription has been set
-        /// </summary>
-        protected virtual void OnTranscriptionChanged()
+        /// <param name="transcription">The transcription returned</param>
+        /// <param name="full">If true the transcription is final, otherwise still being analyzed.</param>
+        protected virtual void ApplyTranscription(string transcription, bool full)
         {
-            if (!IsFinalTranscription)
+            // Apply transcription
+            Results.SetTranscription(transcription, full);
+
+            // Partial transcription callback
+            if (!full)
             {
-                Events?.OnPartialTranscription?.Invoke(Transcription);
+                OnPartialTranscription();
             }
+            // Full transcription callback
             else
             {
-                Events?.OnFullTranscription?.Invoke(Transcription);
+                OnFullTranscription();
             }
+        }
+
+        /// <summary>
+        /// Called when a partial transcription has been set
+        /// </summary>
+        protected virtual void OnPartialTranscription()
+        {
+            Events?.OnPartialTranscription?.Invoke(Transcription);
+        }
+
+        /// <summary>
+        /// Called when a full transcription has been set
+        /// </summary>
+        protected virtual void OnFullTranscription()
+        {
+            Events?.OnFullTranscription?.Invoke(Transcription);
         }
         #endregion TRANSCRIPTION
 
@@ -254,6 +263,11 @@ namespace Meta.Voice
         protected abstract void HandleAudioDeactivation();
 
         /// <summary>
+        /// Check to determine if audio has been sent
+        /// </summary>
+        protected virtual bool HasSentAudio() => true;
+
+        /// <summary>
         /// Called when audio input state is no longer
         /// being listened to
         /// </summary>
@@ -267,10 +281,16 @@ namespace Meta.Voice
             {
                 Cancel(WitConstants.CANCEL_MESSAGE_PRE_SEND);
             }
+            // Handle no audio sent
+            else if (State == VoiceRequestState.Transmitting && !HasSentAudio())
+            {
+                Cancel(WitConstants.CANCEL_MESSAGE_PRE_AUDIO);
+            }
         }
         #endregion DEACTIVATION
 
         #region TRANSMISSION
+
         /// <summary>
         /// Ensure audio is activated prior to sending
         /// </summary>
@@ -284,19 +304,6 @@ namespace Meta.Voice
 
             // Send audio request if possible
             base.Send();
-        }
-        /// <summary>
-        /// Method for subclass success handling
-        /// </summary>
-        protected override void OnSuccess()
-        {
-            // Handle transcription as though it is final
-            if (!IsFinalTranscription && !string.IsNullOrEmpty(Transcription))
-            {
-                ApplyTranscription(Transcription, true);
-            }
-            // Call success events
-            base.OnSuccess();
         }
         #endregion
 

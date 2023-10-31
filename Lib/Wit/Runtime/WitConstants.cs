@@ -68,7 +68,8 @@ namespace Meta.WitAi
         // Reusable constants
         public const string CANCEL_ERROR = "Cancelled";
         public const string CANCEL_MESSAGE_DEFAULT = "Request was cancelled.";
-        public const string CANCEL_MESSAGE_PRE_SEND = "Request cancelled prior to transmission";
+        public const string CANCEL_MESSAGE_PRE_SEND = "Request cancelled prior to transmission begin";
+        public const string CANCEL_MESSAGE_PRE_AUDIO = "Request cancelled prior to audio transmission";
 
         /// <summary>
         /// Error code thrown when an exception is caught during processing or

@@ -20,12 +20,16 @@ namespace Meta.Voice
         string Transcription { get; }
 
         /// <summary>
-        /// Whether the current transcription is a final transcription or not
-        /// </summary>
-        bool IsFinalTranscription { get; }
-        /// <summary>
         /// An array of all finalized transcriptions
         /// </summary>
         string[] FinalTranscriptions { get; }
+
+        /// <summary>
+        /// A setter for transcriptions
+        /// </summary>
+        /// <param name="transcription">The transcription to be set</param>
+        /// <param name="full">Whether the transcription should be considered
+        /// full or partially complete</param>
+        void SetTranscription(string transcription, bool full);
     }
 }

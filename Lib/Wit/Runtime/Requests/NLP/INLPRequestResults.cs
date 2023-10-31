@@ -21,5 +21,11 @@ namespace Meta.Voice
         /// Should only be set by NLPRequests
         /// </summary>
         WitResponseNode ResponseData { get; }
+
+        /// <summary>
+        /// A setter for response data
+        /// </summary>
+        /// <param name="responseData">The response data to be set</param>
+        void SetResponseData(WitResponseNode responseData);
     }
 }

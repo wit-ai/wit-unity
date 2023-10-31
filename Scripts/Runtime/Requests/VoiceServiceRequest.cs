@@ -34,23 +34,15 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// The status code returned from the last request
         /// </summary>
-        public int StatusCode
-        {
-            get => Results == null ? 0 : Results.StatusCode;
-            protected set
-            {
-                int newCode = value;
-                if (newCode.Equals(Results == null ? 0 : Results.StatusCode))
-                {
-                    return;
-                }
-                if (Results == null)
-                {
-                    Results = new VoiceServiceRequestResults();
-                }
-                Results.StatusCode = newCode;
-            }
-        }
+        public int StatusCode => Results.StatusCode;
+
+        // Getter for response decoding
+        protected override int GetResponseStatusCode(WitResponseNode responseData) =>
+            responseData == null ? 0 : responseData.GetStatusCode();
+        protected override string GetResponseError(WitResponseNode responseData) =>
+            responseData?.GetError();
+        protected override bool GetResponseHasPartial(WitResponseNode responseData) =>
+            responseData != null && responseData.HasResponse();
 
         #region Simulation
         protected override bool OnSimulateResponse()
@@ -68,47 +60,25 @@ namespace Meta.WitAi.Requests
         private async void SimulateResponse()
         {
             var stackTrace = new StackTrace();
-            StatusCode = simulatedResponse.code;
             var statusDescription = simulatedResponse.responseDescription;
             for (int i = 0; i < simulatedResponse.messages.Count - 1; i++)
             {
                 var message = simulatedResponse.messages[i];
                 await System.Threading.Tasks.Task.Delay((int)(message.delay * 1000));
                 var partialResponse = WitResponseNode.Parse(message.responseBody);
-                HandlePartialResponse(partialResponse, partialResponse == null ? "Failed to parse" : string.Empty);
+                partialResponse["code"] = new WitResponseData(simulatedResponse.code);
+                ApplyResponseData(partialResponse, false);
             }
 
             var lastMessage = simulatedResponse.messages.Last();
             await System.Threading.Tasks.Task.Delay((int)(lastMessage.delay * 1000));
             var lastResponseData = WitResponseNode.Parse(lastMessage.responseBody);
+            lastResponseData["code"] = new WitResponseData(simulatedResponse.code);
             MainThreadCallback(() =>
             {
-                if (null != lastResponseData)
-                {
-                    // Get error if possible
-                    var error = lastResponseData["error"];
-
-                    // Send partial data if not previously sent
-                    if (lastResponseData.HasResponse())
-                    {
-                        HandlePartialResponse(lastResponseData, error);
-                    }
-
-                    // Append error to description
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        statusDescription += $"\n{error}";
-                    }
-                }
-
-                // Call completion delegate
-                HandleFinalResponse(lastResponseData,
-                    StatusCode == (int)HttpStatusCode.OK
-                        ? string.Empty
-                        : $"{statusDescription}\n\nStackTrace:\n{stackTrace}\n\n");
+                ApplyResponseData(lastResponseData, true);
             });
         }
-
         #endregion
 
         #region Thread Safety
@@ -170,59 +140,14 @@ namespace Meta.WitAi.Requests
         }
         #endregion
 
-        /// <summary>
-        /// Returns an empty result object with the current status code
-        /// </summary>
-        /// <param name="newMessage">The message to be set on the results</param>
-        protected override VoiceServiceRequestResults GetResultsWithMessage(string newMessage)
+        // Add request id as response data if possible
+        protected override void ApplyResponseData(WitResponseNode responseData, bool final)
         {
-            VoiceServiceRequestResults results = new VoiceServiceRequestResults(newMessage);
-            results.StatusCode = StatusCode;
-            results.ResponseData = ResponseData;
-            return results;
-        }
-
-        /// <summary>
-        /// Applies a transcription to the current results
-        /// </summary>
-        /// <param name="newTranscription">The transcription returned</param>
-        /// <param name="newIsFinal">Whether the transcription has completed building</param>
-        protected override void ApplyTranscription(string newTranscription, bool newIsFinal)
-        {
-            if (Results == null)
+            if (responseData != null)
             {
-                Results = new VoiceServiceRequestResults();
+                responseData[WitConstants.HEADER_REQUEST_ID] = Options?.RequestId;
             }
-            Results.Transcription = newTranscription;
-            Results.IsFinalTranscription = newIsFinal;
-            if (Results.IsFinalTranscription)
-            {
-                List<string> transcriptions = new List<string>();
-                if (Results.FinalTranscriptions != null)
-                {
-                    transcriptions.AddRange(Results.FinalTranscriptions);
-                }
-                transcriptions.Add(Results.Transcription);
-                Results.FinalTranscriptions = transcriptions.ToArray();
-            }
-            OnTranscriptionChanged();
-        }
-
-        /// <summary>
-        /// Applies response data to the current results
-        /// </summary>
-        /// <param name="newData">The returned response data</param>
-        protected override void ApplyResultResponseData(WitResponseNode newData)
-        {
-            if (Results == null)
-            {
-                Results = new VoiceServiceRequestResults();
-            }
-            if (newData != null)
-            {
-                newData[WitConstants.HEADER_REQUEST_ID] = Options?.RequestId;
-            }
-            Results.ResponseData = newData;
+            base.ApplyResponseData(responseData, final);
         }
 
         /// <summary>
@@ -232,16 +157,6 @@ namespace Meta.WitAi.Requests
         protected override void RaiseEvent(VoiceServiceRequestEvent eventCallback)
         {
             eventCallback?.Invoke(this);
-        }
-
-        protected override void HandleFinalResponse(WitResponseNode responseData, string error)
-        {
-            if (!string.IsNullOrEmpty(error) && error.Contains(WitConstants.ERROR_NO_TRANSCRIPTION))
-            {
-                responseData = new WitResponseClass();
-                error = string.Empty;
-            }
-            base.HandleFinalResponse(responseData, error);
         }
     }
 }

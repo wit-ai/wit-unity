@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
+using System.Net;
 using Meta.Voice;
 using Meta.WitAi.Json;
 
@@ -16,7 +18,8 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Request status code if applicable
         /// </summary>
-        public int StatusCode { get; internal set; }
+        public int StatusCode { get; private set; } = (int)HttpStatusCode.OK;
+
         /// <summary>
         /// Request cancelation/error message
         /// </summary>
@@ -25,33 +28,61 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Response transcription
         /// </summary>
-        public string Transcription { get; internal set; }
+        public string Transcription { get; private set; }
         /// <summary>
         /// Response transcription
         /// </summary>
-        public bool IsFinalTranscription { get; internal set; }
-        /// <summary>
-        /// Response transcription
-        /// </summary>
-        public string[] FinalTranscriptions { get; internal set; }
+        public string[] FinalTranscriptions { get; private set; }
+
         /// <summary>
         /// Parsed json response data
         /// </summary>
         public WitResponseNode ResponseData { get; internal set; }
 
         /// <summary>
-        /// Default constructor without message
+        /// Sets results to cancellation status code with a specified reason
         /// </summary>
-        public VoiceServiceRequestResults()
+        public void SetCancel(string reason)
         {
-            Message = string.Empty;
+            StatusCode = WitConstants.ERROR_CODE_ABORTED;
+            Message = reason;
         }
+
         /// <summary>
-        /// Constructor with a specific message
+        /// Sets results error message & error status
         /// </summary>
-        public VoiceServiceRequestResults(string newMessage)
+        public void SetError(int errorStatusCode, string error)
         {
-            Message = newMessage;
+            StatusCode = errorStatusCode;
+            Message = error;
+        }
+
+        /// <summary>
+        /// Sets current transcription & update final transcription array
+        /// </summary>
+        /// <param name="transcription">The newest transcription</param>
+        /// <param name="full">Whether the transcription is partial or full</param>
+        public void SetTranscription(string transcription, bool full)
+        {
+            Transcription = transcription;
+            if (full)
+            {
+                List<string> transcriptions = new List<string>();
+                if (FinalTranscriptions != null)
+                {
+                    transcriptions.AddRange(FinalTranscriptions);
+                }
+                transcriptions.Add(Transcription);
+                FinalTranscriptions = transcriptions.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Applies response data
+        /// </summary>
+        public void SetResponseData(WitResponseNode responseData)
+        {
+            ResponseData = responseData;
         }
     }
 }

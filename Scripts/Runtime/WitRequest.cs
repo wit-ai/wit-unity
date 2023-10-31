@@ -134,11 +134,6 @@ namespace Meta.WitAi
 
         #region RESULTS
         /// <summary>
-        /// The current status of the request
-        /// </summary>
-        public string StatusDescription { get; private set; }
-
-        /// <summary>
         /// Simply return the Path to be called
         /// </summary>
         public override string ToString() => Path;
@@ -355,8 +350,6 @@ namespace Meta.WitAi
             HasResponseStarted = false;
 
             // Generate results
-            StatusCode = 0;
-            StatusDescription = "Starting request";
             _bytesWritten = 0;
             _requestStartTime = DateTime.UtcNow;
             _stackTrace = "-";
@@ -454,12 +447,7 @@ namespace Meta.WitAi
         {
             if (_request == null)
             {
-                if (StatusCode == 0)
-                {
-                    StatusCode = WitConstants.ERROR_CODE_GENERAL;
-                    StatusDescription = $"Request canceled prior to start";
-                }
-                HandleFinalResponse(null, StatusDescription);
+                HandleFailure(WitConstants.ERROR_CODE_GENERAL, "Request canceled prior to start");
                 return;
             }
             var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
@@ -500,7 +488,6 @@ namespace Meta.WitAi
                 request.SetRequestHeader(header.Key, header.Value);
             }
 
-            StatusCode = 0;
             request.timeout = TimeoutMs;
             request.downloadHandler = new DownloadHandlerBuffer();
 
@@ -516,30 +503,30 @@ namespace Meta.WitAi
 
         private void OnUnityRequestComplete(string response, string error)
         {
+            if (!string.IsNullOrEmpty(error))
+            {
+                HandleFailure(error);
+                return;
+            }
+
+            // Began
             HasResponseStarted = true;
-            StatusCode = string.IsNullOrEmpty(error) ? 200 : 500;
-            var responseString = response;
-            _lastResponseData = WitResponseNode.Parse(responseString);
+
+            // Decode
+            _lastResponseData = WitResponseNode.Parse(response);
             try
             {
-                onRawResponse?.Invoke(responseString);
-                onPartialResponse?.Invoke(this);
+                onRawResponse?.Invoke(response);
                 if (!string.IsNullOrEmpty(_lastResponseData.GetTranscription()))
                 {
                     onFullTranscription?.Invoke(_lastResponseData.GetTranscription());
                 }
-
-                SetState(VoiceRequestState.Successful);
+                ApplyResponseData(_lastResponseData, true);
             }
             catch (Exception e)
             {
-                VLog.E("Error parsing response: " + e + "\n" + responseString);
-                StatusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
-                StatusDescription = "Error parsing response: " + e + "\n" + responseString;
-
-                SetState(VoiceRequestState.Failed);
+                HandleFailure(WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER, "Error parsing response: " + e + "\n" + response);
             }
-
 
             onResponse?.Invoke(this);
         }
@@ -554,8 +541,20 @@ namespace Meta.WitAi
                 return;
             }
 
-            // No longer active
-            StatusCode = WitConstants.ERROR_CODE_TIMEOUT;
+            // Get path for request uri
+            string path = "";
+            if (null != _request?.RequestUri?.PathAndQuery)
+            {
+                var uriSections = _request.RequestUri.PathAndQuery.Split(new char[] { '?' });
+                path = uriSections[0].Substring(1);
+            }
+
+            // Get error
+            var elapsed = (DateTime.UtcNow - _requestStartTime).TotalMilliseconds;
+            var error = $"Request [{path}] timed out after {elapsed:0.00} ms";
+
+            // Call error
+            MainThreadCallback(() => HandleFailure(WitConstants.ERROR_CODE_TIMEOUT, error));
 
             // Clean up the current request if it is still going
             if (null != _request)
@@ -565,30 +564,6 @@ namespace Meta.WitAi
 
             // Close any open stream resources and clean up streaming state flags
             CloseActiveStream();
-
-            // Complete
-            MainThreadCallback(() =>
-            {
-                string path = "";
-                if (null != _request?.RequestUri?.PathAndQuery)
-                {
-                    var uriSections = _request.RequestUri.PathAndQuery.Split(new char[] { '?' });
-                    path = uriSections[0].Substring(1);
-                }
-
-                // This was a cancellation due to actual timeout.
-                var elapsed = (DateTime.UtcNow - _requestStartTime).TotalMilliseconds;
-                if (elapsed >= TimeoutMs)
-                {
-                    StatusDescription = $"Request [{path}] timed out after {elapsed:0.00} ms";
-                }
-                else
-                {
-                    VLog.W($"Timeout called early {elapsed:0.00} ms");
-                }
-
-                HandleFinalResponse(null, StatusDescription);
-            });
         }
 
         // Write stream
@@ -637,11 +612,7 @@ namespace Meta.WitAi
                 }
 
                 // Write stream error
-                _stackTrace = e.StackTrace;
-                StatusCode = (int) e.Status;
-                StatusDescription = e.Message;
-                VLog.W(e);
-                MainThreadCallback(() => HandleFinalResponse(null, StatusDescription));
+                MainThreadCallback(() => HandleFailure((int) e.Status, e.ToString()));
             }
             catch (Exception e)
             {
@@ -652,11 +623,7 @@ namespace Meta.WitAi
                 }
 
                 // Non web error occured
-                _stackTrace = e.StackTrace;
-                StatusCode = WitConstants.ERROR_CODE_GENERAL;
-                StatusDescription = e.Message;
-                VLog.W(e);
-                MainThreadCallback(() => HandleFinalResponse(null, StatusDescription));
+                MainThreadCallback(() => HandleFailure(WitConstants.ERROR_CODE_GENERAL, e.ToString()));
             }
         }
 
@@ -676,6 +643,7 @@ namespace Meta.WitAi
             {
                 return;
             }
+
             try
             {
                 _writeStream.Write(data, offset, length);
@@ -687,21 +655,11 @@ namespace Meta.WitAi
             }
             catch (ObjectDisposedException e)
             {
-                // Handling edge case where stream is closed remotely
-                // This problem occurs when the Web server resets or closes the connection after
-                // the client application sends the HTTP header.
-                // https://support.microsoft.com/en-us/topic/fix-you-receive-a-system-objectdisposedexception-exception-when-you-try-to-access-a-stream-object-that-is-returned-by-the-endgetrequeststream-method-in-the-net-framework-2-0-bccefe57-0a61-517a-5d5f-2dce0cc63265
-                VLog.W($"Stream already disposed. It is likely the server reset the connection before streaming started.\n{e}");
-                // This prevents a very long holdup on _writeStream.Close
                 _writeStream = null;
-            }
-            catch (IOException e)
-            {
-                VLog.W(e.Message);
             }
             catch (Exception e)
             {
-                VLog.E(e);
+                return;
             }
 
             // Perform a cancellation if still waiting for a post
@@ -718,30 +676,37 @@ namespace Meta.WitAi
             HasResponseStarted = true;
             string stringResponse = "";
 
+            // Status code
+            int statusCode = (int)HttpStatusCode.OK;
+            string error = null;
+
             try
             {
                 // Get response
-                CheckStatus();
                 using (var response = _request.EndGetResponse(asyncResult))
                 {
                     // Got response
-                    CheckStatus();
                     HttpWebResponse httpResponse = response as HttpWebResponse;
 
                     // Apply status & description
-                    StatusCode = (int) httpResponse.StatusCode;
-                    StatusDescription = httpResponse.StatusDescription;
-
-                    // Get stream
-                    using (var responseStream = httpResponse.GetResponseStream())
+                    int newStatus = (int)httpResponse.StatusCode;
+                    if (statusCode != newStatus)
                     {
-                        using (var responseReader = new StreamReader(responseStream))
+                        statusCode = newStatus;
+                        error = httpResponse.StatusDescription;
+                    }
+                    // Decode stream
+                    else
+                    {
+                        using (var responseStream = httpResponse.GetResponseStream())
                         {
-                            string chunk;
-                            while ((chunk = ReadToDelimiter(responseReader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
+                            using (var responseReader = new StreamReader(responseStream))
                             {
-                                stringResponse = chunk;
-                                ProcessStringResponse(stringResponse);
+                                stringResponse = responseReader.ReadToEnd();
+                                if (!string.IsNullOrEmpty(stringResponse))
+                                {
+                                    ProcessStringResponses(stringResponse);
+                                }
                             }
                         }
                     }
@@ -749,9 +714,8 @@ namespace Meta.WitAi
             }
             catch (JSONParseException e)
             {
-                _stackTrace = e.StackTrace;
-                StatusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
-                StatusDescription = "Server returned invalid data.";
+                statusCode = WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER;
+                error = $"Server returned invalid data.\n\n{e}";
             }
             catch (WebException e)
             {
@@ -759,14 +723,13 @@ namespace Meta.WitAi
                     && e.Status != WebExceptionStatus.Timeout)
                 {
                     // Apply status & error
-                    _stackTrace = e.StackTrace;
-                    StatusCode = (int) e.Status;
-                    StatusDescription = e.Message;
+                    statusCode = (int) e.Status;
+                    error = e.ToString();
 
                     // Attempt additional parse
                     if (e.Response is HttpWebResponse errorResponse)
                     {
-                        StatusCode = (int) errorResponse.StatusCode;
+                        statusCode = (int) errorResponse.StatusCode;
                         try
                         {
                             using (var errorStream = errorResponse.GetResponseStream())
@@ -788,11 +751,10 @@ namespace Meta.WitAi
                         {
                             // Response wasn't encoded error, ignore it.
                         }
-                        catch (Exception errorResponseError)
+                        catch (Exception)
                         {
                             // We've already caught that there is an error, we'll ignore any errors
                             // reading error response data and use the status/original error for validation
-                            VLog.W(errorResponseError);
                             _stackTrace = e.StackTrace;
                         }
                     }
@@ -800,130 +762,49 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                _stackTrace = e.StackTrace;
-                StatusCode = WitConstants.ERROR_CODE_GENERAL;
-                StatusDescription = e.Message;
+                statusCode = WitConstants.ERROR_CODE_GENERAL;
+                error = e.ToString();
             }
 
             // Close request stream if possible
             CloseRequestStream();
 
-            // Confirm valid response
-            if (null != _lastResponseData)
-            {
-                var error = _lastResponseData["error"];
-                if (!string.IsNullOrEmpty(error))
-                {
-                    // Get code if possible
-                    var code = _lastResponseData["code"];
-                    if (code != null)
-                    {
-                        StatusCode = code.AsInt;
-                    }
-                    // Use general error if code is not provided
-                    if (StatusCode == (int)HttpStatusCode.OK)
-                    {
-                        StatusCode = WitConstants.ERROR_CODE_GENERAL;
-                    }
-                    // Set error & description
-                    if (string.IsNullOrEmpty(StatusDescription))
-                    {
-                        StatusDescription = $"Error: {code}\n{error}";
-                    }
-                }
-            }
-            // Invalid response
-            else if (StatusCode == (int)HttpStatusCode.OK)
-            {
-                StatusCode = WitConstants.ERROR_CODE_NO_DATA_FROM_SERVER;
-                StatusDescription = $"Server did not return a valid json response.";
-                #if UNITY_EDITOR
-                StatusDescription += $"\nActual Response\n{stringResponse}";
-                #endif
-            }
-
             // Done
             HasResponseStarted = false;
 
+            // Ignore if no longer active
+            if (!IsActive)
+            {
+                return;
+            }
+
+            // Final callbacks
             MainThreadCallback(() =>
             {
-                // Append error if needed
-                if (null != _lastResponseData)
+                // Handle failure
+                if (statusCode != (int)HttpStatusCode.OK)
                 {
-                    var error = _lastResponseData["error"];
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        StatusDescription += $"\n{error}";
-                    }
+                    HandleFailure(statusCode, error);
                 }
-
-                // Call completion delegate
-                HandleFinalResponse(_lastResponseData, StatusCode == (int)HttpStatusCode.OK ? string.Empty : $"{StatusDescription}\n\nStackTrace:\n{_stackTrace}\n\n");
+                // No response
+                else if (ResponseData == null)
+                {
+                    error = $"Server did not return a valid json response.";
+#if UNITY_EDITOR
+                    error += $"\nActual Response\n{stringResponse}";
+#endif
+                    HandleFailure(error);
+                }
+                // Success
+                else
+                {
+                    if (!ResponseData.GetIsFinal())
+                    {
+                        ApplyTranscription(Transcription, true);
+                    }
+                    MakeLastResponseFinal();
+                }
             });
-        }
-        // Check status
-        private void CheckStatus()
-        {
-            if (StatusCode == 0 || StatusCode == WitConstants.ERROR_CODE_TIMEOUT) return;
-
-            switch (StatusCode)
-            {
-                case WitConstants.ERROR_CODE_ABORTED:
-                    throw new WebException("Request was aborted", WebExceptionStatus.RequestCanceled);
-                default:
-                    throw new WebException("Status changed before response was received.", (WebExceptionStatus) StatusCode);
-            }
-        }
-        // Read stream until delimiter is hit
-        private string ReadToDelimiter(StreamReader reader, string delimiter)
-        {
-            // Allocate all vars
-            StringBuilder results = new StringBuilder();
-            int delLength = delimiter.Length;
-            int i;
-            bool found;
-            char nextChar;
-
-            // Iterate each byte in the stream
-            while (reader != null && !reader.EndOfStream)
-            {
-                // Continue until found
-                if (reader.Peek() == 0)
-                {
-                    continue;
-                }
-
-                // Append next character
-                nextChar = (char)reader.Read();
-                results.Append(nextChar);
-
-                // Continue until long as delimiter
-                if (results.Length < delLength)
-                {
-                    continue;
-                }
-
-                // Check if string builder ends with delimiter
-                found = true;
-                for (i=0;i<delLength;i++)
-                {
-                    // Stop checking if not delimiter
-                    if (delimiter[i] != results[results.Length - delLength + i])
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-
-                // Found delimiter
-                if (found)
-                {
-                    return results.ToString(0, results.Length - delLength);
-                }
-            }
-
-            // If no delimiter is found, return the rest of the chunk
-            return results.Length == 0 ? null : results.ToString();
         }
         // Process individual piece
         private void ProcessStringResponses(string stringResponse)
@@ -945,7 +826,7 @@ namespace Meta.WitAi
 
             // Decode full response
             WitResponseNode responseNode = WitResponseNode.Parse(stringResponse);
-            bool hasResponse = responseNode.HasResponse();
+            bool isTranscriptionOnly = responseNode.IsTranscriptionOnly();
             bool isFinal = responseNode.GetIsFinal();
             string transcription = responseNode.GetTranscription();
             _lastResponseData = responseNode;
@@ -954,30 +835,25 @@ namespace Meta.WitAi
             MainThreadCallback(() =>
             {
                 // Set transcription
-                if (!string.IsNullOrEmpty(transcription) && (!hasResponse || isFinal))
+                if (!string.IsNullOrEmpty(transcription) && (isTranscriptionOnly || isFinal))
                 {
                     ApplyTranscription(transcription, isFinal);
                 }
 
                 // Set response
-                if (hasResponse)
-                {
-                    HandlePartialResponse(responseNode, string.Empty);
-                }
+                ApplyResponseData(responseNode, false);
             });
         }
         // On text change callback
-        protected override void OnTranscriptionChanged()
+        protected override void OnPartialTranscription()
         {
-            if (!IsFinalTranscription)
-            {
-                onPartialTranscription?.Invoke(Transcription);
-            }
-            else
-            {
-                onFullTranscription?.Invoke(Transcription);
-            }
-            base.OnTranscriptionChanged();
+            onPartialTranscription?.Invoke(Transcription);
+            base.OnPartialTranscription();
+        }
+        protected override void OnFullTranscription()
+        {
+            onFullTranscription?.Invoke(Transcription);
+            base.OnFullTranscription();
         }
         // On response data change callback
         protected override void OnPartialResponse()
@@ -995,6 +871,8 @@ namespace Meta.WitAi
         {
             return IsPost && _bytesWritten == 0 && StatusCode == 0;
         }
+        // Check if any data has been written
+        protected override bool HasSentAudio() => IsPost && _bytesWritten > 0;
         // Close active stream & then abort if possible
         private void CloseRequestStream()
         {
@@ -1035,13 +913,6 @@ namespace Meta.WitAi
         {
             // Close stream
             CloseActiveStream();
-
-            // Apply abort code
-            if (StatusCode == 0)
-            {
-                StatusCode = WitConstants.ERROR_CODE_ABORTED;
-                StatusDescription = Results.Message;
-            }
 
             // Abort request
             if (null != _request)
