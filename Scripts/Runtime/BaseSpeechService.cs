@@ -12,6 +12,7 @@ using System.Text;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Events;
+using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using UnityEngine.Events;
@@ -47,6 +48,44 @@ namespace Meta.WitAi
         /// If applicable, get all speech events
         /// </summary>
         protected virtual SpeechEvents GetSpeechEvents() => null;
+
+        /// <summary>
+        /// Returns true if this voice service is currently active, listening with the mic or performing a networked request
+        /// </summary>
+        public virtual bool IsAudioInputActive
+        {
+            get
+            {
+                var audioRequest = GetAudioRequest();
+                return audioRequest != null && audioRequest.IsAudioInputActivated;
+            }
+        }
+
+        /// <summary>
+        /// Get the first running audio request
+        /// </summary>
+        protected virtual VoiceServiceRequest GetAudioRequest() =>
+            Requests?.FirstOrDefault((request) => request.InputType == NLPRequestInputType.Audio);
+
+        /// <summary>
+        /// Check for error that will occur if attempting to activate audio
+        /// </summary>
+        /// <returns>Returns an error audio activation should not be allowed.</returns>
+        public virtual string GetActivateAudioError()
+        {
+            // Ensure audio is not already active
+            if (IsAudioInputActive)
+            {
+                return "Audio input is already being performed for this service.";
+            }
+            // No error
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Whether an audio request can be started or not
+        /// </summary>
+        public virtual bool CanActivateAudio() => string.IsNullOrEmpty(GetActivateAudioError());
 
         /// <summary>
         /// Check for error that will occur if attempting to send data
@@ -129,7 +168,7 @@ namespace Meta.WitAi
                 GetSpeechEvents().OnRequestOptionSetup?.Invoke(options);
 
                 // Wait for init
-                WrapRequestEvent(events?.OnInit, OnRequestInit, true);
+                SetEventListener(events?.OnInit, OnRequestInit, true);
             }
         }
 
@@ -214,7 +253,7 @@ namespace Meta.WitAi
             }
 
             // Add main completion event callbacks
-            WrapRequestEvents(request, true);
+            SetEventListeners(request, true);
 
             // Add to request list
             Requests.Add(request);
@@ -313,8 +352,8 @@ namespace Meta.WitAi
             // Remove from set & unwrap if found
             if (Requests.Contains(request))
             {
+                SetEventListeners(request, false);
                 Requests.Remove(request);
-                WrapRequestEvents(request, false);
             }
 
             // Perform log & event callbacks
@@ -322,26 +361,37 @@ namespace Meta.WitAi
             GetSpeechEvents()?.OnComplete?.Invoke(request);
         }
 
-        // Remove or add all events
-        protected virtual void WrapRequestEvents(VoiceServiceRequest request, bool add)
+        /// <summary>
+        /// Adds or removes event listeners for every request event callback
+        /// </summary>
+        /// <param name="request">The request to begin or stop listening to</param>
+        /// <param name="addListeners">If true, adds listeners and if false, removes listeners.</param>
+        protected virtual void SetEventListeners(VoiceServiceRequest request, bool addListeners)
         {
+            // Get request events
             var events = request.Events;
-            WrapRequestEvent(events.OnInit, OnRequestInit, add);
-            WrapRequestEvent(events.OnStartListening, OnRequestStartListening, add);
-            WrapRequestEvent(events.OnStopListening, OnRequestStopListening, add);
-            WrapRequestEvent(events.OnSend, OnRequestSend, add);
-            WrapRequestEvent(events.OnRawResponse, (text) => OnRequestRawResponse(request, text), add);
-            WrapRequestEvent(events.OnPartialTranscription, (text) => OnRequestPartialTranscription(request), add);
-            WrapRequestEvent(events.OnFullTranscription, (text) => OnRequestFullTranscription(request), add);
-            WrapRequestEvent(events.OnPartialResponse, (results) => OnRequestPartialResponse(request), add);
-            WrapRequestEvent(events.OnSuccess, OnRequestSuccess, add);
-            WrapRequestEvent(events.OnFailed, OnRequestFailed, add);
-            WrapRequestEvent(events.OnCancel, OnRequestCancel, add);
-            WrapRequestEvent(events.OnComplete, OnRequestComplete, add);
+
+            // Add/Remove 1 : 1 listeners
+            SetEventListener(events.OnInit, OnRequestInit, addListeners);
+            SetEventListener(events.OnStartListening, OnRequestStartListening, addListeners);
+            SetEventListener(events.OnStopListening, OnRequestStopListening, addListeners);
+            SetEventListener(events.OnSend, OnRequestSend, addListeners);
+            SetEventListener(events.OnSuccess, OnRequestSuccess, addListeners);
+            SetEventListener(events.OnFailed, OnRequestFailed, addListeners);
+            SetEventListener(events.OnCancel, OnRequestCancel, addListeners);
+            SetEventListener(events.OnComplete, OnRequestComplete, addListeners);
+
+            // Add/Remove custom actions
+            SetEventListener(events.OnRawResponse, GetUnityAction<string>(request, OnRequestRawResponse), addListeners);
+            SetEventListener(events.OnPartialTranscription, GetUnityAction<string>(request, OnRequestPartialTranscription), addListeners);
+            SetEventListener(events.OnFullTranscription, GetUnityAction<string>(request, OnRequestFullTranscription), addListeners);
+            SetEventListener(events.OnPartialResponse, GetUnityAction<WitResponseNode>(request, OnRequestPartialResponse), addListeners);
         }
 
-        // Set event action if possible
-        private void WrapRequestEvent<T>(UnityEvent<T> unityEvent, UnityAction<T> action, bool add)
+        /// <summary>
+        /// Adds or removes action for the specified unityEvent
+        /// </summary>
+        private void SetEventListener<T>(UnityEvent<T> unityEvent, UnityAction<T> action, bool add)
         {
             if (add)
             {
@@ -349,8 +399,79 @@ namespace Meta.WitAi
             }
             else
             {
-                unityEvent.RemoveAllListeners();
+                unityEvent.RemoveListener(action);
             }
+        }
+
+        /// <summary>
+        /// The actions that have been generated
+        /// </summary>
+        private Dictionary<string, object> _actions = new Dictionary<string, object>();
+
+        /// <summary>
+        /// Simple getter for unique request + object combination
+        /// </summary>
+        private string GetUniqueId(VoiceServiceRequest request, System.Object obj) =>
+            $"{request.Options.RequestId}_{obj.GetHashCode()}";
+
+        /// <summary>
+        /// Get cached reference for the action
+        /// </summary>
+        private UnityAction<T> GetExistingAction<T>(string uniqueId)
+        {
+            if (_actions.ContainsKey(uniqueId))
+            {
+                var result = _actions[uniqueId];
+                if (result is UnityAction<T> actionResult)
+                {
+                    return actionResult;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get cached reference for the action
+        /// </summary>
+        private UnityAction<T> GetUnityAction<T>(VoiceServiceRequest request, UnityAction<VoiceServiceRequest> unityAction)
+        {
+            // Get unique id
+            string uniqueId = GetUniqueId(request, unityAction);
+
+            // Obtain existing if possible
+            UnityAction<T> newAction = GetExistingAction<T>(uniqueId);
+
+            // Set new delegate & apply to actions
+            if (newAction == null)
+            {
+                newAction = (param) => unityAction?.Invoke(request);
+                _actions[uniqueId] = newAction;
+            }
+
+            // Generate a new one
+            return newAction;
+        }
+
+        /// <summary>
+        /// Get cached reference for the action
+        /// </summary>
+        private UnityAction<T> GetUnityAction<T>(VoiceServiceRequest request, UnityAction<VoiceServiceRequest, T> unityAction)
+        {
+            // Get unique id
+            string uniqueId = GetUniqueId(request, unityAction);
+
+            // Obtain existing if possible
+            UnityAction<T> newAction = GetExistingAction<T>(uniqueId);
+
+            // Set new delegate & apply to actions
+            if (newAction == null)
+            {
+                newAction = (param) => unityAction?.Invoke(request, param);
+                _actions[uniqueId] = newAction;
+            }
+
+            // Generate a new one
+            return newAction;
         }
     }
 }

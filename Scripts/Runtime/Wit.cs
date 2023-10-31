@@ -54,13 +54,13 @@ namespace Meta.WitAi
             return base.GetSendError();
         }
 
-        protected override string GetActivateAudioError()
+        public override string GetActivateAudioError()
         {
             if (!AudioBuffer.Instance.IsInputAvailable)
             {
                 return "No Microphone(s)/recording devices found.  You will be unable to capture audio on this device.";
             }
-            return string.Empty;
+            return base.GetActivateAudioError();
         }
 
         public override VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)

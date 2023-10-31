@@ -167,17 +167,6 @@ namespace Meta.WitAi
 
         #region AUDIO REQUESTS
         /// <summary>
-        /// Whether audio can be activated or not
-        /// </summary>
-        /// <returns></returns>
-        public virtual bool CanActivateAudio() => string.IsNullOrEmpty(GetActivateAudioError());
-        /// <summary>
-        /// Check for error that will occur if attempting to read an audio source
-        /// </summary>
-        /// <returns>Returns an error if audio cannot be read.</returns>
-        protected abstract string GetActivateAudioError();
-
-        /// <summary>
         /// Start listening for sound or speech from the user and start sending data to Wit.ai once sound or speech has been detected.
         /// </summary>
         public void Activate() => Activate(new WitRequestOptions());
