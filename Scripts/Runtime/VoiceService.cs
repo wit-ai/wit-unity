@@ -224,22 +224,6 @@ namespace Meta.WitAi
         public abstract VoiceServiceRequest ActivateImmediately(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents);
         #endregion AUDIO REQUESTS
 
-        #region DEACTIVATION
-        /// <summary>
-        /// Stop listening and submit any remaining buffered microphone data for processing.
-        /// </summary>
-        public abstract void Deactivate();
-
-        /// <summary>
-        /// Stop listening and abort any requests that may be active without waiting for a response.
-        /// </summary>
-        public abstract void DeactivateAndAbortRequest();
-        /// <summary>
-        /// Abort a specific request
-        /// </summary>
-        public virtual void DeactivateAndAbortRequest(VoiceServiceRequest request) => request.Cancel();
-        #endregion DEACTIVATION
-
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
         protected override void OnRequestPartialResponse(VoiceServiceRequest request)
         {

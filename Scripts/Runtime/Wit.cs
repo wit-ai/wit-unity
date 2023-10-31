@@ -83,14 +83,15 @@ namespace Meta.WitAi
 
         public override void Deactivate()
         {
+            base.Deactivate();
             witService.Deactivate();
         }
 
         public override void DeactivateAndAbortRequest()
         {
+            base.DeactivateAndAbortRequest();
             witService.DeactivateAndAbortRequest();
         }
-
         #endregion
 
         protected override void Awake()

@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
@@ -66,6 +67,44 @@ namespace Meta.WitAi
         /// Whether a voice service request can be sent or not
         /// </summary>
         public virtual bool CanSend() => string.IsNullOrEmpty(GetSendError());
+
+        /// <summary>
+        /// Deactivate all requests
+        /// </summary>
+        public virtual void Deactivate()
+        {
+            foreach (var request in Requests.ToArray())
+            {
+                request.DeactivateAudio();
+            }
+        }
+
+        /// <summary>
+        /// Deactivate a specific request
+        /// </summary>
+        public virtual void Deactivate(VoiceServiceRequest request)
+        {
+            request?.DeactivateAudio();
+        }
+
+        /// <summary>
+        /// Deactivate and abort all requests
+        /// </summary>
+        public virtual void DeactivateAndAbortRequest()
+        {
+            foreach (var request in Requests.ToArray())
+            {
+                request.Cancel();
+            }
+        }
+
+        /// <summary>
+        /// Deactivate and abort a specific requests
+        /// </summary>
+        public virtual void DeactivateAndAbortRequest(VoiceServiceRequest request)
+        {
+            request?.Cancel();
+        }
 
         /// <summary>
         /// Method to setup request events with provided base events
