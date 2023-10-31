@@ -8,6 +8,7 @@
 
 using System.Text;
 using Meta.WitAi;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -297,7 +298,7 @@ namespace Meta.Voice
         public override void Send()
         {
             // Activate audio if needed & possible
-            if (!IsAudioInputActivated && CanActivateAudio && CanSend)
+            if (!IsAudioInputActivated && CanActivateAudio)
             {
                 ActivateAudio();
             }
