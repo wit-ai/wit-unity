@@ -20,13 +20,7 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
-using Meta.WitAi.Utilities;
-using UnityEngine;
 using UnityEngine.Networking;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Meta.WitAi
 {
@@ -61,7 +55,24 @@ namespace Meta.WitAi
         /// <summary>
         /// Endpoint to be used for this request
         /// </summary>
-        public string Path { get; private set; }
+        public string Path
+        {
+            get => _path;
+            set
+            {
+                if (_canSetPath)
+                {
+                    _path = value;
+                }
+                else
+                {
+                    VLog.W($"Cannot set WitRequest.Path while after transmission.");
+                }
+            }
+        }
+        private string _path;
+        private bool _canSetPath = true;
+
         /// <summary>
         /// Final portion of the endpoint Path
         /// </summary>
@@ -350,8 +361,11 @@ namespace Meta.WitAi
             _requestStartTime = DateTime.UtcNow;
             _stackTrace = "-";
 
-            // Get uri & headers
+            // Get uri & prevent further path changes
             var uri = GetUri();
+            _canSetPath = false;
+
+            // Get headers
             var headers = GetHeaders();
 
             // Allow overrides
@@ -479,7 +493,7 @@ namespace Meta.WitAi
                     UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
                 request.SetRequestHeader("Content-Type", audioEncoding.ToString());
             }
-            
+
             // Apply all wit headers
             foreach (var header in headers)
             {
@@ -525,7 +539,7 @@ namespace Meta.WitAi
 
                 SetState(VoiceRequestState.Failed);
             }
-            
+
 
             onResponse?.Invoke(this);
         }
@@ -594,7 +608,6 @@ namespace Meta.WitAi
                 // Immediate post
                 if (postData != null && postData.Length > 0)
                 {
-                    Debug.Log("Wrote directly");
                     _bytesWritten += postData.Length;
                     stream.Write(postData, 0, postData.Length);
                     stream.Close();
