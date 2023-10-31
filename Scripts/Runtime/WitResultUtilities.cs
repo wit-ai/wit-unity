@@ -6,10 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Net;
 using Meta.WitAi.Data.Entities;
 using Meta.WitAi.Data.Intents;
 using Meta.WitAi.Json;
-using UnityEngine;
 
 namespace Meta.WitAi
 {
@@ -23,8 +23,30 @@ namespace Meta.WitAi
         public const string WIT_KEY_FINAL = "is_final";
         public const string WIT_PARTIAL_RESPONSE = "partial_response";
         public const string WIT_RESPONSE = "response";
+        public const string WIT_STATUS_CODE = "code";
+        public const string WIT_ERROR = "error";
 
         #region Base Response methods
+        /// <summary>
+        /// Returns if any status code is returned
+        /// </summary>
+        public static int GetStatusCode(this WitResponseNode witResponse) =>
+            null != witResponse
+            && witResponse.AsObject != null
+            && witResponse.AsObject.HasChild(WIT_STATUS_CODE)
+                ? witResponse[WIT_STATUS_CODE].AsInt
+                : (int)HttpStatusCode.OK;
+
+        /// <summary>
+        /// Returns if any errors are contained in the response
+        /// </summary>
+        public static string GetError(this WitResponseNode witResponse) =>
+            null != witResponse
+            && witResponse.AsObject != null
+            && witResponse.AsObject.HasChild(WIT_ERROR)
+                ? witResponse[WIT_ERROR].Value
+                : string.Empty;
+
         /// <summary>
         /// Get the transcription from a wit response node
         /// </summary>
@@ -34,6 +56,15 @@ namespace Meta.WitAi
             && witResponse.AsObject.HasChild(WIT_KEY_TRANSCRIPTION)
             ? witResponse[WIT_KEY_TRANSCRIPTION].Value
             : string.Empty;
+
+        /// <summary>
+        /// Get whether this response is for transcriptions only
+        /// </summary>
+        public static bool IsTranscriptionOnly(this WitResponseNode witResponse)
+        {
+            var transcription = witResponse.GetTranscription();
+            return !string.IsNullOrEmpty(transcription) && !HasResponse(witResponse);
+        }
 
         /// <summary>
         /// Get whether this response contains partial data
