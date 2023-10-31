@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
-using Lib.Wit.Editor;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Lib;
