@@ -8,15 +8,12 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
-using UnityEngine;
 
 namespace Meta.WitAi.Requests
 {
@@ -150,12 +147,19 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
+        /// Subscribes or unsubscribes all provided VoiceServiceRequestEvents from this request's
+        /// VoiceServiceRequestEvents callbacks.
+        /// </summary>
+        /// <param name="newEvents">The events to subscribe or unsubscribe to the request.Events</param>
+        /// <param name="add">Whether to add listeners or remove listeners</param>
+        protected override void SetEventListeners(VoiceServiceRequestEvents newEvents, bool add) =>
+            Events.SetListeners(newEvents, add);
+
+        /// <summary>
         /// Performs an event callback with this request as the parameter
         /// </summary>
         /// <param name="eventCallback">The voice service request event to be called</param>
-        protected override void RaiseEvent(VoiceServiceRequestEvent eventCallback)
-        {
+        protected override void RaiseEvent(VoiceServiceRequestEvent eventCallback) =>
             eventCallback?.Invoke(this);
-        }
     }
 }

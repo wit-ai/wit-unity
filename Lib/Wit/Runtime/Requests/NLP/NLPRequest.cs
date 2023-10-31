@@ -51,9 +51,7 @@ namespace Meta.Voice
         protected NLPRequest(NLPRequestInputType inputType, TOptions options, TEvents newEvents) : base(options, newEvents)
         {
             // Set option input type & bools
-            var opt = Options;
-            opt.InputType = inputType;
-            Options = opt;
+            Options.InputType = inputType;
             _initialized = true;
             _finalized = false;
 

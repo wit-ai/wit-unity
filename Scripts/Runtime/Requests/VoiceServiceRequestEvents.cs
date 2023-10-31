@@ -20,7 +20,44 @@ namespace Meta.WitAi.Requests
     public class VoiceServiceRequestEvents
         : NLPRequestEvents<VoiceServiceRequestEvent, WitResponseNode>
     {
+        /// <summary>
+        /// Adds all listeners for another VoiceServiceRequestEvents
+        /// </summary>
+        public void AddListeners(VoiceServiceRequestEvents events) =>
+            SetListeners(events, true);
 
+        /// <summary>
+        /// Removes all listeners from another VoiceServiceRequestEvents
+        /// </summary>
+        public void RemoveListeners(VoiceServiceRequestEvents events) =>
+            SetListeners(events, false);
+
+        /// <summary>
+        /// Adds or removes all listeners for the provided VoiceServiceRequestEvents
+        /// event object based on the add boolean parameter
+        /// </summary>
+        public void SetListeners(VoiceServiceRequestEvents events, bool add)
+        {
+            OnInit.SetListener(events.OnInit.Invoke, add);
+            OnStateChange.SetListener(events.OnStateChange.Invoke, add);
+            OnAudioInputStateChange.SetListener(events.OnAudioInputStateChange.Invoke, add);
+            OnStartListening.SetListener(events.OnStartListening.Invoke, add);
+            OnStopListening.SetListener(events.OnStopListening.Invoke, add);
+            OnAudioActivation.SetListener(events.OnAudioActivation.Invoke, add);
+            OnAudioDeactivation.SetListener(events.OnAudioDeactivation.Invoke, add);
+            OnSend.SetListener(events.OnSend.Invoke, add);
+            OnRawResponse.SetListener(events.OnRawResponse.Invoke, add);
+            OnPartialTranscription.SetListener(events.OnPartialTranscription.Invoke, add);
+            OnFullTranscription.SetListener(events.OnFullTranscription.Invoke, add);
+            OnPartialResponse.SetListener(events.OnPartialResponse.Invoke, add);
+            OnFullResponse.SetListener(events.OnFullResponse.Invoke, add);
+            OnDownloadProgressChange.SetListener(events.OnDownloadProgressChange.Invoke, add);
+            OnUploadProgressChange.SetListener(events.OnUploadProgressChange.Invoke, add);
+            OnCancel.SetListener(events.OnCancel.Invoke, add);
+            OnFailed.SetListener(events.OnFailed.Invoke, add);
+            OnSuccess.SetListener(events.OnSuccess.Invoke, add);
+            OnComplete.SetListener(events.OnComplete.Invoke, add);
+        }
     }
 
     /// <summary>
@@ -38,55 +75,40 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Adds all listeners for VoiceServiceRequestEvents to overridable methods
         /// </summary>
-        /// <param name="events"></param>
-        public void Wrap(VoiceServiceRequestEvents events)
-        {
-            events.OnCancel.AddListener(OnCancel);
-            events.OnComplete.AddListener(OnComplete);
-            events.OnFailed.AddListener(OnFailed);
-            events.OnInit.AddListener(OnInit);
-            events.OnSend.AddListener(OnSend);
-            events.OnSuccess.AddListener(OnSuccess);
-            events.OnAudioActivation.AddListener(OnAudioActivation);
-            events.OnAudioDeactivation.AddListener(OnAudioDeactivation);
-            events.OnPartialTranscription.AddListener(OnPartialTranscription);
-            events.OnFullTranscription.AddListener(OnFullTranscription);
-            events.OnRawResponse.AddListener(OnRawResponse);
-            events.OnPartialResponse.AddListener(OnPartialResponse);
-            events.OnFullResponse.AddListener(OnFullResponse);
-            events.OnStartListening.AddListener(OnStartListening);
-            events.OnStopListening.AddListener(OnStopListening);
-            events.OnStateChange.AddListener(OnStateChange);
-            events.OnDownloadProgressChange.AddListener(OnDownloadProgressChange);
-            events.OnUploadProgressChange.AddListener(OnUploadProgressChange);
-            events.OnAudioInputStateChange.AddListener(OnAudioInputStateChange);
-        }
+        public void Wrap(VoiceServiceRequestEvents events) =>
+            SetListeners(events, true);
 
         /// <summary>
         /// Removes all listeners for the provided VoiceServiceRequestEvents event object.
         /// </summary>
-        /// <param name="events"></param>
-        public void Unwrap(VoiceServiceRequestEvents events)
+        public void Unwrap(VoiceServiceRequestEvents events) =>
+            SetListeners(events, false);
+
+        /// <summary>
+        /// Adds or removes all listeners for the provided VoiceServiceRequestEvents
+        /// event object based on the add boolean parameter
+        /// </summary>
+        private void SetListeners(VoiceServiceRequestEvents events, bool add)
         {
-            events.OnCancel.RemoveListener(OnCancel);
-            events.OnComplete.RemoveListener(OnComplete);
-            events.OnFailed.RemoveListener(OnFailed);
-            events.OnInit.RemoveListener(OnInit);
-            events.OnSend.RemoveListener(OnSend);
-            events.OnSuccess.RemoveListener(OnSuccess);
-            events.OnAudioActivation.RemoveListener(OnAudioActivation);
-            events.OnAudioDeactivation.RemoveListener(OnAudioDeactivation);
-            events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
-            events.OnFullTranscription.RemoveListener(OnFullTranscription);
-            events.OnRawResponse.RemoveListener(OnRawResponse);
-            events.OnPartialResponse.RemoveListener(OnPartialResponse);
-            events.OnFullResponse.RemoveListener(OnFullResponse);
-            events.OnStartListening.RemoveListener(OnStartListening);
-            events.OnStopListening.RemoveListener(OnStopListening);
-            events.OnStateChange.RemoveListener(OnStateChange);
-            events.OnDownloadProgressChange.RemoveListener(OnDownloadProgressChange);
-            events.OnUploadProgressChange.RemoveListener(OnUploadProgressChange);
-            events.OnAudioInputStateChange.RemoveListener(OnAudioInputStateChange);
+            events.OnInit.SetListener(OnInit, add);
+            events.OnStateChange.SetListener(OnStateChange, add);
+            events.OnAudioInputStateChange.SetListener(OnAudioInputStateChange, add);
+            events.OnStartListening.SetListener(OnStartListening, add);
+            events.OnStopListening.SetListener(OnStopListening, add);
+            events.OnAudioActivation.SetListener(OnAudioActivation, add);
+            events.OnAudioDeactivation.SetListener(OnAudioDeactivation, add);
+            events.OnSend.SetListener(OnSend, add);
+            events.OnRawResponse.SetListener(OnRawResponse, add);
+            events.OnPartialTranscription.SetListener(OnPartialTranscription, add);
+            events.OnFullTranscription.SetListener(OnFullTranscription, add);
+            events.OnPartialResponse.SetListener(OnPartialResponse, add);
+            events.OnFullResponse.SetListener(OnFullResponse, add);
+            events.OnDownloadProgressChange.SetListener(OnDownloadProgressChange, add);
+            events.OnUploadProgressChange.SetListener(OnUploadProgressChange, add);
+            events.OnCancel.SetListener(OnCancel, add);
+            events.OnFailed.SetListener(OnFailed, add);
+            events.OnSuccess.SetListener(OnSuccess, add);
+            events.OnComplete.SetListener(OnComplete, add);
         }
 
         protected virtual void OnAudioInputStateChange(VoiceServiceRequest request)

@@ -11,7 +11,6 @@ using System.Collections;
 using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Data;
-using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -61,15 +60,15 @@ namespace Meta.Voice
         /// <summary>
         /// Options sent as the request parameters
         /// </summary>
-        public TOptions Options { get; protected set; }
+        public TOptions Options { get; }
         /// <summary>
         /// Events specific to this voice request
         /// </summary>
-        public TEvents Events { get; protected set; }
+        public TEvents Events { get; }
         /// <summary>
         /// Results returned from the request
         /// </summary>
-        public TResults Results { get; protected set; }
+        public TResults Results { get; }
 
         /// <summary>
         /// Whether request can currently transmit data
@@ -86,8 +85,12 @@ namespace Meta.Voice
         {
             // Apply options if they exist, otherwise generate
             Options = newOptions != null ? newOptions : Activator.CreateInstance<TOptions>();
-            // Apply events if they exist, otherwise generate
-            Events = newEvents != null ? newEvents : Activator.CreateInstance<TEvents>();
+            // Generate new events & add parameter events as listeners
+            Events = Activator.CreateInstance<TEvents>();
+            if (newEvents != null)
+            {
+                AddEventListeners(newEvents);
+            }
             // Generate results and apply changes throughout lifecycle
             Results = GetNewResults();
 
@@ -100,6 +103,32 @@ namespace Meta.Voice
         /// </summary>
         protected virtual TResults GetNewResults() =>
             Activator.CreateInstance<TResults>();
+
+        /// <summary>
+        /// Adds listeners for all events provided
+        /// </summary>
+        public void AddEventListeners(TEvents newEvents) =>
+            SetEventListeners(newEvents, true);
+
+        /// <summary>
+        /// Removes listeners for all events provided
+        /// </summary>
+        public void RemoveEventListeners(TEvents newEvents) =>
+            SetEventListeners(newEvents, false);
+
+        /// <summary>
+        /// Subscribes or unsubscribes all provided events from this request's
+        /// Events callbacks.
+        /// </summary>
+        /// <param name="newEvents">The events to subscribe or unsubscribe to the request.Events</param>
+        /// <param name="addListeners">Whether to add listeners or remove listeners</param>
+        protected abstract void SetEventListeners(TEvents newEvents, bool addListeners);
+
+        /// <summary>
+        /// Raises a voice request event
+        /// </summary>
+        /// <param name="requestEvent">Event to be performed</param>
+        protected abstract void RaiseEvent(TUnityEvent requestEvent);
 
         /// <summary>
         /// Call after initialization
@@ -123,7 +152,7 @@ namespace Meta.Voice
 
             // Set state & update event
             State = newState;
-            RaiseEvent(Events?.OnStateChange);
+            OnStateChange();
 
             // Handle completion
             bool shouldComplete = false;
@@ -201,6 +230,12 @@ namespace Meta.Voice
             }
         }
 
+        /// <summary>
+        /// Method for calling state change delegates
+        /// </summary>
+        protected virtual void OnStateChange() =>
+            RaiseEvent(Events?.OnStateChange);
+
         // Wait for hold to complete and then perform an action
         protected virtual IEnumerator WaitForHold(Action onReady)
         {
@@ -271,11 +306,6 @@ namespace Meta.Voice
             UploadProgress = newProgress;
             RaiseEvent(Events?.OnUploadProgressChange);
         }
-        /// <summary>
-        /// Raises a voice request event
-        /// </summary>
-        /// <param name="requestEvent">Event to be performed</param>
-        protected abstract void RaiseEvent(TUnityEvent requestEvent);
 
         /// <summary>
         /// Internal method for
