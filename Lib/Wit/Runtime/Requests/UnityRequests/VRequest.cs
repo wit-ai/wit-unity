@@ -10,6 +10,7 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -501,7 +502,7 @@ namespace Meta.WitAi.Requests
                 ResponseError = GetSpecificRequestError(_request);
 
                 // Decode
-                if (string.IsNullOrEmpty(ResponseError) && onDecode != null)
+                if (onDecode != null && (string.IsNullOrEmpty(ResponseError) || typeof(TData) == typeof(string)))
                 {
                     try
                     {
@@ -890,10 +891,23 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The delegate upon completion</param>
         public bool RequestText(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<string> onComplete)
+            RequestCompleteDelegate<string> onComplete,
+            TextStreamHandler.TextStreamResponseDelegate onPartial = null)
         {
-            // Set download handler if needed
-            if (unityRequest.downloadHandler == null)
+            // Partial text decode handler
+            if (onPartial != null)
+            {
+                if (unityRequest.downloadHandler != null)
+                {
+                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
+                }
+                else
+                {
+                    unityRequest.downloadHandler = new TextStreamHandler(onPartial);
+                }
+            }
+            // Default handler
+            else if (unityRequest.downloadHandler == null)
             {
                 unityRequest.downloadHandler = new DownloadHandlerBuffer();
             }
@@ -923,10 +937,23 @@ namespace Meta.WitAi.Requests
         /// Performs a text request async & returns the text along with any errors
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
-        public async Task<RequestCompleteResponse<string>> RequestTextAsync(UnityWebRequest unityRequest)
+        public async Task<RequestCompleteResponse<string>> RequestTextAsync(UnityWebRequest unityRequest,
+            TextStreamHandler.TextStreamResponseDelegate onPartial = null)
         {
-            // Set download handler if needed
-            if (unityRequest.downloadHandler == null)
+            // Partial text decode handler
+            if (onPartial != null)
+            {
+                if (unityRequest.downloadHandler != null)
+                {
+                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
+                }
+                else
+                {
+                    unityRequest.downloadHandler = new TextStreamHandler(onPartial);
+                }
+            }
+            // Default handler
+            else if (unityRequest.downloadHandler == null)
             {
                 unityRequest.downloadHandler = new DownloadHandlerBuffer();
             }
@@ -980,34 +1007,23 @@ namespace Meta.WitAi.Requests
             RequestCompleteResponse<TData> partialResponse = new RequestCompleteResponse<TData>();
 
             // Set partial download handler
-            if (onPartial != null)
+            TextStreamHandler.TextStreamResponseDelegate onPartialText = (jsonText) =>
             {
-                if (unityRequest.downloadHandler != null)
+                // Decode async and then call partial
+                partialJson = jsonText;
+                partialDecoding = true;
+                #pragma warning disable CS4014
+                DecodePartialJsonAsync<TData>(partialJson, (response) =>
                 {
-                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
-                }
-                else
-                {
-                    unityRequest.downloadHandler = new TextStreamHandler((jsonText) =>
-                        {
-                            // Decode async and then call partial
-                            #pragma warning disable CS4014
-                            partialJson = jsonText;
-                            partialDecoding = true;
-                            DecodePartialJsonAsync<TData>(jsonText, (response) =>
-                            {
-                                onPartial?.Invoke(response.Value, response.Error);
-                                partialResponse = response;
-                                partialDecoding = false;
-                            });
-                            #pragma warning restore CS4014
-                        },
-                        WitConstants.ENDPOINT_JSON_DELIMITER);
-                }
-            }
+                    partialResponse = response;
+                    onPartial?.Invoke(partialResponse.Value, partialResponse.Error);
+                    partialDecoding = false;
+                });
+                #pragma warning restore CS4014
+            };
 
             // Perform text request
-            var textResponse = await RequestTextAsync(unityRequest);
+            var textResponse = await RequestTextAsync(unityRequest, onPartialText);
             if (!string.IsNullOrEmpty(textResponse.Error))
             {
                 return new RequestCompleteResponse<TData>(default(TData), textResponse.Error);
@@ -1031,11 +1047,21 @@ namespace Meta.WitAi.Requests
         // Decodes json & returns value
         private async Task<RequestCompleteResponse<TData>> DecodeJsonAsync<TData>(string jsonText)
         {
+            // If string is desired result
+            if (typeof(TData) == typeof(string))
+            {
+                object rawResult = jsonText;
+                return new RequestCompleteResponse<TData>((TData)rawResult, null);
+            }
+
+            // Decode
             TData result = await JsonConvert.DeserializeObjectAsync<TData>(jsonText);
             if (result == null)
             {
                 return new RequestCompleteResponse<TData>(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
             }
+
+            // Return result
             return new RequestCompleteResponse<TData>(result);
         }
         // Decodes json & performs partial callback

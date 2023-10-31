@@ -83,8 +83,10 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
+        /// <param name="onPartial">The callback delegate for text as it arrives</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestText(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<string> onComplete);
+        bool RequestText(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<string> onComplete,
+            TextStreamHandler.TextStreamResponseDelegate onPartial);
 
         /// <summary>
         /// Performs a json request & handles the resultant text
