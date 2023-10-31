@@ -21,7 +21,7 @@ namespace Meta.WitAi.Requests
 {
     [Serializable]
     public abstract class VoiceServiceRequest
-        : NLPRequest<VoiceServiceRequestEvent, WitRequestOptions, VoiceServiceRequestEvents, VoiceServiceRequestResults>
+        : NLPRequest<VoiceServiceRequestEvent, WitRequestOptions, VoiceServiceRequestEvents, VoiceServiceRequestResults, WitResponseNode>
     {
         /// <summary>
         /// Constructor for Voice Service requests

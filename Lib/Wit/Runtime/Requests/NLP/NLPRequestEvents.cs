@@ -7,20 +7,19 @@
  */
 
 using System;
-using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
 {
     /// <summary>
-    /// A unity event that returns a decoded nlp WitResponseNode
+    /// A unity event that returns a decoded nlp response data
     /// </summary>
     [Serializable]
-    public class NLPRequestResponseEvent : UnityEvent<WitResponseNode> {}
+    public class NLPRequestResponseEvent<TResponseData> : UnityEvent<TResponseData> {}
 
     [Serializable]
-    public class NLPRequestEvents<TUnityEvent>
+    public class NLPRequestEvents<TUnityEvent, TResponseData>
         : TranscriptionRequestEvents<TUnityEvent>
         where TUnityEvent : UnityEventBase
     {
@@ -34,15 +33,15 @@ namespace Meta.Voice
         /// <summary>
         /// Called on request language processing while audio is still being analyzed
         /// </summary>
-        public NLPRequestResponseEvent OnPartialResponse => _onPartialResponse;
+        public NLPRequestResponseEvent<TResponseData> OnPartialResponse => _onPartialResponse;
         [Tooltip("Called for partially decoded request responses.")]
-        [SerializeField] private NLPRequestResponseEvent _onPartialResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
+        [SerializeField] private NLPRequestResponseEvent<TResponseData> _onPartialResponse = Activator.CreateInstance<NLPRequestResponseEvent<TResponseData>>();
 
         /// <summary>
         /// Called on request language processing once completely analyzed
         /// </summary>
-        public NLPRequestResponseEvent OnFullResponse => _onFullResponse;
+        public NLPRequestResponseEvent<TResponseData> OnFullResponse => _onFullResponse;
         [Tooltip("Called on request language processing once completely analyzed.")]
-        [SerializeField] private NLPRequestResponseEvent _onFullResponse = Activator.CreateInstance<NLPRequestResponseEvent>();
+        [SerializeField] private NLPRequestResponseEvent<TResponseData> _onFullResponse = Activator.CreateInstance<NLPRequestResponseEvent<TResponseData>>();
     }
 }

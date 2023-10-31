@@ -13,7 +13,7 @@ using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Requests
 {
-    public class VoiceServiceRequestResults : INLPRequestResults
+    public class VoiceServiceRequestResults : INLPRequestResults<WitResponseNode>
     {
         /// <summary>
         /// Request status code if applicable

@@ -18,11 +18,11 @@ namespace Meta.WitAi.Requests
     /// </summary>
     [Serializable]
     public class VoiceServiceRequestEvents
-        : NLPRequestEvents<VoiceServiceRequestEvent>
+        : NLPRequestEvents<VoiceServiceRequestEvent, WitResponseNode>
     {
 
     }
-    
+
     /// <summary>
     /// A UnityEvent with a parameter of VoiceServiceRequest
     /// </summary>
@@ -49,10 +49,11 @@ namespace Meta.WitAi.Requests
             events.OnSuccess.AddListener(OnSuccess);
             events.OnAudioActivation.AddListener(OnAudioActivation);
             events.OnAudioDeactivation.AddListener(OnAudioDeactivation);
-            events.OnFullResponse.AddListener(OnFullResponse);
-            events.OnPartialResponse.AddListener(OnPartialResponse);
             events.OnPartialTranscription.AddListener(OnPartialTranscription);
             events.OnFullTranscription.AddListener(OnFullTranscription);
+            events.OnRawResponse.AddListener(OnRawResponse);
+            events.OnPartialResponse.AddListener(OnPartialResponse);
+            events.OnFullResponse.AddListener(OnFullResponse);
             events.OnStartListening.AddListener(OnStartListening);
             events.OnStopListening.AddListener(OnStopListening);
             events.OnStateChange.AddListener(OnStateChange);
@@ -60,7 +61,7 @@ namespace Meta.WitAi.Requests
             events.OnUploadProgressChange.AddListener(OnUploadProgressChange);
             events.OnAudioInputStateChange.AddListener(OnAudioInputStateChange);
         }
-        
+
         /// <summary>
         /// Removes all listeners for the provided VoiceServiceRequestEvents event object.
         /// </summary>
@@ -75,10 +76,11 @@ namespace Meta.WitAi.Requests
             events.OnSuccess.RemoveListener(OnSuccess);
             events.OnAudioActivation.RemoveListener(OnAudioActivation);
             events.OnAudioDeactivation.RemoveListener(OnAudioDeactivation);
-            events.OnFullResponse.RemoveListener(OnFullResponse);
-            events.OnPartialResponse.RemoveListener(OnPartialResponse);
             events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
             events.OnFullTranscription.RemoveListener(OnFullTranscription);
+            events.OnRawResponse.RemoveListener(OnRawResponse);
+            events.OnPartialResponse.RemoveListener(OnPartialResponse);
+            events.OnFullResponse.RemoveListener(OnFullResponse);
             events.OnStartListening.RemoveListener(OnStartListening);
             events.OnStopListening.RemoveListener(OnStopListening);
             events.OnStateChange.RemoveListener(OnStateChange);
@@ -119,6 +121,10 @@ namespace Meta.WitAi.Requests
         {
         }
 
+        protected virtual void OnRawResponse(string rawResponse)
+        {
+        }
+
         protected virtual void OnPartialResponse(WitResponseNode request)
         {
         }
@@ -153,12 +159,12 @@ namespace Meta.WitAi.Requests
 
         protected virtual void OnComplete(VoiceServiceRequest request)
         {
-            
+
         }
 
         protected virtual void OnCancel(VoiceServiceRequest request)
         {
-            
+
         }
     }
 }

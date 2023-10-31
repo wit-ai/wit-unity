@@ -6,10 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Text;
 using Meta.WitAi;
-using Meta.WitAi.Json;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -21,12 +19,12 @@ namespace Meta.Voice
     /// <typeparam name="TOptions">The type containing all specific options to be passed to the end service.</typeparam>
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
-    public abstract class NLPRequest<TUnityEvent, TOptions, TEvents, TResults>
+    public abstract class NLPRequest<TUnityEvent, TOptions, TEvents, TResults, TResponseData>
         : TranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
         where TOptions : INLPRequestOptions
-        where TEvents : NLPRequestEvents<TUnityEvent>
-        where TResults : INLPRequestResults
+        where TEvents : NLPRequestEvents<TUnityEvent, TResponseData>
+        where TResults : INLPRequestResults<TResponseData>
     {
         /// <summary>
         /// Getter for request input type
@@ -34,9 +32,9 @@ namespace Meta.Voice
         public NLPRequestInputType InputType => Options == null ? NLPRequestInputType.Audio : Options.InputType;
 
         /// <summary>
-        /// Getter for response data
+        /// Getter for decoded response data
         /// </summary>
-        public WitResponseNode ResponseData => Results?.ResponseData;
+        public TResponseData ResponseData => Results == null ? default(TResponseData) : Results.ResponseData;
 
         // Ensure initialized only once
         private bool _initialized = false;
@@ -111,24 +109,24 @@ namespace Meta.Voice
         /// <summary>
         /// Getter for status code from response data
         /// </summary>
-        protected abstract int GetResponseStatusCode(WitResponseNode responseData);
+        protected abstract int GetResponseStatusCode(TResponseData responseData);
 
         /// <summary>
         /// Getter for error from response data if applicable
         /// </summary>
-        protected abstract string GetResponseError(WitResponseNode responseData);
+        protected abstract string GetResponseError(TResponseData responseData);
 
         /// <summary>
         /// Getter for whether response data contains partial (early) response data
         /// </summary>
-        protected abstract bool GetResponseHasPartial(WitResponseNode responseData);
+        protected abstract bool GetResponseHasPartial(TResponseData responseData);
 
         /// <summary>
         /// Sets response data to the current results object
         /// </summary>
         /// <param name="responseData">Parsed json data returned from request</param>
         /// <param name="final">Whether or not this response should be considered final</param>
-        protected virtual void ApplyResponseData(WitResponseNode responseData, bool final)
+        protected virtual void ApplyResponseData(TResponseData responseData, bool final)
         {
             // Ignore if not active
             if (!IsActive)

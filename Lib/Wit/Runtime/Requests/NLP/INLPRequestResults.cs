@@ -6,26 +6,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.WitAi.Json;
-
 namespace Meta.Voice
 {
     /// <summary>
     /// Interface for NLP request results
     /// </summary>
-    /// <typeparam name="TResultData">Type of NLP data received from the request</typeparam>
-    public interface INLPRequestResults : ITranscriptionRequestResults
+    /// <typeparam name="TResponseData">Type of NLP data received from the request</typeparam>
+    public interface INLPRequestResults<TResponseData> : ITranscriptionRequestResults
     {
         /// <summary>
         /// Processed data from the request
         /// Should only be set by NLPRequests
         /// </summary>
-        WitResponseNode ResponseData { get; }
+        TResponseData ResponseData { get; }
 
         /// <summary>
         /// A setter for response data
         /// </summary>
         /// <param name="responseData">The response data to be set</param>
-        void SetResponseData(WitResponseNode responseData);
+        void SetResponseData(TResponseData responseData);
     }
 }
