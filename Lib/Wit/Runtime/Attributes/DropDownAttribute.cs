@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -30,27 +31,29 @@ namespace Meta.WitAi.Attributes
         /// for the drop down menu.
         /// </summary>
         public string OptionListGetterName { get; }
+
         /// <summary>
         /// Whether or not the dropdown options getter method should be invoked on every repaint or cached.  This should
         /// be set to true if the list is expected to change throughout interactions with the GUI.
         /// </summary>
         public bool RefreshOnRepaint { get; }
+
         /// <summary>
         /// Whether or not the dropdown option can be invalid in which case it will be left at index -1.  If false,
         /// this will always clamp the dropdown to the first option.
         /// </summary>
         public bool AllowInvalid { get; }
-        
+
         /// <summary>
         /// Returns true if the data options for the field list are empty and displays the property value instead.
         /// </summary>
         public bool ShowPropertyIfListIsEmpty { get; }
-        
+
         /// <summary>
         /// If true a refresh button will be shown
         /// </summary>
         public bool ShowRefreshButton { get; }
-        
+
         /// <summary>
         /// If set, this method will be used when the refresh button is pressed. This may be a longer manual refresh if
         /// needed and may or may not be the same as the refresh method used for refreshing on paint.
@@ -58,9 +61,16 @@ namespace Meta.WitAi.Attributes
         public string RefreshMethodName { get; }
 
         /// <summary>
+        /// If set a search button will appear to allow for text based searching of parameters
+        /// </summary>
+        public bool ShowSearch { get; }
+
+        /// <summary>
         /// Constructor for drop down attribute
         /// </summary>
-        public DropDownAttribute(string optionListGetterName, bool refreshOnRepaint = false, bool allowInvalid = false, bool showPropertyIfListIsEmpty = true, bool showRefreshButton = true, string refreshMethodName = null)
+        public DropDownAttribute(string optionListGetterName, bool refreshOnRepaint = false, bool allowInvalid = false,
+            bool showPropertyIfListIsEmpty = true, bool showRefreshButton = true, string refreshMethodName = null,
+            bool showSearch = false)
         {
             OptionListGetterName = optionListGetterName;
             RefreshOnRepaint = refreshOnRepaint;
@@ -68,6 +78,7 @@ namespace Meta.WitAi.Attributes
             ShowPropertyIfListIsEmpty = showPropertyIfListIsEmpty;
             ShowRefreshButton = showRefreshButton;
             RefreshMethodName = refreshMethodName;
+            ShowSearch = showSearch;
         }
     }
 
@@ -84,16 +95,56 @@ namespace Meta.WitAi.Attributes
 
         // Options available
         private string[] _options;
+
         // Quick lookup for index
         private Dictionary<string, int> _optionLookup = new Dictionary<string, int>();
 
         private readonly float _refreshSpace =
             EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
 
-        private readonly float _refreshButtonSize =
+        private readonly float _utilityButtonSize =
             EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing;
 
+        private readonly float _searchHeight =
+            (EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing) * 8;
+
         private MethodInfo _refreshMethod;
+
+        private Dictionary<string, Search> _searchContext = new Dictionary<string, Search>();
+
+        /// <summary>
+        /// Search context used to handle individual drawable's current search state/visibility.
+        /// </summary>
+        private class Search
+        {
+            public bool show;
+            public string term;
+            public Vector2 scroll;
+            public string[] filteredList;
+        }
+
+        /// <summary>
+        /// Gets the search context for a given property so the GUI can decide if it should be shown or not.
+        /// </summary>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        private Search SearchContext(SerializedProperty property)
+        {
+            if (!_searchContext.TryGetValue(property.propertyPath, out var search))
+            {
+                search = new Search();
+                _searchContext[property.propertyPath] = search;
+            }
+
+            return search;
+        }
+
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        {
+            var height = base.GetPropertyHeight(property, label);
+            if (SearchContext(property).show) height += _searchHeight + EditorGUIUtility.singleLineHeight;
+            return height;
+        }
 
         // Layout string field as dropdown if possible
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -107,25 +158,73 @@ namespace Meta.WitAi.Attributes
 
             // Obtain method info if missing
             var dropDownAttribute = (DropDownAttribute)attribute;
+
             if (!EnsureGetterMethod(property, dropDownAttribute))
             {
                 string typeName = property.serializedObject.targetObject.GetType().Name;
                 string methodName = dropDownAttribute.OptionListGetterName;
                 Color old = GUI.color;
                 GUI.color = Color.red;
-                EditorGUI.LabelField(position, label.text, $"{typeName}.{methodName}() : IEnumerable<string> method not found");
+                EditorGUI.LabelField(position, label.text,
+                    $"{typeName}.{methodName}() : IEnumerable<string> method not found");
                 GUI.color = old;
                 return;
             }
 
+            var search = SearchContext(property);
+            if (search.show)
+            {
+                var searchRect = new Rect(position.x, position.yMax - _searchHeight - EditorGUIUtility.singleLineHeight,
+                    position.width, _searchHeight);
+                GUI.Box(searchRect, "");
+                var searchTermRect = new Rect(searchRect);
+                searchTermRect.height = EditorGUIUtility.singleLineHeight;
+                var term = GUI.TextField(searchTermRect, search.term);
+                if (term != search.term || null == search.filteredList)
+                {
+                    var cleanTerm = CleanSearch(term);
+                    search.filteredList = string.IsNullOrEmpty(term)
+                        ? _options
+                        : _options.Where(option => CleanSearch(option).Contains(cleanTerm)).ToArray();
+                    search.term = term;
+                }
+
+                var matchesRect = new Rect(searchRect);
+                matchesRect.height -= EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing;
+                matchesRect.y += searchTermRect.height + EditorGUIUtility.singleLineHeight;
+                search.scroll = GUI.BeginScrollView(matchesRect, search.scroll, new Rect(0, 0,
+                    matchesRect.width, EditorGUIUtility.singleLineHeight * search.filteredList.Length));
+                int index = 0;
+                foreach (var option in search.filteredList)
+                {
+                    var optionRect = new Rect(0, EditorGUIUtility.singleLineHeight * index, matchesRect.width,
+                        EditorGUIUtility.singleLineHeight);
+                    if (GUI.Button(optionRect, option, EditorStyles.textField))
+                    {
+                        property.stringValue = option;
+                        search.show = false;
+                        GUIUtility.keyboardControl = 0; // This line removes keyboard focus from the search field
+                    }
+
+                    index++;
+                }
+
+                GUI.EndScrollView();
+            }
+
+            if (dropDownAttribute.ShowSearch)
+            {
+                DrawSearchButton(ref position, property, dropDownAttribute);
+            }
+
             if (dropDownAttribute.ShowRefreshButton)
             {
-                position.width -= _refreshSpace;
+                DrawRefreshButton(ref position, property, dropDownAttribute);
             }
 
             // Obtain options/lookup if empty or required on repaint
-            if ((_options == null 
-                 || dropDownAttribute.ShowPropertyIfListIsEmpty && _options.Length == 0 
+            if ((_options == null
+                 || dropDownAttribute.ShowPropertyIfListIsEmpty && _options.Length == 0
                  || dropDownAttribute.RefreshOnRepaint) && !RefreshOptions(property))
             {
                 EditorGUI.PropertyField(position, property, label);
@@ -134,24 +233,43 @@ namespace Meta.WitAi.Attributes
             {
                 LayoutDropdown(position, property, label, dropDownAttribute);
             }
+        }
 
-            if (dropDownAttribute.ShowRefreshButton)
+        private string CleanSearch(string term)
+        {
+            if (string.IsNullOrEmpty(term)) return string.Empty;
+            return Regex.Replace(term.ToLower(), @"[^\w0-9]+", "");
+        }
+
+        private bool DrawButton(string iconName, string tooltip, ref Rect position)
+        {
+            Rect buttonRect = new Rect(position.xMax - _utilityButtonSize, position.y,
+                _utilityButtonSize, _utilityButtonSize);
+            GUIContent iconContent = EditorGUIUtility.IconContent(iconName);
+            iconContent.tooltip = tooltip;
+            position.xMax -= _utilityButtonSize + EditorGUIUtility.standardVerticalSpacing;
+
+            return GUI.Button(buttonRect, iconContent, GUIStyle.none);
+        }
+
+        private void DrawSearchButton(ref Rect position, SerializedProperty property,
+            DropDownAttribute dropDownAttribute)
+        {
+
+            GUIContent iconContent = EditorGUIUtility.IconContent("d_Search Icon");
+            iconContent.tooltip = "Search";
+
+            var search = SearchContext(property);
+            if (DrawButton("d_Search Icon", "Search", ref position))
             {
-                position.width += _refreshSpace;
-
-                DrawRefreshButton(position, property, dropDownAttribute);
+                search.show = !search.show;
             }
         }
 
-        private void DrawRefreshButton(Rect position, SerializedProperty property, DropDownAttribute dropDownAttribute)
+        private void DrawRefreshButton(ref Rect position, SerializedProperty property,
+            DropDownAttribute dropDownAttribute)
         {
-            Rect buttonRect = new Rect(position.xMax - _refreshButtonSize, position.y,
-                _refreshButtonSize, _refreshButtonSize);
-
-            GUIContent iconContent = EditorGUIUtility.IconContent("d_Refresh");
-            iconContent.tooltip = "Refresh";
-
-            if (GUI.Button(buttonRect, iconContent, GUIStyle.none))
+            if (DrawButton("d_Refresh", "Refresh", ref position))
             {
                 if (string.IsNullOrEmpty(dropDownAttribute.RefreshMethodName))
                 {
@@ -202,7 +320,8 @@ namespace Meta.WitAi.Attributes
                 | BindingFlags.Static);
             _options = null;
             _optionLookup.Clear();
-            return _method != null && _method.GetParameters().Length == 0 && _method.ReturnType.IsAssignableFrom(typeof(IEnumerable<string>));
+            return _method != null && _method.GetParameters().Length == 0 &&
+                   _method.ReturnType.IsAssignableFrom(typeof(IEnumerable<string>));
         }
 
         /// <summary>
@@ -263,7 +382,8 @@ namespace Meta.WitAi.Attributes
         /// <summary>
         /// Performs a dropdown layout & applies selected string to the property
         /// </summary>
-        private void LayoutDropdown(Rect position, SerializedProperty property, GUIContent label, DropDownAttribute dropDownAttribute)
+        private void LayoutDropdown(Rect position, SerializedProperty property, GUIContent label,
+            DropDownAttribute dropDownAttribute)
         {
             // Begin property
             EditorGUI.BeginProperty(position, label, property);
