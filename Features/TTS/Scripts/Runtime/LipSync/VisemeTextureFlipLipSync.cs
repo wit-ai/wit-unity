@@ -6,181 +6,36 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Meta.WitAi.TTS.Data;
-using Meta.WitAi.TTS.Integrations;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Meta.WitAi.TTS.LipSync
 {
     /// <summary>
     /// A class for swapping out mouth textures during an audio animation based on the current viseme
     /// </summary>
-    public class VisemeTextureFlipLipSync : TTSEventAnimator<TTSVisemeEvent, Viseme>
+    [RequireComponent(typeof(VisemeLipSyncAnimator))]
+    public class VisemeTextureFlipLipSync : BaseTextureFlipLipSync
     {
-        /// <summary>
-        /// The material to be used for the texture flip
-        /// </summary>
-        public Material Material;
+        [SerializeField] private Renderer renderer;
+        
+        private VisemeLipSyncAnimator _lipSyncAnimator;
 
-        /// <summary>
-        /// The textures to be used for viseme swapping
-        /// </summary>
-        public VisemeTextureData[] VisemeTextures;
-        // A dictionary per viseme lookup
-        private Dictionary<Viseme, int> _textureLookup = new Dictionary<Viseme, int>();
-        // Current viseme
-        private Viseme _currentViseme = (Viseme)(-1);
+        public override Renderer Renderer => renderer;
 
-        // Stored texture data
-        [Serializable]
-        public struct VisemeTextureData
-        {
-            public Viseme viseme;
-            public Texture2D[] textures;
-        }
-
-        // Setup texture list
-        protected virtual void Reset()
-        {
-            if (VisemeTextures != null && VisemeTextures.Length > 0)
-            {
-                return;
-            }
-            List<VisemeTextureData> newTextures = new List<VisemeTextureData>();
-            foreach (Viseme v in Enum.GetValues(typeof(Viseme)))
-            {
-                newTextures.Add(new VisemeTextureData()
-                {
-                    viseme = v
-                });
-            }
-            VisemeTextures = newTextures.ToArray();
-        }
-
-        // Refresh texture lookup on awake
         protected override void Awake()
         {
             base.Awake();
-            RefreshTextureLookup();
-            if (Material == null)
-            {
-                VLog.E(GetType().Name, "Texture Flip material unassigned");
-            }
-            SetViseme(Viseme.sil);
+            _lipSyncAnimator = GetComponent<VisemeLipSyncAnimator>();
         }
 
-        /// <summary>
-        /// Refreshes texture lookup
-        /// </summary>
-        public void RefreshTextureLookup()
+        protected virtual void OnEnable()
         {
-            // Ignore without textures
-            if (VisemeTextures == null)
-            {
-                return;
-            }
-
-            // Adds textures to dictionary lookup
-            StringBuilder log = new StringBuilder();
-            _textureLookup.Clear();
-            for (int i = 0; i < VisemeTextures.Length; i++)
-            {
-                Viseme v = VisemeTextures[i].viseme;
-                if (VisemeTextures[i].textures == null || VisemeTextures[i].textures.Length == 0)
-                {
-                    log.AppendLine($"VisemeTextures[{i}] Warning: No textures are set.");
-                    continue;
-                }
-                if (_textureLookup.ContainsKey(v))
-                {
-                    log.AppendLine($"VisemeTextures[{i}] Warning: Viseme '{v}' already used by VisemeTextures[{_textureLookup[v]}].");
-                    continue;
-                }
-                _textureLookup[v] = i;
-            }
-
-            // Logs missing viseme textures
-            CheckForMissingVisemes(log);
-
-            // Log warnings
-            if (log.Length > 0)
-            {
-                VLog.E(GetType().Name, $"Setup Warnings:\n{log}");
-            }
+            _lipSyncAnimator.OnVisemeLerp?.AddListener(OnVisemeLerp);
         }
 
-        // Check for missing visemes & add them to the log
-        private void CheckForMissingVisemes(StringBuilder log)
+        protected virtual void OnDisable()
         {
-            foreach (Viseme v in Enum.GetValues(typeof(Viseme)))
-            {
-                if (!_textureLookup.ContainsKey(v))
-                {
-                    log.AppendLine($"{v} Viseme missing texture");
-                }
-            }
-        }
-
-        // Simply sets to the previous unless equal to the next
-        protected override void LerpEvent(TTSVisemeEvent fromEvent, TTSVisemeEvent toEvent, float percentage)
-        {
-            if (percentage < 1f)
-            {
-                SetViseme(fromEvent.Data);
-            }
-            else
-            {
-                SetViseme(toEvent.Data);
-            }
-        }
-
-        // Apply the specified viseme
-        private void SetViseme(Viseme v)
-        {
-            // If viseme is missing, try to use sil
-            if (!_textureLookup.ContainsKey(v))
-            {
-                if (v != Viseme.sil)
-                {
-                    SetViseme(Viseme.sil);
-                }
-                return;
-            }
-
-            // Ignore if same
-            if (_currentViseme == v)
-            {
-                return;
-            }
-            // Set current viseme
-            _currentViseme = v;
-
-            // Get texture index
-            int visemeIndex = _textureLookup[v];
-            int textureIndex = 0;
-            var vt = VisemeTextures[visemeIndex];
-            if (vt.textures.Length > 1)
-            {
-                textureIndex = Random.Range(0, vt.textures.Length);
-            }
-
-            // Apply texture
-            SetTexture(vt.textures[textureIndex]);
-        }
-
-        /// <summary>
-        /// Apply texture to material
-        /// </summary>
-        protected virtual void SetTexture(Texture2D texture)
-        {
-            if (Material != null)
-            {
-                Material.SetTexture("_MainTex", texture);
-            }
+            _lipSyncAnimator.OnVisemeLerp?.RemoveListener(OnVisemeLerp);
         }
     }
 }
