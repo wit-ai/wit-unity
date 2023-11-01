@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using Meta.WitAi.Data.Info;
-using UnityEngine;
 
 namespace Meta.WitAi.Data.Entities
 {

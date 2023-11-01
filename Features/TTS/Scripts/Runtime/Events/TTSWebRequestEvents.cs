@@ -7,9 +7,7 @@
  */
 
 using System;
-using Meta.WitAi.TTS.Data;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Events
 {

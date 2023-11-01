@@ -9,7 +9,7 @@
 using System;
 using System.Text;
 using Meta.WitAi.Data.Info;
-using UnityEditor;
+
 namespace Meta.WitAi.Data.Configuration.Tabs
 {
     /// <summary>

@@ -12,7 +12,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Meta.WitAi;
-using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit.Editor
 {

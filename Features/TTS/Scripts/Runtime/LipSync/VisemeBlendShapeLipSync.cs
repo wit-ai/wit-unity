@@ -13,9 +13,7 @@ using System.Text;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
-using Meta.WitAi.Utilities;
 using UnityEngine;
-using UnityEngine.Scripting;
 
 namespace Meta.WitAi.TTS.LipSync
 {

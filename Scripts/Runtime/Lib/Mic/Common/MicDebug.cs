@@ -8,7 +8,6 @@
 
 using System;
 using System.IO;
-using Meta.WitAi;
 using Meta.WitAi.Interfaces;
 using UnityEngine;
 

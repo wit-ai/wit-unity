@@ -10,7 +10,6 @@ using System;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
-using Meta.WitAi.Json;
 using UnityEngine;
 
 namespace Meta.WitAi.Requests

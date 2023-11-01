@@ -10,7 +10,6 @@ using System;
 using System.Reflection;
 using System.Threading;
 using Meta.WitAi.Utilities;
-using UnityEngine;
 
 namespace Meta.WitAi
 {

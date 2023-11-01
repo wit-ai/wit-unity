@@ -8,7 +8,6 @@
 
 using System;
 using Meta.WitAi.Json;
-using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Data.Entities

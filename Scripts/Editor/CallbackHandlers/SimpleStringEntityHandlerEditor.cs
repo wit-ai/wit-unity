@@ -11,7 +11,6 @@ using System.Linq;
 using System.Reflection;
 using Meta.WitAi.Data.Info;
 using UnityEditor;
-using UnityEngine;
 
 namespace Meta.WitAi.CallbackHandlers
 {

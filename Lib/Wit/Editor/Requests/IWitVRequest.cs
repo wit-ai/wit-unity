@@ -8,8 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.WitAi.Data.Info;
-using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests

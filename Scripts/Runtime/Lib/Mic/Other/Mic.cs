@@ -31,7 +31,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
-using Meta.WitAi;
 
 namespace Meta.WitAi.Lib
 {

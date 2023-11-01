@@ -7,7 +7,6 @@
  */
 
 using System;
-using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Events;
 using Meta.WitAi.TTS.Data;

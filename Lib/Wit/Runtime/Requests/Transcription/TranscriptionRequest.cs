@@ -8,7 +8,6 @@
 
 using System.Text;
 using Meta.WitAi;
-using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice

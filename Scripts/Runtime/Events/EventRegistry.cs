@@ -8,7 +8,6 @@
 
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Events
 {

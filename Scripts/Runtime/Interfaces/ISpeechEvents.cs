@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.WitAi.Events;
-
 namespace Meta.WitAi.Interfaces
 {
     public interface ISpeechEvents

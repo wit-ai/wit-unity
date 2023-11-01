@@ -9,8 +9,6 @@
 using System;
 using System.Collections.Generic;
 using Meta.WitAi.Requests;
-using Meta.WitAi.TTS;
-using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using UnityEngine;
 using UnityEngine.UI;

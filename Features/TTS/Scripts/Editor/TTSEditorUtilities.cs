@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Utilities;

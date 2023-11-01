@@ -7,7 +7,6 @@
  */
 
 using System;
-using UnityEngine;
 
 namespace Meta.WitAi.Data.Info
 {

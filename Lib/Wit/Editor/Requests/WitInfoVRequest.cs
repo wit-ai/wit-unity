@@ -6,10 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 using UnityEngine;
 using Meta.WitAi.Json;

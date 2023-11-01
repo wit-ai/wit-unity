@@ -6,9 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Text;
 using System.Collections.Generic;
-using System.Web;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;

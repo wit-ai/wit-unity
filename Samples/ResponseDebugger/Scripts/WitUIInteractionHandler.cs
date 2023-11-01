@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Net;
-using Meta.Voice;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;

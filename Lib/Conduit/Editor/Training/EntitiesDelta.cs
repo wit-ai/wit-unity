@@ -7,7 +7,6 @@
  */
 
 using System.Collections.Generic;
-using Meta.WitAi.Data.Info;
 
 namespace Meta.Conduit.Editor
 {

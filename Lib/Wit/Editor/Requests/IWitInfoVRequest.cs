@@ -6,11 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Collections.Generic;
 using Meta.WitAi.Data.Info;
-using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
 {

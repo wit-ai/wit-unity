@@ -7,7 +7,6 @@
  */
 
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine.Scripting;
 
 namespace Meta.Voice.Audio.Decoding

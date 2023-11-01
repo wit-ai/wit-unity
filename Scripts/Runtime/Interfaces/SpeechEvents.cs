@@ -8,14 +8,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using Meta.WitAi.Configuration;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
-using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.Events
 {

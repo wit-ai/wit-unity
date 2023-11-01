@@ -7,8 +7,6 @@
  */
 
 using System.Collections.Generic;
-using Meta.WitAi.Json;
-using UnityEngine;
 
 namespace Meta.WitAi.Requests
 {
