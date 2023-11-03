@@ -28,6 +28,7 @@ namespace Meta.WitAi.TTS.LipSync
         /// <summary>
         /// The textures to be used for viseme swapping
         /// </summary>
+        [Header("Texture Settings")]
         public VisemeTextureData[] VisemeTextures;
         // A dictionary per viseme lookup
         private Dictionary<Viseme, int> _textureLookup = new Dictionary<Viseme, int>();

@@ -7,6 +7,7 @@
  */
 
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.TTS.LipSync
 {
@@ -16,20 +17,31 @@ namespace Meta.WitAi.TTS.LipSync
     [RequireComponent(typeof(VisemeLipSyncAnimator))]
     public class VisemeTextureFlipLipSync : BaseTextureFlipLipSync
     {
-        [SerializeField] private Renderer renderer;
+        [FormerlySerializedAs("renderer")] [SerializeField] private Renderer visemeRenderer;
         
         private VisemeLipSyncAnimator _lipSyncAnimator;
 
-        public override Renderer Renderer => renderer;
+        public override Renderer Renderer => visemeRenderer;
 
         protected override void Awake()
         {
             base.Awake();
             _lipSyncAnimator = GetComponent<VisemeLipSyncAnimator>();
+            if (!visemeRenderer)
+            {
+                visemeRenderer = GetComponent<Renderer>();
+            }
         }
 
         protected virtual void OnEnable()
         {
+            if (!visemeRenderer)
+            {
+                VLog.E($"No renderer has been set on {name}. Viseme texture flipping will not be visible.");
+                enabled = false;
+                return;
+            }
+
             _lipSyncAnimator.OnVisemeLerp?.AddListener(OnVisemeLerp);
         }
 
