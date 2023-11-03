@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Net;
 using Meta.Voice;
 using Meta.WitAi.Json;
+using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Requests
 {
@@ -38,6 +39,12 @@ namespace Meta.WitAi.Requests
         /// Parsed json response data
         /// </summary>
         public WitResponseNode ResponseData { get; internal set; }
+
+        /// <summary>
+        /// Constructor to be used for generation
+        /// </summary>
+        [Preserve]
+        public VoiceServiceRequestResults() {}
 
         /// <summary>
         /// Sets results to cancellation status code with a specified reason
