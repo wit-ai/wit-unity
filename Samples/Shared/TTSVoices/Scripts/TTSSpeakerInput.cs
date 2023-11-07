@@ -122,7 +122,7 @@ namespace Meta.Voice.Samples.TTSVoices
             string result = text;
             if (result.Contains(_dateId))
             {
-                DateTime now = DateTime.Now;
+                DateTime now = DateTime.UtcNow;
                 string dateString = $"{now.ToLongDateString()} at {now.ToLongTimeString()}";
                 result = text.Replace(_dateId, dateString);
             }

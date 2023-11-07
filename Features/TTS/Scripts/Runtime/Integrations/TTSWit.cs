@@ -8,8 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
@@ -386,72 +384,6 @@ namespace Meta.WitAi.TTS.Integrations
         }
         #endif
 
-        // Convert voice settings into dictionary to be used with web requests
-        private const string VOICE_KEY = "voice";
-        private const string STYLE_KEY = "style";
-        public Dictionary<string, string> EncodeVoiceSettings(TTSVoiceSettings voiceSettings)
-        {
-            Dictionary<string, string> parameters = new Dictionary<string, string>();
-            if (voiceSettings != null)
-            {
-                foreach (FieldInfo field in GetVoiceSettingsFields(voiceSettings))
-                {
-                    // Ensure field value exists
-                    object fieldVal = field.GetValue(voiceSettings);
-                    if (fieldVal != null)
-                    {
-                        // Clamp in between range
-                        RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
-                        if (range != null && field.FieldType == typeof(int))
-                        {
-                            int oldFloat = (int) fieldVal;
-                            int newFloat = Mathf.Clamp(oldFloat, (int)range.min, (int)range.max);
-                            if (oldFloat != newFloat)
-                            {
-                                fieldVal = newFloat;
-                            }
-                        }
-
-                        // Apply
-                        parameters[field.Name] = fieldVal.ToString();
-                    }
-                }
-
-                // Set default if no voice is provided
-                if (!parameters.ContainsKey(VOICE_KEY) || string.IsNullOrEmpty(parameters[VOICE_KEY]))
-                {
-                    parameters[VOICE_KEY] = TTSWitVoiceSettings.DEFAULT_VOICE;
-                }
-                // Set default if no style is given
-                if (!parameters.ContainsKey(STYLE_KEY) || string.IsNullOrEmpty(parameters[STYLE_KEY]))
-                {
-                    parameters[STYLE_KEY] = TTSWitVoiceSettings.DEFAULT_STYLE;
-                }
-            }
-            return parameters;
-        }
-        // Obtain all fields for a specific voice settings
-        private static readonly Dictionary<Type, FieldInfo[]> _settingsFields = new Dictionary<Type, FieldInfo[]>();
-        private static FieldInfo[] GetVoiceSettingsFields(TTSVoiceSettings voiceSettings)
-        {
-            // Return fields if already found
-            Type settingsType = voiceSettings.GetType();
-            if (_settingsFields.ContainsKey(settingsType))
-            {
-                return _settingsFields[settingsType];
-            }
-
-            // Get public/instance fields
-            FieldInfo[] fields = settingsType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-
-            // Remove fields from TTSVoiceSettings
-            Type baseType = typeof(TTSVoiceSettings);
-            fields = fields.ToList().FindAll((field) => field.DeclaringType != baseType).ToArray();
-
-            // Apply & return
-            _settingsFields[settingsType] = fields;
-            return fields;
-        }
         // Returns an error if request is not valid
         private string IsRequestValid(TTSClipData clipData, WitConfiguration configuration)
         {

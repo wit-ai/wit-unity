@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -24,5 +25,10 @@ namespace Meta.WitAi.TTS.Data
         [TextArea]
         [Tooltip("Text that is added to the end of any TTS request using this voice setting")]
         public string AppendedText;
+
+        /// <summary>
+        /// Encodes all setting parameters into a dictionary for transmission
+        /// </summary>
+        public abstract Dictionary<string, string> Encode();
     }
 }

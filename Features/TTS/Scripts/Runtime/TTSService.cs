@@ -264,15 +264,12 @@ namespace Meta.WitAi.TTS
             // Get a text string for a unique id
             StringBuilder uniqueId = new StringBuilder();
             // Add all data items
-            if (VoiceProvider != null)
+            Dictionary<string, string> data = voiceSettings.Encode();
+            foreach (var key in data.Keys)
             {
-                Dictionary<string, string> data = VoiceProvider.EncodeVoiceSettings(voiceSettings);
-                foreach (var key in data.Keys)
-                {
-                    string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
-                    uniqueId.Append(keyClean);
-                    uniqueId.Append(CLIP_ID_DELIM);
-                }
+                string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
+                uniqueId.Append(keyClean);
+                uniqueId.Append(CLIP_ID_DELIM);
             }
             // Finally, add unique id
             AppendFinalText(uniqueId, textToSpeak, voiceSettings);
@@ -345,7 +342,7 @@ namespace Meta.WitAi.TTS
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
                 loadDuration = 0f,
-                queryParameters = VoiceProvider?.EncodeVoiceSettings(voiceSettings),
+                queryParameters = voiceSettings?.Encode(),
                 queryStream = GetShouldAudioStream(audioType),
                 clipStream = CreateClipStream(),
                 useEvents = ShouldUseEvents(audioType)
@@ -366,9 +363,8 @@ namespace Meta.WitAi.TTS
             // Default
             if (AudioSystem == null)
             {
-                return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, 0.1f);
+                return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
             }
-
             // Get audio clip via audio system
             return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,
                 WitConstants.ENDPOINT_TTS_SAMPLE_RATE);

@@ -23,12 +23,5 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Returns all preset voice settings
         /// </summary>
         TTSVoiceSettings[] PresetVoiceSettings { get; }
-
-        /// <summary>
-        /// Encode voice data to be transmitted
-        /// </summary>
-        /// <param name="voiceSettings">The voice settings class</param>
-        /// <returns>Returns a dictionary with all variables</returns>
-        Dictionary<string, string> EncodeVoiceSettings(TTSVoiceSettings voiceSettings);
     }
 }
