@@ -18,6 +18,7 @@ namespace Meta.WitAi
         // Wit service endpoint info
         public const string URI_SCHEME = "https";
         public const string URI_AUTHORITY = "api.wit.ai";
+        public const string URI_GRAPH_AUTHORITY = "graph.wit.ai/myprofile";
 
         public const int URI_DEFAULT_PORT = -1;
 

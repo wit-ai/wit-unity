@@ -100,4 +100,11 @@ namespace Meta.WitAi.Data.Info
 
         public WitVoiceInfo[] voices;
     }
+
+    // Wit character app info.
+    [Serializable]
+    public struct NpcAppInfo
+    {
+        [SerializeField] public WitAppInfo[] data;
+    }
 }
