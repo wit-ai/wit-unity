@@ -161,6 +161,7 @@ namespace Meta.WitAi
         /// values or other interactions from this callback. This is intended to be used for demo
         /// and test UI, not for regular use.
         /// </summary>
+        [Obsolete("Deprecated for Events.OnRawResponse")]
         public Action<string> onRawResponse;
 
         /// <summary>

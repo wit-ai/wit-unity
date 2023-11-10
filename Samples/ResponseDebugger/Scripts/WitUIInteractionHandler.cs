@@ -58,7 +58,7 @@ namespace Meta.Voice.Samples.WitResponseDebugger
             // message received for display on the next frame.
             if (showJson && request is WitRequest witRequest)
             {
-                witRequest.onRawResponse += (response) => pendingText = response;
+                witRequest.Events.OnRawResponse.AddListener((response) => pendingText = response);
             }
         }
 

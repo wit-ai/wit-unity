@@ -36,7 +36,7 @@ namespace Meta.Voice.Samples.WitShapes
         {
             // The raw response comes back on a different thread. We store the
             // message received for display on the next frame.
-            if (showJson && request is WitRequest r) r.onRawResponse = (response) => pendingText = response;
+            if (showJson && request is WitRequest r) r.Events.OnRawResponse.AddListener((response) => pendingText = response);
         }
 
         private void Update()
