@@ -14,12 +14,14 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
+using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Meta.WitAi
@@ -275,6 +277,9 @@ namespace Meta.WitAi
         #endregion
 
         #region REQUEST
+        //
+        private Thread _requestThread;
+
         // Errors that prevent request submission
         protected override string GetSendError()
         {
@@ -353,17 +358,8 @@ namespace Meta.WitAi
             _requestStartTime = DateTime.UtcNow;
             _stackTrace = "-";
 
-            // Get uri & prevent further path changes
-            var uri = GetUri();
-            _canSetPath = false;
-
-            // Get headers
-            var headers = GetHeaders();
-
-            // Allow overrides
-            onPreSendRequest?.Invoke(ref uri, out headers);
-
             #if UNITY_WEBGL && !UNITY_EDITOR || WEBGL_DEBUG
+            SetupSend(out Uri uri, out Dictionary<string, string> headers);
             StartUnityRequest(uri, headers);
             #else
             #if UNITY_WEBGL && UNITY_EDITOR
@@ -372,8 +368,27 @@ namespace Meta.WitAi
                 VLog.W("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
-            StartThreadedRequest(uri, headers);
+            // Begin calling on main thread if needed
+            WatchMainThreadCallbacks();
+            WitVRequest.PreloadSettings();
+
+            // Run on background thread
+            _requestThread = new Thread(async () => await StartThreadedRequest());
+            _requestThread.Start();
             #endif
+        }
+
+        private void SetupSend(out Uri uri, out Dictionary<string, string> headers)
+        {
+            // Get uri & prevent further path changes
+            uri = GetUri();
+            _canSetPath = false;
+
+            // Get headers
+            headers = GetHeaders();
+
+            // Allow overrides
+            onPreSendRequest?.Invoke(ref uri, out headers);
         }
         #endregion REQUEST
 
@@ -381,8 +396,11 @@ namespace Meta.WitAi
         /// <summary>
         /// Performs a threaded http request
         /// </summary>
-        private void StartThreadedRequest(Uri uri, Dictionary<string, string> headers)
+        private async Task StartThreadedRequest()
         {
+            // Get uri & headers
+            SetupSend(out Uri uri, out Dictionary<string, string> headers);
+
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
 
@@ -396,7 +414,8 @@ namespace Meta.WitAi
             }
             if (null != postContentType)
             {
-                if (forcedHttpMethodType == null) {
+                if (forcedHttpMethodType == null)
+                {
                     _request.Method = "POST";
                 }
                 _request.ContentType = postContentType;
@@ -423,113 +442,41 @@ namespace Meta.WitAi
 
             // Apply timeout
             _request.Timeout = TimeoutMs;
+            HandleTimeout(TimeoutMs);
 
-            // Begin calling on main thread if needed
-            WatchMainThreadCallbacks();
-
-            // Perform http post or put
+            // If post or put, get post stream & wait for completion
             if (_request.Method == "POST" || _request.Method == "PUT")
             {
-                var getRequestTask = _request.BeginGetRequestStream(HandleWriteStream, _request);
-                ThreadPool.RegisterWaitForSingleObject(getRequestTask.AsyncWaitHandle,
-                    HandleTimeoutMsTimer, _request, TimeoutMs, true);
+                var getPostStream = _request.BeginGetRequestStream(HandleWriteStream, _request);
+                while (!getPostStream.IsCompleted)
+                {
+                    await Task.Delay(10);
+                }
             }
-            // Move right to response
-            else
-            {
-                StartResponse();
-            }
-        }
 
-        // Start response
-        private void StartResponse()
-        {
+            // Cancellation
             if (_request == null)
             {
-                HandleFailure(WitConstants.ERROR_CODE_GENERAL, "Request canceled prior to start");
-                return;
-            }
-            var asyncResult = _request.BeginGetResponse(HandleResponse, _request);
-            ThreadPool.RegisterWaitForSingleObject(asyncResult.AsyncWaitHandle, HandleTimeoutMsTimer, _request, TimeoutMs, true);
-        }
-
-        #region Unity Request (WebGL)
-        private void StartUnityRequest(Uri uri, Dictionary<string, string> headers)
-        {
-            UnityWebRequest request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET);
-
-            if (forcedHttpMethodType != null) {
-                request.method = forcedHttpMethodType;
-            }
-
-            if (null != postContentType)
-            {
-                if (forcedHttpMethodType == null)
-                {
-                    request.method = UnityWebRequest.kHttpVerbPOST;
-                }
-
-                request.uploadHandler = new UploadHandlerRaw(postData);
-                request.uploadHandler.contentType = postContentType;
-            }
-
-            // Configure additional headers
-            if (IsPost)
-            {
-                request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
-                    UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
-                request.SetRequestHeader("Content-Type", audioEncoding.ToString());
-            }
-
-            // Apply all wit headers
-            foreach (var header in headers)
-            {
-                request.SetRequestHeader(header.Key, header.Value);
-            }
-
-            request.timeout = TimeoutMs;
-            request.downloadHandler = new DownloadHandlerBuffer();
-
-            if (request.method == UnityWebRequest.kHttpVerbPOST || request.method == UnityWebRequest.kHttpVerbPUT)
-            {
-                throw new NotImplementedException("Not yet implemented.");
-            }
-
-            SetState(VoiceRequestState.Transmitting);
-            VRequest performer = new VRequest();
-            performer.RequestText(request, OnUnityRequestComplete);
-        }
-
-        private void OnUnityRequestComplete(string response, string error)
-        {
-            if (!string.IsNullOrEmpty(error))
-            {
-                HandleFailure(error);
+                MainThreadCallback(() => HandleFailure(WitConstants.ERROR_CODE_GENERAL, "Request canceled prior to start"));
                 return;
             }
 
-            // Began
-            HasResponseStarted = true;
-
-            // Decode
-            try
+            // Get response stream & wait for completion
+            var getResponseStream = _request.BeginGetResponse(HandleResponse, _request);
+            while (!getResponseStream.IsCompleted)
             {
-                HandleRawResponse(response, true);
+                await Task.Delay(10);
             }
-            catch (Exception e)
-            {
-                HandleFailure(WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER, "Error parsing response: " + e + "\n" + response);
-            }
-
-            onResponse?.Invoke(this);
         }
-        #endregion
 
         // Handle timeout callback
-        private void HandleTimeoutMsTimer(object state, bool timeout)
+        private async Task HandleTimeout(int timeoutMS)
         {
-            // Ignore false or too late
-            if (!timeout)
+            // Await a specific timeout in ms
+            await Task.Delay(timeoutMS);
+
+            // Ignore if no longer active
+            if (!IsActive)
             {
                 return;
             }
@@ -564,9 +511,6 @@ namespace Meta.WitAi
         {
             try
             {
-                // Start response stream
-                StartResponse();
-
                 // Get write stream
                 var stream = _request.EndGetRequestStream(ar);
 
@@ -932,6 +876,12 @@ namespace Meta.WitAi
                     _writeStream = null;
                 }
             }
+            // Abort request thread
+            if (_requestThread != null)
+            {
+                _requestThread.Abort();
+                _requestThread = null;
+            }
         }
 
         // Perform a cancellation/abort
@@ -970,5 +920,77 @@ namespace Meta.WitAi
             onResponse = null;
         }
         #endregion HTTP REQUEST
+
+        #region Unity Request (WebGL)
+        private void StartUnityRequest(Uri uri, Dictionary<string, string> headers)
+        {
+            UnityWebRequest request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET);
+
+            if (forcedHttpMethodType != null) {
+                request.method = forcedHttpMethodType;
+            }
+
+            if (null != postContentType)
+            {
+                if (forcedHttpMethodType == null)
+                {
+                    request.method = UnityWebRequest.kHttpVerbPOST;
+                }
+
+                request.uploadHandler = new UploadHandlerRaw(postData);
+                request.uploadHandler.contentType = postContentType;
+            }
+
+            // Configure additional headers
+            if (IsPost)
+            {
+                request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
+                    UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
+                request.SetRequestHeader("Content-Type", audioEncoding.ToString());
+            }
+
+            // Apply all wit headers
+            foreach (var header in headers)
+            {
+                request.SetRequestHeader(header.Key, header.Value);
+            }
+
+            request.timeout = TimeoutMs;
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            if (request.method == UnityWebRequest.kHttpVerbPOST || request.method == UnityWebRequest.kHttpVerbPUT)
+            {
+                throw new NotImplementedException("Not yet implemented.");
+            }
+
+            SetState(VoiceRequestState.Transmitting);
+            VRequest performer = new VRequest();
+            performer.RequestText(request, OnUnityRequestComplete);
+        }
+
+        private void OnUnityRequestComplete(string response, string error)
+        {
+            if (!string.IsNullOrEmpty(error))
+            {
+                HandleFailure(error);
+                return;
+            }
+
+            // Began
+            HasResponseStarted = true;
+
+            // Decode
+            try
+            {
+                HandleRawResponse(response, true);
+            }
+            catch (Exception e)
+            {
+                HandleFailure(WitConstants.ERROR_CODE_INVALID_DATA_FROM_SERVER, "Error parsing response: " + e + "\n" + response);
+            }
+
+            onResponse?.Invoke(this);
+        }
+        #endregion
     }
 }

@@ -296,8 +296,20 @@ namespace Meta.WitAi.Requests
         private static string _deviceModel;
         private static string _appIdentifier;
         private static string _unityVersion;
+        // Preloads settings if needed
+        public static void PreloadSettings()
+        {
+            if (_operatingSystem == null) _operatingSystem = UnityEngine.SystemInfo.operatingSystem;
+            if (_deviceModel == null) _deviceModel = UnityEngine.SystemInfo.deviceModel;
+            if (_appIdentifier == null) _appIdentifier = Application.identifier;
+            if (_unityVersion == null) _unityVersion = Application.unityVersion;
+        }
+
         private static string GetUserAgentHeader(IWitRequestConfiguration configuration)
         {
+            // Preload settings jic
+            PreloadSettings();
+
             // Generate user agent
             StringBuilder userAgent = new StringBuilder();
 
@@ -305,10 +317,8 @@ namespace Meta.WitAi.Requests
             userAgent.Append($"wit-unity-{WitConstants.SDK_VERSION}");
 
             // Append operating system
-            if (_operatingSystem == null) _operatingSystem = UnityEngine.SystemInfo.operatingSystem;
             userAgent.Append($",\"{_operatingSystem}\"");
             // Append device model
-            if (_deviceModel == null) _deviceModel = UnityEngine.SystemInfo.deviceModel;
             userAgent.Append($",\"{_deviceModel}\"");
 
             // Append configuration log id
@@ -320,7 +330,6 @@ namespace Meta.WitAi.Requests
             userAgent.Append($",{logId}");
 
             // Append app identifier
-            if (_appIdentifier == null) _appIdentifier = Application.identifier;
             userAgent.Append($",{_appIdentifier}");
 
             // Append editor identifier
@@ -331,7 +340,6 @@ namespace Meta.WitAi.Requests
             #endif
 
             // Append unity version
-            if (_unityVersion == null) _unityVersion = Application.unityVersion;
             userAgent.Append($",{_unityVersion}");
 
             // Set custom user agent
