@@ -632,20 +632,12 @@ namespace Meta.WitAi
                         statusCode = newStatus;
                         error = httpResponse.StatusDescription;
                     }
-                    // Decode stream
+                    // Decode response stream
                     else
                     {
                         using (var responseStream = httpResponse.GetResponseStream())
                         {
-                            using (var responseReader = new StreamReader(responseStream))
-                            {
-                                string chunk;
-                                while ((chunk = ReadToDelimiter(responseReader, WitConstants.ENDPOINT_JSON_DELIMITER)) != null)
-                                {
-                                    stringResponse = chunk;
-                                    ProcessStringResponse(stringResponse);
-                                }
-                            }
+                            stringResponse = ProcessStreamResponses(responseStream);
                         }
                     }
                 }
@@ -741,55 +733,52 @@ namespace Meta.WitAi
             });
         }
         // Read stream until delimiter is hit
-        private string ReadToDelimiter(StreamReader reader, string delimiter)
+        private string ProcessStreamResponses(Stream stream)
         {
-            // Allocate all vars
-            StringBuilder results = new StringBuilder();
-            int delLength = delimiter.Length;
-            int i;
-            bool found;
-            char nextChar;
-
-            // Iterate each byte in the stream
-            while (reader != null && !reader.EndOfStream)
+            using (var reader = new StreamReader(stream))
             {
-                // Continue until found
-                if (reader.Peek() == 0)
+                StringBuilder builder = new StringBuilder();
+                char[] buffer = new char[256];
+                int length;
+                do
                 {
-                    continue;
-                }
-
-                // Append next character
-                nextChar = (char)reader.Read();
-                results.Append(nextChar);
-
-                // Continue until long as delimiter
-                if (results.Length < delLength)
-                {
-                    continue;
-                }
-
-                // Check if string builder ends with delimiter
-                found = true;
-                for (i=0;i<delLength;i++)
-                {
-                    // Stop checking if not delimiter
-                    if (delimiter[i] != results[results.Length - delLength + i])
+                    // Read to buffer length
+                    length = reader.Read(buffer, 0, buffer.Length);
+                    if (length > 0)
                     {
-                        found = false;
-                        break;
+                        // Generate string
+                        var chunk = new string(buffer, 0, length);
+
+                        // Prepend
+                        if (builder.Length > 0)
+                        {
+                            chunk = builder.ToString() + chunk;
+                            builder.Clear();
+                        }
+
+                        // Split on delimiter
+                        var chunks = chunk.Split(WitConstants.ENDPOINT_JSON_DELIMITER);
+                        for (int c = 0; c < chunks.Length; c++)
+                        {
+                            // Handle
+                            if (c < chunks.Length - 1)
+                            {
+                                ProcessStringResponse(chunks[c]);
+                            }
+                            else
+                            {
+                                builder.Append(chunks[c]);
+                            }
+                        }
                     }
-                }
-
-                // Found delimiter
-                if (found)
+                } while (length > 0);
+                if (builder.Length > 0)
                 {
-                    return results.ToString(0, results.Length - delLength);
+                    ProcessStringResponse(builder.ToString());
+                    return builder.ToString();
                 }
+                return null;
             }
-
-            // If no delimiter is found, return the rest of the chunk
-            return results.Length == 0 ? null : results.ToString();
         }
         // Process individual piece
         private void ProcessStringResponses(string stringResponse)
