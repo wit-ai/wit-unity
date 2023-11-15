@@ -200,8 +200,8 @@ namespace Meta.WitAi.Utilities
         {
             return TryReflectValue<T>(property.serializedObject.targetObject, fieldName, out value);
         }
-        
-        
+        #endif
+
         /// <summary>
         /// Retrieves all instantiatable types which are assignable from the given type T
         /// </summary>
@@ -231,6 +231,5 @@ namespace Meta.WitAi.Utilities
 
             return pluginTypes;
         }
-        #endif
     }
 }
