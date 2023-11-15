@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using Meta.WitAi.Utilities;
+using UnityEngine;
 
 namespace Meta.WitAi
 {
@@ -20,6 +21,7 @@ namespace Meta.WitAi
     /// for use by child classes.
     /// </summary>
     /// <typeparam name="T">the type of plugin</typeparam>
+    [Serializable]
     public abstract class PluggableBase<T>
     {
         private static Type[] _pluginTypes;
@@ -27,6 +29,7 @@ namespace Meta.WitAi
         /// <summary>
         /// A collection of the instantiated plugins which were found.
         /// </summary>
+        [SerializeField]
         protected List<T> LoadedPlugins;
 
         /// <summary>
