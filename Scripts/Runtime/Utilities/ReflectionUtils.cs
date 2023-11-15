@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -198,6 +199,37 @@ namespace Utilities
         public static bool TryReflectPropertyValue<T>(SerializedProperty property, string fieldName, out T value)
         {
             return TryReflectValue<T>(property.serializedObject.targetObject, fieldName, out value);
+        }
+        
+        
+        /// <summary>
+        /// Retrieves all instantiatable types which are assignable from the given type T
+        /// </summary>
+        /// <param name="instance">the type on which this is called</param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>a collection of types</returns>
+        public static Type[] GetAllAssignableTypes<T>()
+        {
+            // Get all loaded assemblies in the current domain
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            // Find all types that implement the IPlugin interface
+            Type[] pluginTypes = assemblies
+                .SelectMany(assembly =>
+                {
+                    try
+                    {
+                        return assembly.GetTypes();
+                    }
+                    catch
+                    {
+                        return new Type[]{};
+                    }
+                })                
+                .Where(type => typeof(T).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+                .ToArray();
+
+            return pluginTypes;
         }
         #endif
     }

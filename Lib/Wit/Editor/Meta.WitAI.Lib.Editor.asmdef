@@ -2,7 +2,8 @@
     "name": "Meta.WitAI.Lib.Editor",
     "rootNamespace": "",
     "references": [
-        "Meta.WitAi.Lib"
+        "Meta.WitAi.Lib",
+        "Meta.WitAi"
     ],
     "includePlatforms": [
         "Editor"

@@ -119,7 +119,7 @@ namespace Lib.Wit.Runtime.Data.Info
                 return;
 
             // now call any hooks connected to a completed export download
-            ExportParser.ProcessExtensions(appConfig ,result);
+            new ExportParser().ProcessExtensions(appConfig ,result);
         }
     }
 }
