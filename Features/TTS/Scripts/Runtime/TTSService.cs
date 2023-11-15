@@ -264,12 +264,19 @@ namespace Meta.WitAi.TTS
             // Get a text string for a unique id
             StringBuilder uniqueId = new StringBuilder();
             // Add all data items
-            Dictionary<string, string> data = voiceSettings.Encode();
-            foreach (var key in data.Keys)
+            if (voiceSettings == null && VoiceProvider != null)
             {
-                string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
-                uniqueId.Append(keyClean);
-                uniqueId.Append(CLIP_ID_DELIM);
+                voiceSettings = VoiceProvider.VoiceDefaultSettings;
+            }
+            if (voiceSettings != null)
+            {
+                Dictionary<string, string> data = voiceSettings.Encode();
+                foreach (var key in data.Keys)
+                {
+                    string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
+                    uniqueId.Append(keyClean);
+                    uniqueId.Append(CLIP_ID_DELIM);
+                }
             }
             // Finally, add unique id
             AppendFinalText(uniqueId, textToSpeak, voiceSettings);

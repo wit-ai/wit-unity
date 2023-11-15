@@ -289,6 +289,10 @@ namespace Meta.WitAi.Requests
         // Encode tts post bytes
         private byte[] EncodePostData(string textToSpeak, bool useEvents, Dictionary<string, string> ttsData)
         {
+            if (ttsData == null)
+            {
+                ttsData = new Dictionary<string, string>();
+            }
             ttsData[WitConstants.ENDPOINT_TTS_PARAM] = textToSpeak;
             ttsData[WitConstants.ENDPOINT_TTS_EVENTS] = useEvents.ToString().ToLower();
             string jsonString = JsonConvert.SerializeObject(ttsData);
