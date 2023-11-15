@@ -16,7 +16,7 @@ using Meta.WitAi.TTS.Data;
 namespace Meta.WitAi.TTS
 {
     [CustomEditor(typeof(TTSSpeaker), true)]
-    public class TTSSpeakerInspector : UnityEditor.Editor
+    public class TTSSpeakerInspector : Editor
     {
         // Speaker
         private TTSSpeaker _speaker;

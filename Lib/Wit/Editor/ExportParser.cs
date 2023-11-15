@@ -10,10 +10,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using Lib.Wit.Editor;
 using Meta.WitAi.Json;
 
-namespace Meta.WitAi.Lib
+namespace Meta.WitAi
 {
 
     /// <summary>

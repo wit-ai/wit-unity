@@ -13,7 +13,7 @@ using UnityEngine;
 namespace Meta.WitAi.TTS
 {
     [CustomEditor(typeof(TTSService), true)]
-    public class TTSServiceInspector : UnityEditor.Editor
+    public class TTSServiceInspector : Editor
     {
         // Service
         private TTSService _service;

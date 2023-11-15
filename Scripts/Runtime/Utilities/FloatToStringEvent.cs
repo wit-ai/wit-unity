@@ -11,7 +11,7 @@ using Meta.WitAi.Attributes;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
-using Utilities;
+using Meta.WitAi.Utilities;
 
 namespace Meta.WitAi.Utilities
 {

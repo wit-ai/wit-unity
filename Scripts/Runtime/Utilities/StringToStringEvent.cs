@@ -8,7 +8,7 @@
 
 using Meta.WitAi.Attributes;
 using UnityEngine;
-using Utilities;
+using Meta.WitAi.Utilities;
 
 namespace Meta.WitAi.Utilities
 {

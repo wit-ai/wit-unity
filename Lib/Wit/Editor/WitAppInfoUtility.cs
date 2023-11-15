@@ -15,7 +15,7 @@ using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
 using UnityEngine;
 
-namespace Meta.WitAi.Lib
+namespace Meta.WitAi
 {
     /*
      * We call UpdateInfo, directly on the configuration and then have a series of async functions which

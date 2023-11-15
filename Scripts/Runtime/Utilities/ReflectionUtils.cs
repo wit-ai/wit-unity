@@ -14,7 +14,7 @@ using System.Reflection;
 using UnityEditor;
 #endif
 
-namespace Utilities
+namespace Meta.WitAi.Utilities
 {
     /// <summary>
     /// A utility class for performing reflection operations.

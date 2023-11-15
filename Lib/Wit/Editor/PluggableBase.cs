@@ -8,8 +8,9 @@
 
 using System;
 using System.Collections.Generic;
-using Utilities;
-namespace Lib.Wit.Editor
+using Meta.WitAi.Utilities;
+
+namespace Meta.WitAi
 {
     /// <summary>
     /// This is a plugin injection system for the given type T which can search for

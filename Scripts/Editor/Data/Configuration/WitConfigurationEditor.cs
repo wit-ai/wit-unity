@@ -16,6 +16,7 @@ using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using Meta.Conduit;
 using Meta.Voice.TelemetryUtilities;
+using Meta.WitAi;
 using Meta.WitAi.Lib;
 using UnityEditor;
 using UnityEngine;

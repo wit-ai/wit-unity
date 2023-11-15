@@ -11,10 +11,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using JetBrains.Annotations;
-using Meta.WitAi;
-using Meta.WitAi.Lib;
 
-namespace Lib.Wit.Editor
+namespace Meta.WitAi
 {
     /// <summary>
     /// This is a export parser which will save the current wit export to file

@@ -15,6 +15,7 @@ using Meta.WitAi.Windows;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Lib;
 using Meta.WitAi.Data.Configuration;
+using Meta.WitAi;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Utilities;
 using UnityEngine;

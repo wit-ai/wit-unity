@@ -16,7 +16,7 @@ using UnityEngine;
 namespace Meta.WitAi.TTS.Preload
 {
     [CustomEditor(typeof(TTSPreloadSettings), true)]
-    public class TTSPreloadSettingsInspector : UnityEditor.Editor
+    public class TTSPreloadSettingsInspector : Editor
     {
         // TTS Settings
         public TTSPreloadSettings Settings { get; private set; }

@@ -9,7 +9,7 @@
 
 using System.IO.Compression;
 
-namespace Meta.WitAi.Lib
+namespace Meta.WitAi
 {
     /// <summary>
     /// Parses the Wit.ai Export zip file

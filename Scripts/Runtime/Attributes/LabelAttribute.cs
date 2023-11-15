@@ -9,7 +9,7 @@
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using Utilities;
+using Meta.WitAi.Utilities;
 
 namespace Meta.WitAi.Attributes
 {

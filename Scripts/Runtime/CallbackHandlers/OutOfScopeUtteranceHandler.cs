@@ -10,7 +10,6 @@ using Meta.WitAi.Attributes;
 using Meta.WitAi.Json;
 using Meta.WitAi.Utilities;
 using UnityEngine;
-using Utilities;
 
 namespace Meta.WitAi.CallbackHandlers
 {

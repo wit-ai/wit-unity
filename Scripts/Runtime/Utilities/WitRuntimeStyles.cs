@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Utilities
+namespace Meta.WitAi.Utilities
 {
     public class WitRuntimeStyles
     {

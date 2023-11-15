@@ -11,11 +11,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
-using Meta.WitAi;
 using Meta.WitAi.Data.Info;
-using Meta.WitAi.Lib;
 using Meta.WitAi.Requests;
-namespace Lib.Wit.Runtime.Data.Info
+namespace Meta.WitAi
 {
     /// <summary>
     /// A class to synchronize multiple parallel retrievals of the same app's export.

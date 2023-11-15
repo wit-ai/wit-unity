@@ -66,7 +66,7 @@ namespace Meta.WitAi.Windows
             // Generate new inspector & initialize immediately
             if (witConfiguration)
             {
-                witInspector = (WitConfigurationEditor)Editor.CreateEditor(witConfiguration);
+                witInspector = (WitConfigurationEditor)UnityEditor.Editor.CreateEditor(witConfiguration);
                 witInspector.drawHeader = false;
                 witInspector.Initialize();
             }

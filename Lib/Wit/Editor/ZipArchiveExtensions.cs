@@ -10,7 +10,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-namespace Lib.Wit.Editor
+namespace Meta.WitAi
 {
     /// <summary>
     /// A set of extensions for ZipArchives for easier processing
