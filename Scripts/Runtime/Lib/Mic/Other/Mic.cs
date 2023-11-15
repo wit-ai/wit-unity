@@ -488,6 +488,8 @@ namespace Meta.WitAi.Lib
 
             IsRecording = false;
 
+            if (!this) return;  //already destroyed
+
             StopCoroutine(ReadRawAudio());
 
             VLog.D("Stopped recording with " + CurrentDeviceName);
