@@ -341,7 +341,7 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnSuccess is returned
         protected virtual void OnRequestSuccess(VoiceServiceRequest request)
         {
-            Log(request, $"Request Success\nResponse:\n{request?.ResponseData}");
+            Log(request, $"Request Success");
             GetSpeechEvents()?.OnResponse?.Invoke(request?.ResponseData);
             GetSpeechEvents()?.OnRequestCompleted?.Invoke();
         }

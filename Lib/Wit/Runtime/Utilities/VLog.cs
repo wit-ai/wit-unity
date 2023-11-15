@@ -70,7 +70,11 @@ namespace Meta.WitAi
         /// <summary>
         /// Hides all errors from the console
         /// </summary>
+        #if UNITY_EDITOR
         public static bool SuppressLogs { get; set; } = false;
+        #else
+        public static bool SuppressLogs { get; set; } = true;
+        #endif
 
         /// <summary>
         /// Event for appending custom data to a log before logging to console
