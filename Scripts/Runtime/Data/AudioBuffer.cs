@@ -115,12 +115,11 @@ namespace Meta.WitAi.Data
         }
 
         // Callback for mic sample ready
-        private void OnMicSampleReady(int sampleCount, float[] sample, float levelMax)
+        private void OnMicSampleReady(int sampleCount, float[] samples, float levelMax)
         {
             events.OnMicLevelChanged.Invoke(levelMax);
-
             var marker = CreateMarker();
-            Convert(sample);
+            Convert(Mathf.Min(sampleCount, samples.Length), samples);
             if (null != events.OnByteDataReady)
             {
                 marker.Clone().ReadIntoWriters(events.OnByteDataReady.Invoke);
@@ -145,18 +144,27 @@ namespace Meta.WitAi.Data
             }
         }
 
-        // Convert
-        private void Convert(float[] samples)
+        // Resample & convert to byte[]
+        private byte[] _convertBuffer = new byte[512];
+        private void Convert(int sampleTotal, float[] samples)
         {
-            var sampleCount = samples.Length;
-            const int rescaleFactor = 32767; //to convert float to Int16
-
-            for (int i = 0; i < sampleCount; i++)
+            // Increase buffer size
+            int chunkTotal = sampleTotal * 2;
+            if (_convertBuffer.Length < chunkTotal)
             {
-                short data = (short) (samples[i] * rescaleFactor);
-                _micDataBuffer.Push((byte) data);
-                _micDataBuffer.Push((byte) (data >> 8));
+                _convertBuffer = new byte[chunkTotal];
             }
+
+            // Convert buffer data
+            for (int i = 0; i < sampleTotal; i++)
+            {
+                short data = (short) (samples[i] * short.MaxValue);
+                _convertBuffer[i * 2] = (byte)data;
+                _convertBuffer[i * 2 + 1] = (byte)(data >> 8);
+            }
+
+            // Push buffer data
+            _micDataBuffer.Push(_convertBuffer, 0, chunkTotal);
         }
 
         public RingBuffer<byte>.Marker CreateMarker()
