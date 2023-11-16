@@ -17,15 +17,6 @@ namespace Meta.WitAi.TTS.Interfaces
     public interface ISpeaker
     {
         /// <summary>
-        /// The id of the voice to use for speech
-        /// </summary>
-        string VoiceID
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
         /// Whether a clip is currently playing for this speaker
         /// </summary>
         bool IsSpeaking { get; }
