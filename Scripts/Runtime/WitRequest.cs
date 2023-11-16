@@ -442,7 +442,7 @@ namespace Meta.WitAi
 
             // Apply timeout
             _request.Timeout = TimeoutMs;
-            HandleTimeout(TimeoutMs);
+            _ = HandleTimeout(TimeoutMs);
 
             // If post or put, get post stream & wait for completion
             if (_request.Method == "POST" || _request.Method == "PUT")
