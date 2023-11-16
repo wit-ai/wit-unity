@@ -9,6 +9,7 @@
 using System.Collections;
 using Meta.Voice.Audio;
 using Meta.WitAi.Json;
+using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Utilities;
 
 namespace Meta.WitAi.TTS.Interfaces
@@ -38,6 +39,11 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Events related to the playback of TTS
         /// </summary>
         TTSSpeakerEvents Events { get; }
+
+        /// <summary>
+        /// The specific voice properties used by this speaker
+        /// </summary>
+        TTSVoiceSettings VoiceSettings { get; }
 
         // TODO: Consider moving to another interface
         /// <summary>
