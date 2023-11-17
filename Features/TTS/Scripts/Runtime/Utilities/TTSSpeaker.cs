@@ -85,13 +85,14 @@ namespace Meta.WitAi.TTS.Utilities
                 {
                     return _overrideVoiceSettings;
                 }
-                // Attempts to use custom voice settings
-                if (string.IsNullOrEmpty(presetVoiceID) && customWitVoiceSettings != null)
+                // Uses preset settings if id is not null & can be found
+                var settings = string.IsNullOrEmpty(presetVoiceID) ? null : TTSService.GetPresetVoiceSettings(presetVoiceID);
+                if (settings != null)
                 {
-                    return customWitVoiceSettings;
+                    return settings;
                 }
-                // Uses preset voice id
-                return TTSService.GetPresetVoiceSettings(presetVoiceID);
+                // Otherwise use custom settings
+                return customWitVoiceSettings;
             }
         }
 

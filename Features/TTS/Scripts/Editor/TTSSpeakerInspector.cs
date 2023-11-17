@@ -81,6 +81,12 @@ namespace Meta.WitAi.TTS
                 }
             }
 
+            // Clear preset
+            if ((_voiceIndex < 0 || _voiceIndex >= _voicePresetIds.Length - 1) && !string.IsNullOrEmpty(_presetVoiceProperty.stringValue))
+            {
+                _presetVoiceProperty.stringValue = null;
+            }
+
             // Add custom layout
             if (_voicePresetIds == null || _voiceIndex < 0 || _voiceIndex >= _voicePresetIds.Length - 1)
             {
