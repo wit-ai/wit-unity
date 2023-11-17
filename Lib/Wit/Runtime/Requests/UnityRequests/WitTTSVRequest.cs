@@ -96,10 +96,18 @@ namespace Meta.WitAi.Requests
             // Get errors
             string errors = GetWebErrors(TextToSpeak, Configuration);
             // Warn if incompatible with streaming
-            if (!downloadOnly && Stream && !CanStreamAudio(FileType))
+            if (!downloadOnly && Stream)
             {
-                VLog.W($"Wit cannot stream {FileType} files please use {TTSWitAudioType.PCM} instead.");
-                Stream = false;
+                if (Application.platform == RuntimePlatform.WebGLPlayer)
+                {
+                    VLog.W($"Wit cannot currently stream TTS in WebGL");
+                    Stream = false;
+                }
+                else if (!CanStreamAudio(FileType))
+                {
+                    VLog.W($"Wit cannot stream {FileType} files please use {TTSWitAudioType.PCM} instead.");
+                    Stream = false;
+                }
             }
             // Return errors
             return errors;

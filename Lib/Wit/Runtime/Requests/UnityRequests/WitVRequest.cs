@@ -243,12 +243,16 @@ namespace Meta.WitAi.Requests
             // Get headers
             Dictionary<string, string> headers = new Dictionary<string, string>();
 
+            // Set authorization
+            headers[WitConstants.HEADER_AUTH] = GetAuthorizationHeader(configuration, useServerToken);
+
+            #if UNITY_EDITOR || !UNITY_WEBGL
             // Set request id
             headers[WitConstants.HEADER_REQUEST_ID] = string.IsNullOrEmpty(requestId) ? Guid.NewGuid().ToString() : requestId;
             // Set User-Agent
             headers[WitConstants.HEADER_USERAGENT] = GetUserAgentHeader(configuration);
-            // Set authorization
-            headers[WitConstants.HEADER_AUTH] = GetAuthorizationHeader(configuration, useServerToken);
+            #endif
+
             // Allow overrides
             if (OnProvideCustomHeaders != null)
             {

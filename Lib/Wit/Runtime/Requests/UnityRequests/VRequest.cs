@@ -1254,9 +1254,9 @@ namespace Meta.WitAi.Requests
             GetAudioExtension(audioType) + (textStream ? "v" : "");
 
         /// <summary>
-        ///
+        /// Returns the IAudioDecoder type that works best with the specified AudioType
+        /// for the current platform.
         /// </summary>
-        /// <param name="audioType">The specified audio type</param>
         public static Type GetAudioDecoderType(AudioType audioType)
         {
             switch (audioType)
