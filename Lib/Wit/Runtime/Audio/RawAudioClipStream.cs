@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.WitAi;
 using UnityEngine;
 
 namespace Meta.Voice.Audio
@@ -29,7 +30,9 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// Generates sample buffer on construct
         /// </summary>
-        public RawAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength, int bufferLengthSeconds)
+        public RawAudioClipStream(int newChannels, int newSampleRate,
+            float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
+            int bufferLengthSeconds = (int)WitConstants.ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH)
             : base(newChannels, newSampleRate, newStreamReadyLength)
         {
             SampleBuffer = new float[newChannels * newSampleRate * bufferLengthSeconds];

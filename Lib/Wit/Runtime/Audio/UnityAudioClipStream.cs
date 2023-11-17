@@ -26,8 +26,6 @@ namespace Meta.Voice.Audio
         private bool _streamable;
         // The streaming chunk size
         private int _chunkSize;
-        // Default chunk length in seconds when not provided
-        public const float DEFAULT_CHUNK_LENGTH = 5f;
 
         /// <summary>
         /// Constructor with specific chunk size
@@ -36,7 +34,7 @@ namespace Meta.Voice.Audio
         /// <param name="newSampleRate">The sample rate for incoming audio data</param>
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
         /// <param name="newChunkSamples">Samples to increase audio clip by</param>
-        public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH, float newChunkLength = DEFAULT_CHUNK_LENGTH)
+        public UnityAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH, float newChunkLength = WitConstants.ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH)
             : base(newChannels, newSampleRate, newStreamReadyLength)
         {
             _streamable = true;

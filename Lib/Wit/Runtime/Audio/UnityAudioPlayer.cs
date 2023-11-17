@@ -14,6 +14,7 @@ namespace Meta.Voice.Audio
 {
     /// <summary>
     /// Unity specific audio player that will play any IAudioClipStream that includes an IAudioClipProvider
+    /// or RawAudioClipStreams via AudioClip streaming.
     /// </summary>
     [Serializable]
     public class UnityAudioPlayer : AudioPlayer, IAudioSourceProvider
@@ -92,9 +93,10 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Sets audio clip & begins playback at a specified offset
+        /// Sets audio clip via an IAudioClipProvider or generates one if using a
+        /// RawAudioClipStream.  Then begins playback at a specified offset.
         /// </summary>
-        /// <param name="offsetSamples">The starting offset of the clip</param>
+        /// <param name="offsetSamples">The starting offset of the clip in samples</param>
         protected override void Play(int offsetSamples = 0)
         {
             // Get new clip
@@ -102,6 +104,13 @@ namespace Meta.Voice.Audio
             if (ClipStream is IAudioClipProvider uacs)
             {
                 newClip = uacs.Clip;
+            }
+            else if (ClipStream is RawAudioClipStream rawAudioClipStream)
+            {
+                newClip = AudioClip.Create("CustomClip", rawAudioClipStream.SampleBuffer.Length,
+                    rawAudioClipStream.Channels, rawAudioClipStream.SampleRate, true,
+                    OnReadRawSamples, OnSetRawPosition);
+                _local = true;
             }
 
             // Null clip
@@ -116,6 +125,28 @@ namespace Meta.Voice.Audio
             AudioSource.clip = newClip;
             AudioSource.timeSamples = offsetSamples;
             AudioSource.Play();
+        }
+
+        // Local clip adjustments
+        private bool _local = false;
+        private int _offset = 0;
+
+        // Set offset position
+        private void OnSetRawPosition(int offset)
+        {
+            _offset = offset;
+        }
+
+        // Read raw sample
+        private void OnReadRawSamples(float[] samples)
+        {
+            if (ClipStream is RawAudioClipStream rawAudioClipStream)
+            {
+                int start = _offset;
+                int length = Mathf.Min(samples.Length, rawAudioClipStream.AddedSamples - _offset);
+                Array.Copy(rawAudioClipStream.SampleBuffer, start, samples, 0, length);
+                _offset += length;
+            }
         }
 
         /// <summary>
@@ -158,6 +189,14 @@ namespace Meta.Voice.Audio
             if (IsPlaying)
             {
                 AudioSource.Stop();
+            }
+            if (_local)
+            {
+                if (AudioSource.clip != null)
+                {
+                    Destroy(AudioSource.clip);
+                }
+                _local = false;
             }
             AudioSource.clip = null;
             base.Stop();
