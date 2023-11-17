@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -30,5 +31,10 @@ namespace Meta.WitAi.TTS.Data
         /// Encodes all setting parameters into a dictionary for transmission
         /// </summary>
         public abstract Dictionary<string, string> Encode();
+
+        /// <summary>
+        /// Decodes all setting parameters from a provided json node
+        /// </summary>
+        public abstract void Decode(WitResponseNode responseNode);
     }
 }

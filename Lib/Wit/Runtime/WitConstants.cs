@@ -118,20 +118,52 @@ namespace Meta.WitAi
         /// /synthesize parameter: The voice id to use when speaking via a voice preset.
         /// </summary>
         public static string TTS_VOICE = "voice";
-
         /// <summary>
-        /// /synthesize parameter: Adjusts the pitch at which a TTS voice will speak
+        /// Default voice name used if no voice is provided
         /// </summary>
-        public static string TTS_PITCH = "pitch";
-
-        /// <summary>
-        /// /synthesize parameter: Adjusts the speed at which a TTS voice will speak
-        /// </summary>,
-        public static string TTS_SPEED = "speed";
+        public const string TTS_VOICE_DEFAULT = "Charlie";
 
         /// <summary>
         /// /synthesize parameter: Adjusts the style used when speaking with a tts voice
         /// </summary>
         public static string TTS_STYLE = "style";
+        /// <summary>
+        /// Default style used if no style is provided
+        /// </summary>
+        public const string TTS_STYLE_DEFAULT = "default";
+
+        /// <summary>
+        /// /synthesize parameter: Adjusts the speed at which a TTS voice will speak
+        /// </summary>,
+        public static string TTS_SPEED = "speed";
+        /// <summary>
+        /// Default speed used if no speed is provided
+        /// </summary>
+        public const int TTS_SPEED_DEFAULT = 100;
+        /// <summary>
+        /// Minimum speed supported by the endpoint (50%)
+        /// </summary>
+        public const int TTS_SPEED_MIN = 50;
+        /// <summary>
+        /// Maximum speed supported by the endpoint (200%)
+        /// </summary>
+        public const int TTS_SPEED_MAX = 200;
+
+        /// <summary>
+        /// /synthesize parameter: Adjusts the pitch at which a TTS voice will speak
+        /// </summary>
+        public static string TTS_PITCH = "pitch";
+        /// <summary>
+        /// Default pitch used if no speed is provided (100%)
+        /// </summary>
+        public const int TTS_PITCH_DEFAULT = 100;
+        /// <summary>
+        /// Minimum pitch supported by the endpoint (25%)
+        /// </summary>
+        public const int TTS_PITCH_MIN = 25;
+        /// <summary>
+        /// Maximum pitch supported by the endpoint (200%)
+        /// </summary>
+        public const int TTS_PITCH_MAX = 200;
     }
 }

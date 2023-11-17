@@ -20,57 +20,21 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Unique voice name
         /// </summary>
-        public string voice = VOICE_DEFAULT;
+        public string voice = WitConstants.TTS_VOICE_DEFAULT;
         /// <summary>
         /// Voice style (ex. formal, fast)
         /// </summary>
-        public string style = STYLE_DEFAULT;
+        public string style = WitConstants.TTS_STYLE_DEFAULT;
         /// <summary>
         /// Text-to-speech speed percentage
         /// </summary>
-        [Range(SPEED_MIN, SPEED_MAX)]
-        public int speed = SPEED_DEFAULT;
+        [Range(WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX)]
+        public int speed = WitConstants.TTS_SPEED_DEFAULT;
         /// <summary>
         /// Text-to-speech audio pitch percentage
         /// </summary>
-        [Range(PITCH_MIN, PITCH_MAX)]
-        public int pitch = PITCH_DEFAULT;
-
-
-        /// <summary>
-        /// Default voice name used if no voice is provided
-        /// </summary>
-        private const string VOICE_DEFAULT = "Charlie";
-        /// <summary>
-        /// Default style used if no style is provided
-        /// </summary>
-        private const string STYLE_DEFAULT = "default";
-
-        /// <summary>
-        /// Minimum speed supported by the endpoint (50%)
-        /// </summary>
-        public const int SPEED_MIN = 50;
-        /// <summary>
-        /// Default speed used if no speed is provided
-        /// </summary>
-        private const int SPEED_DEFAULT = 100;
-        /// <summary>
-        /// Maximum speed supported by the endpoint (200%)
-        /// </summary>
-        public const int SPEED_MAX = 200;
-
-        /// <summary>
-        /// Minimum pitch supported by the endpoint (25%)
-        /// </summary>
-        public const int PITCH_MIN = 25;
-        /// <summary>
-        /// Default pitch used if no speed is provided (100%)
-        /// </summary>
-        private const int PITCH_DEFAULT = 100;
-        /// <summary>
-        /// Maximum pitch supported by the endpoint (200%)
-        /// </summary>
-        public const int PITCH_MAX = 200;
+        [Range(WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX)]
+        public int pitch = WitConstants.TTS_PITCH_DEFAULT;
 
         /// <summary>
         /// Checks if request can be decoded for TTS data
@@ -96,24 +60,56 @@ namespace Meta.WitAi.TTS.Integrations
             Dictionary<string, string> data = new Dictionary<string, string>();
 
             // Use default if voice or style is empty
-            data["voice"] = string.IsNullOrEmpty(voice) ? VOICE_DEFAULT : voice;
-            data["style"] = string.IsNullOrEmpty(style) ? STYLE_DEFAULT : style;
+            data[WitConstants.TTS_VOICE] = string.IsNullOrEmpty(voice) ? WitConstants.TTS_VOICE_DEFAULT : voice;
+            data[WitConstants.TTS_STYLE] = string.IsNullOrEmpty(style) ? WitConstants.TTS_STYLE_DEFAULT : style;
 
             // Clamp speed & don't send if it matches default
-            int val = Mathf.Clamp(speed, SPEED_MIN, SPEED_MAX);
-            if (val != SPEED_DEFAULT)
+            int val = Mathf.Clamp(speed, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
+            if (val != WitConstants.TTS_SPEED_DEFAULT)
             {
-                data["speed"] = val.ToString();
+                data[WitConstants.TTS_SPEED] = val.ToString();
             }
             // Clamp pitch & don't send if it matches
-            val = Mathf.Clamp(pitch, PITCH_MIN, PITCH_MAX);
-            if (val != PITCH_DEFAULT)
+            val = Mathf.Clamp(pitch, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+            if (val != WitConstants.TTS_PITCH_DEFAULT)
             {
-                data["pitch"] = val.ToString();
+                data[WitConstants.TTS_PITCH] = val.ToString();
             }
 
             // Return data
             return data;
+        }
+
+        /// <summary>
+        /// Decodes all setting parameters from a provided json node
+        /// </summary>
+        public override void Decode(WitResponseNode responseNode)
+        {
+            var responseClass = responseNode.AsObject;
+            voice = DecodeString(responseClass, WitConstants.TTS_VOICE, WitConstants.TTS_VOICE_DEFAULT);
+            style = DecodeString(responseClass, WitConstants.TTS_STYLE, WitConstants.TTS_STYLE_DEFAULT);
+            speed = DecodeInt(responseClass, WitConstants.TTS_SPEED, WitConstants.TTS_SPEED_DEFAULT, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
+            pitch = DecodeInt(responseClass, WitConstants.TTS_PITCH, WitConstants.TTS_PITCH_DEFAULT, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+        }
+
+        // Decodes a string if possible
+        private string DecodeString(WitResponseClass responseClass, string id, string defaultValue)
+        {
+            if (responseClass.HasChild(id))
+            {
+                return responseClass[id];
+            }
+            return defaultValue;
+        }
+
+        // Decodes an int if possible
+        private int DecodeInt(WitResponseClass responseClass, string id, int defaultValue, int minValue, int maxValue)
+        {
+            if (responseClass.HasChild(id))
+            {
+                return Mathf.Clamp(responseClass[id].AsInt, minValue, maxValue);
+            }
+            return defaultValue;
         }
     }
 }
