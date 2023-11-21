@@ -6,22 +6,22 @@
     {
       "displayName": "Response Debugger",
       "description": "A scene with simple text UI to show Wit responses.",
-      "path": "Samples/ResponseDebugger"
+      "path": "Samples~/ResponseDebugger"
     },
     {
       "displayName": "Shapes",
       "description": "The sample code that goes with the Shapes tutorial.",
-      "path": "Samples/Shapes"
+      "path": "Samples~/Shapes"
     },
     {
       "displayName": "TTS Voices",
       "description": "A sample scene for performing text-to-speech requests by customizing two voices and having them speak.",
-      "path": "Samples/Shared/TTSVoices"
+      "path": "Samples~/Shared/TTSVoices"
     },
     {
       "displayName": "TTS Lip Sync",
       "description": "A sample scene for performing text-to-speech requests that include lip sync information and viewing a character respond with lip sync enabled.",
-      "path": "Samples/Shared/TTSLipSync"
+      "path": "Samples~/Shared/TTSLipSync"
     }
   ],
   "description": "wit-unity is the Unity SDK for Wit.ai. It provides convenience tools for activating Wit and processing the responses that are returned.",
