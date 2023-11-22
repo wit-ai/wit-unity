@@ -738,40 +738,25 @@ namespace Meta.WitAi
             using (var reader = new StreamReader(stream))
             {
                 StringBuilder builder = new StringBuilder();
-                char[] buffer = new char[256];
-                int length;
-                do
+                while (!reader.EndOfStream)
                 {
                     // Read to buffer length
-                    length = reader.Read(buffer, 0, buffer.Length);
-                    if (length > 0)
+                    var chunk = reader.ReadLine();
+                    if (string.IsNullOrEmpty(chunk))
                     {
-                        // Generate string
-                        var chunk = new string(buffer, 0, length);
-
-                        // Prepend
-                        if (builder.Length > 0)
-                        {
-                            chunk = builder.ToString() + chunk;
-                            builder.Clear();
-                        }
-
-                        // Split on delimiter
-                        var chunks = chunk.Split(WitConstants.ENDPOINT_JSON_DELIMITER);
-                        for (int c = 0; c < chunks.Length; c++)
-                        {
-                            // Handle
-                            if (c < chunks.Length - 1)
-                            {
-                                ProcessStringResponse(chunks[c]);
-                            }
-                            else
-                            {
-                                builder.Append(chunks[c]);
-                            }
-                        }
+                        continue;
                     }
-                } while (length > 0);
+
+                    // Append Line
+                    builder.Append(chunk);
+
+                    // Assumes formatted json is returned and no spacing for end of json string
+                    if (string.Equals(chunk, "}"))
+                    {
+                        ProcessStringResponse(builder.ToString());
+                        builder.Clear();
+                    }
+                }
                 if (builder.Length > 0)
                 {
                     ProcessStringResponse(builder.ToString());
