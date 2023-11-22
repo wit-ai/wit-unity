@@ -5,11 +5,10 @@
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
  */
+using System;
 
 namespace Meta.WitAi.Attributes
 {
-    using System;
-
     /// <summary>
     /// An attribute to show a Button in the inspector for a method in a MonoBehaviour script.
     /// </summary>

@@ -11,11 +11,11 @@ using UnityEditor;
 using UnityEngine;
 using System.Reflection;
 using System.Collections.Generic;
+using Meta.WitAi.Interfaces;
 
 namespace Meta.WitAi.Drawers
 {
-
-    [CustomEditor(typeof(MonoBehaviour), true)]
+    [CustomEditor(typeof(IWitInspectorTools), true)]
     public class ButtonAttributeDrawer : Editor
     {
         private Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
