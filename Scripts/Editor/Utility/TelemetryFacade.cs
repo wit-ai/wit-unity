@@ -27,7 +27,7 @@ namespace Meta.Voice.TelemetryUtilities
                 // Ignore the request. Telemetry can't be turned on.
             }
         }
-        
+
         internal static void SetConsentStatus(bool consentProvided)
         {
         }
@@ -44,6 +44,10 @@ namespace Meta.Voice.TelemetryUtilities
 
         internal static void AnnotateEvent(int instanceKey, AnnotationKey key,
             string value)
+        {
+        }
+
+        internal static void AnnotateCurrentSession(AnnotationKey key, string value)
         {
         }
 
@@ -64,21 +68,26 @@ namespace Meta.Voice.TelemetryUtilities
             Failure = 3,
             Cancel = 4
         }
-        
+
         /// <summary>
         /// Mock event IDs.
         /// </summary>
         public enum TelemetryEventId
         {
+            Unknown = 0,
+            Session = 0,
             SupplyToken = 0,
             CheckAutoTrain = 0,
             AutoTrain = 0,
             ToggleCheckbox = 0,
             SyncEntities = 0,
             ClickButton = 0,
+            AssignIntentMatcherInInspector = 0,
+            SelectOption = 0,
             GenerateManifest = 0,
             LoadManifest = 0,
-            OpenUi = 0
+            NavigateToCodeFromInspector = 0,
+            OpenUi = 0,
         }
 
         /// <summary>
@@ -92,10 +101,20 @@ namespace Meta.Voice.TelemetryUtilities
             ControlId,
             Value,
             Type,
-            PageId
+            Unknown,
+            UnrecognizedEvent,
+            UnrecognizedAnnotationKey,
+            EnvironmentId,
+            SessionId,
+            StartTimeStamp,
+            EndTimeStamp,
+            Error,
+            PageId,
+            WitSdkVersion,
+            WitApiVersion
         }
     }
-    
+
     internal enum TelemetryLogLevel
     {
         // No logging whatsoever
