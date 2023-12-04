@@ -1329,7 +1329,7 @@ namespace Meta.WitAi.TTS.Utilities
 
                 // Update current event list if needed
                 var newEvents = CurrentEvents;
-                var newEventCount = newEvents?.Events == null ? 0 : newEvents.Events.Count;
+                var newEventCount = newEvents == null ? 0 : newEvents.EventCount;
                 if (events != newEventCount)
                 {
                     events = newEventCount;

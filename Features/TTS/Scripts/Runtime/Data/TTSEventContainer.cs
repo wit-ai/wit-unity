@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Meta.WitAi.Json;
 
@@ -26,18 +25,26 @@ namespace Meta.WitAi.TTS.Data
     public class TTSEventContainer
     {
         /// <summary>
+        /// All events provided in a access safe list
+        /// </summary>
+        public List<ITTSEvent> Events => GetEvents<ITTSEvent>();
+        /// <summary>
+        /// Thread safe current event count
+        /// </summary>
+        public int EventCount => _events == null ? 0 : _events.Count;
+        /// <summary>
         /// All events for specified tts word start sample
         /// </summary>
-        public IEnumerable<TTSWordEvent> WordEvents => GetEvents<TTSWordEvent>();
+        public List<TTSWordEvent> WordEvents => GetEvents<TTSWordEvent>();
         /// <summary>
         /// All events for specified tts mouth position start sample
         /// </summary>
-        public IEnumerable<TTSVisemeEvent> VisemeEvents => GetEvents<TTSVisemeEvent>();
+        public List<TTSVisemeEvent> VisemeEvents => GetEvents<TTSVisemeEvent>();
 
-        // Current event lookup dictionary
-        public List<ITTSEvent> Events { get; private set; } = new List<ITTSEvent>();
-        // Lock to ensure getting/setting of events does not trample previous
-        private Object _eventsLock = new Object();
+        // Current event list, not thread safe due to appending on background thread
+        private List<ITTSEvent> _events = new List<ITTSEvent>();
+        // Lock to ensure appending of events does not conflict
+        private List<string> _decoding = new List<string>();
 
         // Json response keys
         internal const string EVENT_TYPE_KEY = "type";
@@ -50,14 +57,21 @@ namespace Meta.WitAi.TTS.Data
         /// </summary>
         /// <param name="eventTypeKey">The type key for the specified event</param>
         /// <typeparam name="TEvent">The event type to be returned</typeparam>
-        public IEnumerable<TEvent> GetEvents<TEvent>(string eventTypeKey = null)
+        public List<TEvent> GetEvents<TEvent>(string eventTypeKey = null)
             where TEvent : ITTSEvent
         {
-            var results = Events.OfType<TEvent>();
-            if (!string.IsNullOrEmpty(eventTypeKey))
+            // Get new list
+            var results = new List<TEvent>();
+            // Cannot use foreach due to bg thread access
+            for (int e = 0; e < EventCount; e++)
             {
-                results = results.Where((ttsEvent) => string.Equals(eventTypeKey, ttsEvent.EventType));
+                // If desired type & matching event type (if provided) then return event
+                if (_events[e] is TEvent ttsEvent && (string.IsNullOrEmpty(eventTypeKey) || eventTypeKey.Equals(ttsEvent.EventType)))
+                {
+                    results.Add(ttsEvent);
+                }
             }
+            // Return results
             return results;
         }
 
@@ -77,58 +91,71 @@ namespace Meta.WitAi.TTS.Data
                 return;
             }
 
-            // Decode async
-            #pragma warning disable CS4014
-            DecodeEventsAsync(eventJson);
-            #pragma warning restore CS4014
+            // Add to decode list
+            _decoding.Add(eventJson);
+
+            // If first, begin decoding the rest
+            if (_decoding.Count == 1)
+            {
+                #pragma warning disable CS4014
+                DecodeEventsAsync();
+                #pragma warning restore CS4014
+            }
         }
 
         // Decode text async
-        private async Task DecodeEventsAsync(string eventJson)
+        private async Task DecodeEventsAsync()
         {
-            // Decode token
-            WitResponseNode decodedEvents = await JsonConvert.DeserializeTokenAsync(eventJson);
-            if (decodedEvents == null)
-            {
-                VLog.W(GetType().Name, $"Audio Events Decode Failed\n{eventJson}\n");
-                return;
-            }
-
-            // Decode each event
-            int index = 0;
+            // Get new events list
             List<ITTSEvent> newEvents = new List<ITTSEvent>();
-            foreach (var eventNode in decodedEvents.AsArray.Childs)
+
+            // Continue decoding while events exist
+            while (_decoding.Count > 0)
             {
-                ITTSEvent ttsEvent = await DecodeEventAsync(index, eventNode);
-                if (ttsEvent != null)
+                // Get event json
+                string eventJson = _decoding[0];
+
+                // Deserialize json
+                WitResponseNode decodedEvents = await JsonConvert.DeserializeTokenAsync(eventJson);
+                if (decodedEvents == null)
                 {
-                    newEvents.Add(ttsEvent);
+                    VLog.W(GetType().Name, $"TTS Audio Events Decode Failed\n{eventJson}\n");
                 }
-                index++;
+                else
+                {
+                    int index = 0;
+                    foreach (var eventNode in decodedEvents.AsArray.Childs)
+                    {
+                        ITTSEvent ttsEvent = await DecodeEventAsync(eventNode);
+                        if (ttsEvent == null)
+                        {
+                            VLog.W(GetType().Name, $"TTS Audio Event[{index}] Decode Failed\n{eventJson}\n");
+                        }
+                        else
+                        {
+                            newEvents.Add(ttsEvent);
+                        }
+                        index++;
+                    }
+                }
+
+                // Remove decoded event
+                _decoding.RemoveAt(0);
             }
 
-            // Update event list
+            // Events added
             if (newEvents.Count > 0)
             {
-                lock (_eventsLock)
-                {
-                    // Insert previous
-                    if (Events.Count > 0)
-                    {
-                        newEvents.InsertRange(0, Events);
-                    }
-                    // Replace
-                    Events = newEvents;
-                }
-                // Sort
-                Events.Sort(CompareEvents);
-                // Callback
+                // Add events
+                _events.AddRange(newEvents);
+
+                // Events updated callback
                 OnEventsUpdated?.Invoke(this);
             }
         }
 
         // Decodes event based on switch statement
-        private async Task<ITTSEvent> DecodeEventAsync(int index, WitResponseNode eventNode)
+        private async Task<ITTSEvent> DecodeEventAsync(WitResponseNode eventNode)
         {
             try
             {
@@ -144,14 +171,10 @@ namespace Meta.WitAi.TTS.Data
                         return await JsonConvert.DeserializeObjectAsync<TTSStringEvent>(eventNode);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                VLog.W(GetType().Name, $"TTS Event[{index}] Decode Failed\n{e}\n\n{eventNode}\n");
                 return null;
             }
         }
-
-        // Sort compare
-        protected virtual int CompareEvents(ITTSEvent event1, ITTSEvent event2) => event1.SampleOffset.CompareTo(event2.SampleOffset);
     }
 }

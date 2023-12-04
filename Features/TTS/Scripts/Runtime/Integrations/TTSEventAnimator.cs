@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.TTS.Data;
@@ -137,7 +136,7 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Getter method for events, can be overwritten if needed
         /// </summary>
-        protected virtual List<TEvent> GetEvents() => Player?.CurrentEvents?.GetEvents<TEvent>().ToList();
+        protected virtual List<TEvent> GetEvents() => Player?.CurrentEvents?.GetEvents<TEvent>();
 
         /// <summary>
         /// Getter method for events, can be overwritten if needed
