@@ -11,6 +11,10 @@ using Meta.WitAi.Data;
 
 namespace Meta.WitAi.Interfaces
 {
+    /// <summary>
+    /// This interface defines the methods and properties required for an audio input source.
+    /// It is used to start and stop recording, check if recording is in progress, and handle events related to recording.
+    /// </summary>
     public interface IAudioInputSource
     {
         /// <summary>
@@ -33,10 +37,20 @@ namespace Meta.WitAi.Interfaces
         /// </summary>
         event Action OnStopRecording;
 
+        /// <summary>
+        /// Starts recording audio with the specified sample length.
+        /// </summary>
+        /// <param name="sampleLen">The length of the audio sample to record.</param>
         void StartRecording(int sampleLen);
 
+        /// <summary>
+        /// Stops recording audio.
+        /// </summary>
         void StopRecording();
-
+        
+        /// <summary>
+        /// Returns true if the audio input source is currently recording.
+        /// </summary>
         bool IsRecording { get; }
 
         /// <summary>
