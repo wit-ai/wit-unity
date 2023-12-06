@@ -6,14 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using UnityEngine;
+using System;
 
-namespace Meta.WitAi.Data.Configuration
+namespace Meta.WitAi.Attributes
 {
     /// <summary>
-    /// A base class for additional serialized configuration data
+    /// An attribute to tag a method that accepts a Invoke(WitConfiguration, WitConfigurationAssetData)
     /// </summary>
-    public abstract class WitConfigurationAssetData : ScriptableObject
+    [AttributeUsage(AttributeTargets.Method)]
+    public class WitConfigurationAssetRefreshAttribute : Attribute
     {
     }
 }

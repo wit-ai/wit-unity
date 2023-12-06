@@ -14,6 +14,9 @@ using Meta.WitAi.Data.Info;
 using UnityEngine;
 using UnityEngine.Serialization;
 #if UNITY_EDITOR
+using System.Reflection;
+using Meta.WitAi.Attributes;
+using Meta.WitAi.Utilities;
 using UnityEditor;
 #endif
 
@@ -135,18 +138,6 @@ namespace Meta.WitAi.Data.Configuration
             #if UNITY_EDITOR
             // Update plugins
             RefreshPlugins();
-
-            // Skip asset data refresh without server access token
-            if (string.IsNullOrEmpty(GetServerAccessToken()))
-            {
-                return;
-            }
-
-            // Perform refresh for all subdata
-            foreach (WitConfigurationAssetData data in _configData)
-            {
-                data.Refresh(this);
-            }
             #endif
         }
 
@@ -261,13 +252,13 @@ namespace Meta.WitAi.Data.Configuration
         {
             // Find all derived data types
             List<Type> dataPlugins =  typeof(WitConfigurationAssetData).GetSubclassTypes();
+            Dictionary<Type, MethodInfo> refreshMethods = GetRefreshMethods(dataPlugins);
 
             // Create instances of the types and register them
             List<WitConfigurationAssetData> newConfigs = new List<WitConfigurationAssetData>();
             var configurationAssetPath = AssetDatabase.GetAssetPath(this);
             foreach (Type dataType in dataPlugins)
             {
-
                 // Grab existing if present
                 var plugin = (WitConfigurationAssetData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 // Generate instance & add to asset
@@ -280,10 +271,45 @@ namespace Meta.WitAi.Data.Configuration
                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(plugin));
                     plugin = (WitConfigurationAssetData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 }
+                // Invoke plugin refresh
+                if (!refreshMethods.ContainsKey(dataType))
+                {
+                    VLog.E(GetType().Name, $"No refresh method found for {dataType}");
+                }
+                else
+                {
+                    refreshMethods[dataType].Invoke(null, new object[] { this, plugin });
+                }
+                // Add plugin to list
                 newConfigs.Add(plugin);
             }
+
+            // Apply data & save
             SetConfigData(newConfigs.ToArray());
             SaveConfiguration();
+        }
+
+        /// <summary>
+        /// Finds all static refresh methods that implement DataAssetRefresh Attribute
+        /// </summary>
+        private Dictionary<Type, MethodInfo> GetRefreshMethods(List<Type> dataTypes)
+        {
+            // Get all methods tagged with AssetDataRefresh
+            var methods = ReflectionUtils.GetMethodsWithAttribute<WitConfigurationAssetRefreshAttribute>();
+            var methodLookups = new Dictionary<Type, MethodInfo>();
+            foreach (var method in methods)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length == 2 && parameters[0].ParameterType == GetType() && dataTypes.Contains(parameters[1].ParameterType))
+                {
+                    methodLookups[parameters[1].ParameterType] = method;
+                }
+                else
+                {
+                    VLog.E(GetType().Name, $"Found AssetDataRefreshAttribute with invalid parameters\nMethod: {method.DeclaringType}.{method.Name}\nTotal: {parameters.Length}");
+                }
+            }
+            return methodLookups;
         }
         #endif
 
