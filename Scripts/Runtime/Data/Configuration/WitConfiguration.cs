@@ -133,14 +133,23 @@ namespace Meta.WitAi.Data.Configuration
         public void UpdateDataAssets()
         {
             #if UNITY_EDITOR
+            // Update plugins
             RefreshPlugins();
-            #endif
 
+            // Skip asset data refresh without server access token
+            if (string.IsNullOrEmpty(GetServerAccessToken()))
+            {
+                return;
+            }
+
+            // Perform refresh for all subdata
             foreach (WitConfigurationAssetData data in _configData)
             {
                 data.Refresh(this);
             }
+            #endif
         }
+
         // Logger invalid warnings
         private const string INVALID_APP_ID_NO_CLIENT_TOKEN = "App Info Not Set - No Client Token";
         private const string INVALID_APP_ID_WITH_CLIENT_TOKEN =
@@ -267,13 +276,14 @@ namespace Meta.WitAi.Data.Configuration
                     plugin = (WitConfigurationAssetData)CreateInstance(dataType);
                     plugin.name = dataType.Name;
                     AssetDatabase.AddObjectToAsset(plugin, configurationAssetPath);
+                    AssetDatabase.SaveAssetIfDirty(plugin);
                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(plugin));
                     plugin = (WitConfigurationAssetData)AssetDatabase.LoadAssetAtPath(configurationAssetPath, dataType);
                 }
                 newConfigs.Add(plugin);
             }
             SetConfigData(newConfigs.ToArray());
-            AssetDatabase.SaveAssets();
+            SaveConfiguration();
         }
         #endif
 
