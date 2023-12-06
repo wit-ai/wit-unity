@@ -17,7 +17,7 @@ namespace Meta.Conduit
     /// <summary>
     /// Resolves parameters for invoking callbacks.
     /// </summary>
-    internal interface IParameterProvider
+    public interface IParameterProvider
     {
         /// <summary>
         /// The list of the names of all parameters in the provider. 

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Meta.WitAi;
 
 namespace Meta.Conduit
 {
@@ -61,12 +62,55 @@ namespace Meta.Conduit
             return stringToSearch.Contains(value);
         }
 
-        private static string StripWhiteSpace(string input)
+        /// <summary>
+        /// Returns a typed value that matches the parameter type if possible.
+        /// </summary>
+        /// <param name="formalParameter">The formal parameter we are trying to supply</param>
+        /// <param name="parameterValue">The raw value of the parameter.</param>
+        /// <returns>The value in the correct type if a conversion was possible. Null otherwise.</returns>
+        internal static object GetTypedParameterValue(ParameterInfo formalParameter, object parameterValue)
         {
-            return string.IsNullOrEmpty(input) ? string.Empty :
-                input.Replace(" ", string.Empty)
-                .Replace("\n", string.Empty)
-                .Replace("\r", string.Empty);
+            var formalType = formalParameter.ParameterType;
+            if (formalType.IsNullableType())
+            {
+                formalType = Nullable.GetUnderlyingType(formalType);
+                if (formalType == null)
+                {
+                    VLog.E($"Got null underlying type for nullable parameter of type {formalParameter.ParameterType}");
+                    return null;
+                }
+            }
+            
+            if (formalType == typeof(string))
+            {
+                return parameterValue.ToString();
+            }
+            else if (formalType.IsEnum)
+            {
+                try
+                {
+                    return Enum.Parse(formalType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
+                }
+                catch (Exception e)
+                {
+                    VLog.E(
+                        $"Parameter Provider - Parameter value '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
+                    throw;
+                }
+            }
+            else
+            {
+                try
+                {
+                    return Convert.ChangeType(parameterValue, formalType);
+                }
+                catch (Exception e)
+                {
+                    VLog.E(
+                        $"Parameter Provider - Nullable parameter value '{parameterValue}' could not be cast to {formalParameter.ParameterType.FullName}\n{e}");
+                    return null;
+                }
+            }
         }
 
         /// <summary>
@@ -130,6 +174,19 @@ namespace Meta.Conduit
             }
             // Sanitized string
             return result;
+        }
+        
+        /// <summary>
+        /// Strips spaces and newlines from a string.
+        /// </summary>
+        /// <param name="input">The string to strip.</param>
+        /// <returns>The string without the whitespaces.</returns>
+        private static string StripWhiteSpace(string input)
+        {
+            return string.IsNullOrEmpty(input) ? string.Empty :
+                input.Replace(" ", string.Empty)
+                    .Replace("\n", string.Empty)
+                    .Replace("\r", string.Empty);
         }
     }
 

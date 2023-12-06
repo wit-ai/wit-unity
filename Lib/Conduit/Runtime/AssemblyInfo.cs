@@ -8,6 +8,7 @@
 
 using System.Runtime.CompilerServices;
 
+[assembly:InternalsVisibleTo("VoiceSDK.Runtime.NPCs")]
 [assembly:InternalsVisibleTo("Meta.WitAi")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Editor")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Conduit")]

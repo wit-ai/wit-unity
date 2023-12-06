@@ -98,7 +98,6 @@ namespace Meta.Conduit
         /// Extracts Conduit parameters from a Wit.Ai response.
         /// </summary>
         /// <param name="responseNode">The response node from Wit.Ai</param>
-        /// <returns>A dictionary where the parameter names are keys and they </returns>
         public void PopulateParametersFromNode(WitResponseNode responseNode)
         {
             _parametersOfType.Clear();
@@ -156,7 +155,7 @@ namespace Meta.Conduit
         /// </summary>
         /// <param name="parameterToRoleMap">
         /// Keys are normalized lowercase internal (code) names.
-        /// Values are fully qualified parameter names (roles)
+        /// Values are fully qualified parameter names (roles).
         /// </param>
         public void PopulateRoles(Dictionary<string, string> parameterToRoleMap)
         {
@@ -192,6 +191,15 @@ namespace Meta.Conduit
             return true;
         }
 
+        public object GetRawParameterValue(string parameterName)
+        {
+            if (!ActualParameters.TryGetValue(parameterName, out var parameterValue) || parameterValue == null)
+            {
+                return null;
+            }
+
+            return parameterValue;
+        }
 
         /// <summary>
         /// Provides the actual parameter value matching the supplied formal parameter.
@@ -216,51 +224,15 @@ namespace Meta.Conduit
                 return null;
             }
 
-            var formalType = formalParameter.ParameterType;
-            if (formalType.IsNullableType())
-            {
-                formalType = Nullable.GetUnderlyingType(formalType);
-                if (formalType == null)
-                {
-                    VLog.E($"Got null underlying type for nullable parameter of type {formalParameter.ParameterType}");
-                    return null;
-                }
-            }
-
             if (!ActualParameters.TryGetValue(actualParameterName, out var parameterValue) || parameterValue == null)
             {
                 return null;
             }
-
-            if (formalType == typeof(string))
-            {
-                return parameterValue.ToString();
-            }
-            else if (formalType.IsEnum)
-            {
-                try
-                {
-                    return Enum.Parse(formalType, ConduitUtilities.SanitizeString(parameterValue.ToString()), true);
-                }
-                catch (Exception e)
-                {
-                    VLog.E($"Parameter Provider - Parameter value '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
-                    throw;
-                }
-            }
-            else
-            {
-                try
-                {
-                    return Convert.ChangeType(parameterValue, formalType);
-                }
-                catch (Exception e)
-                {
-                    VLog.E($"Parameter Provider - Nullable parameter value '{parameterValue}' could not be cast to {formalParameter.ParameterType.FullName}\n{e}");
-                    return null;
-                }
-            }
+            
+            return ConduitUtilities.GetTypedParameterValue(formalParameter, parameterValue);
         }
+        
+        
 
         /// <summary>
         /// Converts an object to Nullable. If the object is already Nullable, then it returns it as-is.
@@ -508,5 +480,4 @@ namespace Meta.Conduit
             return string.Join("',", AllParameterNames);
         }
     }
-
 }

@@ -39,8 +39,6 @@ namespace Meta.Conduit
 
         private bool _isInitialized = false;
 
-        private string _manifestFilePath;
-
         /// <summary>
         /// Maps internal parameter names to fully qualified parameter names (roles/slots).
         /// </summary>
@@ -64,8 +62,6 @@ namespace Meta.Conduit
         /// <param name="manifestFilePath">The path to the manifest file.</param>
         public async Task Initialize(string manifestFilePath)
         {
-            _manifestFilePath = manifestFilePath;
-            
             if (Manifest != null)
             {
                 return;
