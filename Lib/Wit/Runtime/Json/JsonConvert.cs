@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Json
@@ -394,78 +395,34 @@ namespace Meta.WitAi.Json
                 newObject = Activator.CreateInstance(toType);
             }
 
-            // Add renames
-            Dictionary<string, FieldInfo> fieldRenames = new Dictionary<string, FieldInfo>();
-            foreach (var field in toType.GetFields().Where(field => field.IsDefined(typeof(JsonPropertyAttribute), false)))
-            {
-                foreach (var renameAttribute in field.GetCustomAttributes<JsonPropertyAttribute>())
-                {
-                    if (!string.IsNullOrEmpty(renameAttribute.PropertyName))
-                    {
-                        fieldRenames[renameAttribute.PropertyName] = field;
-                    }
-                }
-            }
-            Dictionary<string, PropertyInfo> propRenames = new Dictionary<string, PropertyInfo>();
-            foreach (var prop in toType.GetProperties().Where(prop => prop.IsDefined(typeof(JsonPropertyAttribute), false)))
-            {
-                foreach (var renameAttribute in prop.GetCustomAttributes<JsonPropertyAttribute>())
-                {
-                    if (!string.IsNullOrEmpty(renameAttribute.PropertyName))
-                    {
-                        propRenames[renameAttribute.PropertyName] = prop;
-                    }
-                }
-            }
+            // Get all variables by token id
+            Dictionary<string, IJsonVariableInfo> varDictionary = GetVarDictionary(toType, log);
 
             // Iterate each child node
             foreach (var childTokenName in jsonClass.ChildNodeNames)
             {
-                // Check field
-                FieldInfo field = toType.GetField(childTokenName, BIND_FLAGS);
-                if (fieldRenames.ContainsKey(childTokenName))
+                // If not found, log & ignore
+                if (!varDictionary.ContainsKey(childTokenName))
                 {
-                    field = fieldRenames[childTokenName];
+                    log.AppendLine($"\t{toType.FullName} does not have a matching '{childTokenName}' field or property.");
+                    continue;
                 }
-                if (field != null)
+                // If found, ensure should deserialize
+                IJsonVariableInfo varInfo = varDictionary[childTokenName];
+                if (!varInfo.GetShouldDeserialize())
                 {
-                    // Get old value
-                    object oldValue = field.GetValue(newObject);
-
-                    // Deserialize new value
-                    object newValue = DeserializeToken(field.FieldType, oldValue, jsonClass[childTokenName], log, customConverters);
-
-                    // Apply new value
-                    field.SetValue(newObject, newValue);
+                    log.AppendLine($"\t{toType.FullName} cannot deserialize '{childTokenName}' to the matching {(varInfo is JsonPropertyInfo ? "property" : "field")}.");
                     continue;
                 }
 
-                // Check property
-                PropertyInfo property = toType.GetProperty(childTokenName, BIND_FLAGS);
-                if (propRenames.ContainsKey(childTokenName))
-                {
-                    property = propRenames[childTokenName];
-                }
-                if (property != null && property.GetSetMethod() != null)
-                {
-                    // Get old value
-                    object oldValue = null;
-                    if (property.GetGetMethod() != null)
-                    {
-                        oldValue = property.GetValue(newObject);
-                    }
-                    oldValue = EnsureExists(property.PropertyType, oldValue);
+                // Get old value
+                object oldValue = varInfo.GetValue(newObject);
 
-                    // Deserialize new value
-                    object newValue = DeserializeToken(property.PropertyType, oldValue, jsonClass[childTokenName], log, customConverters);
+                // Deserialize new value
+                object newValue = DeserializeToken(varInfo.GetVariableType(), oldValue, jsonClass[childTokenName], log, customConverters);
 
-                    // Apply new value
-                    property.SetValue(newObject, newValue);
-                    continue;
-                }
-
-                // Not found
-                log.AppendLine($"\t{toType.FullName} does not have a public '{childTokenName}' field or property.");
+                // Apply new value
+                varInfo.SetValue(newObject, newValue);
             }
 
             // Use deserializer if applicable
@@ -660,27 +617,37 @@ namespace Meta.WitAi.Json
                 return new WitResponseData((bool)inObject);
             }
             // Convert to int
-            else if (inType == typeof(int))
+            if (inType == typeof(int))
             {
                 return new WitResponseData((int)inObject);
             }
             // Convert to float
-            else if (inType == typeof(float))
+            if (inType == typeof(float))
             {
                 return new WitResponseData((float)inObject);
             }
             // Convert to double
-            else if (inType == typeof(double))
+            if (inType == typeof(double))
             {
                 return new WitResponseData((double)inObject);
             }
+            // Convert to short
+            if (inType == typeof(short))
+            {
+                return new WitResponseData((short)inObject);
+            }
+            // Convert to long
+            if (inType == typeof(long))
+            {
+                return new WitResponseData((long)inObject);
+            }
             // Convert to enum
-            else if (inType.IsEnum)
+            if (inType.IsEnum)
             {
                 return new WitResponseData(inObject.ToString());
             }
             // Serialize a dictionary into a node
-            else if (inType.GetInterfaces().Contains(typeof(IDictionary)))
+            if (inType.GetInterfaces().Contains(typeof(IDictionary)))
             {
                 IDictionary oldDictionary = (IDictionary) inObject;
                 WitResponseClass newDictionary = new WitResponseClass();
@@ -704,7 +671,7 @@ namespace Meta.WitAi.Json
                 return newDictionary;
             }
             // Serialize enumerable into array
-            else if (inType.GetInterfaces().Contains(typeof(IEnumerable)))
+            if (inType.GetInterfaces().Contains(typeof(IEnumerable)))
             {
                 // Get enum
                 WitResponseArray newArray = new WitResponseArray();
@@ -732,65 +699,87 @@ namespace Meta.WitAi.Json
                 return newArray;
             }
             // Serialize a class or a struct into a node
-            else if (inType.IsClass || (inType.IsValueType && !inType.IsPrimitive))
+            if (inType.IsClass || (inType.IsValueType && !inType.IsPrimitive))
             {
-                WitResponseClass newClass = new WitResponseClass();
-                foreach (var field in inType.GetFields(BIND_FLAGS))
-                {
-                    JsonPropertyAttribute[] fieldAttributes = (JsonPropertyAttribute[])field.GetCustomAttributes(typeof(JsonPropertyAttribute));
-                    SerializeProperty(newClass, field.FieldType, field.Name, field.GetValue(inObject),
-                        fieldAttributes, log, customConverters);
-                }
-                foreach (var property in inType.GetProperties(BIND_FLAGS))
-                {
-                    MethodInfo getter = property.GetGetMethod();
-                    if (getter != null && getter.GetParameters().Length == 0)
-                    {
-                        JsonPropertyAttribute[] propertyAttributes = (JsonPropertyAttribute[])property.GetCustomAttributes(typeof(JsonPropertyAttribute));
-                        SerializeProperty(newClass, property.PropertyType, property.Name, property.GetValue(inObject),
-                            propertyAttributes, log, customConverters);
-                    }
-                }
-                if (inType.GetInterfaces().Contains(typeof(IJsonSerializer)))
-                {
-                    IJsonSerializer serializer = inObject as IJsonSerializer;
-                    if (!serializer.SerializeObject(newClass))
-                    {
-                        log.AppendLine($"\tIJsonSerializer '{inType}' failed");
-                    }
-                }
-                return newClass;
+                return SerializeClass(inType, inObject, log, customConverters);
             }
 
             // Warn & incode to string
             log.AppendLine($"\tJson Serializer cannot serialize: {inType}");
             return inObject == null ? null : new WitResponseData(inObject.ToString());
         }
-        // Serialize a property using property attributes
-        private static void SerializeProperty(WitResponseClass newClass, Type propertyType, string propertyName,
-            object propertyValue, JsonPropertyAttribute[] propertyAttributes,
-            StringBuilder log, JsonConverter[] customConverters)
-        {
-            // Get default object
-            object newObj = EnsureExists(propertyType, propertyValue);
 
-            // If properties exist, use them to decode
-            if (propertyAttributes != null && propertyAttributes.Length > 0)
+        // Serialize object by iterating each property & field
+        private static WitResponseClass SerializeClass(Type inType, object inObject, StringBuilder log, JsonConverter[] customConverters)
+        {
+            // Generate result class
+            WitResponseClass result = new WitResponseClass();
+
+            // Iterate all properties & fields for the specified type
+            foreach (var varInfo in GetVarInfos(inType))
             {
-                foreach (var attribute in propertyAttributes)
+                // Ignore if should not serialize
+                if (!varInfo.GetShouldSerialize())
                 {
-                    // Ignore unless property name exists
-                    if (!string.IsNullOrEmpty(attribute.PropertyName))
-                    {
-                        //
-                        newClass.Add(attribute.PropertyName, SerializeToken(propertyType, newObj, log, customConverters));
-                    }
+                    continue;
                 }
-                return;
+
+                // Iterate all serialized names
+                foreach (var varName in varInfo.GetSerializeNames())
+                {
+                    // Get default object
+                    object newObj = EnsureExists(varInfo.GetVariableType(), varInfo.GetValue(inObject));
+
+                    // Use default property name
+                    result.Add(varName, SerializeToken(varInfo.GetVariableType(), newObj, log, customConverters));
+                }
             }
 
-            // Use default property name
-            newClass.Add(propertyName, SerializeToken(propertyType, newObj, log, customConverters));
+            // Return new class
+            return result;
+        }
+        #endregion
+
+        #region VARIABLES
+        /// <summary>
+        /// Obtains all IJsonVariableInfo for a specific type's fields & properties
+        /// </summary>
+        private static List<IJsonVariableInfo> GetVarInfos(Type forType)
+        {
+            List<IJsonVariableInfo> results = new List<IJsonVariableInfo>();
+            foreach (var field in forType.GetFields(BIND_FLAGS))
+            {
+                results.Add(new JsonFieldInfo(field));
+            }
+            foreach (var property in forType.GetProperties(BIND_FLAGS))
+            {
+                results.Add(new JsonPropertyInfo(property));
+            }
+            return results;
+        }
+        /// <summary>
+        /// Obtains all variable info for a specific type with the keys being the serialized name for each
+        /// </summary>
+        private static Dictionary<string, IJsonVariableInfo> GetVarDictionary(Type forType, StringBuilder log)
+        {
+            Dictionary<string, IJsonVariableInfo> results = new Dictionary<string, IJsonVariableInfo>();
+            foreach (IJsonVariableInfo info in GetVarInfos(forType))
+            {
+                foreach (string name in info.GetSerializeNames())
+                {
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        continue;
+                    }
+                    if (results.ContainsKey(name))
+                    {
+                        log.AppendLine($"\t{forType.FullName} has two fields/properties with the same name '{name}' exposed to JsonConvert.");
+                        continue;
+                    }
+                    results[name] = info;
+                }
+            }
+            return results;
         }
         #endregion
     }

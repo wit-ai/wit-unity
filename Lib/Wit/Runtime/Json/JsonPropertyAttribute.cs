@@ -10,6 +10,12 @@ using System;
 
 namespace Meta.WitAi.Json
 {
+    /// <summary>
+    /// An attribute to be used to tag a field/property that should be serialized/deserialized via JsonConvert
+    /// even if marked as internal.  It will serialize to the provided property name instead of the default name
+    /// if provided.  It will also deserialize the property name if setup.  The default value will be used if
+    /// deserialized is not possible.
+    /// </summary>
     [AttributeUsage(validOn:AttributeTargets.Field|AttributeTargets.Property, AllowMultiple = true)]
     public class JsonPropertyAttribute : Attribute
     {
@@ -23,6 +29,15 @@ namespace Meta.WitAi.Json
         public object DefaultValue { get; private set; }
 
         /// <summary>
+        /// Constructor that defaults to an empty property name
+        /// </summary>
+        public JsonPropertyAttribute()
+        {
+            PropertyName = null;
+            DefaultValue = null;
+        }
+
+        /// <summary>
         /// Constructor that sets property name
         /// </summary>
         /// <param name="propertyName">Name to be read from json</param>
@@ -31,6 +46,7 @@ namespace Meta.WitAi.Json
             PropertyName = propertyName;
             DefaultValue = null;
         }
+
         /// <summary>
         /// Construct for property name and default value
         /// </summary>

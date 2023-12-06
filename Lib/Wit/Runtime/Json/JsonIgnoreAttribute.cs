@@ -10,12 +10,11 @@ using System;
 
 namespace Meta.WitAi.Json
 {
-    [AttributeUsage(validOn:AttributeTargets.Field|AttributeTargets.Property, AllowMultiple = true)]
-    public class JsonIgnoreAttribute : JsonPropertyAttribute
+    /// <summary>
+    /// An attribute to be used to tag a field/property that should not be serialized/deserialized via JsonConvert
+    /// </summary>
+    [AttributeUsage(validOn:AttributeTargets.Field|AttributeTargets.Property, AllowMultiple = false)]
+    public class JsonIgnoreAttribute : Attribute
     {
-        /// <summary>
-        /// Constructor that sets property name to an empty string
-        /// </summary>
-        public JsonIgnoreAttribute() : base("", null) { }
     }
 }

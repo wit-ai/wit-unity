@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.WitAi.Json;
 
 namespace Meta.WitAi.TTS.Data
 {
@@ -35,18 +36,21 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// The type of clip event
         /// </summary>
+        [JsonProperty]
         internal string type;
         public string EventType => type;
 
         /// <summary>
         /// The audio sample offset from the start of the associated audio stream
         /// </summary>
+        [JsonProperty]
         internal int offset;
         public int SampleOffset => offset;
 
         /// <summary>
         /// The data to be parsed for this clip event
         /// </summary>
+        [JsonProperty]
         internal TData data;
         public TData Data => data;
     }
