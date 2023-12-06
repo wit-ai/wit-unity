@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,47 +20,77 @@ namespace Meta.Voice.Samples.TTSVoices
     /// </summary>
     public class TTSSpeakerStatusLabel : TTSSpeakerObserver
     {
+        // The label to be used for the speaker's status
         [SerializeField] private Text _label;
+
+        // Fields for
+        private bool _needsRefresh = true;
+        private Coroutine _refreshUpdater;
 
         protected override void OnEnable()
         {
             base.OnEnable();
             RefreshLabel();
+            _refreshUpdater = StartCoroutine(RefreshUpdater());
         }
+
+        protected override void OnDisable()
+        {
+            if (_refreshUpdater != null)
+            {
+                StopCoroutine(_refreshUpdater);
+                _refreshUpdater = null;
+            }
+        }
+
         protected override void OnLoadBegin(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnLoadAbort(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnLoadFailed(TTSSpeaker speaker, TTSClipData clipData, string error)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnLoadSuccess(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnPlaybackReady(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnPlaybackStart(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnPlaybackCancelled(TTSSpeaker speaker, TTSClipData clipData, string reason)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
         protected override void OnPlaybackComplete(TTSSpeaker speaker, TTSClipData clipData)
         {
-            RefreshLabel();
+            _needsRefresh = true;
         }
+
+        private IEnumerator RefreshUpdater()
+        {
+            while (true)
+            {
+                if (_needsRefresh)
+                {
+                    RefreshLabel();
+                }
+                yield return new WaitForEndOfFrame();
+            }
+        }
+
         private void RefreshLabel()
         {
+            _needsRefresh = false;
             StringBuilder status = new StringBuilder();
             if (Speaker.IsSpeaking)
             {
