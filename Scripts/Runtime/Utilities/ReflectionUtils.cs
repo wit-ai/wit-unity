@@ -129,7 +129,7 @@ namespace Meta.WitAi.Utilities
 
         /// <summary>
         /// Get the value of a field, property, or method that is passed in by name from an object.
-        /// 
+        ///
         /// Priority Search Order:
         /// 1. Field
         /// 2. Property
@@ -185,7 +185,7 @@ namespace Meta.WitAi.Utilities
 
         /// <summary>
         /// Get the value of a field, property, or method that is passed in by name from a serialized property.
-        /// 
+        ///
         /// Priority Search Order:
         /// 1. Field
         /// 2. Property
@@ -202,19 +202,24 @@ namespace Meta.WitAi.Utilities
         }
         #endif
 
+        #region ITERATION
         /// <summary>
-        /// Retrieves all instantiatable types which are assignable from the given type T
+        /// Namespace prefix requirement for type lookups
         /// </summary>
-        /// <param name="instance">the type on which this is called</param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns>a collection of types</returns>
-        public static Type[] GetAllAssignableTypes<T>()
-        {
-            // Get all loaded assemblies in the current domain
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        private const string NAMESPACE_PREFIX = "Meta";
 
-            // Find all types that implement the IPlugin interface
-            Type[] pluginTypes = assemblies
+        /// <summary>
+        /// Check namespace prior to access
+        /// </summary>
+        private static bool IsValidNamespace(Type type) =>
+            type.Namespace != null && type.Namespace.StartsWith(NAMESPACE_PREFIX);
+
+        /// <summary>
+        /// Hefty editor method that iterates all assemblies
+        /// </summary>
+        private static IEnumerable<Type> GetTypes()
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(assembly =>
                 {
                     try
@@ -223,13 +228,39 @@ namespace Meta.WitAi.Utilities
                     }
                     catch
                     {
-                        return new Type[]{};
+                        return new Type[] { };
                     }
-                })                
-                .Where(type => typeof(T).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
-                .ToArray();
-
-            return pluginTypes;
+                })
+                .Where(IsValidNamespace);
         }
+
+        /// <summary>
+        /// Obtains methods with a specific valid callback
+        /// </summary>
+        private static IEnumerable<MethodInfo> GetMethods()
+        {
+            return GetTypes().SelectMany(type => type.GetMethods());
+        }
+
+        /// <summary>
+        /// Retrieves all instantiatable types which are assignable from the given type T
+        /// </summary>
+        /// <param name="instance">the type on which this is called</param>
+        /// <returns>a collection of types</returns>
+        internal static Type[] GetAllAssignableTypes<T>() =>
+            GetTypes().Where(type => typeof(T).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract).ToArray();
+
+        /// <summary>
+        /// Retrieves all classes which are tagged with the specified T attribute
+        /// </summary>
+        internal static Type[] GetTypesWithAttribute<T>() where T : Attribute =>
+            GetTypes().Where(type => type.GetCustomAttributes(typeof(T), false).Length > 0).ToArray();
+
+        /// <summary>
+        /// Retrieves all methods which are tagged with the specified T attribute
+        /// </summary>
+        internal static MethodInfo[] GetMethodsWithAttribute<T>() where T : Attribute =>
+            GetMethods().Where(method => method.GetCustomAttributes(typeof(T), false).Length > 0).ToArray();
+        #endregion ITERATION
     }
 }
