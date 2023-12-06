@@ -404,7 +404,7 @@ namespace Meta.WitAi
         }
 
         /// <summary>
-        /// The actions that have been generated
+        /// Dictionary that holds generated action lamdas to ensure they are removed correctly
         /// </summary>
         private Dictionary<string, object> _actions = new Dictionary<string, object>();
 
