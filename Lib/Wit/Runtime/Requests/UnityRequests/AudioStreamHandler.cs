@@ -108,17 +108,6 @@ namespace Meta.WitAi.Requests
                 return false;
             }
 
-            // Append to error
-            if (_errorBytes != null)
-            {
-                for (int i = 0; i < Mathf.Min(dataLength, _errorBytes.Length - _errorDecoded); i++)
-                {
-                    _errorBytes[_errorDecoded + i] = receiveData[i];
-                }
-                _errorDecoded += dataLength;
-                return true;
-            }
-
             // Decode data async
             #pragma warning disable CS4014
             DecodeDataAsync(receiveData, dataLength);
@@ -130,6 +119,18 @@ namespace Meta.WitAi.Requests
         // Decode data asynchronously
         private async Task DecodeDataAsync(byte[] receiveData, int dataLength)
         {
+            // Append to error async
+            if (_errorBytes != null)
+            {
+                await Task.Run(() =>
+                {
+                    int errorLength = Mathf.Min(dataLength, _errorBytes.Length - _errorDecoded);
+                    Array.Copy(receiveData, 0, _errorBytes, _errorDecoded, errorLength);
+                    _errorDecoded += errorLength;
+                });
+                return;
+            }
+
             // Increment receive chunk count
             int current = _receivedChunks;
             _receivedChunks++;
