@@ -354,8 +354,7 @@ namespace Meta.WitAi
         /// <returns>WitIntentData or null if no intents are found</returns>
         public static WitIntentData GetFirstIntentData(this WitResponseNode witResponse)
         {
-            var firstIntent = witResponse.GetFirstIntent();
-            return firstIntent == null ? null : firstIntent["name"]?.AsWitIntent();
+            return witResponse.GetFirstIntent()?.AsWitIntent();
         }
 
         /// <summary>
