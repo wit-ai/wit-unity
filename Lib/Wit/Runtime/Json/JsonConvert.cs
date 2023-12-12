@@ -416,7 +416,7 @@ namespace Meta.WitAi.Json
                 }
 
                 // Get old value
-                object oldValue = varInfo.GetValue(newObject);
+                object oldValue = varInfo.GetShouldSerialize() ? varInfo.GetValue(newObject) : null;
 
                 // Deserialize new value
                 object newValue = DeserializeToken(varInfo.GetVariableType(), oldValue, jsonClass[childTokenName], log, customConverters);

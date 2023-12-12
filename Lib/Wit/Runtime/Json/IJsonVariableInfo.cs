@@ -9,6 +9,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Meta.WitAi.Json
 {
@@ -116,14 +117,24 @@ namespace Meta.WitAi.Json
             /// </summary>
             public virtual bool GetShouldSerialize()
             {
-                // If JsonIgnore, do not serialize/deserialize
+                // If JsonIgnore, do not serialize
                 if (IsDefined<JsonIgnoreAttribute>() || IsDefined<NonSerializedAttribute>())
+                {
+                    return false;
+                }
+                // If no getter, do not serialize
+                if (!HasGet())
                 {
                     return false;
                 }
                 // If public or marked as JsonProperty, serialize/deserialize
                 return IsGetPublic() || IsDefined<JsonPropertyAttribute>();
             }
+
+            /// <summary>
+            /// Whether or not the get method exists
+            /// </summary>
+            protected abstract bool HasGet();
 
             /// <summary>
             /// Whether or not the get method can be used for this property/field
@@ -135,13 +146,24 @@ namespace Meta.WitAi.Json
             /// </summary>
             public virtual bool GetShouldDeserialize()
             {
-                if (!GetShouldSerialize())
+                // If JsonIgnore, do not serialize
+                if (IsDefined<JsonIgnoreAttribute>() || IsDefined<NonSerializedAttribute>())
+                {
+                    return false;
+                }
+                // If no setter, do not serialize
+                if (!HasSet())
                 {
                     return false;
                 }
                 // If public or marked as JsonProperty, serialize/deserialize
                 return IsSetPublic() || IsDefined<JsonPropertyAttribute>();
             }
+
+            /// <summary>
+            /// Whether or not the setter exists
+            /// </summary>
+            protected abstract bool HasSet();
 
             /// <summary>
             /// Whether or not the set method can be used for this property/field
@@ -165,9 +187,13 @@ namespace Meta.WitAi.Json
 
             public override Type GetVariableType() => _info.FieldType;
 
+            protected override bool HasGet() => true;
+
             protected override bool IsGetPublic() => _info.IsPublic;
 
             public override object GetValue(object obj) => _info.GetValue(obj);
+
+            protected override bool HasSet() => true;
 
             protected override bool IsSetPublic() => _info.IsPublic;
 
@@ -183,19 +209,15 @@ namespace Meta.WitAi.Json
 
             public override Type GetVariableType() => _info.PropertyType;
 
-            protected override bool IsGetPublic()
-            {
-                var getter = _info.GetGetMethod();
-                return getter != null && getter.IsPublic;
-            }
+            protected override bool HasGet() => _info.GetMethod != null;
+
+            protected override bool IsGetPublic() => _info.GetMethod.IsPublic;
 
             public override object GetValue(object obj) => _info.GetValue(obj);
 
-            protected override bool IsSetPublic()
-            {
-                var setter = _info.GetSetMethod();
-                return setter != null && setter.IsPublic;
-            }
+            protected override bool HasSet() => _info.SetMethod != null;
+
+            protected override bool IsSetPublic() => _info.SetMethod.IsPublic;
 
             public override void SetValue(object obj, object value) => _info.SetValue(obj, value);
         }
