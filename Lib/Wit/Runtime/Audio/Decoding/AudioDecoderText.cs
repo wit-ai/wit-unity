@@ -43,6 +43,7 @@ namespace Meta.Voice.Audio.Decoding
 
         // Text decode data
         private bool _hasText = false;
+        private byte _flags = 0x0;
         private long _textLength = 0;
         private long _audioLength = 0;
 
@@ -55,7 +56,7 @@ namespace Meta.Voice.Audio.Decoding
         private const int LONG_SIZE = 8;
         private const int HEADER_SIZE = FLAG_SIZE + (LONG_SIZE * 2); // 1 flag byte + 8 audio size bytes + 8 text size bytes
         private const int MAX_TEXT_LENGTH = 10000; // Max 10k characters
-        private const int MAX_AUDIO_LENGTH = WitConstants.ENDPOINT_TTS_CHANNELS * WitConstants.ENDPOINT_TTS_SAMPLE_RATE * 20; // Max 20 seconds of audio
+        private const int MAX_AUDIO_LENGTH = WitConstants.ENDPOINT_TTS_CHANNELS * WitConstants.ENDPOINT_TTS_SAMPLE_RATE * 2 * 30; // Max 30 seconds of audio
 
         /// <summary>
         /// Constructor that takes in an audio decoder and decode callback delegate
@@ -141,17 +142,31 @@ namespace Meta.Voice.Audio.Decoding
                 }
 
                 // Decode header items
-                byte flags = _headerBytes[0];
+                _flags = _headerBytes[0];
                 _textLength = Max(0, BitConverter.ToInt64(_headerBytes, FLAG_SIZE));
                 _audioLength = Max(0, BitConverter.ToInt64(_headerBytes, FLAG_SIZE + LONG_SIZE));
 
                 // Has text if flags are not empty and text length or audio length is more than 0
-                _hasText = flags != 0x0 && ((_textLength > 0 && _textLength <= MAX_TEXT_LENGTH) || (_audioLength > 0 && _audioLength <= MAX_AUDIO_LENGTH));
+                _hasText = true;
+                if (_flags != 0x1)
+                {
+                    VLog.E(GetType().Name, $"Chunk Header Decode Failed: Invalid Flags\n{GetChunkLog()}\n");
+                    _hasText = false;
+                }
+                else if (_textLength < 0 || _textLength > MAX_TEXT_LENGTH)
+                {
+                    VLog.E(GetType().Name, $"Chunk Header Decode Failed: Invalid Text Length\n{GetChunkLog()}\n");
+                    _hasText = false;
+                }
+                else if (_audioLength < 0 || _audioLength > MAX_AUDIO_LENGTH)
+                {
+                    VLog.E(GetType().Name, $"Chunk Header Decode Failed: Invalid Audio Length\n{GetChunkLog()}\n");
+                    _hasText = false;
+                }
 
                 // Text data not included, decode header
                 if (!_hasText)
                 {
-                    VLog.W($"Audio Text Chunk {_chunksDecoded} - Data Invalid\n\nFlags: {flags} ({GetBitString(_headerBytes, 0, FLAG_SIZE)})\nText Length: {_textLength} (Max {MAX_TEXT_LENGTH}) ({GetBitString(_textLength)})\nAudio Length: {_audioLength} (Max {MAX_AUDIO_LENGTH}) ({GetBitString(_audioLength)})\n\nRaw:\n{GetBitString(_headerBytes).Reverse()}\n");
                     samples.AddRange(_audioDecoder.Decode(_headerBytes, 0, HEADER_SIZE));
                 }
             }
@@ -176,6 +191,12 @@ namespace Meta.Voice.Audio.Decoding
                 _chunksDecoded++;
                 ResetChunk();
             }
+        }
+
+        // Return header info in log string
+        private string GetChunkLog()
+        {
+            return $"Chunk Index: {_chunksDecoded}\nFlags: {_flags} ({GetBitString(_headerBytes, 0, FLAG_SIZE)})\nText Length: {_textLength} (Max {MAX_TEXT_LENGTH}) ({GetBitString(_textLength)})\nAudio Length: {_audioLength} (Max {MAX_AUDIO_LENGTH}) ({GetBitString(_audioLength)})\n\nRaw:\n{GetBitString(_headerBytes).Reverse().ToArray()}";
         }
 
         private void DecodeTextChunk(byte[] chunkData, ref int start, ref int length)
