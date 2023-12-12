@@ -71,12 +71,24 @@ namespace Meta.Conduit
         internal static object GetTypedParameterValue(ParameterInfo formalParameter, object parameterValue)
         {
             var formalType = formalParameter.ParameterType;
+            return GetTypedParameterValue(formalType, parameterValue);
+        }
+        
+        /// <summary>
+        /// Returns a typed value that matches the parameter type if possible.
+        /// </summary>
+        /// <param name="parameterType">The data type we want to get the parameter mapped to.</param>
+        /// <param name="parameterValue">The raw value of the parameter.</param>
+        /// <returns>The value in the correct type if a conversion was possible. Null otherwise.</returns>
+        internal static object GetTypedParameterValue(Type parameterType, object parameterValue)
+        {
+            var formalType = parameterType;
             if (formalType.IsNullableType())
             {
                 formalType = Nullable.GetUnderlyingType(formalType);
                 if (formalType == null)
                 {
-                    VLog.E($"Got null underlying type for nullable parameter of type {formalParameter.ParameterType}");
+                    VLog.E($"Got null underlying type for nullable parameter of type {parameterType}");
                     return null;
                 }
             }
@@ -94,7 +106,7 @@ namespace Meta.Conduit
                 catch (Exception e)
                 {
                     VLog.E(
-                        $"Parameter Provider - Parameter value '{parameterValue}' could not be cast to enum\nEnum Type: {formalParameter.ParameterType.FullName}\n{e}");
+                        $"Parameter value '{parameterValue}' could not be cast to enum\nEnum Type: {formalType.FullName}\n{e}");
                     throw;
                 }
             }
@@ -107,7 +119,7 @@ namespace Meta.Conduit
                 catch (Exception e)
                 {
                     VLog.E(
-                        $"Parameter Provider - Nullable parameter value '{parameterValue}' could not be cast to {formalParameter.ParameterType.FullName}\n{e}");
+                        $"Nullable parameter value '{parameterValue}' could not be cast to {formalType.FullName}\n{e}");
                     return null;
                 }
             }
