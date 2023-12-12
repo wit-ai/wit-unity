@@ -9,6 +9,7 @@
 using System.Linq;
 using UnityEngine;
 using Meta.WitAi;
+using Meta.WitAi.TTS.UX;
 
 namespace Meta.Voice.Samples.TTSVoices
 {

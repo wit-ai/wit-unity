@@ -10,11 +10,11 @@ using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Utilities;
 
-namespace Meta.Voice.Samples.TTSVoices
+namespace Meta.WitAi.TTS.UX
 {
     /// <summary>
-    /// A demo script that provides access to a TTSSpeaker
-    /// and overrides all TTSSpeaker callback events.
+    /// A script that provides access to a TTSSpeaker and overrides all TTSSpeaker
+    /// callback events.
     /// </summary>
     public class TTSSpeakerObserver : MonoBehaviour
     {
@@ -24,7 +24,7 @@ namespace Meta.Voice.Samples.TTSVoices
         public TTSSpeaker Speaker => _speaker;
 
         /// <summary>
-        /// Obtains speaker if not set
+        /// Obtains speaker in children if not found
         /// </summary>
         protected virtual void Awake()
         {

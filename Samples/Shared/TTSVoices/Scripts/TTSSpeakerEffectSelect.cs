@@ -9,6 +9,7 @@
 using System.Text;
 using UnityEngine;
 using Meta.WitAi;
+using Meta.WitAi.TTS.UX;
 
 namespace Meta.Voice.Samples.TTSVoices
 {
@@ -26,8 +27,8 @@ namespace Meta.Voice.Samples.TTSVoices
 
         // Supported IDs
         private const string NONE_ID = "NONE";
-        private static readonly string[] CHARACTER_IDS = new [] {NONE_ID, "CHIPMUNK", "MONSTER", "ROBOT", "DAEMON"};
-        private static readonly string[] ENVIRONMENT_IDS = new [] {NONE_ID, "REVERB", "ROOM", "PHONE", "PA", "CATHEDRAL"};
+        private static readonly string[] CHARACTER_IDS = new [] {NONE_ID, "CHIPMUNK", "MONSTER", "DAEMON", "ROBOT", "ALIEN"};
+        private static readonly string[] ENVIRONMENT_IDS = new [] {NONE_ID, "REVERB", "ROOM", "CATHEDRAL", "RADIO", "PHONE", "PA", "HELMET"};
 
         protected override void OnEnable()
         {

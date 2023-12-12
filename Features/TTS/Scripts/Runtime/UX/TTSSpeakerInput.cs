@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Meta.WitAi.TTS.Utilities;
 
-namespace Meta.Voice.Samples.TTSVoices
+namespace Meta.WitAi.TTS.UX
 {
     public class TTSSpeakerInput : MonoBehaviour
     {

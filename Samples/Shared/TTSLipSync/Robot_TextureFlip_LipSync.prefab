@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8687239950874716805}
   - component: {fileID: 3513267561506601928}
+  - component: {fileID: 1505987942697342542}
   - component: {fileID: 5445742422506655039}
   m_Layer: 0
   m_Name: Robot_TextureFlip_LipSync
@@ -25,6 +26,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6014210938073694145}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
@@ -32,7 +34,6 @@ Transform:
   m_Children:
   - {fileID: 8007122341299788224}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &3513267561506601928
 MonoBehaviour:
@@ -49,7 +50,7 @@ MonoBehaviour:
   _speaker: {fileID: 0}
   Animator: {fileID: 836493036301162537}
   AnimatorSpeakKey: SPEAKING
---- !u!114 &5445742422506655039
+--- !u!114 &1505987942697342542
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -58,7 +59,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 6014210938073694145}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ba716010dc4d4f94598e4f0a74c32c88, type: 3}
+  m_Script: {fileID: 11500000, guid: b877e8b6d61e46aba75553ba5668f485, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _player: {fileID: 0}
@@ -87,7 +88,24 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  Material: {fileID: 2100000, guid: 50e850ca7abf6e7489becd31da622e6a, type: 2}
+  onVisemeLerp:
+    m_PersistentCalls:
+      m_Calls: []
+  onVisemeChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &5445742422506655039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6014210938073694145}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba716010dc4d4f94598e4f0a74c32c88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   VisemeTextures:
   - viseme: 0
     textures:
@@ -136,11 +154,13 @@ MonoBehaviour:
     textures:
     - {fileID: 2800000, guid: 2bac8918846c2f341a515254b70c4bd1, type: 3}
     - {fileID: 2800000, guid: a7e7832cbcaae89438f8019f52ddd4fc, type: 3}
+  visemeRenderer: {fileID: 1022138882204660472}
 --- !u!1001 &7536134223660973611
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 8687239950874716805}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 25e6fa8d93797b5408956303a37d70b4, type: 3}
@@ -188,7 +208,18 @@ PrefabInstance:
       value: TPOSE_v3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 25e6fa8d93797b5408956303a37d70b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 836493036301162537}
   m_SourcePrefab: {fileID: 100100000, guid: 25e6fa8d93797b5408956303a37d70b4, type: 3}
+--- !u!137 &1022138882204660472 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 7402483750096178387, guid: 25e6fa8d93797b5408956303a37d70b4, type: 3}
+  m_PrefabInstance: {fileID: 7536134223660973611}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &7229636347046445946 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 25e6fa8d93797b5408956303a37d70b4, type: 3}
