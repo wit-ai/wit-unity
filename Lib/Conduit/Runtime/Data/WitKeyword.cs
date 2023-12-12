@@ -19,10 +19,11 @@ namespace Meta.Conduit
 
         public readonly HashSet<string> synonyms;
 
+        [UnityEngine.Scripting.Preserve]
         public WitKeyword():this("", null)
         {
         }
-        
+
         public WitKeyword(string keyword, List<string> synonyms = null)
         {
             this.keyword = keyword;
@@ -42,7 +43,7 @@ namespace Meta.Conduit
                 }
             }
         }
-        
+
         public WitKeyword(WitEntityKeywordInfo witEntityKeywordInfo): this(witEntityKeywordInfo.keyword, witEntityKeywordInfo.synonyms)
         {
         }

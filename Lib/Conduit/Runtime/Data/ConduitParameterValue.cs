@@ -25,12 +25,14 @@ namespace Meta.Conduit
         /// </summary>
         public Type DataType;
 
+        [UnityEngine.Scripting.Preserve]
         public ConduitParameterValue(object value)
         {
             Value = value;
             DataType = value.GetType();
         }
 
+        [UnityEngine.Scripting.Preserve]
         public ConduitParameterValue(object value, Type dataType)
         {
             Value = value;
