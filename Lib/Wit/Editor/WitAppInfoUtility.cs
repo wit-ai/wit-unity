@@ -470,6 +470,7 @@ namespace Meta.WitAi
                 {
                     voiceList.AddRange(voices);
                 }
+                voiceList.Sort((voice1, voice2) => voice1.name.CompareTo(voice2.name));
             }
 
             // Set new info
