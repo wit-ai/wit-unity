@@ -7,6 +7,7 @@
  */
 
 using System;
+using UnityEngine.Scripting;
 
 namespace Meta.WitAi.TTS.Data
 {
@@ -14,5 +15,13 @@ namespace Meta.WitAi.TTS.Data
     /// An audio event with viseme data
     /// </summary>
     [Serializable]
-    public class TTSVisemeEvent : TTSEvent<Viseme> {}
+    public class TTSVisemeEvent : TTSEvent<Viseme>
+    {
+        [Preserve]
+        public static Viseme GetVisemeAot(string inViseme)
+        {
+            Enum.TryParse(inViseme, out Viseme result);
+            return result;
+        }
+    }
 }

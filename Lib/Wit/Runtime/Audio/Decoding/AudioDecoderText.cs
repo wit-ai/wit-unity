@@ -148,7 +148,7 @@ namespace Meta.Voice.Audio.Decoding
 
                 // Has text if flags are not empty and text length or audio length is more than 0
                 _hasText = true;
-                if (_flags != 0x1)
+                if (_flags == 0x0)
                 {
                     VLog.E(GetType().Name, $"Chunk Header Decode Failed: Invalid Flags\n{GetChunkLog()}\n");
                     _hasText = false;
