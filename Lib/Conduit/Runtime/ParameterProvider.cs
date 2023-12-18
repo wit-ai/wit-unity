@@ -236,21 +236,20 @@ namespace Meta.Conduit
         /// Provides the actual parameter value matching the supplied formal parameter.
         /// </summary>
         /// <param name="parameterName">The name of the parameter to extract.</param>
-        /// <param name="parameterType">The data type of the parameter. The value will be converted to this type if possible.</param>
         /// <param name="parameterMap">
         /// A map from actual parameter names to formal parameter names. Used when parameters have been resolved
         /// using type, to identify their mapped names.
         /// </param>
         /// <param name="relaxed">When true, will match by type when name matching fails.</param>
         /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
-        public object GetParameterValue(string parameterName, Type parameterType, Dictionary<string, string> parameterMap, bool relaxed)
+        public T GetParameterValue<T>(string parameterName, Dictionary<string, string> parameterMap, bool relaxed)
         {
             if (!ActualParameters.TryGetValue(parameterName, out var parameterValue) || parameterValue == null)
             {
-                return null;
+                return default;
             }
             
-            return ConduitUtilities.GetTypedParameterValue(parameterType, parameterValue);
+            return (T)ConduitUtilities.GetTypedParameterValue(typeof(T), parameterValue);
         }
 
 
