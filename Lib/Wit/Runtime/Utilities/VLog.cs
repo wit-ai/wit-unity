@@ -9,6 +9,9 @@
 using System;
 using System.Text;
 using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace Meta.WitAi
 {
@@ -102,16 +105,16 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void W(object log) => Log(VLogLevel.Warning, null, log);
-        public static void W(string logCategory, object log) => Log(VLogLevel.Warning, logCategory, log);
+        public static void W(object log, Exception e = null) => Log(VLogLevel.Warning, null, log, e);
+        public static void W(string logCategory, object log, Exception e = null) => Log(VLogLevel.Warning, logCategory, log, e);
 
         /// <summary>
         /// Performs a Debug.LogError with custom categorization and using the global log level
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void E(object log) => Log(VLogLevel.Error, null, log);
-        public static void E(string logCategory, object log) => Log(VLogLevel.Error, logCategory, log);
+        public static void E(object log, Exception e = null) => Log(VLogLevel.Error, null, log, e);
+        public static void E(string logCategory, object log, Exception e = null) => Log(VLogLevel.Error, logCategory, log, e);
 
         /// <summary>
         /// Filters out unwanted logs, appends category information
@@ -120,7 +123,7 @@ namespace Meta.WitAi
         /// <param name="logType"></param>
         /// <param name="log"></param>
         /// <param name="category"></param>
-        public static void Log(VLogLevel logType, string logCategory, object log)
+        public static void Log(VLogLevel logType, string logCategory, object log, Exception exception = null)
         {
             #if UNITY_EDITOR
             // Skip logs with higher log type then global log level
@@ -174,19 +177,55 @@ namespace Meta.WitAi
             // Final log append
             OnPreLog?.Invoke(result, logCategory, logType);
 
+            object message = result;
+            if (null != exception)
+            {
+                #if UNITY_EDITOR
+                message = string.Format("{0}\n<color=\"#ff6666\"><b>{1}:</b> {2}</color>\n=== STACK TRACE ===\n{3}\n=====", result, exception.GetType().Name, exception.Message, FormatStackTrace(exception.StackTrace));
+                #endif
+            }
+
             // Log
             switch (logType)
             {
                 case VLogLevel.Error:
-                    UnityEngine.Debug.LogError(result);
+                    UnityEngine.Debug.LogError(message);
                     break;
                 case VLogLevel.Warning:
-                    UnityEngine.Debug.LogWarning(result);
+                    UnityEngine.Debug.LogWarning(message);
                     break;
                 default:
-                    UnityEngine.Debug.Log(result);
+                    UnityEngine.Debug.Log(message);
                     break;
             }
+        }
+
+        public static string FormatStackTrace(string stackTrace)
+        {
+            // Get the project's working directory
+            string workingDirectory = Directory.GetCurrentDirectory();
+            // Use a regular expression to match lines with a file path and line number
+            var regex = new Regex(@"at (.+) in (.*):(\d+)");
+            // Use the MatchEvaluator delegate to format the matched lines
+            MatchEvaluator evaluator = match =>
+            {
+                string method = match.Groups[1].Value;
+                string filePath = match.Groups[2].Value.Replace(workingDirectory, "");
+                string lineNumber = match.Groups[3].Value;
+                // Only format the line as a clickable link if the file exists
+                if (File.Exists(filePath))
+                {
+                    string fileName = Path.GetFileName(filePath);
+                    return $"at {method} in <a href=\"{filePath}\" line=\"{lineNumber}\">{fileName}:<b>{lineNumber}</b></a>";
+                }
+                else
+                {
+                    return match.Value;
+                }
+            };
+            // Replace the matched lines in the stack trace
+            string formattedStackTrace = regex.Replace(stackTrace, evaluator);
+            return formattedStackTrace;
         }
 
         /// <summary>

@@ -70,7 +70,7 @@ namespace Meta.WitAi.Json
             }
             catch (Exception e)
             {
-                VLog.W($"Parse Failed\n{e}\n\n{jsonString}");
+                VLog.W($"Parse Failed\n\n{jsonString}", e);
                 return null;
             }
         }
@@ -188,7 +188,7 @@ namespace Meta.WitAi.Json
             }
             catch (Exception e)
             {
-                VLog.E($"Deserialize Failed\nTo: {typeof(IN_TYPE)}\n{e}");
+                VLog.E($"Deserialize Failed\nTo: {typeof(IN_TYPE)}", e);
                 return instance;
             }
         }
@@ -502,7 +502,7 @@ namespace Meta.WitAi.Json
                 }
                 catch (Exception e)
                 {
-                    VLog.E($"Serialize Object Failed\n{e}");
+                    VLog.E($"Serialize Object Failed", e);
                 }
             }
 
@@ -553,7 +553,7 @@ namespace Meta.WitAi.Json
             }
             catch (Exception e)
             {
-                VLog.E($"Serialize Token Failed\n{e}");
+                VLog.E($"Serialize Token Failed for {inObject.GetType().Name}\n{inObject}", e);
             }
             return null;
         }
@@ -727,11 +727,17 @@ namespace Meta.WitAi.Json
                 // Iterate all serialized names
                 foreach (var varName in varInfo.GetSerializeNames())
                 {
-                    // Get default object
-                    object newObj = EnsureExists(varInfo.GetVariableType(), varInfo.GetValue(inObject));
-
-                    // Use default property name
-                    result.Add(varName, SerializeToken(varInfo.GetVariableType(), newObj, log, customConverters));
+                    try
+                    {
+                        // Get default object
+                        object newObj = EnsureExists(varInfo.GetVariableType(), varInfo.GetValue(inObject));
+                        // Use default property name
+                        result.Add(varName, SerializeToken(varInfo.GetVariableType(), newObj, log, customConverters));
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException($"Cannot encode '{inType.Name}.{varName}': {e.Message}", e);
+                    }
                 }
             }
 
@@ -749,11 +755,14 @@ namespace Meta.WitAi.Json
             List<IJsonVariableInfo> results = new List<IJsonVariableInfo>();
             foreach (var field in forType.GetFields(BIND_FLAGS))
             {
-                results.Add(new JsonFieldInfo(field));
+                var info = new JsonFieldInfo(field);
+                if(info.GetShouldSerialize() || info.GetShouldDeserialize()) results.Add(info);
             }
+            
             foreach (var property in forType.GetProperties(BIND_FLAGS))
             {
-                results.Add(new JsonPropertyInfo(property));
+                var info = new JsonPropertyInfo(property);
+                if(info.GetShouldSerialize() || info.GetShouldDeserialize()) results.Add(info);
             }
             return results;
         }
