@@ -74,8 +74,8 @@ namespace Meta.Conduit
         /// </param>
         /// <param name="relaxed">When true, will match by type when name matching fails.</param>
         /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
-        object GetParameterValue(ParameterInfo formalParameter, Dictionary<string, string> parameterMap,
-            bool relaxed);
+        object GetParameterValue(ParameterInfo formalParameter, Dictionary<string, string> parameterMap = null,
+            bool relaxed = false);
 
         /// <summary>
         /// Provides the actual parameter value matching the supplied parameter.
@@ -87,7 +87,7 @@ namespace Meta.Conduit
         /// </param>
         /// <param name="relaxed">When true, will match by type when name matching fails.</param>
         /// <returns>The actual parameter value matching the formal parameter or null if an error occurs.</returns>
-        public T GetParameterValue<T>(string parameterName, Dictionary<string, string> parameterMap, bool relaxed);
+        public T GetParameterValue<T>(string parameterName, Dictionary<string, string> parameterMap = null, bool relaxed = false);
 
 
         /// <summary>
