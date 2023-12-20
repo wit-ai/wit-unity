@@ -82,6 +82,11 @@ namespace Meta.Conduit
         /// <returns>The value in the correct type if a conversion was possible. Null otherwise.</returns>
         internal static object GetTypedParameterValue(Type parameterType, object parameterValue)
         {
+            if (parameterValue == null)
+            {
+                return null;
+            }
+            
             var formalType = parameterType;
             if (formalType.IsNullableType())
             {
