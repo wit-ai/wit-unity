@@ -16,7 +16,6 @@ namespace Meta.WitAi.Requests
     /// A download handler for UnityWebRequest that decodes text data
     /// as it is received and returns it via a partial response delegate.
     /// </summary>
-    [Preserve]
     public class TextStreamHandler : DownloadHandlerScript, IRequestDownloadHandler
     {
         /// <summary>
@@ -69,6 +68,7 @@ namespace Meta.WitAi.Requests
         public bool IsComplete { get; private set; } = false;
 
         // Generate with a specified delimiter
+        [Preserve]
         public TextStreamHandler(TextStreamResponseDelegate partialResponseDelegate, string partialDelimiter = DEFAULT_PARTIAL_DELIMITER, string finalDelimiter = DEFAULT_FINAL_DELIMITER)
         {
             _partialResponseDelegate = partialResponseDelegate;
@@ -218,11 +218,11 @@ namespace Meta.WitAi.Requests
         #endregion
 
         #region TESTS
-#if UNITY_EDITOR
-        // Tests
-        public bool ReceiveData(byte[] receiveData) => ReceiveData(receiveData, receiveData.Length);
-        public void Complete() => CompleteContent();
-#endif
+        // For internal testing, allows inserting of data for ReceiveData method
+        internal bool ReceiveData(byte[] receiveData) => ReceiveData(receiveData, receiveData.Length);
+
+        // For internal testing, allows manual completion
+        internal void Complete() => CompleteContent();
         #endregion TESTS
     }
 }
