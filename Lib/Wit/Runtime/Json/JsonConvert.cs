@@ -536,6 +536,11 @@ namespace Meta.WitAi.Json
         /// <returns>A json WitResponseNode corresponding to the inObject, or null in case of errors</returns>
         public static WitResponseNode SerializeToken<TFromType>(TFromType inObject, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
+            // Return object if already serialized
+            if (inObject is WitResponseNode responseNode)
+            {
+                return responseNode;
+            }
             // Use default if no customs are added
             if (customConverters == null)
             {
