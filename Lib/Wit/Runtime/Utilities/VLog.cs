@@ -7,10 +7,10 @@
  */
 
 using System;
-using System.Text;
-using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 using UnityEngine;
 
 namespace Meta.WitAi
@@ -73,11 +73,7 @@ namespace Meta.WitAi
         /// <summary>
         /// Hides all errors from the console
         /// </summary>
-        #if UNITY_EDITOR
-        public static bool SuppressLogs { get; set; } = false;
-        #else
-        public static bool SuppressLogs { get; set; } = true;
-        #endif
+        public static bool SuppressLogs { get; set; } = !Application.isEditor && !UnityEngine.Debug.isDebugBuild;
 
         /// <summary>
         /// Event for appending custom data to a log before logging to console
