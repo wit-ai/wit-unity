@@ -8,6 +8,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.WitAi.Json;
+using UnityEngine.Scripting;
 
 namespace Meta.Conduit
 {
@@ -19,32 +21,37 @@ namespace Meta.Conduit
         /// <summary>
         /// Called via JSON reflection, need preserver or it will be stripped on compile
         /// </summary>
-        [UnityEngine.Scripting.Preserve]
+        [Preserve]
         public ManifestErrorHandler() { }
 
         /// <summary>
         /// This is the internal fully qualified name of the method in the codebase.
         /// </summary>
+        [Preserve]
         public string ID { get; set; }
 
         /// <summary>
         /// The fully qualified name of the assembly containing the code for the action.
         /// </summary>
+        [Preserve]
         public string Assembly { get; set; }
 
         /// <summary>
         /// The name of the action as exposed to the backend.
         /// </summary>
+        [Preserve]
         public string Name { get; set; }
-        
+
         /// <summary>
         /// The parameters used by the action.
         /// </summary>
+        [Preserve]
         public List<ManifestParameter> Parameters { get; set; } = new List<ManifestParameter>();
 
         /// <summary>
         /// Returns the fully qualified name of the declaring type of the action.
         /// </summary>
+        [JsonIgnore]
         public string DeclaringTypeName => ID.Substring(0, ID.LastIndexOf('.'));
 
         /// <summary>

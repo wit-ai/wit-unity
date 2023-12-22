@@ -7,6 +7,7 @@
  */
 
 using Meta.WitAi.Json;
+using UnityEngine.Scripting;
 
 namespace Meta.WitAi.Data.Intents
 {
@@ -14,6 +15,7 @@ namespace Meta.WitAi.Data.Intents
     {
         public WitResponseNode responseNode;
 
+        [Preserve]
         public string id;
         public string name;
         public float confidence;

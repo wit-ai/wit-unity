@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using UnityEngine.Scripting;
 
 namespace Meta.Conduit
 {
@@ -24,39 +25,45 @@ namespace Meta.Conduit
         /// <summary>
         /// Called via JSON reflection, need preserver or it will be stripped on compile
         /// </summary>
-        [UnityEngine.Scripting.Preserve]
+        [Preserve]
         public Manifest() { }
 
         /// <summary>
         /// The App ID.
         /// </summary>
+        [Preserve]
         public string ID { get; set; }
 
         /// <summary>
         /// The version of the Manifest format.
         /// </summary>
+        [Preserve]
         public string Version { get; set; }
 
         /// <summary>
         /// A human friendly name for the application/domain.
         /// </summary>
+        [Preserve]
         public string Domain { get; set; }
 
         /// <summary>
         /// List of relevant entities.
         /// </summary>
+        [Preserve]
         public List<ManifestEntity> Entities { get; set; } = new List<ManifestEntity>();
 
         /// <summary>
         /// List of relevant actions (methods).
         /// </summary>
+        [Preserve]
         public List<ManifestAction> Actions { get; set; } = new List<ManifestAction>();
-
 
         /// <summary>
         /// List of error handlers (methods).
         /// </summary>
+        [Preserve]
         public List<ManifestErrorHandler> ErrorHandlers = new List<ManifestErrorHandler>();
+
         /// <summary>
         /// Maps action IDs (intents) to CLR methods. Each entry in the value list is a different overload of the method.
         /// The list is sorted with the most parameters listed first, so we get maximal matches during dispatching by
@@ -77,6 +84,10 @@ namespace Meta.Conduit
         /// </summary>
         [JsonIgnore]
         public static List<string> WitResponseMatcherIntents = new List<string>();
+
+        /// <summary>
+        /// Resolves all entity types using reflection
+        /// </summary>
         public bool ResolveEntities()
         {
             bool allResolved = true;
@@ -88,7 +99,7 @@ namespace Meta.Conduit
                 var type = Type.GetType(qualifiedTypeName);
                 if (type == null)
                 {
-                    VLog.E($"Failed to resolve type: {qualifiedTypeName}");
+                    VLog.E(GetType().Name, $"Failed to resolve type: {qualifiedTypeName}");
                     allResolved = false;
                 }
                 CustomEntityTypes[entity.Name] = type;
@@ -99,11 +110,16 @@ namespace Meta.Conduit
 
         public Tuple<MethodInfo, Type> GetMethodInfo(IManifestMethod action)
         {
-            var actionId = action?.ID;
-            var lastPeriod = actionId.LastIndexOf('.');
+            if (action == null)
+            {
+                VLog.E(GetType().Name, $"Cannot get MethodInfo without provided action");
+                return null;
+            }
+            var actionId = action.ID;
+            var lastPeriod = string.IsNullOrEmpty(actionId) ? -1 : actionId.LastIndexOf('.');
             if (lastPeriod <= 0)
             {
-                VLog.E($"Invalid Action ID: {actionId}");
+                VLog.E(GetType().Name, $"Invalid Action ID: {actionId}");
                 return null;
             }
 
@@ -115,7 +131,7 @@ namespace Meta.Conduit
             var targetType = Type.GetType(qualifiedTypeName);
             if (targetType == null)
             {
-                VLog.E($"Failed to resolve type: {qualifiedTypeName}");
+                VLog.E(GetType().Name, $"Failed to resolve type: {qualifiedTypeName}");
                 return  null;
             }
 
@@ -128,14 +144,14 @@ namespace Meta.Conduit
                 types[i] = Type.GetType(fullTypeName);
                 if (types[i] == null)
                 {
-                    VLog.E($"Failed to resolve type: {fullTypeName}");
+                    VLog.E(GetType().Name, $"Failed to resolve type: {fullTypeName}");
                 }
             }
 
             var targetMethod = GetBestMethodMatch(targetType, method, types);
             if (targetMethod == null)
             {
-                VLog.E($"Failed to resolve method {typeName}.{method}.");
+                VLog.E(GetType().Name, $"Failed to resolve method {typeName}.{method}.");
                 return  null;
             }
 
@@ -157,7 +173,7 @@ namespace Meta.Conduit
                 var targetType = methodInfo.Item2;
                 if (targetMethod == null)
                 {
-                    VLog.E($"Invalid Action ID: {action.ID}");
+                    VLog.E(GetType().Name, $"Invalid Action ID: {action.ID}");
                     resolvedAll = false;
                     continue;
                 }
@@ -165,7 +181,7 @@ namespace Meta.Conduit
                 var attributes = targetMethod.GetCustomAttributes(typeof(ConduitActionAttribute), false);
                 if (attributes.Length == 0)
                 {
-                    VLog.E($"{targetMethod} - Did not have expected Conduit attribute");
+                    VLog.E(GetType().Name, $"{targetMethod} - Did not have expected Conduit attribute");
                     resolvedAll = false;
                     continue;
                 }
@@ -214,7 +230,7 @@ namespace Meta.Conduit
                 var targetType = methodInfo.Item2;
                 if (targetMethod == null)
                 {
-                    VLog.E($"Invalid Action ID: {action.ID}");
+                    VLog.E(GetType().Name, $"Invalid Action ID: {action.ID}");
                     resolvedAll = false;
                     continue;
                 }
@@ -222,14 +238,14 @@ namespace Meta.Conduit
                 var attributes = targetMethod.GetCustomAttributes(typeof(HandleEntityResolutionFailure), false);
                 if (attributes.Length == 0)
                 {
-                    VLog.E($"{targetMethod} - Did not have expected Conduit attribute");
+                    VLog.E(GetType().Name, $"{targetMethod} - Did not have expected Conduit attribute");
                     resolvedAll = false;
                     continue;
                 }
                 var actionAttribute = attributes.First() as HandleEntityResolutionFailure;
                 if (actionAttribute == null)
                 {
-                    VLog.E("Found null attribute when one was expected");
+                    VLog.E(GetType().Name, "Found null attribute when one was expected");
                     continue;
                 }
 
@@ -286,7 +302,7 @@ namespace Meta.Conduit
         {
             if (string.IsNullOrEmpty(actionId))
             {
-                VLog.E("Null or empty action ID supplied");
+                VLog.E(GetType().Name, "Null or empty action ID supplied");
                 return false;
             }
 

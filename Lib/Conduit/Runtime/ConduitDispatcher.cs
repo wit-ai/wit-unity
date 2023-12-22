@@ -37,6 +37,7 @@ namespace Meta.Conduit
         /// </summary>
         private readonly IInstanceResolver _instanceResolver;
 
+        private bool _isInitializing = false;
         private bool _isInitialized = false;
 
         /// <summary>
@@ -62,18 +63,19 @@ namespace Meta.Conduit
         /// <param name="manifestFilePath">The path to the manifest file.</param>
         public async Task Initialize(string manifestFilePath)
         {
-            if (Manifest != null)
+            if (Manifest != null || _isInitializing)
             {
                 return;
             }
+            _isInitializing = true;
 
             Manifest = await _manifestLoader.LoadManifestAsync(manifestFilePath);
-
             if (Manifest == null)
             {
+                _isInitializing = false;
                 return;
             }
-            
+
             // Map fully qualified role names to internal parameters.
             foreach (var action in Manifest.Actions)
             {
@@ -85,7 +87,8 @@ namespace Meta.Conduit
                     }
                 }
             }
-            
+
+            _isInitializing = false;
             _isInitialized = true;
         }
 
@@ -169,7 +172,7 @@ namespace Meta.Conduit
                 VLog.E($"Attempting to invoke error {actionId} ({exception}) with no initialized manifest.");
                 return false;
             }
-            
+
             var contexts = Manifest.GetErrorHandlerContexts();
             foreach (var context in contexts)
             {

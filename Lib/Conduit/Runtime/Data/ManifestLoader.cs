@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Meta.WitAi;
@@ -27,7 +28,7 @@ namespace Meta.Conduit
             var jsonFile = Resources.Load<TextAsset>(manifestPath);
             if (jsonFile == null)
             {
-                VLog.E($"Conduit Error - No Manifest found at Resources/{manifestLocalPath}");
+                VLog.E(GetType().Name, $"No Manifest found at Resources/{manifestLocalPath}");
                 return null;
             }
             return LoadManifestFromJson(jsonFile.text);
@@ -36,14 +37,14 @@ namespace Meta.Conduit
         /// <inheritdoc/>
         public Manifest LoadManifestFromJson(string manifestText)
         {
-            var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText, null, true);
+            var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText);
             if (manifest.ResolveActions())
             {
-                VLog.I($"Successfully Loaded Conduit manifest");
+                VLog.I(GetType().Name, $"Successfully Loaded Conduit manifest");
             }
             else
             {
-                VLog.E($"Fail to resolve actions from Conduit manifest");
+                VLog.E(GetType().Name, $"Fail to resolve actions from Conduit manifest");
             }
             return manifest;
         }
@@ -68,7 +69,7 @@ namespace Meta.Conduit
             }
 
             // Failed
-            VLog.E($"Conduit Error - No Manifest found at Resources/{manifestLocalPath}");
+            VLog.E(GetType().Name, $"No Manifest found at Resources/{manifestLocalPath}");
             return null;
         }
 
@@ -76,23 +77,30 @@ namespace Meta.Conduit
         public async Task<Manifest> LoadManifestFromJsonAsync(string manifestText)
         {
             // Wait for manifest to deserialize
-            var manifest = await JsonConvert.DeserializeObjectAsync<Manifest>(manifestText, null, true);
+            var manifest = await JsonConvert.DeserializeObjectAsync<Manifest>(manifestText);
             if (manifest == null)
             {
-                VLog.E($"Conduit Error - Cannot decode Conduit manifest\n\n{manifestText}");
+                VLog.E(GetType().Name, $"Cannot decode Conduit manifest\n\n{manifestText}");
                 return null;
             }
 
             // Resolve actions on background thread
             await Task.Run(() =>
             {
-                if (manifest.ResolveActions())
+                try
                 {
-                    VLog.I($"Successfully Loaded Conduit manifest");
+                    if (manifest.ResolveActions())
+                    {
+                        VLog.I(GetType().Name, $"Successfully Loaded Conduit manifest");
+                    }
+                    else
+                    {
+                        VLog.E(GetType().Name, $"Fail to decode actions from Conduit manifest");
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    VLog.E($"Fail to decode actions from Conduit manifest");
+                    VLog.E(GetType().Name, $"Fail to decode actions from Conduit manifest\n{e}");
                 }
             });
 

@@ -6,13 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Meta.Conduit
 {
-    using System;
-
     /// <summary>
     /// Marks the method as a callback for voice commands. The method will be mapped to an intent and invoked whenever
     /// that intent is resolved by the backend.

@@ -9,6 +9,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Meta.WitAi.Data.Info;
+using UnityEngine.Scripting;
 
 namespace Meta.Conduit
 {
@@ -20,37 +21,43 @@ namespace Meta.Conduit
         /// <summary>
         /// Called via JSON reflection, need preserver or it will be stripped on compile
         /// </summary>
-        [UnityEngine.Scripting.Preserve]
+        [Preserve]
         public ManifestEntity() { }
 
         /// <summary>
         /// The is the internal name of the entity/parameter in the codebase.
         /// </summary>
+        [Preserve]
         public string ID { get; set; }
 
         /// <summary>
         /// The namespace that contains the entity/enum in the code.
         /// </summary>
+        [Preserve]
         public string Namespace { get; set; }
 
         /// <summary>
         /// The data type for the entity on the backend. For example, wit$number.
         /// </summary>
+        [Preserve]
         public string Type { get; set; }
 
         /// <summary>
         /// This is the name of the entity as understood by the backend.
         /// </summary>
+        [Preserve]
         public string Name { get; set; }
 
         /// <summary>
         /// List of values this entity could assume. For an enum, these would be the enum values.
         /// </summary>
+        [Preserve]
         public List<WitKeyword> Values { get; set; } = new List<WitKeyword>();
 
         /// <summary>
         /// The fully qualified name of the assembly containing the code for the entity.
         /// </summary>
+        [Preserve]
         public string Assembly { get; set; }
 
         /// <summary>
@@ -64,7 +71,7 @@ namespace Meta.Conduit
             {
                 keywords[i] = Values[i].GetAsInfo();
             }
-            
+
             return new WitEntityInfo()
             {
                 name = Name,

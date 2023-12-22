@@ -8,6 +8,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.WitAi.Json;
+using UnityEngine.Scripting;
 
 namespace Meta.Conduit
 {
@@ -19,12 +21,13 @@ namespace Meta.Conduit
         /// <summary>
         /// Called via JSON reflection, need preserver or it will be stripped on compile
         /// </summary>
-        [UnityEngine.Scripting.Preserve]
+        [Preserve]
         public ManifestParameter() { }
 
         /// <summary>
         /// This is the parameter name as exposed to the backend (slot or role)
         /// </summary>
+        [Preserve]
         public string Name
         {
             get => _name;
@@ -35,16 +38,19 @@ namespace Meta.Conduit
         /// <summary>
         /// This is the technical name of the parameter in the actual method in codebase.
         /// </summary>
+        [Preserve]
         public string InternalName { get; set; }
 
         /// <summary>
         /// A fully qualified name exposed to the backend for uniqueness.
         /// </summary>
+        [Preserve]
         public string QualifiedName { get; set; }
 
         /// <summary>
         /// This is the data type of the parameter, exposed as an entity type.
         /// </summary>
+        [JsonIgnore]
         public string EntityType
         {
             get
@@ -71,21 +77,25 @@ namespace Meta.Conduit
         /// <summary>
         /// The assembly containing the data type.
         /// </summary>
+        [Preserve]
         public string TypeAssembly { get; set; }
 
         /// <summary>
         /// The fully qualified name of the parameter data type.
         /// </summary>
+        [Preserve]
         public string QualifiedTypeName { get; set; }
 
         /// <summary>
         /// Additional names by which the backend can refer to this parameter.
         /// </summary>
+        [Preserve]
         public List<string> Aliases { get; set; }
-        
+
         /// <summary>
         /// Example values this parameter can accept.
         /// </summary>
+        [Preserve]
         public List<string> Examples { get; set; }
 
         public override bool Equals(object obj)
