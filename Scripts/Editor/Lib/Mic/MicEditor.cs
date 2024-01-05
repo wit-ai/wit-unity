@@ -22,7 +22,7 @@ namespace Meta.WitAi.Lib
             int index = EditorGUILayout.Popup("Input", mic.CurrentDeviceIndex, mic.Devices.ToArray());
             if (index != mic.CurrentDeviceIndex)
             {
-                mic.ChangeDevice(index);
+                mic.ChangeMicDevice(index);
             }
         }
     }

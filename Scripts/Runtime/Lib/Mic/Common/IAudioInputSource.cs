@@ -47,7 +47,7 @@ namespace Meta.WitAi.Interfaces
         /// Stops recording audio.
         /// </summary>
         void StopRecording();
-        
+
         /// <summary>
         /// Returns true if the audio input source is currently recording.
         /// </summary>
@@ -59,15 +59,5 @@ namespace Meta.WitAi.Interfaces
         /// NOTE: Default values for AudioEncoding are server optimized to reduce latency.
         /// </summary>
         AudioEncoding AudioEncoding { get; }
-
-        /// <summary>
-        /// Return true if input is available.
-        /// </summary>
-        bool IsInputAvailable { get; }
-
-        /// <summary>
-        /// Checks for input
-        /// </summary>
-        void CheckForInput();
     }
 }

@@ -25,127 +25,184 @@
 #define EDITOR_PERMISSION_POPUP
 #endif
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+// Disables microphones
+#define DISABLE_MICROPHONES
+#endif
+
 using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using Meta.WitAi.Data;
-using Meta.WitAi.Interfaces;
+using Meta.Voice;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Lib
 {
     /// <summary>
-    /// The various Mic states possible
-    /// </summary>
-    public enum MicState
-    {
-        Off,
-        Enabling,
-        On,
-        Disabling
-    }
-
-    /// <summary>
     /// A simple mic playback class
     /// </summary>
-    public class Mic : MonoBehaviour, IAudioInputSource
+    public class Mic : BaseAudioClipInput
     {
-        // ================================================
-
-        #region MEMBERS
-        // ================================================
         /// <summary>
-        /// The current state of Mic playback
+        /// The audio clip obtained from Microphone.Start
         /// </summary>
-        public MicState State { get; private set; }
-        private Coroutine _micEnabler;
+        public override AudioClip Clip => _audioClip;
+        private AudioClip _audioClip;
 
         /// <summary>
-        /// Whether the microphone is running
+        /// The current clip position of the
         /// </summary>
-        public bool IsRecording { get; private set; }
+        public override int ClipPosition => MicrophoneGetPosition(CurrentDeviceName);
 
         /// <summary>
-        /// Settings used to encode audio. Defaults to optimal server settings
+        /// Always allow initial activation
         /// </summary>
-        public AudioEncoding AudioEncoding { get; } = new AudioEncoding();
+        public override bool CanActivateAudio => true;
 
         /// <summary>
-        /// Last populated audio sample
+        /// Searches for mics for this long following an activation request.
         /// </summary>
-        public float[] Sample { get; private set; }
-
-        /// <summary>
-        /// Sample duration/length in milliseconds
-        /// </summary>
-        public int SampleDurationMS { get; private set; }
-
-        /// <summary>
-        /// Stop trying to start mic after this duration in seconds
-        /// </summary>
-        public float StartMicTimeout = 5f;
+        [SerializeField] [Tooltip("Searches for mics for this long following an activation request.")]
+        public float MicStartTimeout = 5f;
         // Seconds between mic device check
         private const float MIC_CHECK = 0.5f;
 
         /// <summary>
-        /// Check if input is available & start if possible
+        /// Total amount of seconds included within the mic audio clip buffer
         /// </summary>
-        public bool IsInputAvailable
+        [SerializeField] [Tooltip("Total amount of seconds included within the mic audio clip buffer")]
+        public int MicBufferLength = 2;
+
+        /// <summary>
+        /// Sample rate for mic audio capture in samples per second.
+        /// </summary>
+        [SerializeField] [Tooltip("Sample rate for mic audio capture in samples per second.")]
+        [FormerlySerializedAs("_audioClipSampleRate")]
+        private int _micSampleRate = WitConstants.ENDPOINT_SPEECH_SAMPLE_RATE;
+
+        /// <summary>
+        /// Getter for audio mic sample audio capture in samples per second
+        /// </summary>
+        public override int AudioSampleRate => _micSampleRate;
+
+        /// <summary>
+        /// Sets the new audio sample rate if possible
+        /// </summary>
+        /// <param name="newSampleRate">New sample rate</param>
+        public void SetAudioSampleRate(int newSampleRate)
         {
-            get
+            // Ignore if not possible
+            if (AudioState != VoiceAudioInputState.Off)
             {
-                // Has not begun
-                if (!AudioClip)
+                VLog.E(GetType().Name, $"Cannot set audio sample rate while Mic is {AudioState}");
+                return;
+            }
+
+            // Apply sample rate
+            _micSampleRate = newSampleRate;
+        }
+
+        #region ACTIVATION
+        /// <summary>
+        /// Wait for devices to exist & then start mic
+        /// </summary>
+        protected override IEnumerator ActivateAudio()
+        {
+            // Attempt to wait for a mic selection
+            DateTime now = DateTime.UtcNow;
+            DateTime start = now;
+            DateTime lastRefresh = DateTime.MinValue;
+            while (string.IsNullOrEmpty(CurrentDeviceName) && (now - start).TotalSeconds < MicStartTimeout)
+            {
+                // Perform a refresh
+                if ((now - lastRefresh).TotalSeconds > MIC_CHECK)
                 {
-                    // Try begin
-                    SafeStartMicrophone();
+                    // Refresh now
+                    lastRefresh = now;
+                    RefreshMicDevices();
+
+                    // Use default if not provided
+                    if (_devices.Count > 0 && CurrentDeviceIndex < 0)
+                    {
+                        CurrentDeviceIndex = 0;
+                    }
                 }
-                // True if audio clip exists
-                return AudioClip;
+
+                // Still invalid, wait
+                if (string.IsNullOrEmpty(CurrentDeviceName))
+                {
+                    yield return null;
+                    now = DateTime.UtcNow;
+                }
+            }
+
+            // Still invalid, fail
+            if (string.IsNullOrEmpty(CurrentDeviceName))
+            {
+                VLog.W(GetType().Name, $"No mics found after {MicStartTimeout} seconds");
+                yield break;
+            }
+
+            // If valid, start microphone
+            StartMicrophone();
+        }
+        #endregion ACTIVATION
+
+        #region MICROPHONE
+        // Start microphone with desired device name
+        private void StartMicrophone()
+        {
+            // Cannot start with invalid mic name
+            string micName = CurrentDeviceName;
+            if (string.IsNullOrEmpty(micName))
+            {
+                return;
+            }
+
+            // Ensure 1 second or longer
+            MicBufferLength = Mathf.Max(1, MicBufferLength);
+
+            // Start microphone
+            VLog.I(GetType().Name, $"Start Microphone '{micName}'");
+            _audioClip = MicrophoneStart(micName, true, MicBufferLength, AudioSampleRate);
+
+            // Failed to activate
+            if (_audioClip == null)
+            {
+                VLog.W(GetType().Name, $"Microphone.Start() did not return an AudioClip\nMic Name: {micName}");
             }
         }
 
-        /// <summary>
-        /// Safely starts mic if possible
-        /// </summary>
-        public void CheckForInput() => SafeStartMicrophone();
-
-        /// <summary>
-        /// The length of the sample float array
-        /// </summary>
-        public int SampleLength
+        // Handle microphone stop
+        private void StopMicrophone()
         {
-            get { return AudioEncoding.samplerate * SampleDurationMS / 1000; }
-        }
-
-        /// <summary>
-        /// The AudioClip currently being streamed in the Mic
-        /// </summary>
-        public AudioClip AudioClip { get; private set; }
-
-        [SerializeField] [Tooltip("Sample rate for mic audio to be captured at, it will be resampled using AudioEncoding.samplerate prior to transmission")]
-        private int _audioClipSampleRate = 16000;
-        public int AudioClipSampleRate
-        {
-            get => _audioClipSampleRate;
-            set
+            // Cannot stop with invalid mic name
+            string micName = CurrentDeviceName;
+            if (string.IsNullOrEmpty(micName))
             {
-                if (IsRecording)
-                {
-                    Debug.LogError($"Mic - Cannot set audio sample rate once already recording\nRecording Rate: {_audioClipSampleRate}\nDesired Rate: {value}");
-                }
-                else
-                {
-                    _audioClipSampleRate = value;
-                }
+                return;
+            }
+            // Ignore if not recording
+            if (!MicrophoneIsRecording(micName))
+            {
+                return;
+            }
+
+            // Stop microphone
+            VLog.I(GetType().Name, $"Stop Microphone '{micName}'");
+            MicrophoneEnd(micName);
+
+            // Destroy clip
+            if (_audioClip != null)
+            {
+                DestroyImmediate(_audioClip);
+                _audioClip = null;
             }
         }
+        #endregion MICROPHONE
 
-        // Constants
-        private const bool MIC_CLIP_LOOP = true;
-        private const int MIC_CLIP_CHANNELS = 1;
-        private const int MS_TO_SECONDS = 1000;
-
+        #region DEVICES
         /// <summary>
         /// List of all the available Mic devices
         /// </summary>
@@ -153,14 +210,14 @@ namespace Meta.WitAi.Lib
         {
             get
             {
-                if (null == _devices)
+                if (_devices == null || _devices.Count == 0)
                 {
                     RefreshMicDevices();
                 }
                 return _devices;
             }
         }
-        private List<string> _devices;
+        private List<string> _devices = new List<string>();
 
         /// <summary>
         /// Index of the current Mic device in m_Devices
@@ -174,386 +231,67 @@ namespace Meta.WitAi.Lib
         {
             get
             {
-                if (CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Devices.Count)
+                if (_devices == null || CurrentDeviceIndex < 0 || CurrentDeviceIndex >= _devices.Count)
                     return string.Empty;
-                return Devices[CurrentDeviceIndex];
+                return _devices[CurrentDeviceIndex];
             }
-        }
-
-        int m_SampleCount = 0;
-
-        int MicPosition => Microphone.GetPosition(CurrentDeviceName);
-
-        #endregion
-
-        // ================================================
-
-        #region EVENTS
-
-        // ================================================
-        /// <summary>
-        /// Invoked when the instance starts Recording.
-        /// </summary>
-        public event Action OnStartRecording;
-
-        /// <summary>
-        /// Invoked when an AudioClip couldn't be created to start recording.
-        /// </summary>
-        public event Action OnStartRecordingFailed;
-
-        /// <summary>
-        /// Invoked everytime an audio frame is collected. Includes the frame.
-        /// </summary>
-        public event Action<int, float[], float> OnSampleReady;
-
-        /// <summary>
-        /// Invoked when the instance stop Recording.
-        /// </summary>
-        public event Action OnStopRecording;
-
-        #endregion
-
-        // ================================================
-
-        #region MIC
-
-        // ================================================
-
-        static Mic m_Instance;
-
-        public static Mic Instance
-        {
-            get
-            {
-                if (m_Instance == null)
-                    m_Instance = GameObject.FindObjectOfType<Mic>();
-                if (m_Instance == null && Application.isPlaying)
-                {
-                    m_Instance = new GameObject("UniMic.Mic").AddComponent<Mic>();
-                    DontDestroyOnLoad(m_Instance.gameObject);
-                }
-                return m_Instance;
-            }
-        }
-
-        private void OnEnable()
-        {
-            SafeStartMicrophone();
-        }
-
-        private void OnDisable()
-        {
-            StopMicrophone();
-        }
-
-        private void OnApplicationFocus(bool hasFocus)
-        {
-            #if UNITY_ANDROID && !UNITY_EDITOR
-            if (hasFocus && IsRecording)
-            {
-                VLog.D($"Mic was recording and app is resumed, resuming listening on {CurrentDeviceName}");
-                SafeStartMicrophone();
-                StartCoroutine(ReadRawAudio());
-            }
-            else if (!hasFocus)
-            {
-                VLog.D($"Stopping listening on {CurrentDeviceName} due to loss of focus.");
-                StopMicrophone();
-            }
-            #endif
-        }
-
-        private void OnApplicationPause(bool pauseStatus)
-        {
-            #if UNITY_ANDROID && !UNITY_EDITOR
-            if (pauseStatus)
-            {
-                VLog.D($"Stopping listening on {CurrentDeviceName} due to application pause.");
-                StopMicrophone();
-            }
-            #endif
-        }
-
-        private void OnDestroy()
-        {
-            StopMicrophone();
-        }
-
-        // Safely start microphone
-        public void SafeStartMicrophone()
-        {
-            if (State == MicState.Enabling || State == MicState.On)
-            {
-                return;
-            }
-            // Can't start if inactive
-            if (!gameObject.activeInHierarchy)
-            {
-                return;
-            }
-
-            // Stop
-            if (_micEnabler != null)
-            {
-                StopCoroutine(_micEnabler);
-                _micEnabler = null;
-            }
-
-            // Enabling
-            State = MicState.Enabling;
-            _micEnabler = StartCoroutine(WaitForMics());
-        }
-
-        // Wait for mics
-        private IEnumerator WaitForMics()
-        {
-            // Wait for devices
-            float checkTime = MIC_CHECK;
-            float elapsedTime = 0f;
-            while ((Devices == null || Devices.Count == 0) && elapsedTime <= StartMicTimeout)
-            {
-                if (checkTime >= MIC_CHECK)
-                {
-                    checkTime = 0f;
-                    RefreshMicDevices();
-                }
-                yield return new WaitForEndOfFrame();
-                checkTime += Time.deltaTime;
-                elapsedTime += Time.deltaTime;
-            }
-
-            // Timeout
-            if (elapsedTime > StartMicTimeout)
-            {
-                VLog.W("Mic start timed out");
-                State = MicState.Off;
-                _micEnabler = null;
-                yield break;
-            }
-
-            // Change device if desired
-            string micID = CurrentDeviceName;
-            if (string.IsNullOrEmpty(micID) || AudioClip == null || !string.Equals(micID, AudioClip.name) || !MicrophoneIsRecording(micID))
-            {
-                ChangeDevice(CurrentDeviceIndex < 0 ? 0 : CurrentDeviceIndex);
-            }
-
-            // On
-            State = MicState.On;
-            _micEnabler = null;
         }
 
         /// <summary>
-        /// Refresh mic device list
+        /// Refresh the current list of devices
         /// </summary>
-        public void RefreshMicDevices()
+        private void RefreshMicDevices()
         {
-            string oldDevice = CurrentDeviceName;
-            _devices = new List<string>();
-            UnityEngine.Profiling.Profiler.BeginSample("Microphone Devices");
-            string[] micIDs = MicrophoneGetDevices();
-            if (micIDs != null)
+            // Get old mic name
+            string oldMicName = CurrentDeviceName;
+
+            // Clear previous list
+            _devices.Clear();
+
+            // Get new list & add if it exists
+            var micNames = MicrophoneGetDevices();
+            if (micNames != null)
             {
-                _devices.AddRange(micIDs);
+                _devices.AddRange(micNames);
             }
 
-            if (_devices.Count == 0)
-            {
-                VLog.W("No mics found");
-            }
-            else
-            {
-                VLog.I($"Found {_devices.Count} Mics");
-            }
-
-            UnityEngine.Profiling.Profiler.EndSample();
-            CurrentDeviceIndex = _devices.IndexOf(oldDevice);
+            // Get new device index if applicable
+            CurrentDeviceIndex = _devices.IndexOf(oldMicName);
         }
 
         /// <summary>
         /// Changes to a Mic device for Recording
         /// </summary>
         /// <param name="index">The index of the Mic device. Refer to <see cref="Devices"/></param>
-        public void ChangeDevice(int index)
+        public void ChangeMicDevice(int index)
         {
             StopMicrophone();
             CurrentDeviceIndex = index;
             StartMicrophone();
         }
-
-        private void StartMicrophone()
-        {
-#if !UNITY_WEBGL || UNITY_EDITOR
-            AudioClip = Microphone.Start(CurrentDeviceName, MIC_CLIP_LOOP, MIC_CLIP_CHANNELS, AudioClipSampleRate);
-            if (AudioClip != null)
-            {
-                VLog.I("Reserved mic " + CurrentDeviceName);
-                AudioClip.name = CurrentDeviceName;
-                AudioEncoding.numChannels = AudioClip.channels;
-            }
-            else
-            {
-                VLog.W($"Cannot access the microphone '{CurrentDeviceName}'.  Please ensure that it is enabled.");
-            }
-#endif
-        }
-
-        private void StopMicrophone()
-        {
-            // Not already off or disabled
-            if (State == MicState.Disabling || State == MicState.Off)
-            {
-                return;
-            }
-
-            // Disable
-            State = MicState.Disabling;
-
-            // Stop waiting to enable
-            if (_micEnabler != null)
-            {
-                StopCoroutine(_micEnabler);
-                _micEnabler = null;
-            }
-
-            // End
-            if (MicrophoneIsRecording(CurrentDeviceName))
-            {
-#if !UNITY_WEBGL || UNITY_EDITOR
-                VLog.I("Released mic " + CurrentDeviceName);
-                Microphone.End(CurrentDeviceName);
-#endif
-            }
-
-            // Destroy clip
-            if (AudioClip != null)
-            {
-                AudioClip.DestroySafely();
-                AudioClip = null;
-            }
-
-            // Disabled
-            State = MicState.Off;
-        }
-        #endregion
-
-        // ================================================
-
-        #region RECORDING
-
-        /// <summary>
-        /// Starts to stream the input of the current Mic device
-        /// </summary>
-        public void StartRecording(int sampleLen = 10)
-        {
-            // Still unavailable, exit
-            if (!IsInputAvailable)
-            {
-                return;
-            }
-
-            // Stop recording if doing so
-            StopRecording();
-
-            IsRecording = true;
-
-            SampleDurationMS = sampleLen;
-
-            if (AudioClip)
-            {
-                Sample = new float[AudioClipSampleRate / MS_TO_SECONDS * SampleDurationMS * AudioClip.channels];
-
-                StartCoroutine(ReadRawAudio());
-
-#if !UNITY_WEBGL || UNITY_EDITOR
-                // Make sure we seek before we start reading data
-                MicrophoneGetPosition(CurrentDeviceName);
-                VLog.D("Started recording with " + CurrentDeviceName);
-#endif
-                if (OnStartRecording != null)
-                    OnStartRecording.Invoke();
-            }
-            else
-            {
-                OnStartRecordingFailed.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// Ends the Mic stream.
-        /// </summary>
-        public void StopRecording()
-        {
-            if (!IsRecording) return;
-
-            IsRecording = false;
-
-            if (!this) return;  //already destroyed
-
-            StopCoroutine(ReadRawAudio());
-
-            VLog.D("Stopped recording with " + CurrentDeviceName);
-            if (OnStopRecording != null)
-                OnStopRecording.Invoke();
-        }
-
-        IEnumerator ReadRawAudio()
-        {
-            int loops = 0;
-            int readAbsPos = MicrophoneGetPosition(CurrentDeviceName);
-            int prevPos = readAbsPos;
-            float[] temp = new float[Sample.Length];
-
-            while (AudioClip != null && MicrophoneIsRecording(CurrentDeviceName) && IsRecording)
-            {
-                bool isNewDataAvailable = true;
-
-                while (isNewDataAvailable && AudioClip)
-                {
-                    int currPos = MicrophoneGetPosition(CurrentDeviceName);
-                    if (currPos < prevPos)
-                        loops++;
-                    prevPos = currPos;
-
-                    var currAbsPos = loops * AudioClip.samples + currPos;
-                    var nextReadAbsPos = readAbsPos + temp.Length;
-                    float levelMax = 0;
-
-                    if (nextReadAbsPos < currAbsPos)
-                    {
-                        AudioClip.GetData(temp, readAbsPos % AudioClip.samples);
-
-                        for (int i = 0; i < temp.Length; i++)
-                        {
-                            float wavePeak = temp[i] * temp[i];
-                            if (levelMax < wavePeak)
-                            {
-                                levelMax = wavePeak;
-                            }
-                        }
-
-                        Sample = temp;
-                        m_SampleCount++;
-                        OnSampleReady?.Invoke(m_SampleCount, Sample, levelMax);
-
-                        readAbsPos = nextReadAbsPos;
-                        isNewDataAvailable = true;
-                    }
-                    else
-                        isNewDataAvailable = false;
-                }
-
-                yield return null;
-            }
-        }
-
-        #endregion
+        #endregion DEVICES
 
         #region NO_MIC_WRAPPERS
         // Wrapper methods to handle platforms where the UnityEngine.Microphone class is non-existent
+        private AudioClip MicrophoneStart(string deviceName, bool loop, int lengthSeconds, int frequency)
+        {
+#if DISABLE_MICROPHONES
+            return null;
+#else
+            return Microphone.Start(deviceName, loop, lengthSeconds, frequency);
+#endif
+        }
+
+        private void MicrophoneEnd(string deviceName)
+        {
+#if !DISABLE_MICROPHONES
+            Microphone.End(deviceName);
+#endif
+        }
+
         private bool MicrophoneIsRecording(string device)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if DISABLE_MICROPHONES
             return false;
 #else
             return !string.IsNullOrEmpty(device) && Microphone.IsRecording(device);
@@ -562,7 +300,7 @@ namespace Meta.WitAi.Lib
 
         private string[] MicrophoneGetDevices()
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if DISABLE_MICROPHONES
             return new string[] {};
 #else
             return Microphone.devices;
@@ -571,7 +309,7 @@ namespace Meta.WitAi.Lib
 
         private int MicrophoneGetPosition(string device)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if DISABLE_MICROPHONES
             // This should (probably) never happen, since the Start/Stop Recording methods will
             // silently fail under webGL.
             return 0;

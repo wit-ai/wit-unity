@@ -138,7 +138,7 @@ namespace Meta.WitAi
             set => _witRequestProvider = value;
         }
 
-        public bool MicActive => AudioBuffer.Instance.IsRecording(this);
+        public bool MicActive => _buffer.IsRecording(this);
 
         protected bool ShouldSendMicData => RuntimeConfiguration.sendAudioToWit ||
                                                   null == _activeTranscriptionProvider;
@@ -180,7 +180,6 @@ namespace Meta.WitAi
         protected void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            AudioBufferEvents e = AudioBuffer.Instance?.Events;
             SetMicDelegates(false);
         }
         // On scene refresh
@@ -216,6 +215,7 @@ namespace Meta.WitAi
             // Add delegates
             if (add)
             {
+                e.OnAudioStateChange += OnAudioBufferStateChange;
                 e.OnMicLevelChanged.AddListener(OnMicLevelChanged);
                 e.OnByteDataReady.AddListener(OnByteDataReady);
                 e.OnSampleReady += OnMicSampleReady;
@@ -223,6 +223,7 @@ namespace Meta.WitAi
             // Remove delegates
             else
             {
+                e.OnAudioStateChange -= OnAudioBufferStateChange;
                 e.OnMicLevelChanged.RemoveListener(OnMicLevelChanged);
                 e.OnByteDataReady.RemoveListener(OnByteDataReady);
                 e.OnSampleReady -= OnMicSampleReady;
@@ -261,7 +262,7 @@ namespace Meta.WitAi
 
             // Now active
             _isActive = true;
-            _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider.RuntimeConfiguration.preferredActivationOffset);
+            _lastSampleMarker = _buffer.CreateMarker(ConfigurationProvider.RuntimeConfiguration.preferredActivationOffset);
             _lastMinVolumeLevelTime = float.PositiveInfinity;
             _lastWordTime = float.PositiveInfinity;
             _receivedTranscription = false;
@@ -274,13 +275,16 @@ namespace Meta.WitAi
             // Start recording if possible
             if (ShouldSendMicData)
             {
-                if (!AudioBuffer.Instance.IsRecording(this))
+                if (!_buffer.IsRecording(this))
                 {
                     _minKeepAliveWasHit = false;
                     _isSoundWakeActive = true;
                     StartRecording();
                 }
-                _recordingRequest.ActivateAudio();
+                else
+                {
+                    _recordingRequest.ActivateAudio();
+                }
             }
 
             // Activate transcription provider
@@ -307,7 +311,7 @@ namespace Meta.WitAi
             SendRecordingRequest();
 
             // Start marker
-            _lastSampleMarker = AudioBuffer.Instance.CreateMarker(ConfigurationProvider
+            _lastSampleMarker = _buffer.CreateMarker(ConfigurationProvider
                 .RuntimeConfiguration.preferredActivationOffset);
 
             // Return the request
@@ -367,7 +371,7 @@ namespace Meta.WitAi
                 return;
             }
             SetupRequest(newRequest);
-            newRequest.AudioEncoding = AudioBuffer.Instance.AudioEncoding;
+            newRequest.AudioEncoding = _buffer.AudioEncoding;
             newRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
                 newRequest.AudioEncoding);
             #pragma warning disable CS0618
@@ -417,14 +421,14 @@ namespace Meta.WitAi
         // Stop any recording
         private void StopRecording()
         {
-            if (!AudioBuffer.Instance.IsRecording(this)) return;
-            AudioBuffer.Instance.StopRecording(this);
+            if (!_buffer.IsRecording(this)) return;
+            _buffer.StopRecording(this);
         }
         // When wit is ready, start recording
         private void OnWitReadyForData()
         {
             _lastMinVolumeLevelTime = _time;
-            if (!AudioBuffer.Instance.IsRecording(this))
+            if (!_buffer.IsRecording(this))
             {
                 StartRecording();
             }
@@ -432,25 +436,48 @@ namespace Meta.WitAi
         // Handle begin recording
         private void StartRecording()
         {
-            // Check for input
-            if (!AudioBuffer.Instance.IsInputAvailable)
-            {
-                AudioBuffer.Instance.CheckForInput();
-            }
             // Wait for input and then try again
-            if (!AudioBuffer.Instance.IsInputAvailable)
+            if (!_buffer.IsInputAvailable)
             {
                 VoiceEvents.OnError.Invoke("Input Error", "No input source was available. Cannot activate for voice input.");
                 return;
             }
             // Already recording
-            if (AudioBuffer.Instance.IsRecording(this))
+            if (_buffer.IsRecording(this))
             {
                 return;
             }
 
             // Start recording
-            AudioBuffer.Instance.StartRecording(this);
+            _buffer.StartRecording(this);
+        }
+        // Callback from audio buffer if mic started successfully
+        private void OnAudioBufferStateChange(VoiceAudioInputState audioInputState)
+        {
+            if (_recordingRequest != null)
+            {
+                // Success
+                if (_buffer.IsRecording(this) && _recordingRequest.AudioInputState == VoiceAudioInputState.Off)
+                {
+                    _recordingRequest.ActivateAudio();
+                }
+                // Deactivate
+                else if (!_buffer.IsRecording(this))
+                {
+                    // Deactivate
+                    if (_recordingRequest.AudioInputState == VoiceAudioInputState.On
+                        || _recordingRequest.AudioInputState == VoiceAudioInputState.Activating)
+                    {
+                        _recordingRequest.DeactivateAudio();
+                    }
+                    // Failed to start
+                    else if (_recordingRequest.AudioInputState == VoiceAudioInputState.Off &&
+                             _recordingRequest.State == VoiceRequestState.Initialized)
+                    {
+                        _recordingRequest.Cancel("Failed to start audio input");
+                    }
+                }
+            }
         }
         // Callback for mic byte data ready
         private void OnByteDataReady(byte[] buffer, int offset, int length)
@@ -575,7 +602,7 @@ namespace Meta.WitAi
         /// </summary>
         public void Deactivate()
         {
-            DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, false);
+            DeactivateRequest(_buffer.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, false);
         }
 
         /// <summary>
@@ -594,7 +621,7 @@ namespace Meta.WitAi
         /// </summary>
         public void DeactivateAndAbortRequest()
         {
-            DeactivateRequest(AudioBuffer.Instance.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, true);
+            DeactivateRequest(_buffer.IsRecording(this) ? VoiceEvents?.OnStoppedListeningDueToDeactivation : null, true);
         }
         // Stop listening if time expires
         private IEnumerator DeactivateDueToTimeLimit()

@@ -32,6 +32,7 @@ namespace Meta.WitAi
 
         // NLP Endpoints
         public const string ENDPOINT_SPEECH = "speech";
+        public const int ENDPOINT_SPEECH_SAMPLE_RATE = 16000;
         public const string ENDPOINT_MESSAGE = "message";
         public const string ENDPOINT_MESSAGE_PARAM = "q";
         public const string ENDPOINT_JSON_DELIMITER = "\r\n";

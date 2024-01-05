@@ -23,5 +23,9 @@ namespace Meta.WitAi.Data
             "The total audio data that should be buffered for lookback purposes on sound based activations.")]
         [SerializeField]
         public float micBufferLengthInSeconds = 1;
+
+        [Tooltip("The audio encoding to be used for transmission of audio data, should keep as default in almost all scenarios.  Adjust encoding directly on IAudioInput script such as Mic to capture at different rates.")]
+        [SerializeField]
+        public AudioEncoding encoding = new AudioEncoding();
     }
 }

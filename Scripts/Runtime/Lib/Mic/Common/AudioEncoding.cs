@@ -20,19 +20,31 @@ namespace Meta.WitAi.Data
         }
 
         /// <summary>
+        /// The number of recording channels
+        /// </summary>
+        /// <returns></returns>
+        public int numChannels = 1;
+
+        /// <summary>
+        /// The amount of samples used per second
+        /// </summary>
+        public int samplerate = WitConstants.ENDPOINT_SPEECH_SAMPLE_RATE;
+
+        /// <summary>
         /// The expected encoding of the mic pcm data
         /// </summary>
-        public string encoding = "signed-integer";
+        public string encoding = ENCODING_SIGNED;
+        public const string ENCODING_SIGNED = "signed-integer";
+        public const string ENCODING_UNSIGNED = "unsigned-integer";
 
         /// <summary>
         /// The number of bits per sample
         /// </summary>
-        public int bits = 16;
-
-        /// <summary>
-        /// The sample rate used to capture audio
-        /// </summary>
-        public int samplerate = 16000;
+        public int bits = BITS_SHORT;
+        public const int BITS_BYTE = 8;
+        public const int BITS_SHORT = 16;
+        public const int BITS_INT = 32;
+        public const int BITS_LONG = 64;
 
         /// <summary>
         /// The endianess of the data
@@ -40,11 +52,8 @@ namespace Meta.WitAi.Data
         public Endian endian = Endian.Little;
 
         /// <summary>
-        /// The number of recording channels
+        /// Convert encoding into string for transmission
         /// </summary>
-        /// <returns></returns>
-        public int numChannels = 1;
-
         public override string ToString()
         {
             return $"audio/raw;bits={bits};rate={samplerate / 1000}k;encoding={encoding};endian={endian.ToString().ToLower()}";

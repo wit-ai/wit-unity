@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.Voice;
 using Meta.WitAi.Data;
 using UnityEngine;
 
@@ -19,19 +20,24 @@ namespace Meta.WitAi.Events
     public class AudioBufferEvents
     {
         /// <summary>
+        /// Callbacks as audio state changes
+        /// </summary>
+        public Action<VoiceAudioInputState> OnAudioStateChange;
+
+        /// <summary>
         /// Fired when a sample is ready to be read
         /// <param name="marker">The marker in the AudioBuffer's ringbuffer where the sample starts</param>
         /// <param name="levelMax">The maximum volume (0-1) seen in this sample</param>
         /// </summary>
         public delegate void OnSampleReadyEvent(RingBuffer<byte>.Marker marker, float levelMax);
-        
+
         /// <summary>
         /// Fired when a sample is ready to be read
         /// <param name="marker">The marker in the AudioBuffer's ringbuffer where the sample starts</param>
         /// <param name="levelMax">The maximum volume (0-1) seen in this sample</param>
         /// </summary>
         public OnSampleReadyEvent OnSampleReady;
-        
+
         /// <summary>
         /// Fired when a sample is received from an audio input source
         /// <param name="samples">The raw float sample buffer</param>
@@ -56,7 +62,7 @@ namespace Meta.WitAi.Events
         /// </summary>
         [Header("Data")]
         public WitByteDataEvent OnByteDataReady = new WitByteDataEvent();
-        
+
         /// <summary>
         /// Fired when byte data is sent to various voice services
         /// <param name="buffer">The byte buffer about to be sent</param>

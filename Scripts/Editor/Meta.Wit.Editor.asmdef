@@ -8,7 +8,8 @@
         "Meta.WitAi.Conduit.Editor",
         "Meta.WitAI.Lib.Editor",
         "Meta.VoiceSDK.Mic.Other",
-        "VoiceSDK.Telemetry"
+        "VoiceSDK.Telemetry",
+        "Meta.VoiceSDK.Mic.Common"
     ],
     "includePlatforms": [
         "Editor"

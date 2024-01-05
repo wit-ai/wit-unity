@@ -6,13 +6,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections;
+#if UNITY_EDITOR
+#define DEBUG_MIC
+#endif
+
+using System;
 using System.Collections.Generic;
+using Meta.Voice;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Lib;
 using UnityEngine;
+using UnityEngine.Profiling;
+#if DEBUG_MIC
+using System.IO;
+#endif
 
 namespace Meta.WitAi.Data
 {
@@ -46,22 +55,40 @@ namespace Meta.WitAi.Data
                 return _instance;
             }
         }
-        #endregion
+        #endregion Singleton
 
+        #region Settings
+        /// <summary>
+        /// If set to true, the audio buffer will always be recording.
+        /// </summary>
         [Tooltip("If set to true, the audio buffer will always be recording.")]
         [SerializeField] private bool alwaysRecording;
-        
+
+        /// <summary>
+        /// Configuration settings for the audio buffer.
+        /// </summary>
         [Tooltip("Configuration settings for the audio buffer.")]
         [SerializeField] private AudioBufferConfiguration audioBufferConfiguration = new AudioBufferConfiguration();
-        
+
+        /// <summary>
+        /// Events triggered when AudioBuffer processes and receives audio data.
+        /// </summary>
         [TooltipBox("Events triggered when AudioBuffer processes and receives audio data.")]
         [SerializeField] private AudioBufferEvents events = new AudioBufferEvents();
+
+        /// <summary>
+        /// The audio buffer's encoding settings.  Mic.Encoding is re-encoded to match the desired transmission encoding
+        /// </summary>
+        public AudioEncoding AudioEncoding => audioBufferConfiguration.encoding;
 
         /// <summary>
         /// Events triggered when AudioBuffer processes and receives audio data.
         /// </summary>
         public AudioBufferEvents Events => events;
 
+        /// <summary>
+        /// The current audio input source
+        /// </summary>
         public IAudioInputSource MicInput
         {
             get
@@ -88,17 +115,29 @@ namespace Meta.WitAi.Data
                         _micInput = gameObject.AddComponent<Mic>();
                     }
                 }
-
                 return _micInput;
             }
         }
+        // The actual mic input being used
         private IAudioInputSource _micInput;
-        private RingBuffer<byte> _micDataBuffer;
 
-        private byte[] _byteDataBuffer;
+        // Total sample chunks since start
+        private int _totalSampleChunks;
+        // The buffers
+        private RingBuffer<byte> _outputBuffer;
 
-        private HashSet<Component> _waitingRecorders = new HashSet<Component>();
-        private HashSet<Component> _activeRecorders = new HashSet<Component>();
+        // The components that have requested audio input
+        private HashSet<Component> _recorders = new HashSet<Component>();
+
+        /// <summary>
+        /// Returns true if an input audio source (for example Mic) is available
+        /// </summary>
+        public bool IsInputAvailable => MicInput != null;
+
+        /// <summary>
+        /// Returns true if a component has requested audio but
+        /// </summary>
+        public VoiceAudioInputState AudioState { get; private set; } = VoiceAudioInputState.Off;
 
         /// <summary>
         /// Returns true if a component has registered to receive audio data and if the mic is actively capturing data
@@ -106,131 +145,66 @@ namespace Meta.WitAi.Data
         /// </summary>
         /// <param name="component">The source of the StartRecording</param>
         /// <returns>True if this component has called StartRecording</returns>
-        public bool IsRecording(Component component) => _waitingRecorders.Contains(component) || _activeRecorders.Contains(component);
-        
-        /// <summary>
-        /// Returns true if an input audio source (for example Mic) is available
-        /// </summary>
-        public bool IsInputAvailable => MicInput != null && MicInput.IsInputAvailable;
-        
-        /// <summary>
-        /// Requests a check to see if an input source is available on an associated audio source. This may trigger a
-        /// rescan of available mic devices and can be expensive.
-        /// </summary>
-        public void CheckForInput() => MicInput.CheckForInput();
-        
-        /// <summary>
-        /// Returns the audio encoding settings set up by the audio input source.
-        /// </summary>
-        public AudioEncoding AudioEncoding => MicInput.AudioEncoding;
+        public bool IsRecording(Component component) => _recorders.Contains(component);
+        #endregion Settings
 
+        #region Lifecycle
+        /// <summary>
+        /// Initialize buffer
+        /// </summary>
         private void Awake()
         {
             _instance = this;
-
             InitializeMicDataBuffer();
         }
 
+        /// <summary>
+        /// Begin watching mic input
+        /// </summary>
         private void OnEnable()
         {
+            // Add delegates
+            MicInput.OnStartRecording += OnMicRecordSuccess;
+            MicInput.OnStartRecordingFailed += OnMicRecordFailed;
+            MicInput.OnStopRecording += OnMicRecordStop;
             MicInput.OnSampleReady += OnMicSampleReady;
 
+            // Begin recording
             if (alwaysRecording) StartRecording(this);
         }
 
-        // Remove mic delegates
+        /// <summary>
+        /// Stop watching mic input
+        /// </summary>
         private void OnDisable()
         {
-            MicInput.OnSampleReady -= OnMicSampleReady;
-
+            // Stop recording
             if (alwaysRecording) StopRecording(this);
+
+            // Remove delegates
+            MicInput.OnStartRecording -= OnMicRecordSuccess;
+            MicInput.OnStartRecordingFailed -= OnMicRecordFailed;
+            MicInput.OnStopRecording -= OnMicRecordStop;
+            MicInput.OnSampleReady -= OnMicSampleReady;
         }
 
         /// <summary>
-        /// Called when a new mic sample is ready to be processed as sent by the audio input source
+        /// Sets audio state & performs callback
         /// </summary>
-        /// <param name="sampleCount">The number of samples to process (could be less than samples.length if multi-channel</param>
-        /// <param name="samples">The raw pcm float audio samples</param>
-        /// <param name="levelMax">The max volume level in this sample</param>
-        private void OnMicSampleReady(int sampleCount, float[] samples, float levelMax)
+        private void SetAudioState(VoiceAudioInputState newAudioState)
         {
-            events.OnSampleReceived?.Invoke(samples, sampleCount, levelMax);
-            events.OnMicLevelChanged?.Invoke(levelMax);
-            var marker = CreateMarker();
-            Convert(Mathf.Min(sampleCount, samples.Length), samples);
-            if (null != events.OnByteDataReady)
+            AudioState = newAudioState;
+#if DEBUG_MIC
+            if (AudioState == VoiceAudioInputState.On)
             {
-                marker.Clone().ReadIntoWriters(events.OnByteDataReady.Invoke);
+                DebugStart();
             }
-            events.OnSampleReady?.Invoke(marker, levelMax);
-        }
-
-        /// <summary>
-        /// Generate mic data buffer if needed
-        /// </summary>
-        private void InitializeMicDataBuffer()
-        {
-            if (null == _micDataBuffer && audioBufferConfiguration.micBufferLengthInSeconds > 0)
+            else if (AudioState == VoiceAudioInputState.Off)
             {
-                var bufferSize = (int) Mathf.Ceil(2 *
-                                                  audioBufferConfiguration
-                                                      .micBufferLengthInSeconds * 1000 *
-                                                  audioBufferConfiguration.sampleLengthInMs);
-                if (bufferSize <= 0)
-                {
-                    bufferSize = 1024;
-                }
-                _micDataBuffer = new RingBuffer<byte>(bufferSize);
+                DebugStop();
             }
-        }
-
-        // Resample & convert to byte[]
-        private byte[] _convertBuffer = new byte[512];
-        /// <summary>
-        /// Resamples audio and converts it to a byte buffer
-        /// </summary>
-        /// <param name="sampleTotal">The total number of samples in the sample buffer</param>
-        /// <param name="samples">The pcm float sample buffer</param>
-        private void Convert(int sampleTotal, float[] samples)
-        {
-            // Increase buffer size
-            int chunkTotal = sampleTotal * 2;
-            if (_convertBuffer.Length < chunkTotal)
-            {
-                _convertBuffer = new byte[chunkTotal];
-            }
-
-            // Convert buffer data
-            for (int i = 0; i < sampleTotal; i++)
-            {
-                short data = (short) (samples[i] * short.MaxValue);
-                _convertBuffer[i * 2] = (byte)data;
-                _convertBuffer[i * 2 + 1] = (byte)(data >> 8);
-            }
-
-            // Push buffer data
-            _micDataBuffer.Push(_convertBuffer, 0, chunkTotal);
-        }
-
-        /// <summary>
-        /// Create a marker at the current audio input time.
-        /// </summary>
-        /// <returns>A marker representing a position in the ring buffer that can be read as long as the the ring buffer
-        /// hasn't wrapped and replaced the start of this marker yet.</returns>
-        public RingBuffer<byte>.Marker CreateMarker()
-        {
-            return _micDataBuffer.CreateMarker();
-        }
-
-        /// <summary>
-        /// Creates a marker with an offset
-        /// </summary>
-        /// <param name="offset">Number of seconds to offset the marker by</param>
-        /// <returns></returns>
-        public RingBuffer<byte>.Marker CreateMarker(float offset)
-        {
-            var samples = (int) (AudioEncoding.samplerate * offset);
-            return _micDataBuffer.CreateMarker(samples);
+#endif
+            Events.OnAudioStateChange?.Invoke(AudioState);
         }
 
         /// <summary>
@@ -240,37 +214,73 @@ namespace Meta.WitAi.Data
         /// <param name="component">A component to use as a key that will keep the audio buffer actively recording</param>
         public void StartRecording(Component component)
         {
-            StartCoroutine(WaitForMicToStart(component));
+            // Ignore if contained
+            if (_recorders.Contains(component))
+            {
+                return;
+            }
+
+            // Add component to recorder list
+            _recorders.Add(component);
+
+            // Try to activate mic audio
+            if (AudioState == VoiceAudioInputState.Off || AudioState == VoiceAudioInputState.Deactivating)
+            {
+                // Begin activation
+                _totalSampleChunks = 0;
+                SetAudioState(VoiceAudioInputState.Activating);
+
+                // Start recording
+                if (!MicInput.IsRecording)
+                {
+                    MicInput.StartRecording(audioBufferConfiguration.sampleLengthInMs);
+                }
+                // Already started elsewhere, update AudioBuffer
+                else
+                {
+                    OnMicRecordSuccess();
+                }
+            }
+            // Already on, update component
+            else if (AudioState == VoiceAudioInputState.On)
+            {
+                OnMicRecordStarted(component);
+            }
         }
 
         /// <summary>
-        /// Waits for the mic to start and announces it when it is ready
+        /// Handles mic record success
         /// </summary>
-        /// <param name="component"></param>
-        /// <returns></returns>
-        private IEnumerator WaitForMicToStart(Component component)
+        private void OnMicRecordSuccess()
         {
-            // Wait for mic
-            _waitingRecorders.Add(component);
-            yield return new WaitUntil(() => null != MicInput && MicInput.IsInputAvailable);
-            if (!_waitingRecorders.Contains(component))
-            {
-                yield break;
-            }
-            _waitingRecorders.Remove(component);
+            // Activation success
+            SetAudioState(VoiceAudioInputState.On);
 
-            // Add component
-            _activeRecorders.Add(component);
-            // Start mic
-            if (!MicInput.IsRecording)
+            // Start each recorder
+            foreach (var component in _recorders)
             {
-                MicInput.StartRecording(audioBufferConfiguration.sampleLengthInMs);
+                OnMicRecordStarted(component);
             }
-            // On Start Listening
+        }
+
+        /// <summary>
+        /// Handles callback for individual component
+        /// </summary>
+        private void OnMicRecordStarted(Component component)
+        {
             if (component is IVoiceEventProvider v)
             {
-                v.VoiceEvents.OnStartListening?.Invoke();
+                v.VoiceEvents.OnMicStartedListening?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Handles mic record failure
+        /// </summary>
+        private void OnMicRecordFailed()
+        {
+            // Stop all recording due to failure
+            OnMicRecordStop();
         }
 
         /// <summary>
@@ -280,30 +290,342 @@ namespace Meta.WitAi.Data
         /// <param name="component">The component used to start recording</param>
         public void StopRecording(Component component)
         {
-            // Remove waiting recorder
-            if (_waitingRecorders.Contains(component))
-            {
-                _waitingRecorders.Remove(component);
-                return;
-            }
-            // Ignore unless active
-            if (!_activeRecorders.Contains(component))
+            // Ignore if not contained
+            if (!_recorders.Contains(component))
             {
                 return;
             }
 
-            // Remove active recorder
-            _activeRecorders.Remove(component);
-            // Stop recording if last active recorder
-            if (_activeRecorders.Count == 0)
+            // Try to deactivate mic audio
+            if (AudioState == VoiceAudioInputState.On || AudioState == VoiceAudioInputState.Activating)
             {
-                MicInput.StopRecording();
+                // Now deactivating
+                SetAudioState(VoiceAudioInputState.Deactivating);
+
+                // Try to stop recording
+                if (MicInput.IsRecording)
+                {
+                    MicInput.StopRecording();
+                }
+                // Already stopped, update AudioBuffer
+                else
+                {
+                    OnMicRecordStop();
+                }
             }
-            // On Stop Listening
-            if (component is IVoiceEventProvider v)
+            // Already off locally, update component
+            else if (AudioState == VoiceAudioInputState.Off)
             {
-                v.VoiceEvents.OnStoppedListening?.Invoke();
+                OnMicRecordStopped(component);
+                _recorders.Remove(component);
             }
         }
+
+        /// <summary>
+        /// Performs a deactivation
+        /// </summary>
+        private void OnMicRecordStop()
+        {
+            // Stop each recorder
+            foreach (var component in _recorders)
+            {
+                OnMicRecordStopped(component);
+            }
+
+            // Clear recorder list
+            _recorders.Clear();
+
+            // Activation success
+            SetAudioState(VoiceAudioInputState.Off);
+        }
+
+        /// <summary>
+        /// Handles callback for individual component
+        /// </summary>
+        private void OnMicRecordStopped(Component component)
+        {
+            if (component is IVoiceEventProvider v)
+            {
+                v.VoiceEvents.OnMicStoppedListening?.Invoke();
+            }
+        }
+        #endregion
+
+        #region Buffer
+        /// <summary>
+        /// Generate mic data buffer if needed
+        /// </summary>
+        private void InitializeMicDataBuffer()
+        {
+            // Log error for non-signed encoding
+            if (AudioEncoding.numChannels != 1)
+            {
+                VLog.E(GetType().Name, $"{AudioEncoding.numChannels} audio channels are not currently supported");
+                AudioEncoding.numChannels = 1;
+            }
+            // Log error for non-signed encoding
+            if (!string.Equals(AudioEncoding.encoding, AudioEncoding.ENCODING_SIGNED)
+                && !string.Equals(AudioEncoding.encoding, AudioEncoding.ENCODING_UNSIGNED))
+            {
+                VLog.E(GetType().Name, $"{AudioEncoding.encoding} encoding is not currently supported");
+                AudioEncoding.encoding = AudioEncoding.ENCODING_SIGNED;
+            }
+            // Log error for invalid bit encoding
+            if (AudioEncoding.bits != AudioEncoding.BITS_BYTE && AudioEncoding.bits != AudioEncoding.BITS_SHORT
+                && AudioEncoding.bits != AudioEncoding.BITS_INT && AudioEncoding.bits != AudioEncoding.BITS_LONG)
+            {
+                VLog.E(GetType().Name, $"{AudioEncoding.bits} bit audio encoding is not currently supported");
+                AudioEncoding.bits = AudioEncoding.BITS_SHORT;
+            }
+
+            // Buffer length in ms
+            var bufferLength = Mathf.Max(10f, audioBufferConfiguration.micBufferLengthInSeconds * 1000f);
+
+            // Get output buffer
+            if (_outputBuffer == null)
+            {
+                // Size using output encoding
+                var bufferSize = AudioEncoding.numChannels * AudioEncoding.samplerate * Mathf.CeilToInt((AudioEncoding.bits / 8f) * bufferLength);
+                // Generate
+                _outputBuffer = new RingBuffer<byte>(bufferSize);
+            }
+        }
+
+        /// <summary>
+        /// Called when a new mic sample is ready to be processed as sent by the audio input source
+        /// </summary>
+        /// <param name="sampleCount">The number of samples to process (could be less than samples.length if multi-channel</param>
+        /// <param name="samples">The raw pcm float audio samples</param>
+        /// <param name="levelMax">The max volume level in this sample</param>
+        private void OnMicSampleReady(int sampleCount, float[] samples, float levelMax)
+            => OnAudioSampleReady(samples, 0, samples.Length);
+
+        /// <summary>
+        /// Adds all sent audio into an input buffer
+        /// </summary>
+        /// <param name="samples">The bytes that make up the audio input sample</param>
+        /// <param name="offset">The offset in the sample array to be read from</param>
+        /// <param name="length">The length of samples to be taken</param>
+        private void OnAudioSampleReady(float[] samples, int offset, int length)
+        {
+            // Resample provided array & determine level max
+            Profiler.BeginSample("Resample & Encode Audio");
+            Encode(samples, offset, length, out byte[] data, out float levelMax);
+            Profiler.EndSample();
+
+            // Perform received callback
+            events.OnSampleReceived?.Invoke(samples, _totalSampleChunks, levelMax);
+            events.OnMicLevelChanged?.Invoke(levelMax);
+
+            // Create marker
+            var marker = CreateMarker();
+            // Push new data
+            _outputBuffer.Push(data, 0, data.Length);
+            #if DEBUG_MIC
+            // Write to debug
+            DebugWrite(data);
+            #endif
+
+            // Raw data ready
+            if (null != events.OnByteDataReady)
+            {
+                marker.Clone().ReadIntoWriters(events.OnByteDataReady.Invoke);
+            }
+            // Sample ready
+            events.OnSampleReady?.Invoke(marker, levelMax);
+
+            // Increment chunk count
+            _totalSampleChunks++;
+        }
+
+        /// <summary>
+        /// Resample into a new array & determine max level
+        /// </summary>
+        private void Encode(float[] samples, int offset, int length, out byte[] results, out float levelMax)
+        {
+            // Get mic encoding
+            AudioEncoding micEncoding = MicInput.AudioEncoding;
+            int micChannels = micEncoding.numChannels;
+            int micSampleRate = micEncoding.samplerate;
+            bool micSigned = string.Equals(micEncoding.encoding, Data.AudioEncoding.ENCODING_SIGNED);
+
+            // Get output encoding
+            AudioEncoding outEncoding = AudioEncoding;
+            int outSampleRate = outEncoding.samplerate;
+            int bytesPerSample = Mathf.CeilToInt(outEncoding.bits / 8f);
+            GetEncodingMinMax(outEncoding.bits, string.Equals(outEncoding.encoding, AudioEncoding.ENCODING_SIGNED),
+                out long encodingMin, out long encodingMax);
+            long encodingDif = encodingMax - encodingMin;
+            bool littleEnd = outEncoding.endian == AudioEncoding.Endian.Little;
+            int byteOffset = littleEnd ? 0 : bytesPerSample - 1;
+            int byteMult = littleEnd ? 1 : -1;
+
+            // Determine resize factor & total samples
+            float resizeFactor = micSampleRate == outSampleRate ? 1f : (float)micSampleRate / outSampleRate;
+            resizeFactor *= micChannels; // Skip all additional channels
+            int totalSamples = Mathf.FloorToInt(length / resizeFactor);
+            results = new byte[totalSamples * bytesPerSample];
+
+            // Resample
+            levelMax = 0f;
+            for (int i = 0; i < totalSamples; i++)
+            {
+                // Get sample
+                int micIndex = offset + Mathf.FloorToInt(i * resizeFactor);
+                float sample = samples[micIndex];
+
+                // If signed from source (-1 to 1), convert to unsigned (0 to 1)
+                if (micSigned)
+                {
+                    sample = Mathf.Clamp01(sample / 2f + 0.5f);
+                }
+
+                // Get max level from signed float (0 to 1)
+                if (sample > levelMax)
+                {
+                    levelMax = sample;
+                }
+
+                // Encode from signed long
+                long data = (long)(encodingMin + sample * encodingDif);
+                for (int b = 0; b < bytesPerSample; b++)
+                {
+                    results[i * bytesPerSample + (byteOffset + b * byteMult)] = (byte)(data >> (b * 8));
+                }
+            }
+        }
+        // Encoding options
+        private void GetEncodingMinMax(int bits, bool signed, out long encodingMin, out long encodingMax)
+        {
+            switch (bits)
+            {
+                // Always unsigned
+                case AudioEncoding.BITS_BYTE:
+                    encodingMin = byte.MinValue;
+                    encodingMax = byte.MaxValue;
+                    break;
+                // Always signed
+                case AudioEncoding.BITS_LONG:
+                    encodingMin = long.MinValue;
+                    encodingMax = long.MaxValue;
+                    break;
+                // Signed/Unsigned
+                case AudioEncoding.BITS_INT:
+                    encodingMin = signed ? int.MinValue : uint.MinValue;
+                    encodingMax = signed ? int.MaxValue : uint.MaxValue;
+                    break;
+                // Signed/Unsigned
+                case AudioEncoding.BITS_SHORT:
+                default:
+                    encodingMin = signed ? short.MinValue : ushort.MinValue;
+                    encodingMax = signed ? short.MaxValue : ushort.MaxValue;
+                    break;
+            }
+        }
+        #endregion Buffer
+
+        #region Marker
+        /// <summary>
+        /// Create a marker at the current audio input time.
+        /// </summary>
+        /// <returns>A marker representing a position in the ring buffer that can be read as long as the the ring buffer
+        /// hasn't wrapped and replaced the start of this marker yet.</returns>
+        public RingBuffer<byte>.Marker CreateMarker()
+        {
+            return _outputBuffer.CreateMarker();
+        }
+
+        /// <summary>
+        /// Creates a marker with an offset
+        /// </summary>
+        /// <param name="offset">Number of seconds to offset the marker by</param>
+        public RingBuffer<byte>.Marker CreateMarker(float offset)
+        {
+            var samples = (int) (AudioEncoding.numChannels * AudioEncoding.samplerate * offset);
+            return _outputBuffer.CreateMarker(samples);
+        }
+        #endregion Marker
+
+#if DEBUG_MIC
+        /// <summary>
+        /// Whether to generate pcm files for each audio interaction
+        /// </summary>
+        [Header("Debugging")]
+        [SerializeField] private bool _debugOutput = false;
+
+        /// <summary>
+        /// Editor directory from project root to
+        /// </summary>
+        [SerializeField] private string _debugFileDirectory = "Logs";
+
+        /// <summary>
+        /// Debug path from project root
+        /// </summary>
+        [SerializeField] private string _debugFileName = "AudioBuffer";
+
+        // The file stream being used
+        private FileStream _fileStream;
+
+        // On start, debug
+        private void DebugStart()
+        {
+            if (!_debugOutput)
+            {
+                return;
+            }
+
+            // The directory to be used
+            string directory = Application.dataPath.Replace("Assets", "");
+            directory += _debugFileDirectory + "/";
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            // Start with directory & file name
+            string path = directory + _debugFileName;
+
+            // Append settings
+            path += $"_{Mathf.FloorToInt(AudioEncoding.samplerate / 1000f)}k";
+            bool signed = string.Equals(AudioEncoding.encoding, AudioEncoding.ENCODING_SIGNED);
+            path += $"_{(signed ? "s" : "u")}{AudioEncoding.bits}bit";
+            path += AudioEncoding.endian == AudioEncoding.Endian.Little ? "" : "_BigEnd";
+
+            // Append datetime
+            DateTime now = DateTime.UtcNow;
+            path += $"_{now.Year:0000}{now.Month:00}{now.Day:00}";
+            path += $"_{now.Hour:00}{now.Minute:00}{now.Second:00}";
+
+            // Append ext
+            path += ".pcm";
+
+            // Create file stream
+            VLog.D(GetType().Name, $"Start Writing to AudioBuffer Debug File\nPath: {path}");
+            _fileStream = File.Open(path, FileMode.Create);
+        }
+
+        // Write to file
+        private void DebugWrite(byte[] bytes)
+        {
+            if (_fileStream == null)
+            {
+                return;
+            }
+            _fileStream.Write(bytes, 0, bytes.Length);
+        }
+
+        // Stop mic debug
+        private void DebugStop()
+        {
+            if (_fileStream == null)
+            {
+                return;
+            }
+            VLog.D(GetType().Name, "Stop Writing to AudioBuffer Debug File");
+            _fileStream.Close();
+            _fileStream.Dispose();
+            _fileStream = null;
+        }
+#endif
     }
 }
