@@ -285,6 +285,7 @@ namespace Meta.WitAi.Windows
 
             // Additional open wit button
             GUILayout.FlexibleSpace();
+            GUI.enabled = true;
             if (GUILayout.Button(OpenButtonLabel, WitStyles.TextButton))
             {
                 Application.OpenURL(HeaderUrl);
