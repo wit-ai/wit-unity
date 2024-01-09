@@ -103,7 +103,7 @@ namespace Meta.WitAi.Lib
             _micSampleRate = newSampleRate;
         }
 
-        #region ACTIVATION
+        #region ACTIVATION and DEACTIVATION
         /// <summary>
         /// Wait for devices to exist & then start mic
         /// </summary>
@@ -147,7 +147,16 @@ namespace Meta.WitAi.Lib
             // If valid, start microphone
             StartMicrophone();
         }
-        #endregion ACTIVATION
+
+        /// <summary>
+        /// Stop microphone if currently recording
+        /// </summary>
+        protected override IEnumerator DeactivateAudio()
+        {
+            StopMicrophone();
+            yield return base.DeactivateAudio();
+        }
+        #endregion ACTIVATION and DEACTIVATION
 
         #region MICROPHONE
         // Start microphone with desired device name
@@ -166,6 +175,7 @@ namespace Meta.WitAi.Lib
             // Start microphone
             VLog.I(GetType().Name, $"Start Microphone '{micName}'");
             _audioClip = MicrophoneStart(micName, true, MicBufferLength, AudioSampleRate);
+            Debug.LogWarning($"Start Mic: {micName}");
 
             // Failed to activate
             if (_audioClip == null)
@@ -192,6 +202,7 @@ namespace Meta.WitAi.Lib
             // Stop microphone
             VLog.I(GetType().Name, $"Stop Microphone '{micName}'");
             MicrophoneEnd(micName);
+            Debug.LogWarning($"Stop Mic: {micName}");
 
             // Destroy clip
             if (_audioClip != null)
