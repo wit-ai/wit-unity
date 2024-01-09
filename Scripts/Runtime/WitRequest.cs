@@ -21,7 +21,6 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
-using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Meta.WitAi
@@ -111,6 +110,9 @@ namespace Meta.WitAi
 
         // Decode in NLPRequest
         protected override bool DecodeRawResponses => true;
+
+        // The async delay time in ms
+        public const int ASYNC_DELAY = 100;
         #endregion PARAMETERS
 
         #region REQUEST
@@ -440,8 +442,8 @@ namespace Meta.WitAi
                 _request.Headers[key] = headers[key];
             }
 
-            // Apply timeout
-            _request.Timeout = TimeoutMs;
+            // Handle timeout
+            _timeoutStart = DateTime.UtcNow;
             _ = HandleTimeout(TimeoutMs);
 
             // If post or put, get post stream & wait for completion
@@ -450,7 +452,7 @@ namespace Meta.WitAi
                 var getPostStream = _request.BeginGetRequestStream(HandleWriteStream, _request);
                 while (!getPostStream.IsCompleted)
                 {
-                    await Task.Delay(10);
+                    await Task.Delay(ASYNC_DELAY);
                 }
             }
 
@@ -465,15 +467,19 @@ namespace Meta.WitAi
             var getResponseStream = _request.BeginGetResponse(HandleResponse, _request);
             while (!getResponseStream.IsCompleted)
             {
-                await Task.Delay(10);
+                await Task.Delay(ASYNC_DELAY);
             }
         }
 
         // Handle timeout callback
-        private async Task HandleTimeout(int timeoutMS)
+        private DateTime _timeoutStart;
+        private async Task HandleTimeout(double timeoutMS)
         {
             // Await a specific timeout in ms
-            await Task.Delay(timeoutMS);
+            while ((DateTime.UtcNow - _timeoutStart).TotalMilliseconds < timeoutMS)
+            {
+                await Task.Delay(ASYNC_DELAY);
+            }
 
             // Ignore if no longer active
             if (!IsActive)
@@ -777,6 +783,7 @@ namespace Meta.WitAi
         // Handles raw response
         private void ProcessStringResponse(string stringResponse)
         {
+            _timeoutStart = DateTime.UtcNow;
             HandleRawResponse(stringResponse, false);
         }
         // On raw response callback, ensure on main thread
