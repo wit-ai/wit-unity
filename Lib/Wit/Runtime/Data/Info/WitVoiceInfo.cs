@@ -17,5 +17,6 @@ namespace Meta.WitAi.Data.Info
         public string locale;
         public string gender;
         public string[] styles;
+        public string[] supported_features;
     }
 }
