@@ -46,7 +46,6 @@ namespace Meta.WitAi.Windows
         private string _serverToken;
         private string _appName;
         private string _appID;
-        private bool _initialized = false;
         public bool drawHeader = true;
         private bool _foldout = true;
         private int _requestTab = 0;
@@ -74,6 +73,11 @@ namespace Meta.WitAi.Windows
         protected virtual string DocsUrl => WitTexts.Texts.WitDocsUrl;
         protected virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
 
+        /// <summary>
+        /// Number of days in between automatic refreshes
+        /// </summary>
+        private const double REFRESH_HOURS = 24d;
+
         public void Initialize()
         {
             // Shared between all WitConfigurationEditors
@@ -94,7 +98,7 @@ namespace Meta.WitAi.Windows
 
             // Get app server token
             _serverToken = WitAuthUtility.GetAppServerToken(Configuration);
-            if (CanConfigurationRefresh(Configuration) && WitConfigurationUtility.IsServerTokenValid(_serverToken))
+            if (ShouldAutoRefresh(Configuration))
             {
                 SafeRefresh();
             }
@@ -108,10 +112,9 @@ namespace Meta.WitAi.Windows
         public override void OnInspectorGUI()
         {
             // Init if needed
-            if (!_initialized || Configuration != target)
+            if (Configuration != target)
             {
                 Initialize();
-                _initialized = true;
             }
 
             // Draw header
@@ -329,6 +332,24 @@ namespace Meta.WitAi.Windows
             Configuration.SetServerToken(_serverToken);
 
             _conduitManifestGenerationManager.GenerateManifest(Configuration, false);
+        }
+        // Whether configuration should auto refresh
+        protected virtual bool ShouldAutoRefresh(WitConfiguration configuration)
+        {
+            // Ignore if cant refresh yet
+            if (!CanConfigurationRefresh(configuration))
+            {
+                return false;
+            }
+            // If a token is valid, check refresh
+            if (WitConfigurationUtility.IsServerTokenValid(_serverToken) ||
+                WitConfigurationUtility.IsClientTokenValid(configuration.GetClientAccessToken()))
+            {
+                DateTime lastRefresh = configuration.LastRefresh;
+                return (DateTime.UtcNow - lastRefresh).TotalHours >= REFRESH_HOURS;
+            }
+            // Failed
+            return false;
         }
         // Whether or not to allow a configuration to refresh
         protected virtual bool CanConfigurationRefresh(WitConfiguration configuration)

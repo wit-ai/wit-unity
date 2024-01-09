@@ -120,6 +120,28 @@ namespace Meta.WitAi.Data.Configuration
         }
         #endif
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Datetime in UTC of the last time this configuration was refreshed
+        /// </summary>
+        public DateTime LastRefresh => DateTime.UnixEpoch.AddSeconds(_lastRefreshSeconds);
+
+        /// <summary>
+        /// The serialized seconds since UnixEpoch
+        /// </summary>
+        [SerializeField] [HideInInspector]
+        private double _lastRefreshSeconds;
+
+        /// <summary>
+        /// Refreshes the last update seconds
+        /// </summary>
+        private void RefreshLastUpdate()
+        {
+            _lastRefreshSeconds = (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
+            EditorUtility.SetDirty(this);
+        }
+#endif
+
         /// <summary>
         /// Reset all data
         /// </summary>
@@ -227,6 +249,7 @@ namespace Meta.WitAi.Data.Configuration
         public void SetApplicationInfo(WitAppInfo newInfo)
         {
             _appInfo = newInfo;
+            RefreshLastUpdate();
             SaveConfiguration();
         }
 
