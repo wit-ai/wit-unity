@@ -128,8 +128,8 @@ namespace Meta.WitAi
                 return;
             }
             #endif
-            // Suppress logs if desired
-            if (SuppressLogs)
+            // Suppress all except errors
+            if (SuppressLogs && (int)logType > (int)VLogLevel.Error)
             {
                 return;
             }
