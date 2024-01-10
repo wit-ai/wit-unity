@@ -477,8 +477,11 @@ namespace Meta.WitAi.Data
                 // If signed from source (-1 to 1), convert to unsigned (0 to 1)
                 if (micSigned)
                 {
-                    sample = Mathf.Clamp01(sample / 2f + 0.5f);
+                    sample = sample / 2f + 0.5f;
                 }
+
+                // Clamp
+                sample = Mathf.Clamp01(sample);
 
                 // Get max level from signed float (0 to 1)
                 if (sample > levelMax)
