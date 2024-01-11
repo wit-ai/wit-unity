@@ -175,7 +175,6 @@ namespace Meta.WitAi.Lib
             // Start microphone
             VLog.I(GetType().Name, $"Start Microphone '{micName}'");
             _audioClip = MicrophoneStart(micName, true, MicBufferLength, AudioSampleRate);
-            Debug.LogWarning($"Start Mic: {micName}");
 
             // Failed to activate
             if (_audioClip == null)
@@ -202,7 +201,6 @@ namespace Meta.WitAi.Lib
             // Stop microphone
             VLog.I(GetType().Name, $"Stop Microphone '{micName}'");
             MicrophoneEnd(micName);
-            Debug.LogWarning($"Stop Mic: {micName}");
 
             // Destroy clip
             if (_audioClip != null)
