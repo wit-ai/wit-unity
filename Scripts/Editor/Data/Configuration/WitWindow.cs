@@ -117,25 +117,6 @@ namespace Meta.WitAi.Windows
 
         private void DrawWitConfigurations()
         {
-            // Server access token
-            GUILayout.BeginHorizontal();
-            bool updated = false;
-            WitEditorUI.LayoutPasswordField(WitTexts.SettingsServerTokenContent, ref serverToken, ref updated);
-            if (updated)
-            {
-                RelinkServerToken(false);
-            }
-            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsRelinkButtonLabel))
-            {
-                RelinkServerToken(true);
-            }
-            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsAddButtonLabel))
-            {
-                OpenConfigGenerationWindow();
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Space(WitStyles.ButtonMargin);
-
             // Configuration select
             base.LayoutContent();
             // Update inspector if needed
@@ -150,35 +131,7 @@ namespace Meta.WitAi.Windows
                 witInspector.OnInspectorGUI();
             }
         }
-
-        // Apply server token
-        private void RelinkServerToken(bool closeIfInvalid)
-        {
-            // Open Setup if Invalid
-            bool invalid = !WitConfigurationUtility.IsServerTokenValid(serverToken);
-            if (invalid)
-            {
-                // Clear if desired
-                if (string.IsNullOrEmpty(serverToken))
-                {
-                    WitAuthUtility.ServerToken = serverToken;
-                }
-                // Open New & Close
-                if (closeIfInvalid)
-                {
-                    // Generate new configuration
-                    OpenConfigGenerationWindow();
-                    // Close
-                    Close();
-                }
-                return;
-            }
-
-            // Set valid server token
-            WitAuthUtility.ServerToken = serverToken;
-            WitConfigurationUtility.SetServerToken(serverToken);
-        }
-
+        
         private static void RefreshLogLevel()
         {
             if (_logLevelNames != null && _logLevelNames.Length == _logLevels.Length)

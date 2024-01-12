@@ -250,43 +250,7 @@ namespace Meta.WitAi.Data.Configuration
         {
             return !string.IsNullOrEmpty(clientToken) && clientToken.Length == 32;
         }
-        // Sets server token for all configurations if possible
-        public static void SetServerToken(string serverToken, Action<string> onSetComplete = null)
-        {
-            // Invalid token
-            if (!IsServerTokenValid(serverToken))
-            {
-                SetServerTokenComplete(string.Empty, "", onSetComplete);
-                return;
-            }
-            // Perform a list app request to get app for token
-            WitAppInfoUtility.GetAppInfo(serverToken, (clientToken, info, error) =>
-            {
-                SetServerTokenComplete(serverToken, error, onSetComplete);
-            });
-        }
-        // Set server token complete
-        private static void SetServerTokenComplete(string serverToken, string error, Action<string> onSetComplete)
-        {
-            // Failed
-            if (!string.IsNullOrEmpty(error))
-            {
-                VLog.E($"Set Server Token Failed\n{error}");
-                WitAuthUtility.ServerToken = "";
-            }
-            // Success
-            else
-            {
-                // Log Success
-                VLog.D("Set Server Token Success");
-                // Apply token
-                WitAuthUtility.ServerToken = serverToken;
-                // Refresh configurations
-                ReloadConfigurationData();
-            }
-            // On complete
-            onSetComplete?.Invoke(error);
-        }
+        
         // Sets server token for specified configuration by updating it's application data
         public static void SetServerToken(this WitConfiguration configuration, string serverToken, Action<string> onSetComplete = null)
         {

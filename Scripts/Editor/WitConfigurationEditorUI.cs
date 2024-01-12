@@ -57,7 +57,12 @@ namespace Meta.WitAi
                 EditorUtility.FocusProjectWindow();
                 EditorGUIUtility.PingObject(witConfigs[configIndex]);
             }
-
+            
+            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.SettingsAddButtonLabel))
+            {
+                onNewClick?.Invoke();
+            }
+            
             GUILayout.EndHorizontal();
         }
     }

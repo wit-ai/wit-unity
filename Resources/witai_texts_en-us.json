@@ -37,7 +37,6 @@
   "SettingsTitleLabel": "Wit.ai Settings",
   "SettingsServerTokenLabel": "Server Access Token",
   "SettingsServerTokenTooltip": "The shared server access token.",
-  "SettingsRelinkButtonLabel": "Relink",
   "SettingsAddButtonLabel": "New",
   "SettingsAddMainButtonLabel": "New Configuration",
   "ConfigurationHeaderLabel": "Application Configuration",
