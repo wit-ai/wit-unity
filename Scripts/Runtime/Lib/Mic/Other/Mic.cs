@@ -61,6 +61,11 @@ namespace Meta.WitAi.Lib
         public override bool CanActivateAudio => true;
 
         /// <summary>
+        /// Due to Microphone.Start & Microphone.End taking so long, activate on enable
+        /// </summary>
+        public override bool ActivateOnEnable => true;
+
+        /// <summary>
         /// Searches for mics for this long following an activation request.
         /// </summary>
         [SerializeField] [Tooltip("Searches for mics for this long following an activation request.")]
@@ -92,10 +97,10 @@ namespace Meta.WitAi.Lib
         /// <param name="newSampleRate">New sample rate</param>
         public void SetAudioSampleRate(int newSampleRate)
         {
-            // Ignore if not possible
-            if (AudioState != VoiceAudioInputState.Off)
+            // Cannot change if on
+            if (ActivationState == VoiceAudioInputState.On)
             {
-                VLog.E(GetType().Name, $"Cannot set audio sample rate while Mic is {AudioState}");
+                VLog.E(GetType().Name, $"Cannot set audio sample rate while Mic is {ActivationState}");
                 return;
             }
 
@@ -103,11 +108,11 @@ namespace Meta.WitAi.Lib
             _micSampleRate = newSampleRate;
         }
 
-        #region ACTIVATION and DEACTIVATION
+        #region ACTIVATION
         /// <summary>
         /// Wait for devices to exist & then start mic
         /// </summary>
-        protected override IEnumerator ActivateAudio()
+        protected override IEnumerator HandleActivation()
         {
             // Attempt to wait for a mic selection
             DateTime now = DateTime.UtcNow;
@@ -141,24 +146,20 @@ namespace Meta.WitAi.Lib
             if (string.IsNullOrEmpty(CurrentDeviceName))
             {
                 VLog.W(GetType().Name, $"No mics found after {MicStartTimeout} seconds");
+                SetActivationState(VoiceAudioInputState.Off);
                 yield break;
             }
 
             // If valid, start microphone
             StartMicrophone();
+
+            // Failed
+            if (_audioClip == null)
+            {
+                SetActivationState(VoiceAudioInputState.Off);
+            }
         }
 
-        /// <summary>
-        /// Stop microphone if currently recording
-        /// </summary>
-        protected override IEnumerator DeactivateAudio()
-        {
-            StopMicrophone();
-            yield return base.DeactivateAudio();
-        }
-        #endregion ACTIVATION and DEACTIVATION
-
-        #region MICROPHONE
         // Start microphone with desired device name
         private void StartMicrophone()
         {
@@ -182,6 +183,16 @@ namespace Meta.WitAi.Lib
                 VLog.W(GetType().Name, $"Microphone.Start() did not return an AudioClip\nMic Name: {micName}");
             }
         }
+        #endregion ACTIVATION
+
+        #region DEACTIVATION
+        /// <summary>
+        /// Stop microphone for deactivation
+        /// </summary>
+        protected override void HandleDeactivation()
+        {
+            StopMicrophone();
+        }
 
         // Handle microphone stop
         private void StopMicrophone()
@@ -192,15 +203,13 @@ namespace Meta.WitAi.Lib
             {
                 return;
             }
-            // Ignore if not recording
-            if (!MicrophoneIsRecording(micName))
-            {
-                return;
-            }
 
-            // Stop microphone
-            VLog.I(GetType().Name, $"Stop Microphone '{micName}'");
-            MicrophoneEnd(micName);
+            // Stop microphone if recording
+            if (MicrophoneIsRecording(micName))
+            {
+                VLog.I(GetType().Name, $"Stop Microphone '{micName}'");
+                MicrophoneEnd(micName);
+            }
 
             // Destroy clip
             if (_audioClip != null)
@@ -312,6 +321,13 @@ namespace Meta.WitAi.Lib
 #if DISABLE_MICROPHONES
             return new string[] {};
 #else
+            #if EDITOR_PERMISSION_POPUP
+            // Simulate permission popup which returns null array for multiple frames
+            if (Time.frameCount <= 5)
+            {
+                return null;
+            }
+            #endif
             return Microphone.devices;
 #endif
         }
