@@ -112,6 +112,11 @@ namespace Meta.WitAi.Json
             set { }
         }
 
+        public virtual string[] ChildNodeNames
+        {
+            get { return Array.Empty<string>(); }
+        }
+
         public virtual int Count
         {
             get { return 0; }
@@ -881,7 +886,7 @@ namespace Meta.WitAi.Json
     {
         private Dictionary<string, WitResponseNode> m_Dict = new Dictionary<string, WitResponseNode>();
 
-        public string[] ChildNodeNames => m_Dict.Keys.ToArray();
+        public override string[] ChildNodeNames => m_Dict.Keys.ToArray();
 
         public bool HasChild(string child) => m_Dict.ContainsKey(child);
 
