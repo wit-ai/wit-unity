@@ -134,7 +134,6 @@ namespace Meta.WitAi
         private Stream _writeStream;
         private object _streamLock = new object();
         private int _bytesWritten;
-        private string _stackTrace;
         private DateTime _requestStartTime;
         private ConcurrentQueue<byte[]> _writeBuffer = new ConcurrentQueue<byte[]>();
         #endregion REQUEST
@@ -358,7 +357,6 @@ namespace Meta.WitAi
             // Generate results
             _bytesWritten = 0;
             _requestStartTime = DateTime.UtcNow;
-            _stackTrace = "-";
 
             #if UNITY_WEBGL && !UNITY_EDITOR || WEBGL_DEBUG
             SetupSend(out Uri uri, out Dictionary<string, string> headers);
@@ -691,7 +689,6 @@ namespace Meta.WitAi
                         {
                             // We've already caught that there is an error, we'll ignore any errors
                             // reading error response data and use the status/original error for validation
-                            _stackTrace = e.StackTrace;
                         }
                     }
                 }
@@ -720,7 +717,17 @@ namespace Meta.WitAi
                 // Handle failure
                 if (statusCode != (int)HttpStatusCode.OK)
                 {
-                    HandleFailure(statusCode, error);
+                    // Handle error for empty response
+                    if (statusCode == (int)HttpStatusCode.BadRequest &&
+                        stringResponse.Contains(WitConstants.ERROR_RESPONSE_EMPTY_TRANSCRIPTION))
+                    {
+                        Cancel(WitConstants.ERROR_NO_TRANSCRIPTION);
+                    }
+                    // Otherwise error
+                    else
+                    {
+                        HandleFailure(statusCode, error);
+                    }
                 }
                 // No response
                 else if (ResponseData == null && !IsDecoding)
