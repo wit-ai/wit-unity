@@ -114,12 +114,28 @@ namespace Meta.WitAi.Data
                     {
                         _micInput = gameObject.AddComponent<Mic>();
                     }
+                    // Set frequency interface if implemented
+                    if (_micInput is IAudioLevelRangeProvider micRange)
+                    {
+                        _micLevelRange = micRange;
+                    }
                 }
                 return _micInput;
             }
         }
         // The actual mic input being used
         private IAudioInputSource _micInput;
+        private IAudioLevelRangeProvider _micLevelRange;
+
+        /// <summary>
+        /// The minimum unsigned frequency handled by the microphone
+        /// </summary>
+        public float MicMinAudioLevel => _micLevelRange == null ? 0.5f : _micLevelRange.MinAudioLevel;
+
+        /// <summary>
+        /// The minimum unsigned frequency handled by the microphone
+        /// </summary>
+        public float MicMaxAudioLevel => _micLevelRange == null ? 1f : _micLevelRange.MaxAudioLevel;
 
         // Total sample chunks since start
         private int _totalSampleChunks;
@@ -480,22 +496,30 @@ namespace Meta.WitAi.Data
                     sample = sample / 2f + 0.5f;
                 }
 
-                // Clamp
-                sample = Mathf.Clamp01(sample);
-
-                // Get max level from signed float (0 to 1)
+                // Get largest unsigned sample
                 if (sample > levelMax)
                 {
                     levelMax = sample;
                 }
 
-                // Encode from signed long
+                // Encode from unsigned long (auto clamps)
                 long data = (long)(encodingMin + sample * encodingDif);
                 for (int b = 0; b < bytesPerSample; b++)
                 {
                     results[i * bytesPerSample + (byteOffset + b * byteMult)] = (byte)(data >> (b * 8));
                 }
             }
+
+            // Scale based on min/max audio levels
+            float min = MicMinAudioLevel;
+            float max = MicMaxAudioLevel;
+            if ((!min.Equals(0f) || !max.Equals(1f)) && max > min)
+            {
+                levelMax = (levelMax - min) / (max - min);
+            }
+
+            // Clamp result 0 to 1
+            levelMax = Mathf.Clamp01(levelMax);
         }
         // Encoding options
         private void GetEncodingMinMax(int bits, bool signed, out long encodingMin, out long encodingMax)

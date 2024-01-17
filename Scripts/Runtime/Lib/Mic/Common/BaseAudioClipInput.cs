@@ -18,7 +18,7 @@ namespace Meta.WitAi.Lib
     /// <summary>
     /// An abstract class for IAudioInputSources that use audio clips
     /// </summary>
-    public abstract class BaseAudioClipInput : MonoBehaviour, IAudioInputSource
+    public abstract class BaseAudioClipInput : MonoBehaviour, IAudioInputSource, IAudioLevelRangeProvider
     {
         /// <summary>
         /// The audio clip generated
@@ -49,6 +49,15 @@ namespace Meta.WitAi.Lib
         /// The total length in ms for the samples
         /// </summary>
         public virtual int AudioSampleLength { get; private set; }
+
+        /// <summary>
+        /// Ignore audio input below 0.5f magnitude
+        /// </summary>
+        public virtual float MinAudioLevel => 0.5f;
+        /// <summary>
+        /// Allow max audio input magnitude
+        /// </summary>
+        public virtual float MaxAudioLevel => 1f;
 
         /// <summary>
         /// Generates an audio encoding object using the existing settings
