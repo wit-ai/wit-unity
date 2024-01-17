@@ -25,6 +25,7 @@ namespace Meta.WitAi
     public abstract class PluggableBase<T>
     {
         private static Type[] _pluginTypes;
+        private static T[] _builtPlugins;
 
         /// <summary>
         /// A collection of the instantiated plugins which were found.
@@ -69,17 +70,19 @@ namespace Meta.WitAi
         /// <returns>a collection of plugins</returns>
         private static IEnumerable<T> BuildPlugins()
         {
-            T[] results = new T[_pluginTypes.Length];
+            if (_builtPlugins != null) return _builtPlugins;
 
-            for(int i=0;i<results.Length; i++)
+            _builtPlugins = new T[_pluginTypes.Length];
+
+            for(int i=0;i<_builtPlugins.Length; i++)
             {
                 if (Activator.CreateInstance(_pluginTypes[i]) is T plugin)
                 {
-                    results[i] = plugin;
+                    _builtPlugins[i] = plugin;
                 }
             }
-            //TODO: these could be instead cached by type to avoid the Find call
-            return results;
+
+            return _builtPlugins;
         }
 
         /// <returns>Retrieves the given type from the list of loaded plugins, if it exists.
@@ -104,7 +107,19 @@ namespace Meta.WitAi
             {
                 EnsurePluginsAreLoaded();
             }
-            return LoadedPlugins.FindAll(path => path is TPluginType) as TPluginType[];
+
+            if (LoadedPlugins == null) return Array.Empty<TPluginType>();
+
+            List<TPluginType> plugins = new List<TPluginType>();
+            foreach (var plugin in LoadedPlugins)
+            {
+                if (plugin is TPluginType type)
+                {
+                    plugins.Add(type);
+                }
+            }
+
+            return plugins.ToArray();
         }
     }
 }
