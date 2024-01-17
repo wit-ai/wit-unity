@@ -29,7 +29,7 @@ namespace Meta.WitAi
         /// Finds all the Json files canvases in the zip archive under the given folder
         /// </summary>
         /// <returns>new list of entries which represent json files</returns>
-        protected List<ZipArchiveEntry> GetJsonFileNames(string folder, ZipArchive zip)
+        public List<ZipArchiveEntry> GetJsonFileNames(string folder, ZipArchive zip)
         {
             var jsonCanvases = new List<ZipArchiveEntry>();
             foreach (var entry in zip.Entries)
@@ -48,7 +48,7 @@ namespace Meta.WitAi
         /// <param name="zip">zip archive from Wit.ai export</param>
         /// <param name="fileName">one of the file names</param>
         /// <returns>The entire canvas structure as nested JSON objects</returns>
-        protected WitResponseNode ExtractJson(ZipArchive zip, string fileName)
+        public WitResponseNode ExtractJson(ZipArchive zip, string fileName)
         {
             var entry = zip.Entries.First((v) => v.Name.EndsWith(fileName));
             if (entry.Name.EndsWith(fileName))
