@@ -167,7 +167,7 @@ namespace Meta.Voice
                     }
                     catch (Exception e)
                     {
-                        LogE(e);
+                        LogE("OnInit Exception Caught", e);
                     }
                     break;
                 case VoiceRequestState.Transmitting:
@@ -180,7 +180,7 @@ namespace Meta.Voice
                     }
                     catch (Exception e)
                     {
-                        LogE(e);
+                        LogE("HandleCancel Exception Caught", e);
                     }
                     try
                     {
@@ -188,7 +188,7 @@ namespace Meta.Voice
                     }
                     catch (Exception e)
                     {
-                        LogE(e);
+                        LogE("OnCancel Exception Caught", e);
                     }
                     shouldComplete = true;
                     break;
@@ -199,7 +199,7 @@ namespace Meta.Voice
                     }
                     catch (Exception e)
                     {
-                        LogE(e);
+                        LogE("OnFailed Exception Caught", e);
                     }
                     shouldComplete = true;
                     break;
@@ -210,7 +210,7 @@ namespace Meta.Voice
                     }
                     catch (Exception e)
                     {
-                        LogE(e);
+                        LogE("OnSuccess Exception Caught", e);
                     }
                     shouldComplete = true;
                     break;
@@ -225,7 +225,7 @@ namespace Meta.Voice
                 }
                 catch (Exception e)
                 {
-                    LogE(e);
+                    LogE("OnComplete Exception Caught", e);
                 }
             }
         }
@@ -259,7 +259,7 @@ namespace Meta.Voice
             }
             catch (Exception e)
             {
-                LogE(e);
+                LogE("OnSend Exception Caught", e);
             }
             if (!OnSimulateResponse())
             {
@@ -269,7 +269,7 @@ namespace Meta.Voice
                 }
                 catch (Exception e)
                 {
-                    LogE(e);
+                    LogE("HandleSend Exception Caught", e);
                 }
             }
         }
@@ -322,7 +322,7 @@ namespace Meta.Voice
             VLog.Log(logLevel, GetType().Name, requestLog);
         }
         protected void LogW(string log) => Log(log, VLogLevel.Warning);
-        protected void LogE(Exception e) => Log(e.ToString(), VLogLevel.Error);
+        protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLogLevel.Error);
 
         /// <summary>
         /// Append request specific data to log
