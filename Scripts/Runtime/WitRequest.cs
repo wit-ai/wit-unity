@@ -711,6 +711,17 @@ namespace Meta.WitAi
                 return;
             }
 
+            // Get error
+            if (statusCode != (int)HttpStatusCode.OK
+                && !string.IsNullOrEmpty(stringResponse))
+            {
+                WitResponseNode decode = JsonConvert.DeserializeToken(stringResponse);
+                if (decode != null && decode.AsObject.HasChild(WitConstants.ENDPOINT_ERROR_PARAM))
+                {
+                    error = decode[WitConstants.ENDPOINT_ERROR_PARAM].Value;
+                }
+            }
+
             // Final callbacks
             MainThreadCallback(() =>
             {
@@ -719,7 +730,7 @@ namespace Meta.WitAi
                 {
                     // Handle error for empty response
                     if (statusCode == (int)HttpStatusCode.BadRequest &&
-                        stringResponse.Contains(WitConstants.ERROR_RESPONSE_EMPTY_TRANSCRIPTION))
+                        string.Equals(error, WitConstants.ERROR_NO_TRANSCRIPTION))
                     {
                         Cancel(WitConstants.ERROR_NO_TRANSCRIPTION);
                     }

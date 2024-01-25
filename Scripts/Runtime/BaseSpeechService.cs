@@ -235,7 +235,7 @@ namespace Meta.WitAi
             result.AppendLine($"Request Id: {request?.Options?.RequestId}");
             if (warn)
             {
-                VLog.W(category, result);
+                VLog.E(category, result);
             }
             else
             {
