@@ -63,7 +63,8 @@ namespace Meta.WitAi.Lib
         /// <summary>
         /// Due to Microphone.Start & Microphone.End taking so long, activate on enable
         /// </summary>
-        public override bool ActivateOnEnable => true;
+        public override bool ActivateOnEnable => _activateOnEnable;
+        [SerializeField] private bool _activateOnEnable = true;
 
         /// <summary>
         /// Searches for mics for this long following an activation request.

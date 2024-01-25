@@ -394,6 +394,9 @@ namespace Meta.WitAi.Lib
                 DeactivateAudio();
             }
 
+            // No longer recording
+            IsRecording = false;
+
             // Recording complete
             OnStopRecording?.Invoke();
         }
