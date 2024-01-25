@@ -219,7 +219,8 @@ namespace Meta.WitAi.Requests
             {
                 foreach (string key in queryParams.Keys)
                 {
-                    uriBuilder.Query += $"&{key}={queryParams[key]}";
+                    var value = UnityWebRequest.EscapeURL(queryParams[key]).Replace("+", "%20");
+                    uriBuilder.Query += $"&{key}={value}";
                 }
             }
 
