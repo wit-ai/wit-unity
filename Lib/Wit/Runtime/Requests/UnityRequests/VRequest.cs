@@ -375,10 +375,19 @@ namespace Meta.WitAi.Requests
             string downloadedJson = string.Empty;
             try
             {
-                byte[] downloadedBytes = request?.downloadHandler?.data;
+                var downloadHandler = request?.downloadHandler;
+                byte[] downloadedBytes = downloadHandler?.data;
                 if (downloadedBytes != null)
                 {
                     downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
+                }
+                else
+                {
+                    string downloadedText = downloadHandler?.text;
+                    if (!string.IsNullOrEmpty(downloadedText))
+                    {
+                        downloadedJson = downloadedText;
+                    }
                 }
             }
             catch (Exception e)
@@ -408,7 +417,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Get final result
-            return $"{request.error}\nServer Response Message: {downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value}";
+            return downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value;
         }
         #endregion
 
