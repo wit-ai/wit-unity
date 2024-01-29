@@ -60,7 +60,7 @@ namespace Meta.WitAi.TTS.Integrations
                 _player = gameObject.GetComponentInChildren(typeof(ITTSEventPlayer));
                 if (Player == null)
                 {
-                    VLog.E($"No Player found for {GetType().Name}");
+                    VLog.E($"No Player found for {GetType().Name} on {name}");
                 }
             }
             // Generate min & max events

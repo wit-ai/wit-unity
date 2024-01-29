@@ -17,6 +17,8 @@ namespace Meta.Voice.Audio
     /// </summary>
     public class UnityAudioClipStream : AudioClipStream, IAudioClipProvider, IAudioClipSetter
     {
+        [SerializeField] private bool debug;
+        
         /// <summary>
         /// The audio clip to be used for Unity AudioSource playback
         /// </summary>
@@ -161,14 +163,14 @@ namespace Meta.Voice.Audio
                 Clip.SetData(oldSamples, 0);
 
                 // Invoke clip updated callback
-                VLog.D($"Clip Stream - Clip Updated\nNew Samples: {samples}\nOld Samples: {oldClipSamples}");
+                if(debug) VLog.D($"Clip Stream - Clip Updated\nNew Samples: {samples}\nOld Samples: {oldClipSamples}");
 
                 // Requeue previous clip
                 ReuseCachedClip(oldClip);
             }
             else
             {
-                VLog.D($"Clip Stream - Clip Generated\nSamples: {samples}");
+                if(debug) VLog.D($"Clip Stream - Clip Generated\nSamples: {samples}");
             }
 
             // Handle update
