@@ -111,9 +111,6 @@ namespace Meta.WitAi
         /// </summary>
         public const int ERROR_CODE_TIMEOUT = 14;
 
-        public const string ERROR_RESPONSE_EMPTY_TRANSCRIPTION = "empty-transcription";
-        public const string ERROR_RESPONSE_TIMEOUT = "timeout";
-
         // Wit TTS Settings Nodes
         /// <summary>
         /// /synthesize parameter: The voice id to use when speaking via a voice preset.
@@ -154,6 +151,7 @@ namespace Meta.WitAi
         /// /synthesize parameter: Adjusts the pitch at which a TTS voice will speak
         /// </summary>
         public static string TTS_PITCH = "pitch";
+
         /// <summary>
         /// Default pitch used if no speed is provided (100%)
         /// </summary>
@@ -166,5 +164,27 @@ namespace Meta.WitAi
         /// Maximum pitch supported by the endpoint (200%)
         /// </summary>
         public const int TTS_PITCH_MAX = 200;
+        
+        #region Response Body Runtime Errors
+        /// <summary>
+        /// The key in the response body for the response code
+        /// </summary>
+        public const string KEY_RESPONSE_CODE = "code";
+
+        /// <summary>
+        /// The key in the response body for the response error message
+        /// </summary>
+        public const string KEY_RESPONSE_ERROR = "error";
+
+        /// <summary>
+        /// The server received a request, but there was no transcription detected in the input audio stream.
+        /// </summary>
+        public const string ERROR_RESPONSE_EMPTY_TRANSCRIPTION = "empty-transcription";
+
+        /// <summary>
+        /// The active request timed out
+        /// </summary>
+        public const string ERROR_RESPONSE_TIMEOUT = "timeout";
+        #endregion
     }
 }
