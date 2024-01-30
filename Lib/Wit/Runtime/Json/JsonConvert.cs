@@ -587,6 +587,11 @@ namespace Meta.WitAi.Json
             {
                 inType = inObject.GetType();
             }
+            // Already set
+            if (inObject is WitResponseNode node)
+            {
+                return node;
+            }
 
             // Iterate custom converters
             if (customConverters != null)
@@ -734,10 +739,11 @@ namespace Meta.WitAi.Json
                 {
                     try
                     {
-                        // Get default object
-                        object newObj = EnsureExists(varInfo.GetVariableType(), varInfo.GetValue(inObject));
-                        // Use default property name
-                        result.Add(varName, SerializeToken(varInfo.GetVariableType(), newObj, log, customConverters));
+                        object newObj = varInfo.GetValue(inObject);
+                        if (newObj != null)
+                        {
+                            result.Add(varName, SerializeToken(varInfo.GetVariableType(), newObj, log, customConverters));
+                        }
                     }
                     catch (Exception e)
                     {
@@ -763,7 +769,7 @@ namespace Meta.WitAi.Json
                 var info = new JsonFieldInfo(field);
                 if(info.GetShouldSerialize() || info.GetShouldDeserialize()) results.Add(info);
             }
-            
+
             foreach (var property in forType.GetProperties(BIND_FLAGS))
             {
                 var info = new JsonPropertyInfo(property);

@@ -10,6 +10,7 @@ using System.Net;
 using Meta.WitAi.Data.Entities;
 using Meta.WitAi.Data.Intents;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.WitAi
 {
@@ -81,56 +82,45 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Get whether this response is for transcriptions only
+        /// </summary>
+        public static WitResponseNode SafeGet(this WitResponseNode witResponse, string key)
+        {
+            var witObject = witResponse?.AsObject;
+            return witObject != null && witObject.HasChild(key) ? witObject[key] : null;
+        }
+
+        /// <summary>
         /// Gets the content of a witResponse's partial or final response whichever is present.
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
         /// <returns></returns>
-        public static WitResponseClass GetResponse(this WitResponseNode witResponse)
-        {
-            return witResponse.GetFinalResponse() ?? witResponse.GetPartialResponse();
-        }
+        public static WitResponseClass GetResponse(this WitResponseNode witResponse) =>
+            witResponse?.GetFinalResponse() ?? witResponse?.GetPartialResponse();
 
         /// <summary>
         /// Gets the content of a witResponse["response"] node.
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
-        /// <returns></returns>
-        public static WitResponseClass GetFinalResponse(this WitResponseNode witResponse)
-        {
-            var response = witResponse?.AsObject;
-            return null != response && response.HasChild(WIT_PARTIAL_RESPONSE) ? response[WIT_PARTIAL_RESPONSE].AsObject : null;
-        }
+        public static WitResponseClass GetFinalResponse(this WitResponseNode witResponse) =>
+            witResponse?.SafeGet(WIT_RESPONSE)?.AsObject;
 
         /// <summary>
         /// Gets the content of a witResponse["partial_response"] node.
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
-        /// <returns></returns>
-        public static WitResponseClass GetPartialResponse(this WitResponseNode witResponse)
-        {
-            var response = witResponse?.AsObject;
-            return null != response && response.HasChild(WIT_PARTIAL_RESPONSE) ? response[WIT_PARTIAL_RESPONSE].AsObject : null;
-        }
+        public static WitResponseClass GetPartialResponse(this WitResponseNode witResponse) =>
+            witResponse?.SafeGet(WIT_PARTIAL_RESPONSE)?.AsObject;
 
         /// <summary>
         /// Get whether this response is a 'final' response
         /// </summary>
         public static bool GetIsFinal(this WitResponseNode witResponse) =>
-            null != witResponse
-            && witResponse.AsObject != null
-            && witResponse.AsObject.HasChild(WIT_KEY_FINAL)
-            && witResponse[WIT_KEY_FINAL].AsBool;
+            witResponse?.SafeGet(WIT_KEY_FINAL)?.AsBool ?? false;
 
         // Used for multiple lookups
-        private static WitResponseArray GetArray(WitResponseNode witResponse, string key)
-        {
-            var response = witResponse?.AsObject;
-            if (response != null && response.HasChild(key))
-            {
-                return response[key].AsArray;
-            }
-            return null;
-        }
+        private static WitResponseArray GetArray(WitResponseNode witResponse, string key) =>
+            witResponse?.SafeGet(key)?.AsArray;
         #endregion
 
         #region Entity methods
