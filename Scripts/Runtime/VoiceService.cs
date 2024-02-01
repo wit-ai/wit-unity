@@ -53,6 +53,7 @@ namespace Meta.WitAi
                 }
                 return _witConfiguration;
             }
+            set => _witConfiguration = value;
         }
         private WitConfiguration _witConfiguration;
 
