@@ -24,7 +24,11 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// The audio event player being used for playback
         /// </summary>
-        public ITTSEventPlayer Player => _player as ITTSEventPlayer;
+        public ITTSEventPlayer Player
+        {
+            get => _player as ITTSEventPlayer;
+            set => SetPlayer(value);
+        }
         [SerializeField, ObjectType(typeof(ITTSEventPlayer))]
         private UnityEngine.Object _player;
 
@@ -50,11 +54,20 @@ namespace Meta.WitAi.TTS.Integrations
         private TEvent _maxEvent;
 
         /// <summary>
-        /// On awake, find IAudioEventPlayer for playback handling
+        /// On awake, generate min and max events
         /// </summary>
         protected virtual void Awake()
         {
-            // Find player if possible
+            _minEvent = Activator.CreateInstance<TEvent>();
+            _maxEvent = Activator.CreateInstance<TEvent>();
+        }
+
+        /// <summary>
+        /// Finds player if needed, adds delegates and refreshes events
+        /// </summary>
+        protected virtual void OnEnable()
+        {
+            // Find player if needed/possible
             if (Player == null)
             {
                 _player = gameObject.GetComponentInChildren(typeof(ITTSEventPlayer));
@@ -63,22 +76,8 @@ namespace Meta.WitAi.TTS.Integrations
                     VLog.E($"No Player found for {GetType().Name} on {name}");
                 }
             }
-            // Generate min & max events
-            _minEvent = Activator.CreateInstance<TEvent>();
-            _maxEvent = Activator.CreateInstance<TEvent>();
-        }
-
-        /// <summary>
-        /// Add animation updated methods
-        /// </summary>
-        protected virtual void OnEnable()
-        {
             // Add delegates
-            if (Player != null)
-            {
-                Player.OnEventsUpdated += OnEventsUpdated;
-                Player.OnSampleUpdated += OnSampleUpdated;
-            }
+            SetPlayerDelegates(Player, true);
             // Refreshes event list & sample
             RefreshEvents(true);
         }
@@ -100,15 +99,67 @@ namespace Meta.WitAi.TTS.Integrations
         }
 
         /// <summary>
-        /// Remove animation updated methods
+        /// Remove player delegates on disable
         /// </summary>
         protected virtual void OnDisable()
         {
-            // Remove delegates
-            if (Player != null)
+            SetPlayerDelegates(Player, false);
+        }
+
+        /// <summary>
+        /// Safely set player while adjusting event handling
+        /// </summary>
+        protected virtual void SetPlayer(ITTSEventPlayer player)
+        {
+            // Ignore if same
+            var current = Player;
+            if (current == player)
             {
-                Player.OnEventsUpdated -= OnEventsUpdated;
-                Player.OnSampleUpdated -= OnSampleUpdated;
+                return;
+            }
+
+            // Remove previous delegates
+            if (gameObject.activeInHierarchy)
+            {
+                SetPlayerDelegates(current, false);
+            }
+
+            // Set player object
+            current = player;
+            if (current is UnityEngine.Object playerObj)
+            {
+                _player = playerObj;
+            }
+
+            // Add new delegates
+            if (gameObject.activeInHierarchy)
+            {
+                SetPlayerDelegates(current, true);
+            }
+
+            // Force refresh events
+            RefreshEvents(true);
+        }
+
+        /// <summary>
+        /// Setter for player delegates
+        /// </summary>
+        /// <param name="add">Add if true, remove if false</param>
+        protected virtual void SetPlayerDelegates(ITTSEventPlayer player, bool add)
+        {
+            if (player == null)
+            {
+                return;
+            }
+            if (add)
+            {
+                player.OnEventsUpdated += OnEventsUpdated;
+                player.OnSampleUpdated += OnSampleUpdated;
+            }
+            else
+            {
+                player.OnEventsUpdated -= OnEventsUpdated;
+                player.OnSampleUpdated -= OnSampleUpdated;
             }
         }
 
