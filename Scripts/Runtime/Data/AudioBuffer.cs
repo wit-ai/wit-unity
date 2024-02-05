@@ -11,6 +11,7 @@
 #endif
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Meta.Voice;
 using Meta.WitAi.Attributes;
@@ -156,12 +157,21 @@ namespace Meta.WitAi.Data
         public VoiceAudioInputState AudioState { get; private set; } = VoiceAudioInputState.Off;
 
         /// <summary>
+        /// Current max audio level, defaults to -1 when off
+        /// </summary>
+        public float MicMaxLevel { get; private set; } = MIC_RESET;
+        private const float MIC_RESET = -1f;
+
+        /// <summary>
         /// Returns true if a component has registered to receive audio data and if the mic is actively capturing data
         /// that will be shared
         /// </summary>
         /// <param name="component">The source of the StartRecording</param>
         /// <returns>True if this component has called StartRecording</returns>
         public bool IsRecording(Component component) => _recorders.Contains(component);
+
+        // Coroutine for volume update
+        private Coroutine _volumeUpdate;
         #endregion Settings
 
         #region Lifecycle
@@ -210,16 +220,22 @@ namespace Meta.WitAi.Data
         private void SetAudioState(VoiceAudioInputState newAudioState)
         {
             AudioState = newAudioState;
-#if DEBUG_MIC
             if (AudioState == VoiceAudioInputState.On)
             {
+                StopUpdateVolume();
+                MicMaxLevel = MIC_RESET;
+                _volumeUpdate = StartCoroutine(UpdateVolume());
+#if DEBUG_MIC
                 DebugStart();
+#endif
             }
             else if (AudioState == VoiceAudioInputState.Off)
             {
+#if DEBUG_MIC
                 DebugStop();
-            }
 #endif
+                StopUpdateVolume();
+            }
             Events.OnAudioStateChange?.Invoke(AudioState);
         }
 
@@ -429,9 +445,11 @@ namespace Meta.WitAi.Data
             Encode(samples, offset, length, out byte[] data, out float levelMax);
             Profiler.EndSample();
 
+            // Set max level for frame
+            MicMaxLevel = Mathf.Max(levelMax, MicMaxLevel);
+
             // Perform received callback
             events.OnSampleReceived?.Invoke(samples, _totalSampleChunks, levelMax);
-            events.OnMicLevelChanged?.Invoke(levelMax);
 
             // Create marker
             var marker = CreateMarker();
@@ -452,6 +470,44 @@ namespace Meta.WitAi.Data
 
             // Increment chunk count
             _totalSampleChunks++;
+        }
+
+        /// <summary>
+        /// Ensure volume callback only occurs once per frame
+        /// </summary>
+        private IEnumerator UpdateVolume()
+        {
+            float volume = MIC_RESET;
+            while (true)
+            {
+                if (Application.isBatchMode)
+                {
+                    yield return null;
+                }
+                else
+                {
+                    yield return new WaitForEndOfFrame();
+                }
+                if (!volume.Equals(MicMaxLevel) && !MicMaxLevel.Equals(MIC_RESET))
+                {
+                    volume = MicMaxLevel;
+                    events.OnMicLevelChanged?.Invoke(volume);
+                    MicMaxLevel = MIC_RESET;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stop volume update coroutine
+        /// </summary>
+        private void StopUpdateVolume()
+        {
+            MicMaxLevel = -1f;
+            if (_volumeUpdate != null)
+            {
+                StopCoroutine(_volumeUpdate);
+                _volumeUpdate = null;
+            }
         }
 
         /// <summary>
