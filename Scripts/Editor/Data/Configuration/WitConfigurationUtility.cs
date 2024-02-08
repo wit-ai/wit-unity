@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using Meta.Conduit;
 using Meta.Voice.TelemetryUtilities;
-using Meta.WitAi;
 using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;

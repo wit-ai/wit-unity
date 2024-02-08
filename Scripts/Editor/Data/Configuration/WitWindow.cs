@@ -12,7 +12,6 @@ using System.Linq;
 using Meta.Voice.TelemetryUtilities;
 using UnityEditor;
 using UnityEngine;
-using Meta.WitAi.Data.Configuration;
 
 namespace Meta.WitAi.Windows
 {

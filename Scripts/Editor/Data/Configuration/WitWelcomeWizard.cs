@@ -9,7 +9,6 @@
 using System;
 using UnityEngine;
 using Meta.WitAi.Data.Configuration;
-using Meta.WitAi;
 using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.Windows

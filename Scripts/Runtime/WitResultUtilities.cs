@@ -10,7 +10,6 @@ using System.Net;
 using Meta.WitAi.Data.Entities;
 using Meta.WitAi.Data.Intents;
 using Meta.WitAi.Json;
-using UnityEngine;
 
 namespace Meta.WitAi
 {
