@@ -54,6 +54,11 @@ namespace Meta.Conduit.Editor
             
             AddValues(enumValues);
         }
+        
+        // General overload without entities
+        public EnumCodeWrapper(IFileIo fileIo, Type enumType, string sourceCodeFile) : this(fileIo, enumType, enumType.Name, sourceCodeFile)
+        {
+        }
 
         // Setup
         public EnumCodeWrapper(IFileIo fileIo, string enumName, string entityName, IList<WitKeyword> enumValues, string enumNamespace = null, string sourceCodeFile = null)
@@ -71,7 +76,7 @@ namespace Meta.Conduit.Editor
             
             // Initial setup
             _compileUnit = new CodeCompileUnit();
-            _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GetEnumFilePath(enumName, enumNamespace) : sourceCodeFile;
+            _sourceFilePath = string.IsNullOrEmpty(sourceCodeFile) ? GenerateEnumFilePath(enumName, enumNamespace) : sourceCodeFile;
             _fileIo = fileIo;
 
             // Setup namespace
@@ -94,7 +99,7 @@ namespace Meta.Conduit.Editor
             };
             _namespace.Types.Add(_typeDeclaration);
 
-            if (!entityName.Equals(enumName))
+            if (!string.IsNullOrEmpty(enumName) && !entityName.Equals(enumName))
             {
                 var entityAttributeType = new CodeTypeReference(GetShortAttributeName(nameof(ConduitEntityAttribute)));
                 var entityAttributeArgs = new CodeAttributeArgument[]
@@ -113,6 +118,23 @@ namespace Meta.Conduit.Editor
         /// </summary>
         /// <param name="values">The values to add.</param>
         public void AddValues(IList<WitKeyword> values)
+        {
+            if (values == null)
+            {
+                return;
+            }
+
+            foreach (var value in values)
+            {
+                AddValue(value);
+            }
+        }
+
+        /// <summary>
+        /// Adds the supplied values to the enum construct. Values that already exist are ignored.
+        /// </summary>
+        /// <param name="values">The values to add.</param>
+        public void AddValues(ICollection<string> values)
         {
             if (values == null)
             {
@@ -219,7 +241,7 @@ namespace Meta.Conduit.Editor
         }
         
         // Get safe enum file path
-        private string GetEnumFilePath(string enumName, string enumNamespace)
+        private string GenerateEnumFilePath(string enumName, string enumNamespace)
         {
             return Path.Combine(DEFAULT_PATH, enumNamespace.Replace('.', '\\'), $"{enumName}.cs");
         }
@@ -254,7 +276,7 @@ namespace Meta.Conduit.Editor
         }
 
         // Add a single value. Replace attribute if value already exists.
-        private void AddValue(string value, CodeAttributeDeclaration attribute = null)
+        public void AddValue(string value, CodeAttributeDeclaration attribute = null)
         {
             // Get clean value
             var cleanValue = ConduitUtilities.SanitizeString(value);

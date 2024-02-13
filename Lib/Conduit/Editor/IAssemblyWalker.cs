@@ -47,7 +47,10 @@ namespace Meta.Conduit.Editor
         /// True if the type is the only type defined in the file.
         /// False if there are other types in the same file.
         /// </param>
+        /// <param name="scopeToTargetAssemblies">Look only at target assemblies. If false, scan everything.</param>
+        /// <param name="editorAssemblies">Look in editor assemblies.</param>
+        /// <param name="playerAssemblies">Look in player assemblies.</param>
         /// <returns>True if the type was found. False otherwise.</returns>
-        bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit);
+        bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit, bool scopeToTargetAssemblies = true, bool editorAssemblies = false, bool playerAssemblies = true);
     }
 }

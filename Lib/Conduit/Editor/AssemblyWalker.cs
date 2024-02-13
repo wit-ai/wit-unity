@@ -99,16 +99,26 @@ namespace Meta.Conduit.Editor
             return _compilationAssemblies.Where(assembly => !_shortAssemblyNamesToIgnore.Contains(assembly.name));
         }
 
-        public bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit)
+        public bool GetSourceCode(Type type, out string sourceCodeFile, out bool singleUnit, bool scopeToTargetAssemblies = true, bool editorAssemblies = false, bool playerAssemblies = true)
         {
             if (type == null)
             {
                 throw new ArgumentException("Type cannot be null");
             }
 
-            foreach (var assembly in GetCompilationAssemblies(AssembliesType.Player))
+            var targetAssemblies = new List<Assembly>();
+            if (playerAssemblies)
             {
-                if (!_assemblies.ContainsKey(assembly.name))
+                targetAssemblies.AddRange(GetCompilationAssemblies(AssembliesType.Player));
+            }
+            if (editorAssemblies)
+            {
+                targetAssemblies.AddRange(GetCompilationAssemblies(AssembliesType.Editor));
+            }
+
+            foreach (var assembly in targetAssemblies)
+            {
+                if (scopeToTargetAssemblies && !_assemblies.ContainsKey(assembly.name))
                 {
                     continue;
                 }
