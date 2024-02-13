@@ -11,8 +11,8 @@ namespace Meta.WitAi
     public static class WitConstants
     {
         // Wit service version info
-        public const string API_VERSION = "20231213";
-        public const string SDK_VERSION = "63.0.0";
+        public const string API_VERSION = "20240113";
+        public const string SDK_VERSION = "64.0.0";
         public const string CLIENT_NAME = "wit-unity";
 
         // Wit service endpoint info
@@ -164,7 +164,7 @@ namespace Meta.WitAi
         /// Maximum pitch supported by the endpoint (200%)
         /// </summary>
         public const int TTS_PITCH_MAX = 200;
-        
+
         #region Response Body Runtime Errors
         /// <summary>
         /// The key in the response body for the response code
