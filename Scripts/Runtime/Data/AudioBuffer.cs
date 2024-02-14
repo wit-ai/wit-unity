@@ -358,14 +358,15 @@ namespace Meta.WitAi.Data
         /// </summary>
         private void OnMicRecordStop()
         {
+            // Clear recorder list
+            var stoppedRecorders = _recorders;
+            _recorders = new HashSet<Component>();
+
             // Stop each recorder
-            foreach (var component in _recorders)
+            foreach (var component in stoppedRecorders)
             {
                 OnMicRecordStopped(component);
             }
-
-            // Clear recorder list
-            _recorders.Clear();
 
             // Activation success
             SetAudioState(VoiceAudioInputState.Off);
