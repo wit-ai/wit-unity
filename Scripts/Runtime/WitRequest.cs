@@ -440,9 +440,10 @@ namespace Meta.WitAi
                 _request.Headers[key] = headers[key];
             }
 
-            // Handle timeout
-            _timeoutStart = DateTime.UtcNow;
-            _ = HandleTimeout(TimeoutMs);
+            // Handle timeout locally
+            _timeoutThread = new Thread(HandleTimeout);
+            _timeoutThread.Start();
+            _request.Timeout = -1;
 
             // If post or put, get post stream & wait for completion
             if (_request.Method == "POST" || _request.Method == "PUT")
@@ -470,14 +471,19 @@ namespace Meta.WitAi
         }
 
         // Handle timeout callback
+        private Thread _timeoutThread;
         private DateTime _timeoutStart;
-        private async Task HandleTimeout(double timeoutMS)
+        private void HandleTimeout()
         {
             // Await a specific timeout in ms
-            while ((DateTime.UtcNow - _timeoutStart).TotalMilliseconds < timeoutMS)
+            double elapsed;
+            _timeoutStart = DateTime.UtcNow;
+            do
             {
-                await Task.Delay(ASYNC_DELAY);
-            }
+                Thread.Sleep(ASYNC_DELAY);
+                elapsed = (DateTime.UtcNow - _timeoutStart).TotalMilliseconds;
+            } while (elapsed < TimeoutMs);
+            _timeoutThread = null;
 
             // Ignore if no longer active
             if (!IsActive)
@@ -494,7 +500,6 @@ namespace Meta.WitAi
             }
 
             // Get error
-            var elapsed = (DateTime.UtcNow - _requestStartTime).TotalMilliseconds;
             var error = $"Request [{path}] timed out after {elapsed:0.00} ms";
 
             // Call error
@@ -859,7 +864,15 @@ namespace Meta.WitAi
         // Close stream
         private void CloseActiveStream()
         {
+            // No longer ready
             IsInputStreamReady = false;
+            // Abort timeout
+            if (_timeoutThread != null)
+            {
+                _timeoutThread.Abort();
+                _timeoutThread = null;
+            }
+            // Close write stream
             lock (_streamLock)
             {
                 if (null != _writeStream)
