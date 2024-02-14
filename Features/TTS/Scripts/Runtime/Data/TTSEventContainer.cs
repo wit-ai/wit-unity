@@ -7,7 +7,9 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Meta.WitAi.Json;
 
@@ -44,13 +46,16 @@ namespace Meta.WitAi.TTS.Data
         // Current event list, not thread safe due to appending on background thread
         private List<ITTSEvent> _events = new List<ITTSEvent>();
         // Lock to ensure appending of events does not conflict
-        private List<string> _decoding = new List<string>();
+        private ConcurrentQueue<string> _decoding = new ConcurrentQueue<string>();
 
         // Json response keys
         internal const string EVENT_TYPE_KEY = "type";
         internal const string EVENT_WORD_TYPE_KEY = "WORD";
         internal const string EVENT_VISEME_TYPE_KEY = "VISEME";
         internal const string EVENT_PHONEME_TYPE_KEY = "PHONE";
+
+        // Background task for decoding
+        private Thread _decodeThread;
 
         /// <summary>
         /// Getters for a list of events based on keys
@@ -92,31 +97,27 @@ namespace Meta.WitAi.TTS.Data
             }
 
             // Add to decode list
-            _decoding.Add(eventJson);
+            _decoding.Enqueue(eventJson);
 
-            // If first, begin decoding the rest
-            if (_decoding.Count == 1)
+            // Start decode thread
+            if (_decodeThread == null)
             {
-                #pragma warning disable CS4014
-                DecodeEventsAsync();
-                #pragma warning restore CS4014
+                _decodeThread = new Thread(DecodeEvents);
+                _decodeThread.Start();
             }
         }
 
         // Decode text async
-        private async Task DecodeEventsAsync()
+        private void DecodeEvents()
         {
             // Get new events list
             List<ITTSEvent> newEvents = new List<ITTSEvent>();
 
             // Continue decoding while events exist
-            while (_decoding.Count > 0)
+            while (_decoding.TryDequeue(out string eventJson))
             {
-                // Get event json
-                string eventJson = _decoding[0];
-
                 // Deserialize json
-                WitResponseNode decodedEvents = await JsonConvert.DeserializeTokenAsync(eventJson);
+                WitResponseNode decodedEvents = JsonConvert.DeserializeToken(eventJson);
                 if (decodedEvents == null)
                 {
                     VLog.W(GetType().Name, $"TTS Audio Events Decode Failed\n{eventJson}\n");
@@ -126,7 +127,7 @@ namespace Meta.WitAi.TTS.Data
                     int index = 0;
                     foreach (var eventNode in decodedEvents.AsArray.Childs)
                     {
-                        ITTSEvent ttsEvent = await DecodeEventAsync(eventNode);
+                        ITTSEvent ttsEvent = DecodeEvent(eventNode);
                         if (ttsEvent == null)
                         {
                             VLog.W(GetType().Name, $"TTS Audio Event[{index}] Decode Failed\n{eventJson}\n");
@@ -138,12 +139,12 @@ namespace Meta.WitAi.TTS.Data
                         index++;
                     }
                 }
-
-                // Remove decoded event
-                _decoding.RemoveAt(0);
             }
 
-            // Events added
+            // Clear thread
+            _decodeThread = null;
+
+            // Events added callback
             if (newEvents.Count > 0)
             {
                 // Add events
@@ -155,20 +156,20 @@ namespace Meta.WitAi.TTS.Data
         }
 
         // Decodes event based on switch statement
-        private async Task<ITTSEvent> DecodeEventAsync(WitResponseNode eventNode)
+        private ITTSEvent DecodeEvent(WitResponseNode eventNode)
         {
             try
             {
                 switch (eventNode[EVENT_TYPE_KEY].Value)
                 {
                     case EVENT_WORD_TYPE_KEY:
-                        return await JsonConvert.DeserializeObjectAsync<TTSWordEvent>(eventNode);
+                        return JsonConvert.DeserializeObject<TTSWordEvent>(eventNode);
                     case EVENT_VISEME_TYPE_KEY:
-                        return await JsonConvert.DeserializeObjectAsync<TTSVisemeEvent>(eventNode);
+                        return JsonConvert.DeserializeObject<TTSVisemeEvent>(eventNode);
                     case EVENT_PHONEME_TYPE_KEY:
-                        return await JsonConvert.DeserializeObjectAsync<TTSPhonemeEvent>(eventNode);
+                        return JsonConvert.DeserializeObject<TTSPhonemeEvent>(eventNode);
                     default:
-                        return await JsonConvert.DeserializeObjectAsync<TTSStringEvent>(eventNode);
+                        return JsonConvert.DeserializeObject<TTSStringEvent>(eventNode);
                 }
             }
             catch (Exception)
