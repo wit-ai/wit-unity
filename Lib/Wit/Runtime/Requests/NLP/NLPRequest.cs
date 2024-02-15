@@ -6,9 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Text;
+using System.Threading;
 using Meta.WitAi;
 using System.Threading.Tasks;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -42,6 +45,10 @@ namespace Meta.Voice
         private bool _initialized = false;
         // Ensure final is not called multiple times
         private bool _finalized = false;
+        // Decode thread
+        private Thread _decodeThread;
+        // Async delay
+        private const int DECODE_DELAY_MS = 5;
 
         /// <summary>
         /// Constructor for NLP requests
@@ -55,6 +62,8 @@ namespace Meta.Voice
             Options.InputType = inputType;
             _initialized = true;
             _finalized = false;
+            _decodeThread = new Thread(DecodeAsync);
+            _decodeThread.Start();
 
             // Finalize
             SetState(VoiceRequestState.Initialized);
@@ -120,16 +129,19 @@ namespace Meta.Voice
         /// <summary>
         /// Whether currently decoding a raw response
         /// </summary>
-        public virtual bool IsDecoding => _rawDecodesStarted != _rawDecodesComplete;
+        public virtual bool IsDecoding => _rawResponses.Count > 0 || _rawDecoding || _rawDecoded > _rawApplied;
 
         // Last raw response received
         private string _rawResponseLast;
         // Total raw response decodes began
-        private int _rawDecodesStarted;
+        private ConcurrentQueue<string> _rawResponses = new ConcurrentQueue<string>();
         // Total raw response decodes complete
-        private int _rawDecodesComplete;
+        private bool _rawDecoding;
+        // Apply
+        private int _rawDecoded = 0;
+        private int _rawApplied = 0;
         // Whether the currently decoding raw response should be considered final
-        private bool _rawDecodeFinal;
+        private bool _rawResponseFinal;
 
         /// <summary>
         /// Performs callbacks for raw response &
@@ -163,18 +175,12 @@ namespace Meta.Voice
             }
 
             // Apply last raw response
+            _rawResponseFinal |= final;
             _rawResponseLast = rawResponse;
+            _rawResponses.Enqueue(_rawResponseLast);
 
             // Perform callback
             OnRawResponse(rawResponse);
-
-            // Decode raw response on background thread
-            if (DecodeRawResponses)
-            {
-#pragma warning disable CS4014
-                DecodeRawResponseAsync(rawResponse, final);
-#pragma warning restore CS4014
-            }
         }
 
         /// <summary>
@@ -186,38 +192,58 @@ namespace Meta.Voice
         /// <summary>
         /// Decodes asynchronously and then passes into appropriate locations
         /// </summary>
-        protected virtual async Task DecodeRawResponseAsync(string rawResponse, bool final)
+        private void DecodeAsync()
         {
-            // Decode immediately
-            int rawDecodeIndex = _rawDecodesStarted;
-            _rawDecodesStarted++;
-            TResponseData responseData = await ResponseDecoder.DecodeAsync(rawResponse);
-
-            // Wait for previous decodes to complete
-            while (rawDecodeIndex > _rawDecodesComplete)
+            while (IsActive)
             {
-                await Task.Delay(2);
+                // Dequeue while possible
+                if (_rawResponses.TryDequeue(out var rawResponse))
+                {
+                    // Ignore
+                    if (!DecodeRawResponses || ResponseDecoder == null)
+                    {
+                        continue;
+                    }
+
+                    // Begin decode
+                    _rawDecoding = true;
+
+                    // Decode data
+                    TResponseData responseData = ResponseDecoder.Decode(rawResponse);
+
+                    // Enqueue decoded data
+                    _rawDecoded++;
+                    MainThreadCallback(() => ApplyDecodedResponseData(responseData));
+
+                    // Decode complete
+                    _rawDecoding = false;
+                }
+                // Wait 10ms for another response
+                else
+                {
+                    Thread.Sleep(DECODE_DELAY_MS);
+                }
             }
-
-            // Apply
-            ApplyDecodedResponseData(responseData, final);
+            _rawResponses.Clear();
+            _decodeThread = null;
         }
-        // Call application of data
-        protected virtual void ApplyDecodedResponseData(TResponseData responseData, bool final)
-        {
-            // Allow next decode to complete
-            _rawDecodesComplete++;
 
-            // No longer active
+        /// <summary>
+        /// Applies decoded responses as they arrive from the background thread
+        /// </summary>
+        protected virtual void ApplyDecodedResponseData(TResponseData responseData)
+        {
+            // Applied
+            _rawApplied++;
+
+            // Ignore if no longer active
             if (!IsActive)
             {
                 return;
             }
 
-            // Adjust final if no longer decoding
-            final |= !IsDecoding && _rawDecodeFinal;
-
-            // Handle decoded raw response
+            // Apply if possible
+            bool final = !IsDecoding && _rawResponseFinal;
             ApplyResponseData(responseData, final);
         }
         #endregion DECODING
@@ -243,7 +269,7 @@ namespace Meta.Voice
                 }
                 _finalized = true;
             }
-            // Handle null response
+            // Handle null response if final
             if (responseData == null)
             {
                 if (final)
@@ -252,17 +278,14 @@ namespace Meta.Voice
                 }
                 return;
             }
-            // Handle error
+            // Handle error immediately
             string error = ResponseDecoder?.GetResponseError(responseData);
             if (!string.IsNullOrEmpty(error))
             {
-                if (final)
-                {
-                    int errorStatusCode = ResponseDecoder == null
-                        ? WitConstants.ERROR_CODE_GENERAL
-                        : ResponseDecoder.GetResponseStatusCode(responseData);
-                    HandleFailure(errorStatusCode, error);
-                }
+                int errorStatusCode = ResponseDecoder == null
+                    ? WitConstants.ERROR_CODE_GENERAL
+                    : ResponseDecoder.GetResponseStatusCode(responseData);
+                HandleFailure(errorStatusCode, error);
                 return;
             }
 
@@ -307,7 +330,6 @@ namespace Meta.Voice
                 Events.OnValidateResponse?.Invoke(responseData, validationErrors);
                 if (validationErrors.Length > 0)
                 {
-                    Debug.Log($"[RFB DEBUG] Failure Response\n{responseData}");
                     HandleFailure($"Response validation failed due to {validationErrors}");
                     return;
                 }
@@ -365,7 +387,7 @@ namespace Meta.Voice
             // Still decoding, enable flag to be handled on completion
             if (IsDecoding)
             {
-                _rawDecodeFinal = true;
+                _rawResponseFinal = true;
                 return;
             }
             // Apply previous data as final

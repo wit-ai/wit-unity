@@ -18,10 +18,8 @@ namespace Meta.WitAi.Requests
     public class WitResponseDecoder : INLPRequestResponseDecoder<WitResponseNode>
     {
         /// <inheritdoc/>
-        public async Task<WitResponseNode> DecodeAsync(string rawResponse)
-        {
-            return await JsonConvert.DeserializeTokenAsync(rawResponse);
-        }
+        public WitResponseNode Decode(string rawResponse) =>
+            JsonConvert.DeserializeToken(rawResponse);
 
         /// <inheritdoc/>
         public int GetResponseStatusCode(WitResponseNode results) =>

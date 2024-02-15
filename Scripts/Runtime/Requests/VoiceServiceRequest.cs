@@ -7,10 +7,8 @@
  */
 
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
@@ -43,10 +41,6 @@ namespace Meta.WitAi.Requests
         {
             if (null == simulatedResponse) return false;
 
-
-            // Begin calling on main thread if needed
-            WatchMainThreadCallbacks();
-
             SimulateResponse();
             return true;
         }
@@ -68,82 +62,18 @@ namespace Meta.WitAi.Requests
             await System.Threading.Tasks.Task.Delay((int)(lastMessage.delay * 1000));
             var lastResponseData = WitResponseNode.Parse(lastMessage.responseBody);
             lastResponseData["code"] = new WitResponseData(simulatedResponse.code);
-            MainThreadCallback(() =>
-            {
-                ApplyResponseData(lastResponseData, true);
-            });
+            ApplyResponseData(lastResponseData, true);
         }
         #endregion
 
-        #region Thread Safety
-        // Check performing
-        private CoroutineUtility.CoroutinePerformer _performer = null;
-        // All actions
-        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
-        // Main thread
-        private static Thread _main;
-
-        // While active, perform any sent callbacks
-        protected void WatchMainThreadCallbacks()
-        {
-            // Ignore if already performing
-            if (_performer != null)
-            {
-                return;
-            }
-
-            // Main thread
-            _main = Thread.CurrentThread;
-
-            // Check callbacks every frame (editor or runtime)
-            _performer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
-        }
-        // Every frame check for callbacks & perform any found
-        private System.Collections.IEnumerator PerformMainThreadCallbacks()
-        {
-            // While checking, continue
-            while (HasMainThreadCallbacks())
-            {
-                // Wait for a tick
-                yield return null;
-
-                // Perform if possible
-                while (_mainThreadCallbacks.Count > 0 && _mainThreadCallbacks.TryDequeue(out var result))
-                {
-                    result();
-                }
-            }
-            _performer = null;
-        }
-        // If active or performing callbacks
-        private bool HasMainThreadCallbacks()
-        {
-            return IsActive || _mainThreadCallbacks.Count > 0;
-        }
-        // Called from background thread
-        protected void MainThreadCallback(Action action)
-        {
-            if (action == null)
-            {
-                return;
-            }
-            if (Thread.CurrentThread == _main)
-            {
-                action.Invoke();
-                return;
-            }
-            _mainThreadCallbacks.Enqueue(action);
-        }
-        #endregion
-
-        // Add request id as response data if possible
-        protected override void ApplyResponseData(WitResponseNode responseData, bool final)
+        // Sets request id
+        protected override void ApplyResponseData(WitResponseNode responseData, bool isFinal)
         {
             if (responseData != null)
             {
                 responseData[WitConstants.HEADER_REQUEST_ID] = Options?.RequestId;
             }
-            base.ApplyResponseData(responseData, final);
+            base.ApplyResponseData(responseData, isFinal);
         }
 
         /// <summary>

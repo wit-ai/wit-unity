@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Threading.Tasks;
-
 namespace Meta.Voice
 {
     /// <summary>
@@ -20,7 +18,7 @@ namespace Meta.Voice
         /// </summary>
         /// <param name="rawResponse">The text response from the server</param>
         /// <returns>Returns decoded results</returns>
-        Task<TResults> DecodeAsync(string rawResponse);
+        TResults Decode(string rawResponse);
 
         /// <summary>
         /// Determine the response code from the provided results

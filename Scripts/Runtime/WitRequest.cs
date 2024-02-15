@@ -818,11 +818,6 @@ namespace Meta.WitAi
                 onRawResponse?.Invoke(rawResponse);
             });
         }
-        // Merge back onto main thread following decode
-        protected override void ApplyDecodedResponseData(WitResponseNode responseData, bool final)
-        {
-            MainThreadCallback(() => base.ApplyDecodedResponseData(responseData, final));
-        }
         // On text change callback
         protected override void OnPartialTranscription()
         {

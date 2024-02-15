@@ -8,7 +8,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Text;
+using System.Threading;
 using Meta.WitAi;
 using Meta.WitAi.Data;
 using UnityEngine.Events;
@@ -39,7 +41,9 @@ namespace Meta.Voice
         /// <summary>
         /// Active if not currently canceled, failed or successful
         /// </summary>
-        public bool IsActive => State == VoiceRequestState.Initialized || State == VoiceRequestState.Transmitting;
+        public bool IsActive => State == (VoiceRequestState)(-1)
+                                || State == VoiceRequestState.Initialized
+                                || State == VoiceRequestState.Transmitting;
 
         /// <summary>
         /// Whether transmission should hold prior to send
@@ -93,6 +97,8 @@ namespace Meta.Voice
             }
             // Generate results and apply changes throughout lifecycle
             Results = GetNewResults();
+            // Generate handler for main thread callbacks
+            WatchMainThreadCallbacks();
 
             // Initialized
             SetState(VoiceRequestState.Initialized);
@@ -512,5 +518,65 @@ namespace Meta.Voice
             RaiseEvent(Events?.OnComplete);
         }
         #endregion RESULTS
+
+        #region THREAD SAFETY
+        // Main thread
+        private static Thread _mainThread;
+        // Check performing
+        private CoroutineUtility.CoroutinePerformer _mainThreadPerformer = null;
+        // All actions
+        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
+
+        // While active, perform any sent callbacks
+        protected void WatchMainThreadCallbacks()
+        {
+            // Ignore if already performing
+            if (_mainThreadPerformer != null)
+            {
+                return;
+            }
+
+            // Assign on first request
+            if (_mainThread == null)
+            {
+                _mainThread = Thread.CurrentThread;
+            }
+
+            // Check callbacks every frame (editor or runtime)
+            _mainThreadPerformer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
+        }
+        // Called from background thread
+        protected void MainThreadCallback(Action action)
+        {
+            if (action == null)
+            {
+                return;
+            }
+            if (Thread.CurrentThread == _mainThread)
+            {
+                action.Invoke();
+                return;
+            }
+            _mainThreadCallbacks.Enqueue(action);
+        }
+        // Every frame check for callbacks & perform any found
+        private IEnumerator PerformMainThreadCallbacks()
+        {
+            // While checking, continue
+            while (true)
+            {
+                // Perform immediately
+                if (_mainThreadCallbacks.TryDequeue(out var result))
+                {
+                    result.Invoke();
+                }
+                // Wait for a moment
+                else
+                {
+                    yield return null;
+                }
+            }
+        }
+        #endregion THREAD SAFETY
     }
 }
