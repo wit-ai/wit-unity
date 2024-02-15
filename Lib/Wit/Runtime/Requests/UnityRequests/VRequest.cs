@@ -65,6 +65,16 @@ namespace Meta.WitAi.Requests
         public delegate void RequestFirstResponseDelegate();
         // Default request completion delegate
         public delegate void RequestCompleteDelegate<TResult>(TResult result, string error);
+        
+        /// <summary>
+        /// The URI of the current/last request.
+        /// </summary>
+        protected Uri uri;
+        
+        /// <summary>
+        /// The data for PUT and POST requests. This will usually be set by child classes that have unencoded payloads.
+        /// </summary>
+        protected string payload;
 
         /// <summary>
         /// A request result wrapper which can return a result and error string.
@@ -993,7 +1003,20 @@ namespace Meta.WitAi.Requests
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial)
         {
+            var method = unityRequest.method;
             var result = await RequestJsonAsync(unityRequest, onPartial);
+            try
+            {
+                if (!string.IsNullOrEmpty(result.Error))
+                {
+                    VLog.D("VRequest",$"Failed request: [{method}] {uri}. {(string.IsNullOrEmpty(payload)?string.Empty:$"Payload: {payload}.")} Error: {result.Error}");
+                }
+            }
+            catch
+            {
+                VLog.D("Failed to log request details");
+            }
+                        
             onComplete?.Invoke(result.Value, result.Error);
         }
 
@@ -1088,8 +1111,10 @@ namespace Meta.WitAi.Requests
         /// <returns>False if the request cannot be performed</returns>
         public bool RequestJsonGet<TData>(Uri uri,
             RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJson(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onComplete, onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            return RequestJson(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onComplete, onPartial);
+        }
 
         /// <summary>
         /// Perform a json get request with a specified uri asynchronously

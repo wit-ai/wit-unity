@@ -125,8 +125,12 @@ namespace Meta.WitAi.Requests
         public bool RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams,
             RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJsonGet(GetUri(uriEndpoint, uriParams), onComplete, onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = string.Empty;
+            return RequestJsonGet(uri, onComplete, onPartial);
+        }
 
         /// <summary>
         /// Get request to a wit endpoint asynchronously
@@ -135,8 +139,12 @@ namespace Meta.WitAi.Requests
         /// <returns>Returns the request complete data including a parsed result if possible</returns>
         public async Task<RequestCompleteResponse<TData>> RequestWitGetAsync<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams = null,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            await RequestJsonGetAsync<TData>(GetUri(uriEndpoint, uriParams), onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = string.Empty;
+            return await RequestJsonGetAsync<TData>(uri, onPartial);
+        }
 
         /// <summary>
         /// Post text request to a wit endpoint
@@ -150,8 +158,12 @@ namespace Meta.WitAi.Requests
         public bool RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
             RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJsonPost(GetUri(uriEndpoint, uriParams), postText, onComplete, onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = postText;
+            return RequestJsonPost(uri, postText, onComplete, onPartial);
+        }
 
         /// <summary>
         /// Post request to a wit endpoint asynchronously
@@ -162,8 +174,12 @@ namespace Meta.WitAi.Requests
         /// <returns>Returns the request complete data including a parsed result if possible</returns>
         public async Task<RequestCompleteResponse<TData>> RequestWitPostAsync<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            await RequestJsonPostAsync<TData>(GetUri(uriEndpoint, uriParams), postText, onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = postText;
+            return await RequestJsonPostAsync<TData>(uri, postText, onPartial);
+        }
 
         /// <summary>
         /// Put text request to a wit endpoint
@@ -178,8 +194,12 @@ namespace Meta.WitAi.Requests
         public bool RequestWitPut<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText,
             RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJsonPut(GetUri(uriEndpoint, uriParams), putText, onComplete, onPartial);
+            RequestCompleteDelegate<TData> onPartial = null)
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = putText;
+            return RequestJsonPut(uri, putText, onComplete, onPartial);
+        }
 
         /// <summary>
         /// Put text request to a wit endpoint asynchronously
@@ -191,7 +211,12 @@ namespace Meta.WitAi.Requests
         public async Task<RequestCompleteResponse<TData>> RequestWitPutAsync<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText,
             RequestCompleteDelegate<TData> onPartial = null)
-            => await RequestJsonPutAsync<TData>(GetUri(uriEndpoint, uriParams), putText, onPartial);
+        {
+            uri = GetUri(uriEndpoint, uriParams);
+            payload = putText;
+            return await RequestJsonPutAsync<TData>(uri, putText, onPartial);
+        }
+
         #endregion
 
         #region STATIC
