@@ -113,9 +113,13 @@ namespace Meta.Conduit.Editor
                     {
                         completionCallback.Invoke(true, string.Empty);
                     }
+                    else
+                    {
+                        completionCallback.Invoke(false, $"Request to add entity {entity.name} failed on Wit.ai. Error: {error}");
+                    }
                 }))
             {
-                completionCallback.Invoke(false, $"Failed to send request to add entity {entity.name}");
+                completionCallback.Invoke(false, $"Failed to send request to add entity {entity.name}.");
                 yield break;
             }
 
