@@ -9,6 +9,7 @@
 using System.Text;
 using Meta.WitAi;
 using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -300,6 +301,17 @@ namespace Meta.Voice
                 {
                     OnPartialResponse();
                 }
+
+                // Additional event validation on final
+                var validationErrors = new StringBuilder();
+                Events.OnValidateResponse?.Invoke(responseData, validationErrors);
+                if (validationErrors.Length > 0)
+                {
+                    Debug.Log($"[RFB DEBUG] Failure Response\n{responseData}");
+                    HandleFailure($"Response validation failed due to {validationErrors}");
+                    return;
+                }
+
                 // Call final response
                 OnFullResponse();
                 // Handle success

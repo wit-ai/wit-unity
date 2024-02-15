@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -17,6 +18,12 @@ namespace Meta.Voice
     /// </summary>
     [Serializable]
     public class NLPRequestResponseEvent<TResponseData> : UnityEvent<TResponseData> {}
+
+    /// <summary>
+    /// A unity event that returns a decoded nlp response data & a string builder for error validation
+    /// </summary>
+    [Serializable]
+    public class NLPRequestResponseValidatorEvent<TResponseData> : UnityEvent<TResponseData, StringBuilder> {}
 
     [Serializable]
     public class NLPRequestEvents<TUnityEvent, TResponseData>
@@ -43,5 +50,12 @@ namespace Meta.Voice
         public NLPRequestResponseEvent<TResponseData> OnFullResponse => _onFullResponse;
         [Tooltip("Called on request language processing once completely analyzed.")]
         [SerializeField] private NLPRequestResponseEvent<TResponseData> _onFullResponse = Activator.CreateInstance<NLPRequestResponseEvent<TResponseData>>();
+
+        /// <summary>
+        /// Called by request to allow custom validation prior to error determination.
+        /// </summary>
+        public NLPRequestResponseValidatorEvent<TResponseData> OnValidateResponse => _onValidateResponse;
+        [Tooltip("Called by request to allow custom validation prior to error determination.")]
+        [SerializeField] private NLPRequestResponseValidatorEvent<TResponseData> _onValidateResponse = Activator.CreateInstance<NLPRequestResponseValidatorEvent<TResponseData>>();
     }
 }
