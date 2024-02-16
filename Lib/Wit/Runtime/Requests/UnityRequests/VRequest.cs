@@ -1057,7 +1057,7 @@ namespace Meta.WitAi.Requests
             var textResponse = await RequestTextAsync(unityRequest, onPartialText);
             if (!string.IsNullOrEmpty(textResponse.Error))
             {
-                return new RequestCompleteResponse<TData>(default(TData), textResponse.Error);
+                return new RequestCompleteResponse<TData>(default(TData), $"{textResponse.Error}. Details: {textResponse.Value ?? "null"}");
             }
 
             // Wait for partial decode to complete
