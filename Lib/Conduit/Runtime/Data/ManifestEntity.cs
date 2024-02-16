@@ -75,7 +75,8 @@ namespace Meta.Conduit
             return new WitEntityInfo()
             {
                 name = Name,
-                keywords = keywords
+                keywords = keywords,
+                roles = new WitEntityRoleInfo[]{}
             };
         }
 
