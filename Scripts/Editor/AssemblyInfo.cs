@@ -9,3 +9,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly:InternalsVisibleTo("Meta.Wit.Composer.Editor")]
+[assembly:InternalsVisibleTo("VoiceSDK.Editor")]
