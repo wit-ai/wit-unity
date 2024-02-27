@@ -7,10 +7,13 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using Meta.WitAi.Json;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meta.WitAi
@@ -46,7 +49,73 @@ namespace Meta.WitAi
         }
         private static VLogLevel _editorLogLevel = (VLogLevel)(-1);
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
+        private const string EDITOR_FILTER_LOG_KEY = "VSDK_FILTER_LOG";
         private const VLogLevel EDITOR_LOG_LEVEL_DEFAULT = VLogLevel.Warning;
+
+        private static HashSet<string> _filteredTagSet;
+        private static List<string> _filteredTagList;
+
+        public static List<String> FilteredTags
+        {
+            get
+            {
+                if (null == _filteredTagList)
+                {
+                    _filteredTagList = new List<string>();
+                    var filtered = EditorPrefs.GetString(EDITOR_FILTER_LOG_KEY, null);
+                    if (!string.IsNullOrEmpty(filtered))
+                    {
+                        _filteredTagList = JsonConvert.DeserializeObject<List<string>>(filtered);
+                    }
+                }
+
+                return _filteredTagList;
+            }
+        }
+        
+        private static HashSet<string> FilteredTagSet
+        {
+            get
+            {
+                if (null == _filteredTagSet)
+                {
+                    _filteredTagSet = new HashSet<string>();
+                    foreach (var tag in FilteredTags)
+                    {
+                        _filteredTagSet.Add(tag);
+                    }
+                }
+
+                return _filteredTagSet;
+            }
+        }
+
+        public static void AddTagFilter(string filteredTag)
+        {
+            if (!FilteredTagSet.Contains(filteredTag))
+            {
+                _filteredTagList.Add(filteredTag);
+                _filteredTagSet.Add(filteredTag);
+                SaveFilters();
+            }
+        }
+
+        public static void RemoveTagFilter(string filteredTag)
+        {
+            if (FilteredTagSet.Contains(filteredTag))
+            {
+                _filteredTagList.Remove(filteredTag);
+                _filteredTagSet.Remove(filteredTag);
+                SaveFilters();
+            }
+        }
+
+        private static void SaveFilters()
+        {
+            _filteredTagList.Sort();
+            var list = JsonConvert.SerializeObject(_filteredTagList);
+            EditorPrefs.SetString(EDITOR_FILTER_LOG_KEY, list);
+        }
 
         // Init on load
         [UnityEngine.RuntimeInitializeOnLoadMethod]
@@ -127,7 +196,10 @@ namespace Meta.WitAi
             {
                 return;
             }
+
+            if (FilteredTagSet.Contains(logCategory)) return;
             #endif
+
             // Suppress all except errors
             if (SuppressLogs && (int)logType > (int)VLogLevel.Error)
             {
@@ -154,17 +226,15 @@ namespace Meta.WitAi
 
             // Insert log type
             int start = result.Length;
-            result.Append($"[{logType.ToString().ToUpper()}] ");
+            result.Append($"[VSDK {logType.ToString().ToUpper()}] ");
             WrapWithLogColor(result, start, logType);
 
             // Append VDSK & Category
             start = result.Length;
-            result.Append("[VSDK");
             if (!string.IsNullOrEmpty(category))
             {
-                result.Append($" {category}");
+                result.Append($"[{category}] ");
             }
-            result.Append("] ");
             WrapWithCallingLink(result, start);
 
             // Append the actual log

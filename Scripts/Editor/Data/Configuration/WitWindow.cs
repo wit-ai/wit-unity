@@ -26,6 +26,7 @@ namespace Meta.WitAi.Windows
         private static int _logLevel = -1;
         private static string[] _logLevelNames;
         private static readonly VLogLevel[] _logLevels = (Enum.GetValues(typeof(VLogLevel)) as VLogLevel[])?.Reverse().ToArray();
+        private string _newFilter;
 
 #if VSDK_TELEMETRY_AVAILABLE
         private static int _telemetryLogLevel = -1;
@@ -88,6 +89,27 @@ namespace Meta.WitAi.Windows
             {
                 SetLogLevel(logLevel);
             }
+            
+            GUILayout.Label("Log Filters", EditorStyles.boldLabel);
+            for (int i = 0; i < VLog.FilteredTags.Count; i++)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(VLog.FilteredTags[i]);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("X", GUILayout.Width(EditorGUIUtility.singleLineHeight)))
+                {
+                    VLog.RemoveTagFilter(VLog.FilteredTags[i]);
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.BeginHorizontal();
+            _newFilter = GUILayout.TextField(_newFilter);
+            if (!string.IsNullOrEmpty(_newFilter) && GUILayout.Button("Add"))
+            {
+                VLog.AddTagFilter(_newFilter);
+            }
+            GUILayout.EndHorizontal();
 
             var showTooltips = ShowTooltips;
             WitEditorUI.LayoutToggle(new GUIContent(WitTexts.Texts.ShowTooltipsLabel), ref showTooltips, ref updated);
