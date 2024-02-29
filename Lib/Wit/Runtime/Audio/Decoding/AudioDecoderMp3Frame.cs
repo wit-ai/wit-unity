@@ -201,7 +201,7 @@ namespace Meta.Voice.Audio.Decoding
         public int SampleRate { get; private set; }
 
         /// <summary>
-        /// Whether the Copyright bit is set
+        /// Whether the copyright bit is set
         /// </summary>
         public bool IsCopyrighted { get; private set; }
 
