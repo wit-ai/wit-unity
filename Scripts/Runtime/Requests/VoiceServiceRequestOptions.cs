@@ -57,10 +57,11 @@ namespace Meta.WitAi.Requests
             RequestId = string.IsNullOrEmpty(newRequestId) ? GetUniqueRequestId() : newRequestId;
             QueryParams = ConvertQueryParams(newParams);
         }
+
         /// <summary>
         /// Generates a random guid
         /// </summary>
-        protected virtual string GetUniqueRequestId() => Guid.NewGuid().ToString();
+        protected virtual string GetUniqueRequestId() => WitConstants.GetUniqueId();
         /// <summary>
         /// Generates a dictionary of key/value strings from a query param array
         /// </summary>

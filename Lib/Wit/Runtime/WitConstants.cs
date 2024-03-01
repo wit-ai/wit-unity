@@ -225,5 +225,12 @@ namespace Meta.WitAi
         /// </summary>
         public const string ERROR_RESPONSE_TIMEOUT = "timeout";
         #endregion
+
+        /// <summary>
+        /// Returns a unique identifier using the current unix timestamp
+        /// and a randomized guid
+        /// </summary>
+        public static string GetUniqueId()
+            => $"{System.DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{System.Guid.NewGuid()}";
     }
 }

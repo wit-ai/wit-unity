@@ -59,7 +59,7 @@ namespace Meta.WitAi.Requests
             RequestId = requestId;
             if (string.IsNullOrEmpty(RequestId))
             {
-                RequestId = Guid.NewGuid().ToString();
+                RequestId = WitConstants.GetUniqueId();
             }
             _useServerToken = useServerToken;
         }
@@ -274,7 +274,7 @@ namespace Meta.WitAi.Requests
 
             #if UNITY_EDITOR || !UNITY_WEBGL
             // Set request id
-            headers[WitConstants.HEADER_REQUEST_ID] = string.IsNullOrEmpty(requestId) ? Guid.NewGuid().ToString() : requestId;
+            headers[WitConstants.HEADER_REQUEST_ID] = string.IsNullOrEmpty(requestId) ? WitConstants.GetUniqueId() : requestId;
             // Set User-Agent
             headers[WitConstants.HEADER_USERAGENT] = GetUserAgentHeader(configuration);
             #endif
