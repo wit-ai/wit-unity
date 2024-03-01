@@ -18,7 +18,7 @@ namespace Meta.Voice.Audio
     public class UnityAudioClipStream : AudioClipStream, IAudioClipProvider, IAudioClipSetter
     {
         [SerializeField] private bool debug;
-        
+
         /// <summary>
         /// The audio clip to be used for Unity AudioSource playback
         /// </summary>
@@ -54,7 +54,7 @@ namespace Meta.Voice.Audio
             Channels = !Clip ? 0 : Clip.channels;
             SampleRate = !Clip ? 0 : Clip.frequency;
             AddedSamples = !Clip ? 0 : Clip.samples;
-            TotalSamples = !Clip ? 0 : Clip.samples;
+            ExpectedSamples = !Clip ? 0 : Clip.samples;
             UpdateState();
             return true;
         }
@@ -80,7 +80,7 @@ namespace Meta.Voice.Audio
                 UpdateClip(newMaxSamples);
             }
             // Generate larger clip if needed
-            else if (AddedSamples + newSamples.Length > TotalSamples)
+            else if (AddedSamples + newSamples.Length > ExpectedSamples)
             {
                 int newMaxSamples = Mathf.Max(TotalSamples + _chunkSize,
                     AddedSamples + newSamples.Length);
@@ -101,8 +101,8 @@ namespace Meta.Voice.Audio
         /// Calls on occassions where the total samples are known.  Either prior to a disk load or
         /// following a stream completion.
         /// </summary>
-        /// <param name="totalSamples">The total samples is the final number of samples to be received</param>
-        public override void SetTotalSamples(int totalSamples)
+        /// <param name="expectedSamples">The final number of samples expected to be received</param>
+        public override void SetExpectedSamples(int expectedSamples)
         {
             // Cannot add samples to non-streamable clip
             if (!_streamable)
@@ -112,10 +112,10 @@ namespace Meta.Voice.Audio
             }
 
             // Set clip with specific length
-            UpdateClip(totalSamples);
+            UpdateClip(expectedSamples);
 
-            // Increment TotalSamples & check for completion
-            base.SetTotalSamples(totalSamples);
+            // Increment expected samples & check for completion
+            base.SetExpectedSamples(expectedSamples);
         }
 
         /// <summary>
@@ -140,18 +140,17 @@ namespace Meta.Voice.Audio
                 return;
             }
             // Already generated
-            if (Clip != null && TotalSamples == samples)
+            if (Clip != null && Clip.samples == samples)
             {
                 return;
             }
 
             // Get old clip if applicable
             AudioClip oldClip = Clip;
-            int oldClipSamples = TotalSamples;
+            int oldClipSamples = oldClip == null ? 0 : oldClip.samples;
 
             // Generate new clip
-            TotalSamples = samples;
-            Clip = GetCachedClip(TotalSamples, Channels, SampleRate);
+            Clip = GetCachedClip(samples, Channels, SampleRate);
 
             // If previous clip existed, get previous data
             if (oldClip != null)

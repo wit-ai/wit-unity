@@ -37,18 +37,22 @@ namespace Meta.Voice.Audio
         public int SampleRate { get; protected set; }
 
         /// <summary>
-        /// The total number of samples currently added to this stream
+        /// The total number of samples currently added to this stream.
         /// </summary>
         public int AddedSamples { get; protected set; }
         /// <summary>
-        /// The total number of samples expected for this stream
+        /// The total number of samples expected from the stream.  When streaming, this is not set until the stream is complete.
         /// </summary>
-        public int TotalSamples { get; protected set; }
+        public int ExpectedSamples { get; protected set; }
+        /// <summary>
+        /// The maximum known total of samples currently in this stream.
+        /// </summary>
+        public int TotalSamples => Mathf.Max(AddedSamples, ExpectedSamples);
 
         /// <summary>
         /// The length of the stream in seconds.
         /// </summary>
-        public float Length => GetSampleLength(Mathf.Max(TotalSamples, AddedSamples));
+        public float Length => GetSampleLength(TotalSamples);
 
         /// <summary>
         /// A getter for the minimum length in seconds required before the OnStreamReady method is called
@@ -89,9 +93,10 @@ namespace Meta.Voice.Audio
 
             // Clear counts & bools
             AddedSamples = 0;
-            TotalSamples = 0;
+            ExpectedSamples = 0;
             IsReady = false;
             IsComplete = false;
+            ThreadUtility.InitMainThreadScheduler();
         }
 
         /// <summary>
@@ -108,10 +113,11 @@ namespace Meta.Voice.Audio
         /// Calls on occassions where the total samples are known.  Either prior to a disk load or
         /// following a stream completion.
         /// </summary>
-        /// <param name="totalSamples">The total samples is the final number of samples to be received</param>
-        public virtual void SetTotalSamples(int totalSamples)
+        /// <param name="expectedSamples">The final number of samples expected to be received</param>
+        public virtual void SetExpectedSamples(int expectedSamples)
         {
-            TotalSamples = totalSamples;
+            ExpectedSamples = expectedSamples;
+            StreamReadyLength = Mathf.Min(StreamReadyLength, GetSampleLength(expectedSamples));
             UpdateState();
         }
 
@@ -125,8 +131,8 @@ namespace Meta.Voice.Audio
             {
                 HandleStreamReady();
             }
-            // Stream complete (Don't check if newly ready)
-            else if (!IsComplete && TotalSamples > 0 && AddedSamples == TotalSamples)
+            // Stream complete
+            if (!IsComplete && ExpectedSamples > 0 && AddedSamples >= ExpectedSamples)
             {
                 HandleStreamComplete();
             }
@@ -135,13 +141,21 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// Perform on stream updated invocation
         /// </summary>
-        protected virtual void HandleStreamReady()
+        private void HandleStreamReady()
         {
             if (IsReady)
             {
                 return;
             }
             IsReady = true;
+            ThreadUtility.CallOnMainThread(RaiseStreamReady);
+        }
+
+        /// <summary>
+        /// Method that calls OnStreamReady on the main thread
+        /// </summary>
+        protected virtual void RaiseStreamReady()
+        {
             OnStreamReady?.Invoke(this);
         }
 
@@ -154,19 +168,35 @@ namespace Meta.Voice.Audio
             {
                 return;
             }
+            ThreadUtility.CallOnMainThread(RaiseStreamUpdated);
+        }
+
+        /// <summary>
+        /// Method that calls OnStreamUpdated on the main thread
+        /// </summary>
+        protected virtual void RaiseStreamUpdated()
+        {
             OnStreamUpdated?.Invoke(this);
         }
 
         /// <summary>
         /// Perform on stream complete invocation
         /// </summary>
-        protected virtual void HandleStreamComplete()
+        private void HandleStreamComplete()
         {
             if (IsComplete)
             {
                 return;
             }
             IsComplete = true;
+            ThreadUtility.CallOnMainThread(RaiseStreamComplete);
+        }
+
+        /// <summary>
+        /// Method that calls OnStreamComplete on the main thread
+        /// </summary>
+        protected virtual void RaiseStreamComplete()
+        {
             OnStreamComplete?.Invoke(this);
         }
 

@@ -65,12 +65,12 @@ namespace Meta.WitAi.Requests
         public delegate void RequestFirstResponseDelegate();
         // Default request completion delegate
         public delegate void RequestCompleteDelegate<TResult>(TResult result, string error);
-        
+
         /// <summary>
         /// The URI of the current/last request.
         /// </summary>
         protected Uri uri;
-        
+
         /// <summary>
         /// The data for PUT and POST requests. This will usually be set by child classes that have unencoded payloads.
         /// </summary>
@@ -1016,7 +1016,7 @@ namespace Meta.WitAi.Requests
             {
                 VLog.D("Failed to log request details");
             }
-                        
+
             onComplete?.Invoke(result.Value, result.Error);
         }
 
@@ -1577,7 +1577,7 @@ namespace Meta.WitAi.Requests
                 {
                     byte[] data = rawDownloader.data;
                     float[] samples = GetAudioDecoder(audioType, textStream, onTextDecoded).Decode(data, 0, data.Length);
-                    clipStream.SetTotalSamples(samples.Length);
+                    clipStream.SetExpectedSamples(samples.Length);
                     clipStream.AddSamples(samples);
                 }
                 // Custom Raw PCM streaming

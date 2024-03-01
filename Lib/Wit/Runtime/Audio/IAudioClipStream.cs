@@ -46,12 +46,17 @@ namespace Meta.Voice.Audio
         int AddedSamples { get; }
 
         /// <summary>
-        /// The total number of samples expected for this stream
+        /// The total number of samples expected from the stream.  When streaming, this is not set until the stream is complete.
+        /// </summary>
+        int ExpectedSamples { get; }
+
+        /// <summary>
+        /// The maximum known total of samples currently in this stream.  Typically Max(AddedSamples, ExpectedSamples)
         /// </summary>
         int TotalSamples { get; }
 
         /// <summary>
-        /// The length of the stream in seconds.  Typically Mathf.Max(TotalSamples, AddedSamples) / (Channels * SampleRate)
+        /// The known length of the stream in seconds.  Typically TotalSamples / (Channels * SampleRate)
         /// </summary>
         float Length { get; }
 
@@ -87,11 +92,11 @@ namespace Meta.Voice.Audio
         void AddSamples(float[] samples);
 
         /// <summary>
-        /// Called on occasions where the total samples are known.  Either prior to a disk load or
+        /// Calls on occasions where the total samples are known.  Either prior to a disk load or
         /// following a stream completion.
         /// </summary>
-        /// <param name="totalSamples">The total samples is the final number of samples to be received</param>
-        void SetTotalSamples(int totalSamples);
+        /// <param name="expectedSamples">The final number of samples expected to be received</param>
+        void SetExpectedSamples(int expectedSamples);
 
         /// <summary>
         /// Called when clip stream should be completely removed from RAM

@@ -94,7 +94,7 @@ namespace Meta.WitAi.Requests
             if (totalSamples > 0)
             {
                 VLog.I($"Clip Stream - Received Size\nTotal Samples: {totalSamples}\nContent Length: {contentLength}");
-                ClipStream.SetTotalSamples(totalSamples);
+                ClipStream.SetExpectedSamples(totalSamples);
             }
         }
 
@@ -261,7 +261,7 @@ namespace Meta.WitAi.Requests
 
             // Stream complete
             IsComplete = true;
-            ClipStream.SetTotalSamples(ClipStream.AddedSamples);
+            ClipStream.SetExpectedSamples(ClipStream.AddedSamples);
             VLog.I($"Clip Stream - Complete\nLength: {ClipStream.Length:0.00} secs");
 
             // Dispose
