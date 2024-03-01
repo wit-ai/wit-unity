@@ -11,147 +11,66 @@
 #endif
 
 using System;
-using UnityEngine;
-using System.Collections;
 #if THREADING_ENABLED
-using System.Threading;
+using System.Threading.Tasks;
 #endif
 
 namespace Meta.WitAi
 {
+    /// <summary>
+    /// A static class used for performing callbacks on the main thread
+    /// </summary>
     public static class ThreadUtility
     {
-        // Default timeout to off
-        public const float THREAD_DEFAULT_TIMEOUT = -1f;
+        #if THREADING_ENABLED
+        /// <summary>
+        /// The task scheduler that runs on the main thread
+        /// </summary>
+        private static TaskScheduler _mainThreadScheduler;
+        #endif
 
-        // Perform in background & return on complete
-        public static ThreadPerformer<T> PerformInBackground<T>(Func<T> workerAction, Action<T, string> onComplete, float timeout = THREAD_DEFAULT_TIMEOUT)
+        /// <summary>
+        /// Called from main thread in constructor of any scripts that need to
+        /// call code on the main thread.
+        /// </summary>
+        public static void InitMainThreadScheduler()
         {
-            return new ThreadPerformer<T>(workerAction, onComplete, timeout);
+            #if THREADING_ENABLED
+            if (_mainThreadScheduler != null)
+            {
+                return;
+            }
+            _mainThreadScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            #endif
         }
 
-        // Performer
-        public class ThreadPerformer<T>
+        /// <summary>
+        /// Safely calls an action on the main thread using a scheduler.
+        /// </summary>
+        /// <param name="callback">The action to be performed on the main thread</param>
+        public static void CallOnMainThread(Action callback)
         {
-            /// <summary>
-            /// Whether thread is running
-            /// </summary>
-            public bool IsRunning { get; private set; }
-
-            // Complete callback items
             #if THREADING_ENABLED
-            private Thread _thread;
+
+            // Get task for callback
+            Task task = new Task(callback);
+
+            // Start on the main scheduler
+            if (_mainThreadScheduler != null)
+            {
+                task.Start(_mainThreadScheduler);
+                return;
+            }
+
+            // Start here
+            task.Start();
+
+            #else
+
+            // Call immediately
+            callback?.Invoke();
+
             #endif
-            private Func<T> _worker;
-            private Action<T, string> _complete;
-            private float _timeout;
-            private T _result;
-            private string _error;
-            private CoroutineUtility.CoroutinePerformer _coroutine;
-
-            /// <summary>
-            /// Generate thread
-            /// </summary>
-            public ThreadPerformer(Func<T> worker, Action<T, string> onComplete, float timeout)
-            {
-                // Begin
-                IsRunning = true;
-
-                // Wait for thread completion
-                _result = default(T);
-                _error = string.Empty;
-                _worker = worker;
-                _complete = onComplete;
-                _timeout = timeout;
-                _coroutine = CoroutineUtility.StartCoroutine(WaitForCompletion(), true);
-
-                // Start thread
-                #if THREADING_ENABLED
-                _thread = new Thread(Work);
-                _thread.Start();
-                #endif
-            }
-
-            // Work
-            private void Work()
-            {
-                // Perform action
-                try
-                {
-                    _result = _worker.Invoke();
-                }
-                // Catch exceptions
-                catch (Exception e)
-                {
-                    _error = $"Background thread error thrown\n{e}";
-                }
-
-                // Complete
-                IsRunning = false;
-            }
-
-            // Wait for completion
-            private IEnumerator WaitForCompletion()
-            {
-                #if !THREADING_ENABLED
-                yield return null;
-                Work();
-                #endif
-
-                // Wait while running
-                DateTime start = DateTime.UtcNow;
-                while (IsRunning && !IsTimedOut(start))
-                {
-                    yield return null;
-                }
-
-                // Timed out
-                if (IsTimedOut(start))
-                {
-                    _error = "Timed out";
-                }
-
-                // Complete
-                _complete?.Invoke(_result, _error);
-
-                // Quit
-                Quit();
-            }
-            // Check if timed out
-            private bool IsTimedOut(DateTime start)
-            {
-                // Ignore if no timeout
-                if (_timeout <= 0)
-                {
-                    return false;
-                }
-                // Timed out
-                return (DateTime.UtcNow - start).TotalSeconds >= _timeout;
-            }
-
-            // Quit running thread
-            public void Quit()
-            {
-                if (_coroutine != null)
-                {
-                    GameObject.DestroyImmediate(_coroutine);
-                    _coroutine = null;
-                }
-                #if THREADING_ENABLED
-                if (_thread != null)
-                {
-                    if (IsRunning)
-                    {
-                        _thread.Join();
-                    }
-                    _thread = null;
-                }
-                #endif
-                if (IsRunning)
-                {
-                    IsRunning = false;
-                }
-            }
         }
     }
 }

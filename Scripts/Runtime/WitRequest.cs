@@ -369,7 +369,7 @@ namespace Meta.WitAi
             }
             #endif
             // Begin calling on main thread if needed
-            WatchMainThreadCallbacks();
+            ThreadUtility.InitMainThreadScheduler();
             WitVRequest.PreloadSettings();
 
             // Run on background thread

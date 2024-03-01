@@ -98,7 +98,7 @@ namespace Meta.Voice
             // Generate results and apply changes throughout lifecycle
             Results = GetNewResults();
             // Generate handler for main thread callbacks
-            WatchMainThreadCallbacks();
+            ThreadUtility.InitMainThreadScheduler();
 
             // Initialized
             SetState(VoiceRequestState.Initialized);
@@ -520,63 +520,9 @@ namespace Meta.Voice
         #endregion RESULTS
 
         #region THREAD SAFETY
-        // Main thread
-        private static Thread _mainThread;
-        // Check performing
-        private CoroutineUtility.CoroutinePerformer _mainThreadPerformer = null;
-        // All actions
-        private ConcurrentQueue<Action> _mainThreadCallbacks = new ConcurrentQueue<Action>();
-
-        // While active, perform any sent callbacks
-        protected void WatchMainThreadCallbacks()
-        {
-            // Ignore if already performing
-            if (_mainThreadPerformer != null)
-            {
-                return;
-            }
-
-            // Assign on first request
-            if (_mainThread == null)
-            {
-                _mainThread = Thread.CurrentThread;
-            }
-
-            // Check callbacks every frame (editor or runtime)
-            _mainThreadPerformer = CoroutineUtility.StartCoroutine(PerformMainThreadCallbacks());
-        }
         // Called from background thread
         protected void MainThreadCallback(Action action)
-        {
-            if (action == null)
-            {
-                return;
-            }
-            if (Thread.CurrentThread == _mainThread)
-            {
-                action.Invoke();
-                return;
-            }
-            _mainThreadCallbacks.Enqueue(action);
-        }
-        // Every frame check for callbacks & perform any found
-        private IEnumerator PerformMainThreadCallbacks()
-        {
-            // While checking, continue
-            while (true)
-            {
-                // Perform immediately
-                if (_mainThreadCallbacks.TryDequeue(out var result))
-                {
-                    result.Invoke();
-                }
-                // Wait for a moment
-                else
-                {
-                    yield return null;
-                }
-            }
-        }
+            => ThreadUtility.CallOnMainThread(action);
         #endregion THREAD SAFETY
     }
 }
