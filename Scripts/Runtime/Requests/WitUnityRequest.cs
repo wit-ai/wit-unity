@@ -136,7 +136,11 @@ namespace Meta.WitAi.Requests
             }
 
             // Apply raw response data
-            HandleRawResponse(rawResponse, final);
+            var rawResponses = rawResponse.Split(WitConstants.ENDPOINT_JSON_DELIMITER);
+            for (int r = 0; r < rawResponses.Length; r++)
+            {
+                HandleRawResponse(rawResponses[r], final && (r == rawResponses.Length - 1));
+            }
         }
 
         /// <summary>

@@ -1000,7 +1000,7 @@ namespace Meta.WitAi.Json
 
             // Get response node
             WitResponseNode node = this[aKey];
-            return node.Cast<T>(defaultValue);
+            return node == null ? defaultValue : node.Cast<T>(defaultValue);
         }
 
         public override string ToString()
