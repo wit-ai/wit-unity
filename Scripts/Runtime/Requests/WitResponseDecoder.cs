@@ -30,7 +30,8 @@ namespace Meta.WitAi.Requests
             results.GetError();
 
         /// <inheritdoc/>
-        public bool GetResponseHasPartial(WitResponseNode results) => true;
+        public bool GetResponseHasPartial(WitResponseNode results) =>
+            results.GetHasPartialResponse();
 
         /// <inheritdoc/>
         public string GetResponseTranscription(WitResponseNode results) =>
@@ -38,10 +39,10 @@ namespace Meta.WitAi.Requests
 
         /// <inheritdoc/>
         public bool GetResponseHasTranscription(WitResponseNode results) =>
-            results.IsTranscriptionOnly();
+            results.GetHasTranscription();
 
         /// <inheritdoc/>
         public bool GetResponseIsTranscriptionFull(WitResponseNode results) =>
-            results.GetIsFinal();
+            results.GetIsTranscriptionFinal();
     }
 }

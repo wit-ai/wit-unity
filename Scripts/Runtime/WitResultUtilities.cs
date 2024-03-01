@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Net;
 using Meta.WitAi.Data.Entities;
 using Meta.WitAi.Data.Intents;
@@ -15,16 +16,25 @@ namespace Meta.WitAi
 {
     public static class WitResultUtilities
     {
-        // Keys
-        public const string WIT_KEY_TRANSCRIPTION = "text";
-        public const string WIT_KEY_INTENTS = "intents";
-        public const string WIT_KEY_ENTITIES = "entities";
-        public const string WIT_KEY_TRAITS = "traits";
-        public const string WIT_KEY_FINAL = "is_final";
-        public const string WIT_PARTIAL_RESPONSE = "partial_response";
-        public const string WIT_RESPONSE = "response";
-        public const string WIT_STATUS_CODE = "code";
-        public const string WIT_ERROR = "error";
+        // Obsolete keys
+        [Obsolete]
+        public const string WIT_KEY_TRANSCRIPTION = WitConstants.KEY_RESPONSE_TRANSCRIPTION;
+        [Obsolete]
+        public const string WIT_KEY_INTENTS = WitConstants.KEY_RESPONSE_NLP_INTENTS;
+        [Obsolete]
+        public const string WIT_KEY_ENTITIES = WitConstants.KEY_RESPONSE_NLP_ENTITIES;
+        [Obsolete]
+        public const string WIT_KEY_TRAITS = WitConstants.KEY_RESPONSE_NLP_TRAITS;
+        [Obsolete]
+        public const string WIT_KEY_FINAL = WitConstants.KEY_RESPONSE_IS_FINAL;
+        [Obsolete]
+        public const string WIT_PARTIAL_RESPONSE = WitConstants.KEY_RESPONSE_PARTIAL;
+        [Obsolete]
+        public const string WIT_RESPONSE = WitConstants.KEY_RESPONSE_FINAL;
+        [Obsolete]
+        public const string WIT_STATUS_CODE = WitConstants.KEY_RESPONSE_CODE;
+        [Obsolete]
+        public const string WIT_ERROR = WitConstants.KEY_RESPONSE_ERROR;
 
         #region Base Response methods
         /// <summary>
@@ -33,8 +43,8 @@ namespace Meta.WitAi
         public static int GetStatusCode(this WitResponseNode witResponse) =>
             null != witResponse
             && witResponse.AsObject != null
-            && witResponse.AsObject.HasChild(WIT_STATUS_CODE)
-                ? witResponse[WIT_STATUS_CODE].AsInt
+            && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_CODE)
+                ? witResponse[WitConstants.KEY_RESPONSE_CODE].AsInt
                 : (int)HttpStatusCode.OK;
 
         /// <summary>
@@ -43,8 +53,8 @@ namespace Meta.WitAi
         public static string GetError(this WitResponseNode witResponse) =>
             null != witResponse
             && witResponse.AsObject != null
-            && witResponse.AsObject.HasChild(WIT_ERROR)
-                ? witResponse[WIT_ERROR].Value
+            && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_ERROR)
+                ? witResponse[WitConstants.KEY_RESPONSE_ERROR].Value
                 : string.Empty;
 
         /// <summary>
@@ -53,32 +63,9 @@ namespace Meta.WitAi
         public static string GetTranscription(this WitResponseNode witResponse) =>
             null != witResponse
             && witResponse.AsObject != null
-            && witResponse.AsObject.HasChild(WIT_KEY_TRANSCRIPTION)
-            ? witResponse[WIT_KEY_TRANSCRIPTION].Value
+            && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_TRANSCRIPTION)
+            ? witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION].Value
             : string.Empty;
-
-        /// <summary>
-        /// Get whether this response is for transcriptions only
-        /// </summary>
-        public static bool IsTranscriptionOnly(this WitResponseNode witResponse)
-        {
-            var transcription = witResponse.GetTranscription();
-            return !string.IsNullOrEmpty(transcription) && !HasResponse(witResponse);
-        }
-
-        /// <summary>
-        /// Get whether this response contains partial data
-        /// </summary>
-        public static bool HasResponse(this WitResponseNode witResponse)
-        {
-            var response = witResponse?.AsObject;
-            return null != response
-                && (response.HasChild(WIT_KEY_INTENTS)
-                    || response.HasChild(WIT_KEY_ENTITIES)
-                    || response.HasChild(WIT_KEY_TRAITS)
-                    || response.HasChild(WIT_PARTIAL_RESPONSE)
-                    || response.HasChild(WIT_RESPONSE));
-        }
 
         /// <summary>
         /// Get whether this response is for transcriptions only
@@ -102,20 +89,63 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
         public static WitResponseClass GetFinalResponse(this WitResponseNode witResponse) =>
-            witResponse?.SafeGet(WIT_RESPONSE)?.AsObject;
+            witResponse?.SafeGet(WitConstants.KEY_RESPONSE_FINAL)?.AsObject;
 
         /// <summary>
         /// Gets the content of a witResponse["partial_response"] node.
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
         public static WitResponseClass GetPartialResponse(this WitResponseNode witResponse) =>
-            witResponse?.SafeGet(WIT_PARTIAL_RESPONSE)?.AsObject;
+            witResponse?.SafeGet(WitConstants.KEY_RESPONSE_PARTIAL)?.AsObject;
 
         /// <summary>
-        /// Get whether this response is a 'final' response
+        ///
+        /// </summary>
+        public static bool GetHasPartialResponse(this WitResponseNode witResponse)
+        {
+            var response = witResponse?.AsObject;
+            return null != response
+                   // Allow if final, does not include transcription or includes action
+                   // TODO: Replace with response type check once available
+                   && (response.GetIsFinal()
+                       || !response.GetHasTranscription()
+                       || response.HasChild(WitConstants.KEY_RESPONSE_ACTION));
+        }
+
+        /// <summary>
+        /// Get whether this response is the final response returned from the service
         /// </summary>
         public static bool GetIsFinal(this WitResponseNode witResponse) =>
-            witResponse?.SafeGet(WIT_KEY_FINAL)?.AsBool ?? false;
+            witResponse?.SafeGet(WitConstants.KEY_RESPONSE_IS_FINAL)?.AsBool ?? false;
+
+        /// <summary>
+        /// Get whether this response is a 'final' transcription
+        /// </summary>
+        public static bool GetIsTranscriptionFinal(this WitResponseNode witResponse)
+        {
+            // Use final transcription
+            return (witResponse?.SafeGet(WitConstants.KEY_RESPONSE_TRANSCRIPTION_IS_FINAL)?.AsBool ?? false)
+                // TODO: Replace with response type check once available
+                || !string.IsNullOrEmpty(witResponse?[WitConstants.KEY_RESPONSE_ACTION]);
+        }
+
+        /// <summary>
+        /// Get whether this response contains a transcription that should be analyzed
+        /// </summary>
+        public static bool GetHasTranscription(this WitResponseNode witResponse)
+        {
+            var response = witResponse?.AsObject;
+            return null != response
+                   && response.HasChild(WitConstants.KEY_RESPONSE_TRANSCRIPTION)
+                   // Allow if final or not within an NLP response
+                   // TODO: Replace with response type check once available
+                   && (response.GetIsTranscriptionFinal()
+                       || (!response.HasChild(WitConstants.KEY_RESPONSE_NLP_ENTITIES)
+                           && !response.HasChild(WitConstants.KEY_RESPONSE_NLP_INTENTS)
+                           && !response.HasChild(WitConstants.KEY_RESPONSE_NLP_TRAITS)
+                           && !response.HasChild(WitConstants.KEY_RESPONSE_PARTIAL)
+                           && !response.HasChild(WitConstants.KEY_RESPONSE_FINAL)));
+        }
 
         // Used for multiple lookups
         private static WitResponseArray GetArray(WitResponseNode witResponse, string key) =>
@@ -146,7 +176,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static string GetFirstEntityValue(this WitResponseNode witResponse, string name)
         {
-            return witResponse?[WIT_KEY_ENTITIES]?[name]?[0]?["value"]?.Value;
+            return witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name]?[0]?["value"]?.Value;
         }
 
         /// <summary>
@@ -158,10 +188,10 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static string[] GetAllEntityValues(this WitResponseNode witResponse, string name)
         {
-            var values = new string[witResponse?[WIT_KEY_ENTITIES]?[name]?.Count ?? 0];
-            for (var i = 0; i < witResponse?[WIT_KEY_ENTITIES]?[name]?.Count; i++)
+            var values = new string[witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name]?.Count ?? 0];
+            for (var i = 0; i < witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name]?.Count; i++)
             {
-                values[i] = witResponse?[WIT_KEY_ENTITIES]?[name]?[i]?["value"]?.Value;
+                values[i] = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name]?[i]?["value"]?.Value;
             }
             return values;
         }
@@ -174,7 +204,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitResponseNode GetFirstEntity(this WitResponseNode witResponse, string name)
         {
-            return witResponse?[WIT_KEY_ENTITIES]?[name][0];
+            return witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name][0];
         }
 
         /// <summary>
@@ -185,7 +215,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitEntityData GetFirstWitEntity(this WitResponseNode witResponse, string name)
         {
-            var array = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var array = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             return array?.Count > 0 ? array[0].AsWitEntity() : null;
         }
 
@@ -198,7 +228,7 @@ namespace Meta.WitAi
         public static WitEntityIntData GetFirstWitIntEntity(this WitResponseNode witResponse,
             string name)
         {
-            var array = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var array = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             return array?.Count > 0 ? array[0].AsWitIntEntity() : null;
         }
 
@@ -211,7 +241,7 @@ namespace Meta.WitAi
         public static int GetFirstWitIntValue(this WitResponseNode witResponse,
             string name, int defaultValue)
         {
-            var array = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var array = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
 
             if (null == array || array.Count == 0) return defaultValue;
             return array[0].AsWitIntEntity().value;
@@ -225,7 +255,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitEntityFloatData GetFirstWitFloatEntity(this WitResponseNode witResponse, string name)
         {
-            var array = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var array = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             return array?.Count > 0 ? array[0].AsWitFloatEntity() : null;
         }
 
@@ -238,7 +268,7 @@ namespace Meta.WitAi
         public static float GetFirstWitFloatValue(this WitResponseNode witResponse,
             string name, float defaultValue)
         {
-            var array = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var array = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
 
             if (null == array || array.Count == 0) return defaultValue;
             return array[0].AsWitFloatEntity().value;
@@ -251,7 +281,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitEntityData[] GetEntities(this WitResponseNode witResponse, string name)
         {
-            var entityJsonArray = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var entityJsonArray = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             var entities = new WitEntityData[entityJsonArray?.Count ?? 0];
             for (int i = 0; i < entities.Length; i++)
             {
@@ -268,7 +298,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static int EntityCount(this WitResponseNode response)
         {
-            return response?[WIT_KEY_ENTITIES]?.AsArray?.Count ?? 0;
+            return response?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?.AsArray?.Count ?? 0;
         }
 
         /// <summary>
@@ -279,7 +309,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitEntityFloatData[] GetFloatEntities(this WitResponseNode witResponse, string name)
         {
-            var entityJsonArray = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var entityJsonArray = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             var entities = new WitEntityFloatData[entityJsonArray?.Count ?? 0];
             for (int i = 0; i < entities.Length; i++)
             {
@@ -297,7 +327,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitEntityIntData[] GetIntEntities(this WitResponseNode witResponse, string name)
         {
-            var entityJsonArray = witResponse?[WIT_KEY_ENTITIES]?[name].AsArray;
+            var entityJsonArray = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name].AsArray;
             var entities = new WitEntityIntData[entityJsonArray?.Count ?? 0];
             for (int i = 0; i < entities.Length; i++)
             {
@@ -332,7 +362,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitResponseNode GetFirstIntent(this WitResponseNode witResponse)
         {
-            var array = GetArray(witResponse, WIT_KEY_INTENTS);
+            var array = GetArray(witResponse, WitConstants.KEY_RESPONSE_NLP_INTENTS);
             return array == null || array.Count == 0 ? null : array[0];
         }
 
@@ -353,7 +383,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitIntentData[] GetIntents(this WitResponseNode witResponse)
         {
-            var array = GetArray(witResponse, WIT_KEY_INTENTS);
+            var array = GetArray(witResponse, WitConstants.KEY_RESPONSE_NLP_INTENTS);
             var intents = new WitIntentData[array?.Count ?? 0];
             for (int i = 0; i < intents.Length; i++)
             {
@@ -506,7 +536,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static string GetTraitValue(this WitResponseNode witResponse, string name)
         {
-            return witResponse?[WIT_KEY_TRAITS]?[name]?[0]?["value"]?.Value;
+            return witResponse?[WitConstants.KEY_RESPONSE_NLP_TRAITS]?[name]?[0]?["value"]?.Value;
         }
         #endregion
     }

@@ -165,7 +165,46 @@ namespace Meta.WitAi
         /// </summary>
         public const int TTS_PITCH_MAX = 200;
 
-        #region Response Body Runtime Errors
+        #region Response Body Runtime
+        /// <summary>
+        /// The key in the response body for the response transcription
+        /// </summary>
+        public const string KEY_RESPONSE_TRANSCRIPTION = "text";
+        /// <summary>
+        /// The key in the response body for the final transcription
+        /// </summary>
+        public const string KEY_RESPONSE_TRANSCRIPTION_IS_FINAL = "is_final";
+
+        /// <summary>
+        /// The key in the response body for the response NLP intents
+        /// </summary>
+        public const string KEY_RESPONSE_NLP_INTENTS = "intents";
+        /// <summary>
+        /// The key in the response body for the response NLP entities
+        /// </summary>
+        public const string KEY_RESPONSE_NLP_ENTITIES = "entities";
+        /// <summary>
+        /// The key in the response body for the response NLP traits
+        /// </summary>
+        public const string KEY_RESPONSE_NLP_TRAITS = "traits";
+
+        /// <summary>
+        /// Key in the response body for partially built responses
+        /// </summary>
+        public const string KEY_RESPONSE_PARTIAL = "partial_response";
+        /// <summary>
+        /// Key in the response body for completed responses
+        /// </summary>
+        public const string KEY_RESPONSE_FINAL = "response";
+        /// <summary>
+        /// The key in the response body for the action handling
+        /// </summary>
+        public const string KEY_RESPONSE_ACTION = "action";
+        /// <summary>
+        /// The key in the response body for the final response
+        /// </summary>
+        public const string KEY_RESPONSE_IS_FINAL = "is_final";
+
         /// <summary>
         /// The key in the response body for the response code
         /// </summary>
