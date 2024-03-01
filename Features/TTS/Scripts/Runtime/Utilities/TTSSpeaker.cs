@@ -1306,11 +1306,11 @@ namespace Meta.WitAi.TTS.Utilities
         private IEnumerator WaitForPlaybackComplete()
         {
             // Use delta time to wait for completion
-            float elapsedTime = 0f;
             int events = -1;
             int sample = -1;
-            while (!IsPlaybackComplete(elapsedTime))
+            while (!IsPlaybackComplete())
             {
+                // Wait a frame
                 yield return new WaitForEndOfFrame();
 
                 // Fix audio source, paused/resumed externally
@@ -1343,21 +1343,15 @@ namespace Meta.WitAi.TTS.Utilities
                     sample = newSample;
                     OnPlaybackSampleUpdated(sample);
                 }
-
-                // Only increment if playing
-                if (!IsPaused)
-                {
-                    elapsedTime += Time.deltaTime;
-                }
             }
 
             // Playback completed
             HandlePlaybackComplete(false);
         }
         // Check for playback completion
-        protected virtual bool IsPlaybackComplete(float elapsedTime)
+        protected virtual bool IsPlaybackComplete()
         {
-            return elapsedTime >= AudioPlayer?.ClipStream.Length || (!AudioPlayer.IsPlaying && !IsPaused);
+            return CurrentSample >= TotalSamples && (AudioPlayer?.ClipStream?.IsComplete ?? true);
         }
         // Completed playback
         protected virtual void HandlePlaybackComplete(bool stopped)
