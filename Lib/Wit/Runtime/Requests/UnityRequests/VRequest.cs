@@ -1337,10 +1337,10 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="audioType">Audio decoder type allowed</param>
         /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
         /// <returns>Instantiated audio decoder</returns>
         public virtual IAudioDecoder GetAudioDecoder(AudioType audioType, bool textStream = false,
-            AudioTextDecodeDelegate onTextDecoded = null)
+            AudioJsonDecodeDelegate onJsonDecoded = null)
         {
             Type decoderType = GetAudioDecoderType(audioType);
             if (decoderType == null)
@@ -1350,7 +1350,7 @@ namespace Meta.WitAi.Requests
             IAudioDecoder audioDecoder =  Activator.CreateInstance(decoderType) as IAudioDecoder;
             if (textStream)
             {
-                return new AudioDecoderText(audioDecoder, onTextDecoded);
+                return new AudioDecoderJson(audioDecoder, onJsonDecoded);
             }
             return audioDecoder;
         }
@@ -1364,16 +1364,16 @@ namespace Meta.WitAi.Requests
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             Uri uri,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
             AudioType audioType, bool audioStream,
-            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null) =>
+            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null) =>
             RequestAudioStream(clipStream,
                 new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
                 onClipStreamReady,
-                audioType, audioStream, textStream, onTextDecoded);
+                audioType, audioStream, textStream, onJsonDecoded);
 
         /// <summary>
         /// Request audio clip with audio data, web request & completion delegate
@@ -1384,15 +1384,15 @@ namespace Meta.WitAi.Requests
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
         public bool RequestAudioStream(IAudioClipStream clipStream,
             UnityWebRequest unityRequest,
             RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
             AudioType audioType, bool audioStream,
-            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null)
+            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null)
         {
             // Setup failed
-            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onTextDecoded);
+            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onJsonDecoded);
             if (!string.IsNullOrEmpty(errors))
             {
                 onClipStreamReady?.Invoke(clipStream, errors);
@@ -1405,7 +1405,7 @@ namespace Meta.WitAi.Requests
                 // Finalize audio request stream
                 if (string.IsNullOrEmpty(error))
                 {
-                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onTextDecoded);
+                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onJsonDecoded);
                 }
 
                 // Unload clip stream if error
@@ -1434,15 +1434,15 @@ namespace Meta.WitAi.Requests
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
         /// <returns>Returns the resultant audio clip stream</returns>
         public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
             Uri uri,
             AudioType audioType, bool audioStream,
-            bool textStream = false, AudioTextDecodeDelegate onTextDecoded = null) =>
+            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null) =>
             await RequestAudioStreamAsync(clipStream,
                 new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
-                audioType, audioStream, textStream, onTextDecoded);
+                audioType, audioStream, textStream, onJsonDecoded);
 
         /// <summary>
         /// Request audio clip with audio data, web request & completion delegate
@@ -1452,18 +1452,18 @@ namespace Meta.WitAi.Requests
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="audioStream">Whether or not audio should be streamed</param>
         /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onTextDecoded">The text decode callback which will be called multiple times</param>
+        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
         /// <returns>Returns the resultant audio clip stream</returns>
         public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
             UnityWebRequest unityRequest, AudioType audioType, bool audioStream, bool textStream = false,
-            AudioTextDecodeDelegate onTextDecoded = null)
+            AudioJsonDecodeDelegate onJsonDecoded = null)
         {
             // Results
             RequestCompleteResponse<IAudioClipStream> results = new RequestCompleteResponse<IAudioClipStream>();
             results.Value = clipStream;
 
             // Setup failed
-            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onTextDecoded);
+            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onJsonDecoded);
             if (!string.IsNullOrEmpty(errors))
             {
                 results.Error = errors;
@@ -1476,7 +1476,7 @@ namespace Meta.WitAi.Requests
                 // Finalize audio request stream
                 if (string.IsNullOrEmpty(error))
                 {
-                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onTextDecoded);
+                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onJsonDecoded);
                     results.Value = clipStream;
                 }
 
@@ -1510,7 +1510,7 @@ namespace Meta.WitAi.Requests
         private string SetupAudioRequest(IAudioClipStream clipStream,
             UnityWebRequest unityRequest,
             AudioType audioType, bool audioStream,
-            bool textStream, AudioTextDecodeDelegate onTextDecoded)
+            bool textStream, AudioJsonDecodeDelegate onJsonDecoded)
         {
             // Add audio download handler
             if (unityRequest.downloadHandler == null)
@@ -1530,7 +1530,7 @@ namespace Meta.WitAi.Requests
                     }
 
                     // Use custom audio stream handler
-                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType, textStream, onTextDecoded));
+                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType, textStream, onJsonDecoded));
                 }
                 // Use audio clip download handler
                 else
@@ -1551,7 +1551,7 @@ namespace Meta.WitAi.Requests
 
         // Called on audio ready to be decoded
         private string FinalizeAudioRequest(ref IAudioClipStream clipStream, UnityWebRequest request, AudioType audioType,
-            bool textStream, AudioTextDecodeDelegate onTextDecoded)
+            bool textStream, AudioJsonDecodeDelegate onJsonDecoded)
         {
             // Update stream if applicable
             try
@@ -1576,7 +1576,7 @@ namespace Meta.WitAi.Requests
                 else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
                 {
                     byte[] data = rawDownloader.data;
-                    float[] samples = GetAudioDecoder(audioType, textStream, onTextDecoded).Decode(data, 0, data.Length);
+                    float[] samples = GetAudioDecoder(audioType, textStream, onJsonDecoded).Decode(data, 0, data.Length);
                     clipStream.SetExpectedSamples(samples.Length);
                     clipStream.AddSamples(samples);
                 }

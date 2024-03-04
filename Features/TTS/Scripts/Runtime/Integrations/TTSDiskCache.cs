@@ -163,7 +163,7 @@ namespace Meta.WitAi.TTS.Integrations
                         OnStreamComplete(clipData, error);
                     }
                 }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk, clipData.useEvents,
-                clipData.Events.AppendEvents);
+                clipData.Events.AppendJson);
             if (canPerform)
             {
                 _streamRequests[clipData.clipID] = request;

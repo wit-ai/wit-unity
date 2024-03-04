@@ -48,9 +48,9 @@ namespace Meta.WitAi.Requests
         public bool Stream { get; private set; }
 
         // Whether audio data should include events
-        public bool UseTextStream { get; }
+        public bool UseEvents { get; }
         // Callback when events are decoded within audio stream
-        public AudioTextDecodeDelegate OnTextDecoded { get; }
+        public AudioJsonDecodeDelegate OnJsonDecoded { get; }
 
         /// <summary>
         /// Constructor for wit based text-to-speech VRequests
@@ -64,20 +64,20 @@ namespace Meta.WitAi.Requests
         /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
         /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
         /// <param name="useEvents">Whether or not events should be requested with this audio request</param>
-        /// <param name="onTextDecoded">Whether or not events should be requested with this audio request</param>
+        /// <param name="OnJsonDecoded">Audio event json node return callback</param>
         public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string textToSpeak,
             Dictionary<string, string> ttsData, TTSWitAudioType audioFileType, bool audioStream = false,
             RequestProgressDelegate onDownloadProgress = null,
             RequestFirstResponseDelegate onFirstResponse = null,
-            bool useTextStream = false, AudioTextDecodeDelegate onTextDecoded = null)
+            bool useEvents = false, AudioJsonDecodeDelegate onJsonDecoded = null)
             : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
         {
             TextToSpeak = textToSpeak;
             TtsData = ttsData;
             FileType = audioFileType;
             Stream = audioStream;
-            UseTextStream = useTextStream;
-            OnTextDecoded = onTextDecoded;
+            UseEvents = useEvents;
+            OnJsonDecoded = onJsonDecoded;
             Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
         }
 
@@ -165,7 +165,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, UseTextStream, TtsData);
+            byte[] bytes = EncodePostData(TextToSpeak, UseEvents, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -177,7 +177,7 @@ namespace Meta.WitAi.Requests
             UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform an audio stream request
-            if (!RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream, UseTextStream, OnTextDecoded))
+            if (!RequestAudioStream(clipStream, unityRequest, onClipReady, GetAudioType(FileType), Stream, UseEvents, OnJsonDecoded))
             {
                 return "Failed to start audio stream";
             }
@@ -203,7 +203,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Async encode
-            var bytes = await EncodePostBytesAsync(TextToSpeak, UseTextStream, TtsData);
+            var bytes = await EncodePostBytesAsync(TextToSpeak, UseEvents, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -214,7 +214,7 @@ namespace Meta.WitAi.Requests
             UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform request async
-            return await RequestAudioStreamAsync(clipStream, unityRequest, GetAudioType(FileType), Stream, UseTextStream, OnTextDecoded);
+            return await RequestAudioStreamAsync(clipStream, unityRequest, GetAudioType(FileType), Stream, UseEvents, OnJsonDecoded);
         }
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, UseTextStream, TtsData);
+            byte[] bytes = EncodePostData(TextToSpeak, UseEvents, TtsData);
             if (bytes == null)
             {
                 errors = WitConstants.ERROR_TTS_DECODE;
@@ -273,7 +273,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Async encode
-            byte[] bytes = await EncodePostBytesAsync(TextToSpeak, UseTextStream, TtsData);
+            byte[] bytes = await EncodePostBytesAsync(TextToSpeak, UseEvents, TtsData);
             if (bytes == null)
             {
                 return WitConstants.ERROR_TTS_DECODE;

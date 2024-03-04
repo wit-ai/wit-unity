@@ -108,7 +108,7 @@ namespace Meta.WitAi.TTS.Integrations
                 RequestSettings.audioType, clipData.queryStream,
                 (progress) => OnRequestProgressUpdated(clipData, progress),
                 () => OnRequestFirstResponse(clipData),
-                clipData.useEvents, clipData.Events.AppendEvents);
+                clipData.useEvents, clipData.Events.AppendJson);
 
         // Progress callbacks
         private void OnRequestFirstResponse(TTSClipData clipData)
