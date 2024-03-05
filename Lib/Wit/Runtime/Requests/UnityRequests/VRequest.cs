@@ -54,11 +54,6 @@ namespace Meta.WitAi.Requests
         // Currently transmitting requests
         private static int _requestCount = 0;
 
-        /// <summary>
-        /// Wait delay for async methods
-        /// </summary>
-        public const int ASYNC_DELAY_MS = 10;
-
         // Request progress delegate
         public delegate void RequestProgressDelegate(float progress);
         // Request first response
@@ -506,7 +501,7 @@ namespace Meta.WitAi.Requests
             // Continue while request exists & is not complete
             while (!IsRequestComplete())
             {
-                await Task.Delay(ASYNC_DELAY_MS);
+                await TaskUtility.Wait();
                 Update();
             }
 
@@ -1061,10 +1056,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Wait for partial decode to complete
-            while (partialDecoding)
-            {
-                await Task.Delay(ASYNC_DELAY_MS);
-            }
+            await TaskUtility.WaitWhile(() => partialDecoding);
 
             // Return previously decoded json
             if (string.Equals(partialJson, textResponse.Value))
@@ -1492,15 +1484,10 @@ namespace Meta.WitAi.Requests
             };
 
             // Perform async request
-            #pragma warning disable CS4014
-            RequestAsync<string>(unityRequest, null);
-            #pragma warning restore CS4014
+            _ = RequestAsync<string>(unityRequest, null);
 
             // Wait for stream to be ready or error
-            while (!IsStreamReady && string.IsNullOrEmpty(results.Error))
-            {
-                await Task.Delay(ASYNC_DELAY_MS);
-            }
+            await TaskUtility.WaitWhile(() => !IsStreamReady && string.IsNullOrEmpty(results.Error));
 
             // Return results
             return results;

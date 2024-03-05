@@ -137,10 +137,7 @@ namespace Meta.WitAi.Requests
 
             // If must decode in sequence, wait for previous to complete
             bool sequentialDecode = _decoder.RequireSequentialDecode;
-            while (sequentialDecode && _decodedChunks < current)
-            {
-                await Task.Delay(VRequest.ASYNC_DELAY_MS);
-            }
+            await TaskUtility.WaitWhile(() => sequentialDecode && _decodedChunks < current);
 
             // Perform decode async
             float[] samples = null;
@@ -158,10 +155,7 @@ namespace Meta.WitAi.Requests
             });
 
             // Needs to wait for sequential prior to returning if not done previously
-            while (!sequentialDecode && _decodedChunks < current)
-            {
-                await Task.Delay(VRequest.ASYNC_DELAY_MS);
-            }
+            await TaskUtility.WaitWhile(() => !sequentialDecode && _decodedChunks < current);
 
             // Increment decoded chunk count
             _decodedChunks++;

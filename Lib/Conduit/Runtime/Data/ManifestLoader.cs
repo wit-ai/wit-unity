@@ -57,10 +57,7 @@ namespace Meta.Conduit
 
             // Load async from resources
             var jsonRequest = Resources.LoadAsync<TextAsset>(manifestPath);
-            while (!jsonRequest.isDone)
-            {
-                await Task.Delay(VRequest.ASYNC_DELAY_MS);
-            }
+            await TaskUtility.WaitWhile(() => !jsonRequest.isDone);
 
             // Success
             if (jsonRequest.asset is TextAsset textAsset)

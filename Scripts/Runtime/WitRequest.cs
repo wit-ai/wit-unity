@@ -110,9 +110,6 @@ namespace Meta.WitAi
 
         // Decode in NLPRequest
         protected override bool DecodeRawResponses => true;
-
-        // The async delay time in ms
-        public const int ASYNC_DELAY = 100;
         #endregion PARAMETERS
 
         #region REQUEST
@@ -446,10 +443,7 @@ namespace Meta.WitAi
             if (_request.Method == "POST" || _request.Method == "PUT")
             {
                 var getPostStream = _request.BeginGetRequestStream(HandleWriteStream, _request);
-                while (!getPostStream.IsCompleted)
-                {
-                    await Task.Delay(ASYNC_DELAY);
-                }
+                await TaskUtility.WaitWhile(() => !getPostStream.IsCompleted);
             }
 
             // Cancellation
@@ -461,15 +455,13 @@ namespace Meta.WitAi
 
             // Get response stream & wait for completion
             var getResponseStream = _request.BeginGetResponse(HandleResponse, _request);
-            while (!getResponseStream.IsCompleted)
-            {
-                await Task.Delay(ASYNC_DELAY);
-            }
+            await TaskUtility.WaitWhile(() => !getResponseStream.IsCompleted);
         }
 
         // Handle timeout callback
         private Thread _timeoutThread;
         private DateTime _timeoutStart;
+        private const int TIMEOUT_DELAY_MS = 100;
         private void HandleTimeout()
         {
             // Await a specific timeout in ms
@@ -477,7 +469,7 @@ namespace Meta.WitAi
             _timeoutStart = DateTime.UtcNow;
             do
             {
-                Thread.Sleep(ASYNC_DELAY);
+                Thread.Sleep(TIMEOUT_DELAY_MS);
                 elapsed = (DateTime.UtcNow - _timeoutStart).TotalMilliseconds;
             } while (elapsed < TimeoutMs);
             _timeoutThread = null;
