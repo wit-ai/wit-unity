@@ -368,8 +368,6 @@ namespace Meta.WitAi
                 VLog.W("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
-            // Begin calling on main thread if needed
-            ThreadUtility.InitMainThreadScheduler();
             WitVRequest.PreloadSettings();
 
             // Run on background thread

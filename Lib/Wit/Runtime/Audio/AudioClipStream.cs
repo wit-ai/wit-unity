@@ -96,7 +96,6 @@ namespace Meta.Voice.Audio
             ExpectedSamples = 0;
             IsReady = false;
             IsComplete = false;
-            ThreadUtility.InitMainThreadScheduler();
         }
 
         /// <summary>

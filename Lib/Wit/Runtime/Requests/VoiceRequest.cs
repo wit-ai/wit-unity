@@ -97,8 +97,6 @@ namespace Meta.Voice
             }
             // Generate results and apply changes throughout lifecycle
             Results = GetNewResults();
-            // Generate handler for main thread callbacks
-            ThreadUtility.InitMainThreadScheduler();
 
             // Initialized
             SetState(VoiceRequestState.Initialized);

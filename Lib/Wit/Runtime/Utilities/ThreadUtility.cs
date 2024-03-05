@@ -12,6 +12,7 @@
 
 using System;
 #if THREADING_ENABLED
+using UnityEngine;
 using System.Threading.Tasks;
 #endif
 
@@ -27,22 +28,21 @@ namespace Meta.WitAi
         /// The task scheduler that runs on the main thread
         /// </summary>
         private static TaskScheduler _mainThreadScheduler;
-        #endif
 
         /// <summary>
         /// Called from main thread in constructor of any scripts that need to
         /// call code on the main thread.
         /// </summary>
-        public static void InitMainThreadScheduler()
+        [RuntimeInitializeOnLoadMethod]
+        private static void Init()
         {
-            #if THREADING_ENABLED
             if (_mainThreadScheduler != null)
             {
                 return;
             }
             _mainThreadScheduler = TaskScheduler.FromCurrentSynchronizationContext();
-            #endif
         }
+        #endif
 
         /// <summary>
         /// Safely calls an action on the main thread using a scheduler.
