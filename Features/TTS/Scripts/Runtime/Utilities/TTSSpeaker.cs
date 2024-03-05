@@ -1351,7 +1351,18 @@ namespace Meta.WitAi.TTS.Utilities
         // Check for playback completion
         protected virtual bool IsPlaybackComplete()
         {
-            return CurrentSample >= TotalSamples && (AudioPlayer?.ClipStream?.IsComplete ?? true);
+            // No longer playing if audio player stopped
+            if (!AudioPlayer.IsPlaying && !IsPaused)
+            {
+                return true;
+            }
+            // No longer playing if clip stream is missing
+            if (AudioPlayer?.ClipStream == null)
+            {
+                return true;
+            }
+            // Complete if stream is complete (total samples are set) and current sample is final
+            return AudioPlayer.ClipStream.IsComplete && CurrentSample >= TotalSamples;
         }
         // Completed playback
         protected virtual void HandlePlaybackComplete(bool stopped)
