@@ -309,7 +309,7 @@ namespace Meta.WitAi
             Dictionary<string, string> queryParams = new Dictionary<string, string>(Options.QueryParams);
 
             // Get uri using override
-            var uri = WitVRequest.GetWitUri(Configuration, Path, queryParams);
+            var uri = WitRequestSettings.GetUri(Configuration, Path, queryParams);
             #pragma warning disable CS0618
             if (onCustomizeUri != null)
             {
@@ -324,7 +324,7 @@ namespace Meta.WitAi
         private Dictionary<string, string> GetHeaders()
         {
             // Get default headers
-            Dictionary<string, string> headers = WitVRequest.GetWitHeaders(Configuration, Options?.RequestId, false);
+            Dictionary<string, string> headers = WitRequestSettings.GetHeaders(Configuration, Options?.RequestId, false);
 
             // Append additional headers
             if (onProvideCustomHeaders != null)
@@ -368,7 +368,6 @@ namespace Meta.WitAi
                 VLog.W("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
-            WitVRequest.PreloadSettings();
 
             // Run on background thread
             _requestThread = new Thread(async () => await StartThreadedRequest());
