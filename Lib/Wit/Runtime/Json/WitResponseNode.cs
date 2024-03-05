@@ -1010,7 +1010,7 @@ namespace Meta.WitAi.Json
             {
                 if (result.Length > 2)
                     result += ", ";
-                result += "\"" + Escape(N.Key) + "\": " + N.Value.ToString();
+                result += "\"" + Escape(N.Key) + "\": " + (N.Value?.ToString() ?? "\"\"");
             }
 
             result += "}";
