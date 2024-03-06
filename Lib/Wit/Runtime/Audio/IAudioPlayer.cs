@@ -24,6 +24,11 @@ namespace Meta.Voice.Audio
         bool IsPlaying { get; }
 
         /// <summary>
+        /// Whether or not elapsed samples can be determined from this audio player
+        /// </summary>
+        bool CanSetElapsedSamples { get; }
+
+        /// <summary>
         /// The currently elapsed sample count
         /// </summary>
         int ElapsedSamples { get; }

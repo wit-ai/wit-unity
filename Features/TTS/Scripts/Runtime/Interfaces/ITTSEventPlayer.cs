@@ -22,9 +22,9 @@ namespace Meta.WitAi.TTS.Interfaces
     public interface ITTSEventPlayer
     {
         /// <summary>
-        /// The current sample of the playing tts audio data if applicable
+        /// The current number of elapsed samples for the playing tts audio data
         /// </summary>
-        int CurrentSample { get; }
+        int ElapsedSamples { get; }
 
         /// <summary>
         /// The total samples available for the events

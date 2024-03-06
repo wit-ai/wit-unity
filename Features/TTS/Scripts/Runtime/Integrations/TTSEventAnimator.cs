@@ -203,7 +203,7 @@ namespace Meta.WitAi.TTS.Integrations
         protected virtual void RefreshSample(bool force)
         {
             // Get sample
-            var sample = Player == null || Events == null ? -1 : Player.CurrentSample;
+            var sample = Player == null || Events == null ? -1 : Player.ElapsedSamples;
             if (!force && sample == _sample)
             {
                 return;

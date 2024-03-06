@@ -148,6 +148,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         public bool IsActive => IsSpeaking || IsLoading;
 
+        // Total elapsed seconds of the playing audio clip.  Used for elapsed sample calculation if needed.
+        private float _elapsedPlayTime;
+
         // Current clip to be played
         protected TTSSpeakerRequestData _speakingRequest;
         // Full clip data list
@@ -1308,10 +1311,17 @@ namespace Meta.WitAi.TTS.Utilities
             // Use delta time to wait for completion
             int events = -1;
             int sample = -1;
+            _elapsedPlayTime = 0f;
             while (!IsPlaybackComplete())
             {
                 // Wait a frame
                 yield return new WaitForEndOfFrame();
+
+                // Append delta time for elapsed play time
+                if (!IsPaused)
+                {
+                    _elapsedPlayTime += Time.deltaTime;
+                }
 
                 // Fix audio source, paused/resumed externally
                 bool playerPaused = !AudioPlayer.IsPlaying;
@@ -1337,7 +1347,7 @@ namespace Meta.WitAi.TTS.Utilities
                 }
 
                 // Update current sample if needed
-                var newSample = CurrentSample;
+                var newSample = ElapsedSamples;
                 if (sample != newSample)
                 {
                     sample = newSample;
@@ -1362,7 +1372,7 @@ namespace Meta.WitAi.TTS.Utilities
                 return true;
             }
             // Complete if stream is complete (total samples are set) and current sample is final
-            return AudioPlayer.ClipStream.IsComplete && CurrentSample >= TotalSamples;
+            return AudioPlayer.ClipStream.IsComplete && ElapsedSamples >= TotalSamples;
         }
         // Completed playback
         protected virtual void HandlePlaybackComplete(bool stopped)
@@ -1769,9 +1779,26 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region ITTSEventPlayer
         /// <summary>
-        /// The current sample of the playing audio data if applicable
+        /// The current amount of elapsed samples of the playing audio data if applicable
         /// </summary>
-        public int CurrentSample => IsSpeaking ? _audioPlayer.ElapsedSamples : 0;
+        public int ElapsedSamples
+        {
+            get
+            {
+                // Not speaking
+                if (!IsSpeaking)
+                {
+                    return 0;
+                }
+                // Ensure elapsed samples can be determined
+                if (_audioPlayer.CanSetElapsedSamples)
+                {
+                    return _audioPlayer.ElapsedSamples;
+                }
+                // Otherwise use elapsed time
+                return Mathf.FloorToInt(_elapsedPlayTime * _audioPlayer.ClipStream.Channels * _audioPlayer.ClipStream.SampleRate);
+            }
+        }
 
         /// <summary>
         /// The total samples available for the current tts events

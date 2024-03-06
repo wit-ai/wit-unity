@@ -35,6 +35,25 @@ namespace Meta.Voice.Audio
         public bool CloneAudioSource => _cloneAudioSource;
 
         /// <summary>
+        /// Whether the player is currently playing back audio
+        /// </summary>
+        public override bool IsPlaying => AudioSource != null && AudioSource.isPlaying;
+
+        /// <summary>
+        /// Elapsed samples can be used for animation progress
+        /// </summary>
+        public override bool CanSetElapsedSamples => true;
+
+        /// <summary>
+        /// The currently elapsed sample count
+        /// </summary>
+        public override int ElapsedSamples => AudioSource != null ? AudioSource.timeSamples : 0;
+
+        // Local clip adjustments
+        private bool _local = false;
+        private int _offset = 0;
+
+        /// <summary>
         /// Performs all player initialization
         /// </summary>
         public override void Init()
@@ -127,10 +146,6 @@ namespace Meta.Voice.Audio
             AudioSource.Play();
         }
 
-        // Local clip adjustments
-        private bool _local = false;
-        private int _offset = 0;
-
         // Set offset position
         private void OnSetRawPosition(int offset)
         {
@@ -148,16 +163,6 @@ namespace Meta.Voice.Audio
                 _offset += length;
             }
         }
-
-        /// <summary>
-        /// Whether the player is currently playing back audio
-        /// </summary>
-        public override bool IsPlaying => AudioSource != null && AudioSource.isPlaying;
-
-        /// <summary>
-        /// The currently elapsed sample count
-        /// </summary>
-        public override int ElapsedSamples => AudioSource != null ? AudioSource.timeSamples : 0;
 
         /// <summary>
         /// Performs a pause if the current clip is playing

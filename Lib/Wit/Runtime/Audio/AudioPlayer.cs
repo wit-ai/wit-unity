@@ -26,9 +26,15 @@ namespace Meta.Voice.Audio
         public virtual bool IsPlaying => ClipStream != null;
 
         /// <summary>
-        /// The currently elapsed sample count
+        /// Default to not being able to obtain elapsed samples
         /// </summary>
-        public abstract int ElapsedSamples { get; }
+        public virtual bool CanSetElapsedSamples => false;
+
+        /// <summary>
+        /// The currently elapsed sample count for accurate sample based
+        /// animations and determination of playback completion.
+        /// </summary>
+        public virtual int ElapsedSamples => 0;
 
         /// <summary>
         /// Performs all player initialization
