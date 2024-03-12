@@ -36,6 +36,11 @@ namespace Meta.WitAi
     {
         #if UNITY_EDITOR
         /// <summary>
+        /// If enabled, errors will log to console as warnings
+        /// </summary>
+        public static bool LogErrorsAsWarnings = false;
+
+        /// <summary>
         /// Ignores logs in editor if less than log level (Error = 0, Warning = 2, Log = 3)
         /// </summary>
         public static VLogLevel EditorLogLevel
@@ -51,7 +56,6 @@ namespace Meta.WitAi
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_FILTER_LOG_KEY = "VSDK_FILTER_LOG";
         private const VLogLevel EDITOR_LOG_LEVEL_DEFAULT = VLogLevel.Warning;
-
         private static HashSet<string> _filteredTagSet;
         private static List<string> _filteredTagList;
 
@@ -72,7 +76,7 @@ namespace Meta.WitAi
                 return _filteredTagList;
             }
         }
-        
+
         private static HashSet<string> FilteredTagSet
         {
             get
@@ -255,6 +259,13 @@ namespace Meta.WitAi
             switch (logType)
             {
                 case VLogLevel.Error:
+                    #if UNITY_EDITOR
+                    if (LogErrorsAsWarnings)
+                    {
+                        UnityEngine.Debug.LogWarning(message);
+                        return;
+                    }
+                    #endif
                     UnityEngine.Debug.LogError(message);
                     break;
                 case VLogLevel.Warning:
