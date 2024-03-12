@@ -31,7 +31,7 @@ namespace Meta.WitAi.Requests
 
         /// <inheritdoc/>
         public bool GetResponseHasPartial(WitResponseNode results) =>
-            results.GetHasPartialResponse();
+            !results.GetHasTranscription();
 
         /// <inheritdoc/>
         public string GetResponseTranscription(WitResponseNode results) =>

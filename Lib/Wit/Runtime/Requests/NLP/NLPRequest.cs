@@ -10,9 +10,6 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 using Meta.WitAi;
-using System.Threading.Tasks;
-using Meta.WitAi.Json;
-using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -314,11 +311,6 @@ namespace Meta.Voice
             // Final was called, handle success
             if (final)
             {
-                // Call final transcription if not previously called
-                if (InputType == NLPRequestInputType.Audio && (!hasTranscription || !isTranscriptionFull))
-                {
-                    ApplyTranscription(transcription, true);
-                }
                 // Call partial response if not previously called
                 if (!hasPartial)
                 {

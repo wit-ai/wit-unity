@@ -134,6 +134,12 @@ namespace Meta.WitAi.Requests
                 }
                 return;
             }
+            // Use previous response
+            if (final)
+            {
+                MakeLastResponseFinal();
+                return;
+            }
 
             // Apply raw response data
             var rawResponses = rawResponse.Split(WitConstants.ENDPOINT_JSON_DELIMITER);

@@ -11,7 +11,7 @@ namespace Meta.WitAi
     public static class WitConstants
     {
         // Wit service version info
-        public const string API_VERSION = "20240213";
+        public const string API_VERSION = "20240307";
         public const string SDK_VERSION = "65.0.0";
         public const string CLIENT_NAME = "wit-unity";
 
@@ -29,6 +29,17 @@ namespace Meta.WitAi
         public const string HEADER_USERAGENT_CONFID_MISSING = "not-yet-configured";
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
+
+        // Wit response types
+        public const string RESPONSE_TYPE_KEY = "type";
+        public const string RESPONSE_TYPE_PARTIAL_TRANSCRIPTION = "PARTIAL_TRANSCRIPTION";
+        public const string RESPONSE_TYPE_FINAL_TRANSCRIPTION = "FINAL_TRANSCRIPTION";
+        public const string RESPONSE_TYPE_PARTIAL_NLP = "PARTIAL_UNDERSTANDING";
+        public const string RESPONSE_TYPE_FINAL_NLP = "FINAL_UNDERSTANDING";
+        public const string RESPONSE_TYPE_TTS = "SYNTHESIZE_DATA";
+        public const string RESPONSE_TYPE_ERROR = "ERROR";
+        public const string RESPONSE_TYPE_ABORTED = "ABORTED";
+        public const string RESPONSE_TYPE_END = "END_STREAM";
 
         // NLP Endpoints
         public const string ENDPOINT_SPEECH = "speech";

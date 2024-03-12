@@ -942,7 +942,7 @@ namespace Meta.WitAi
             {
                 request.method = string.IsNullOrEmpty(forcedHttpMethodType) ?
                     UnityWebRequest.kHttpVerbPOST : forcedHttpMethodType;
-                request.SetRequestHeader("Content-Type", audioEncoding.ToString());
+                request.SetRequestHeader(WitConstants.HEADER_POST_CONTENT, audioEncoding.ToString());
             }
 
             // Apply all wit headers

@@ -81,6 +81,14 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
         /// <returns></returns>
+        public static string GetResponseType(this WitResponseNode witResponse) =>
+            witResponse?[WitConstants.RESPONSE_TYPE_KEY];
+
+        /// <summary>
+        /// Gets the content of a witResponse's partial or final response whichever is present.
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        /// <returns></returns>
         public static WitResponseClass GetResponse(this WitResponseNode witResponse) =>
             witResponse?.GetFinalResponse() ?? witResponse?.GetPartialResponse();
 
@@ -99,34 +107,47 @@ namespace Meta.WitAi
             witResponse?.SafeGet(WitConstants.KEY_RESPONSE_PARTIAL)?.AsObject;
 
         /// <summary>
-        ///
-        /// </summary>
-        public static bool GetHasPartialResponse(this WitResponseNode witResponse)
-        {
-            var response = witResponse?.AsObject;
-            return null != response
-                   // Allow if final, does not include transcription or includes action
-                   // TODO: Replace with response type check once available
-                   && (response.GetIsFinal()
-                       || !response.GetHasTranscription()
-                       || response.HasChild(WitConstants.KEY_RESPONSE_ACTION));
-        }
-
-        /// <summary>
         /// Get whether this response is the final response returned from the service
         /// </summary>
         public static bool GetIsFinal(this WitResponseNode witResponse) =>
             witResponse?.SafeGet(WitConstants.KEY_RESPONSE_IS_FINAL)?.AsBool ?? false;
 
         /// <summary>
+        /// Get whether this response is a 'final' nlp response
+        /// </summary>
+        public static bool GetIsNlpPartial(this WitResponseNode witResponse)
+        {
+            var responseType = witResponse?.GetResponseType();
+            return string.Equals(responseType, WitConstants.RESPONSE_TYPE_PARTIAL_NLP);
+        }
+
+        /// <summary>
+        /// Get whether this response is a 'final' nlp response
+        /// </summary>
+        public static bool GetIsNlpFinal(this WitResponseNode witResponse)
+        {
+            var responseType = witResponse?.GetResponseType();
+            return string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_NLP);
+        }
+
+        /// <summary>
+        /// Get whether this response is a 'final' transcription
+        /// </summary>
+        public static bool GetIsTranscriptionPartial(this WitResponseNode witResponse)
+        {
+            var responseType = witResponse?.GetResponseType();
+            return string.Equals(responseType, WitConstants.RESPONSE_TYPE_PARTIAL_TRANSCRIPTION)
+                   && !string.IsNullOrEmpty(witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION]);
+        }
+
+        /// <summary>
         /// Get whether this response is a 'final' transcription
         /// </summary>
         public static bool GetIsTranscriptionFinal(this WitResponseNode witResponse)
         {
-            // Use final transcription
-            return (witResponse?.SafeGet(WitConstants.KEY_RESPONSE_TRANSCRIPTION_IS_FINAL)?.AsBool ?? false)
-                // TODO: Replace with response type check once available
-                || !string.IsNullOrEmpty(witResponse?[WitConstants.KEY_RESPONSE_ACTION]);
+            var responseType = witResponse?.GetResponseType();
+            return string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_TRANSCRIPTION)
+                   && !string.IsNullOrEmpty(witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION]);
         }
 
         /// <summary>
@@ -134,17 +155,10 @@ namespace Meta.WitAi
         /// </summary>
         public static bool GetHasTranscription(this WitResponseNode witResponse)
         {
-            var response = witResponse?.AsObject;
-            return null != response
-                   && response.HasChild(WitConstants.KEY_RESPONSE_TRANSCRIPTION)
-                   // Allow if final or not within an NLP response
-                   // TODO: Replace with response type check once available
-                   && (response.GetIsTranscriptionFinal()
-                       || (!response.HasChild(WitConstants.KEY_RESPONSE_NLP_ENTITIES)
-                           && !response.HasChild(WitConstants.KEY_RESPONSE_NLP_INTENTS)
-                           && !response.HasChild(WitConstants.KEY_RESPONSE_NLP_TRAITS)
-                           && !response.HasChild(WitConstants.KEY_RESPONSE_PARTIAL)
-                           && !response.HasChild(WitConstants.KEY_RESPONSE_FINAL)));
+            var responseType = witResponse?.GetResponseType();
+            return (string.Equals(responseType, WitConstants.RESPONSE_TYPE_PARTIAL_TRANSCRIPTION)
+                   || string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_TRANSCRIPTION))
+                   && !string.IsNullOrEmpty(witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION]);
         }
 
         // Used for multiple lookups
