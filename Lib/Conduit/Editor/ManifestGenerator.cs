@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -21,8 +22,14 @@ namespace Meta.Conduit.Editor
     /// The manifest includes all the information necessary to train the backend services as well as dispatching the
     /// incoming requests to the right methods with the right parameters.
     /// </summary>
+    [LogCategory(LogCategories.Conduit, LogCategories.ManifestGenerator)]
     internal class ManifestGenerator
     {
+        /// <summary>
+        /// The logger.
+        /// </summary>
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// Provides access to available assemblies.
         /// </summary>
@@ -96,9 +103,11 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         private string GenerateManifest(IEnumerable<IConduitAssembly> assemblies, string domain, string id)
         {
-            VLog.D($"Generating manifest.");
+            _log.Debug($"Generating manifest.");
 
+            var sequenceId = _log.Start(VLogLevel.Verbose, "Extract assembly data");
             var (entities, actions, errorHandlers) = ExtractAssemblyData(assemblies);
+            _log.End(sequenceId);
 
             var manifest = new Manifest()
             {
@@ -112,13 +121,18 @@ namespace Meta.Conduit.Editor
 
             return JsonConvert.SerializeObject(manifest);
         }
- 
+
         private (List<ManifestEntity>, List<ManifestAction>, List<ManifestErrorHandler>) ExtractAssemblyData(IEnumerable<IConduitAssembly> assemblies)
         {
             var entities = new List<ManifestEntity>();
             var actions = new List<ManifestAction>();
             var errorHandlers = new List<ManifestErrorHandler>();
-            _assemblyMiner.Initialize();
+
+            using (_log.Scope(VLogLevel.Verbose, "Initializing assembly miner"))
+            {
+                _assemblyMiner.Initialize();
+            }
+
             foreach (var assembly in assemblies)
             {
                 actions.AddRange(this._assemblyMiner.ExtractActions(assembly));
@@ -129,7 +143,7 @@ namespace Meta.Conduit.Editor
                 }
                 catch (Exception)
                 {
-                    VLog.W("Conduit App found no error handlers");
+                    _log.Warning("Conduit App found no error handlers");
                 }
             }
 

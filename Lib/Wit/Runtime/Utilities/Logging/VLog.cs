@@ -12,6 +12,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
@@ -19,21 +20,12 @@ using UnityEngine;
 namespace Meta.WitAi
 {
     /// <summary>
-    /// The various logging options for VLog
-    /// </summary>
-    public enum VLogLevel
-    {
-        Error = 0,
-        Warning = 1,
-        Log = 2,
-        Info = 3
-    }
-
-    /// <summary>
     /// A class for internal Meta.Voice logs
     /// </summary>
     public static class VLog
     {
+        private static ILoggerRegistry _loggerRegistry = LoggerRegistry.Instance;
+
         #if UNITY_EDITOR
         /// <summary>
         /// If enabled, errors will log to console as warnings
@@ -56,6 +48,7 @@ namespace Meta.WitAi
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_FILTER_LOG_KEY = "VSDK_FILTER_LOG";
         private const VLogLevel EDITOR_LOG_LEVEL_DEFAULT = VLogLevel.Warning;
+
         private static HashSet<string> _filteredTagSet;
         private static List<string> _filteredTagList;
 
@@ -217,6 +210,8 @@ namespace Meta.WitAi
                 category = GetCallingCategory();
             }
 
+            var logger = _loggerRegistry.GetLogger(category);
+
             // String builder
             StringBuilder result = new StringBuilder();
 
@@ -247,7 +242,7 @@ namespace Meta.WitAi
             // Final log append
             OnPreLog?.Invoke(result, logCategory, logType);
 
-            object message = result;
+            string message = result.ToString();
             if (null != exception)
             {
                 #if UNITY_EDITOR
@@ -258,21 +253,22 @@ namespace Meta.WitAi
             // Log
             switch (logType)
             {
+
                 case VLogLevel.Error:
-                    #if UNITY_EDITOR
+#if UNITY_EDITOR
                     if (LogErrorsAsWarnings)
                     {
-                        UnityEngine.Debug.LogWarning(message);
+                        logger.Warning(message);
                         return;
                     }
-                    #endif
-                    UnityEngine.Debug.LogError(message);
+#endif
+                    logger.Error(message);
                     break;
                 case VLogLevel.Warning:
-                    UnityEngine.Debug.LogWarning(message);
+                    logger.Warning(message);
                     break;
                 default:
-                    UnityEngine.Debug.Log(message);
+                    logger.Debug(message);
                     break;
             }
         }

@@ -17,23 +17,23 @@ namespace Meta.WitAi
     public static class WitResultUtilities
     {
         // Obsolete keys
-        [Obsolete]
+
         public const string WIT_KEY_TRANSCRIPTION = WitConstants.KEY_RESPONSE_TRANSCRIPTION;
-        [Obsolete]
+
         public const string WIT_KEY_INTENTS = WitConstants.KEY_RESPONSE_NLP_INTENTS;
-        [Obsolete]
+
         public const string WIT_KEY_ENTITIES = WitConstants.KEY_RESPONSE_NLP_ENTITIES;
-        [Obsolete]
+
         public const string WIT_KEY_TRAITS = WitConstants.KEY_RESPONSE_NLP_TRAITS;
-        [Obsolete]
+
         public const string WIT_KEY_FINAL = WitConstants.KEY_RESPONSE_IS_FINAL;
-        [Obsolete]
+
         public const string WIT_PARTIAL_RESPONSE = WitConstants.KEY_RESPONSE_PARTIAL;
-        [Obsolete]
+
         public const string WIT_RESPONSE = WitConstants.KEY_RESPONSE_FINAL;
-        [Obsolete]
+
         public const string WIT_STATUS_CODE = WitConstants.KEY_RESPONSE_CODE;
-        [Obsolete]
+
         public const string WIT_ERROR = WitConstants.KEY_RESPONSE_ERROR;
 
         #region Base Response methods
