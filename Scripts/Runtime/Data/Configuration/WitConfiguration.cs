@@ -118,29 +118,55 @@ namespace Meta.WitAi.Data.Configuration
             }
             return string.Empty;
         }
-        #endif
 
+        #region Refresh
 #if UNITY_EDITOR
+        private string RefreshKey
+        {
+            get
+            {
+                string assetPath = AssetDatabase.GetAssetPath(this);
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+                return $"WitConfig::Refresh::{guid}";
+            }
+        }
+#endif
+
         /// <summary>
-        /// Datetime in UTC of the last time this configuration was refreshed
+        /// The last time this configuration was refreshed in reference to the UnixEpoch
         /// </summary>
-        public DateTime LastRefresh => DateTime.UnixEpoch.AddSeconds(_lastRefreshSeconds);
+        public DateTime LastRefresh => DateTime.UnixEpoch.AddSeconds(LastRefreshSeconds);
+
+        /// <summary>
+        /// The last time this configuration was refreshed in reference to the UnixEpoch
+        /// </summary>
+        private double _lastRefreshSeconds;
 
         /// <summary>
         /// The serialized seconds since UnixEpoch
         /// </summary>
-        [SerializeField] [HideInInspector]
-        private double _lastRefreshSeconds;
+        private double LastRefreshSeconds
+        {
+#if UNITY_EDITOR
+            get => SessionState.GetFloat(RefreshKey, 0);
+            set => SessionState.SetFloat(RefreshKey, (float) value);
+#else
+            get => (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
+            set {}
+#endif
+        }
+
 
         /// <summary>
         /// Refreshes the last update seconds
         /// </summary>
         private void RefreshLastUpdate()
         {
-            _lastRefreshSeconds = (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
+            LastRefreshSeconds = (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
             EditorUtility.SetDirty(this);
         }
-#endif
+        #endregion
+        #endif
 
         /// <summary>
         /// Reset all data
