@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Lib.Wit.Runtime.Utilities.Logging;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -105,7 +105,7 @@ namespace Meta.Conduit.Editor
         {
             _log.Debug($"Generating manifest.");
 
-            var sequenceId = _log.Start(VLogLevel.Verbose, "Extract assembly data");
+            var sequenceId = _log.Start(VLoggerVerbosity.Verbose, "Extract assembly data");
             var (entities, actions, errorHandlers) = ExtractAssemblyData(assemblies);
             _log.End(sequenceId);
 
@@ -128,7 +128,7 @@ namespace Meta.Conduit.Editor
             var actions = new List<ManifestAction>();
             var errorHandlers = new List<ManifestErrorHandler>();
 
-            using (_log.Scope(VLogLevel.Verbose, "Initializing assembly miner"))
+            using (_log.Scope(VLoggerVerbosity.Verbose, "Initializing assembly miner"))
             {
                 _assemblyMiner.Initialize();
             }

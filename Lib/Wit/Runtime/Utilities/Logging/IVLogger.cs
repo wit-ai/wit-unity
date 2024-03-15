@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using Meta.WitAi;
+using System;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// The VSDK Logger. Each class should have its own instance of the logger.
@@ -100,13 +100,30 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         void Error(string message, params object [] parameters);
 
         /// <summary>
+        /// Logs an error with an exception.
+        /// </summary>
+        /// <param name="correlationId">The correlation ID.</param>
+        /// <param name="exception">The exception to log</param>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        void Error(CorrelationID correlationId, Exception exception, string message, params object [] parameters);
+
+        /// <summary>
+        /// Logs an error with an exception.
+        /// </summary>
+        /// <param name="exception">The exception to log</param>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        void Error(Exception exception, string message, params object [] parameters);
+
+        /// <summary>
         /// Returns a logging scope to be used in a "using" block.
         /// </summary>
         /// <param name="verbosity">The verbosity of the logging.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="parameters">The parameter</param>
         /// <returns>The scope.</returns>
-        public LogScope Scope(VLogLevel verbosity, string message, params object[] parameters)
+        public LogScope Scope(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, CorrelationID, message, parameters);
         }
@@ -119,7 +136,7 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         /// <param name="message">The message to log.</param>
         /// <param name="parameters">The parameter</param>
         /// <returns>The scope.</returns>
-        public LogScope Scope(VLogLevel verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public LogScope Scope(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, correlationId, message, parameters);
         }
@@ -132,7 +149,7 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         /// <param name="message"></param>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public int Start(VLogLevel verbosity, CorrelationID correlationId, string message, params object[] parameters);
+        public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters);
 
         /// <summary>
         /// Explicitly start a scope.
@@ -141,7 +158,7 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         /// <param name="message"></param>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public int Start(VLogLevel verbosity, string message, params object[] parameters);
+        public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters);
 
         /// <summary>
         /// Explicitly end a scope. Must have been started already.

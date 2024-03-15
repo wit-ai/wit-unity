@@ -9,10 +9,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
-using Lib.Wit.Runtime.Utilities.Logging;
+using Meta.Voice.Logging;
 using Meta.WitAi.Json;
 using UnityEditor;
 using UnityEngine;
@@ -20,11 +19,37 @@ using UnityEngine;
 namespace Meta.WitAi
 {
     /// <summary>
+    /// The various logging options for VLog
+    /// </summary>
+    public enum VLogLevel
+    {
+        /// <summary>
+        /// Error log. Usually indicates a bug in the code.
+        /// </summary>
+        Error = 0,
+
+        /// <summary>
+        /// Something that is a red flag and could potentially be a problem, but not necessarily.
+        /// </summary>
+        Warning = 1,
+
+        /// <summary>
+        /// Debug logs. Useful for debugging specific things.
+        /// </summary>
+        Log = 2,
+
+        /// <summary>
+        /// Information logs. Normal tracing.
+        /// </summary>
+        Info = 3,
+    }
+
+    /// <summary>
     /// A class for internal Meta.Voice logs
     /// </summary>
     public static class VLog
     {
-        private static ILoggerRegistry _loggerRegistry = LoggerRegistry.Instance;
+        private static readonly ILoggerRegistry _loggerRegistry = LoggerRegistry.Instance;
 
         #if UNITY_EDITOR
         /// <summary>
@@ -41,7 +66,7 @@ namespace Meta.WitAi
             set
             {
                 _editorLogLevel = value;
-                UnityEditor.EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
+                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
             }
         }
         private static VLogLevel _editorLogLevel = (VLogLevel)(-1);
@@ -70,7 +95,7 @@ namespace Meta.WitAi
             }
         }
 
-        private static HashSet<string> FilteredTagSet
+        internal static HashSet<string> FilteredTagSet
         {
             get
             {
@@ -142,11 +167,6 @@ namespace Meta.WitAi
         public static bool SuppressLogs { get; set; } = !Application.isEditor && !UnityEngine.Debug.isDebugBuild;
 
         /// <summary>
-        /// Event for appending custom data to a log before logging to console
-        /// </summary>
-        public static event Action<StringBuilder, string, VLogLevel> OnPreLog;
-
-        /// <summary>
         /// Performs a Debug.Log with custom categorization and using the global log level of Info
         /// </summary>
         /// <param name="log">The text to be debugged</param>
@@ -187,23 +207,6 @@ namespace Meta.WitAi
         /// <param name="category"></param>
         public static void Log(VLogLevel logType, string logCategory, object log, Exception exception = null)
         {
-            #if UNITY_EDITOR
-            // Skip logs with higher log type then global log level
-            if ((int) logType > (int)EditorLogLevel)
-            {
-                return;
-            }
-
-            if (FilteredTagSet.Contains(logCategory)) return;
-            #endif
-
-            // Suppress all except errors
-            if (SuppressLogs && (int)logType > (int)VLogLevel.Error)
-            {
-                return;
-            }
-
-            // Use calling category if null
             string category = logCategory;
             if (string.IsNullOrEmpty(category))
             {
@@ -212,63 +215,24 @@ namespace Meta.WitAi
 
             var logger = _loggerRegistry.GetLogger(category);
 
-            // String builder
-            StringBuilder result = new StringBuilder();
-
-            #if !UNITY_EDITOR && !UNITY_ANDROID
-            {
-                // Start with datetime if not done so automatically
-                DateTime now = DateTime.Now;
-                result.Append($"[{now.ToShortDateString()} {now.ToShortTimeString()}] ");
-            }
-            #endif
-
-            // Insert log type
-            int start = result.Length;
-            result.Append($"[VSDK {logType.ToString().ToUpper()}] ");
-            WrapWithLogColor(result, start, logType);
-
-            // Append VDSK & Category
-            start = result.Length;
-            if (!string.IsNullOrEmpty(category))
-            {
-                result.Append($"[{category}] ");
-            }
-            WrapWithCallingLink(result, start);
-
-            // Append the actual log
-            result.Append(log == null ? string.Empty : log.ToString());
-
-            // Final log append
-            OnPreLog?.Invoke(result, logCategory, logType);
-
-            string message = result.ToString();
-            if (null != exception)
-            {
-                #if UNITY_EDITOR
-                message = string.Format("{0}\n<color=\"#ff6666\"><b>{1}:</b> {2}</color>\n=== STACK TRACE ===\n{3}\n=====", result, exception.GetType().Name, exception.Message, FormatStackTrace(exception.StackTrace));
-                #endif
-            }
-
             // Log
             switch (logType)
             {
-
                 case VLogLevel.Error:
 #if UNITY_EDITOR
                     if (LogErrorsAsWarnings)
                     {
-                        logger.Warning(message);
+                        logger.Warning(log.ToString());
                         return;
                     }
 #endif
-                    logger.Error(message);
+                    logger.Error(log.ToString());
                     break;
                 case VLogLevel.Warning:
-                    logger.Warning(message);
+                    logger.Warning(log.ToString());
                     break;
                 default:
-                    logger.Debug(message);
+                    logger.Debug(log.ToString());
                     break;
             }
         }
@@ -317,44 +281,21 @@ namespace Meta.WitAi
             return path;
         }
 
-        /// <summary>
-        /// Determines a category from the script name that called the previous method
-        /// </summary>
-        /// <returns>Assembly name</returns>
-        private static void WrapWithCallingLink(StringBuilder builder, int startIndex)
+        private static VLoggerVerbosity LogLevelToVerbosity(VLogLevel logLevel)
         {
-            #if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
-            StackTrace stackTrace = new StackTrace(true);
-            StackFrame stackFrame = stackTrace.GetFrame(3);
-            string callingFileName = stackFrame.GetFileName().Replace('\\', '/');
-            int callingFileLine = stackFrame.GetFileLineNumber();
-            builder.Insert(startIndex, $"<a href=\"{callingFileName}\" line=\"{callingFileLine}\">");
-            builder.Append("</a>");
-            #endif
-        }
-
-        /// <summary>
-        /// Get hex value for each log type
-        /// </summary>
-        private static void WrapWithLogColor(StringBuilder builder, int startIndex, VLogLevel logType)
-        {
-            #if UNITY_EDITOR
-            string hex;
-            switch (logType)
+            switch (logLevel)
             {
+                case VLogLevel.Log:
+                    return VLoggerVerbosity.Log;
                 case VLogLevel.Error:
-                    hex = "FF0000";
-                    break;
+                    return VLoggerVerbosity.Error;
+                case VLogLevel.Info:
+                    return VLoggerVerbosity.Info;
                 case VLogLevel.Warning:
-                    hex = "FFFF00";
-                    break;
+                    return VLoggerVerbosity.Warning;
                 default:
-                    hex = "00FF00";
-                    break;
+                    return VLoggerVerbosity.Log;
             }
-            builder.Insert(startIndex, $"<color=#{hex}>");
-            builder.Append("</color>");
-            #endif
         }
     }
 }

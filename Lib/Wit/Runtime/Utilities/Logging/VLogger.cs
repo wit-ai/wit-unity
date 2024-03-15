@@ -8,10 +8,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Meta.WitAi;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     internal class VLogger : IVLogger
     {
@@ -44,83 +48,101 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         /// <inheritdoc/>
         public void Verbose(string message, params object [] parameters)
         {
-            Log(VLogLevel.Verbose, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Verbose, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
-            Log(VLogLevel.Verbose, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Verbose, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(string message, params object [] parameters)
         {
-            Log(VLogLevel.Info, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Info, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(CorrelationID correlationId, string message, params object [] parameters)
         {
-            Log(VLogLevel.Info, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Info, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(string message, params object [] parameters)
         {
-            Log(VLogLevel.Log, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Log, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
-            Log(VLogLevel.Log, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Log, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Warning(string message, params object [] parameters)
         {
-            Log(VLogLevel.Warning, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Warning, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(CorrelationID correlationId, string message, params object [] parameters)
         {
-            Log(VLogLevel.Error, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Error, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(string message, params object [] parameters)
         {
-            Log(VLogLevel.Error, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Error, CorrelationID, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, Exception exception, string message, params object[] parameters)
+        {
+            Log(VLoggerVerbosity.Error, correlationId, exception, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(Exception exception, string message, params object[] parameters)
+        {
+            Log(VLoggerVerbosity.Error, CorrelationID, exception, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Warning(CorrelationID correlationId, string message, params object [] parameters)
         {
-            Log(VLogLevel.Warning, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Warning, correlationId, message, parameters);
         }
 
-        private void Log(VLogLevel verbosity, CorrelationID correlationID, string message, params object[] parameters)
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationID, message, parameters);
             Write(logEntry);
         }
 
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, Exception exception, string message, params object[] parameters)
+        {
+            var logEntry = new LogEntry(_category, verbosity, correlationID, exception, message, parameters);
+            Write(logEntry);
+        }
+
         /// <inheritdoc/>
-        public LogScope Scope(VLogLevel verbosity, string message, params object[] parameters)
+        public LogScope Scope(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
-        public LogScope Scope(VLogLevel verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public LogScope Scope(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
-        public int Start(VLogLevel verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             _logEntries.Add(_nextSequenceId, logEntry);
@@ -131,7 +153,7 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         }
 
         /// <inheritdoc/>
-        public int Start(VLogLevel verbosity, string message, params object[] parameters)
+        public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, CorrelationID, message, parameters);
             _logEntries.Add(_nextSequenceId, logEntry);
@@ -165,19 +187,155 @@ namespace Lib.Wit.Runtime.Utilities.Logging
             }
         }
 
+        /// <summary>
+        /// Applies any relevant filtering and formatting, then writes to the log sink.
+        /// </summary>
+        /// <param name="logEntry">The entry to write.</param>
+        /// <param name="prefix">Any prefix that should go before the log.</param>
         private void Write(LogEntry logEntry, string prefix)
         {
-            UnityEngine.Debug.Log($"{prefix}{logEntry}");
+#if UNITY_EDITOR
+            // Skip logs with higher log type then global log level
+            if ((int) logEntry.Verbosity < (int)VLog.EditorLogLevel)
+            {
+                return;
+            }
+
+            if (VLog.FilteredTagSet.Contains(logEntry.Category))
+            {
+                return;
+            }
+#endif
+
+            // Suppress all except errors if needed
+            if (VLog.SuppressLogs && (int)logEntry.Verbosity < (int)VLoggerVerbosity.Error)
+            {
+                return;
+            }
+
+            var sb = new StringBuilder();
+
+#if !UNITY_EDITOR && !UNITY_ANDROID
+            {
+                // Start with datetime if not done so automatically
+                DateTime now = DateTime.Now;
+                sb.Append($"[{now.ToShortDateString()} {now.ToShortTimeString()}] ");
+            }
+#endif
+
+            // Insert log type
+            var start = sb.Length;
+            sb.Append($"[VSDK {logEntry.Verbosity.ToString().ToUpper()}] ");
+            WrapWithLogColor(sb, start, logEntry.Verbosity);
+
+            // Append VDSK & Category
+            start = sb.Length;
+            if (!string.IsNullOrEmpty(logEntry.Category))
+            {
+                sb.Append($"[{logEntry.Category}] ");
+            }
+            WrapWithCallingLink(sb, start);
+
+            // Append the actual log
+            sb.Append(logEntry.Message == null ? string.Empty : logEntry.Message.ToString());
+
+            var message = sb.ToString();
+            if (logEntry.Exception != null)
+            {
+#if UNITY_EDITOR
+                message = string.Format("{0}\n<color=\"#ff6666\"><b>{1}:</b> {2}</color>\n=== STACK TRACE ===\n{3}\n=====", sb, logEntry.Exception.GetType().Name, logEntry.Exception.Message, FormatStackTrace(logEntry.Exception.StackTrace));
+#endif
+            }
+
+            switch (logEntry.Verbosity)
+            {
+                case VLoggerVerbosity.Error:
+#if UNITY_EDITOR
+                    if (VLog.LogErrorsAsWarnings)
+                    {
+                        UnityEngine.Debug.LogWarning($"{prefix}{message}");
+                        return;
+                    }
+#endif
+                    UnityEngine.Debug.LogError($"{prefix}{message}");
+                    break;
+                case VLoggerVerbosity.Warning:
+                    UnityEngine.Debug.LogWarning($"{prefix}{message}");
+                    break;
+                default:
+                    UnityEngine.Debug.Log($"{prefix}{message}");
+                    break;
+            }
         }
 
         private void Write(LogEntry logEntry)
         {
-            UnityEngine.Debug.Log(logEntry);
+            Write(logEntry, String.Empty);
         }
 
-        private void Write(string message)
+        private static void WrapWithCallingLink(StringBuilder builder, int startIndex)
         {
-            UnityEngine.Debug.Log(message);
+#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
+            var stackTrace = new StackTrace(true);
+            var stackFrame = stackTrace.GetFrame(3);
+            var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
+            var callingFileLine = stackFrame.GetFileLineNumber();
+            builder.Insert(startIndex, $"<a href=\"{callingFileName}\" line=\"{callingFileLine}\">");
+            builder.Append("</a>");
+#endif
+        }
+
+        /// <summary>
+        /// Get hex value for each log type
+        /// </summary>
+        private static void WrapWithLogColor(StringBuilder builder, int startIndex, VLoggerVerbosity logType)
+        {
+#if UNITY_EDITOR
+            string hex;
+            switch (logType)
+            {
+                case VLoggerVerbosity.Error:
+                    hex = "FF0000";
+                    break;
+                case VLoggerVerbosity.Warning:
+                    hex = "FFFF00";
+                    break;
+                default:
+                    hex = "00FF00";
+                    break;
+            }
+            builder.Insert(startIndex, $"<color=#{hex}>");
+            builder.Append("</color>");
+#endif
+        }
+
+        private static string FormatStackTrace(string stackTrace)
+        {
+            // Get the project's working directory
+            var workingDirectory = Directory.GetCurrentDirectory();
+            // Use a regular expression to match lines with a file path and line number
+            var regex = new Regex(@"at (.+) in (.*):(\d+)");
+            // Use the MatchEvaluator delegate to format the matched lines
+            string Evaluator(Match match)
+            {
+                var method = match.Groups[1].Value;
+                var filePath = match.Groups[2].Value.Replace(workingDirectory, "");
+                var lineNumber = match.Groups[3].Value;
+                // Only format the line as a clickable link if the file exists
+                if (File.Exists(filePath))
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    return $"at {method} in <a href=\"{filePath}\" line=\"{lineNumber}\">{fileName}:<b>{lineNumber}</b></a>";
+                }
+                else
+                {
+                    return match.Value;
+                }
+            }
+
+            // Replace the matched lines in the stack trace
+            var formattedStackTrace = regex.Replace(stackTrace, (MatchEvaluator)Evaluator);
+            return formattedStackTrace;
         }
 
         private struct LogEntry
@@ -187,9 +345,11 @@ namespace Lib.Wit.Runtime.Utilities.Logging
             public string Message { get; }
             public object[] Parameters { get; }
             public CorrelationID CorrelationID { get; }
-            public VLogLevel Verbosity { get; }
+            public VLoggerVerbosity Verbosity { get; }
 
-            public LogEntry(string category, VLogLevel verbosity, CorrelationID correlationId, string message, object [] parameters)
+            public Exception Exception { get; }
+
+            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, string message, object [] parameters)
             {
                 Category = category;
                 TimeStamp = DateTime.UtcNow;
@@ -197,6 +357,18 @@ namespace Lib.Wit.Runtime.Utilities.Logging
                 Parameters = parameters;
                 Verbosity = verbosity;
                 CorrelationID = correlationId;
+                Exception = null;
+            }
+
+            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, Exception exception, string message, object [] parameters)
+            {
+                Category = category;
+                TimeStamp = DateTime.UtcNow;
+                Message = message;
+                Parameters = parameters;
+                Verbosity = verbosity;
+                CorrelationID = correlationId;
+                Exception = exception;
             }
 
             public override string ToString()

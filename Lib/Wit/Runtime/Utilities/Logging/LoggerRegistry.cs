@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {

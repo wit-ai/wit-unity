@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// The correlation ID allows the tracing of an operation from beginning to end.

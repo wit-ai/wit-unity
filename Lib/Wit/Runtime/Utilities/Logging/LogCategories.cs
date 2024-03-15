@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// The core log categories used by the VSDK.

@@ -8,7 +8,7 @@
 
 using System;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// This attributes associates a category name to a class. The category name will be used in logging.

@@ -6,36 +6,36 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-namespace Meta.WitAi
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// The various logging options for VLog
     /// </summary>
-    public enum VLogLevel
+    public enum VLoggerVerbosity
     {
         /// <summary>
         /// Error log. Usually indicates a bug in the code.
         /// </summary>
-        Error = 0,
+        Error = 5,
 
         /// <summary>
         /// Something that is a red flag and could potentially be a problem, but not necessarily.
         /// </summary>
-        Warning = 1,
+        Warning = 4,
 
         /// <summary>
         /// Debug logs. Useful for debugging specific things.
         /// </summary>
-        Log = 2,
+        Log = 3,
 
         /// <summary>
         /// Information logs. Normal tracing.
         /// </summary>
-        Info = 3,
+        Info = 2,
 
         /// <summary>
         /// High verbosity information. Helpful for detailed tracing.
         /// </summary>
-        Verbose = 4
+        Verbose = 1
     }
 }

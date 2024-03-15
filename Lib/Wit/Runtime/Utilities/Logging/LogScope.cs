@@ -7,9 +7,8 @@
  */
 
 using System;
-using Meta.WitAi;
 
-namespace Lib.Wit.Runtime.Utilities.Logging
+namespace Meta.Voice.Logging
 {
     /// <summary>
     /// A logging scope to be used in "using" blocks.
@@ -27,7 +26,7 @@ namespace Lib.Wit.Runtime.Utilities.Logging
         /// <param name="correlationID">The correlation ID.</param>
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
-        public LogScope(IVLogger logger, VLogLevel verbosity, CorrelationID correlationID, string message, object [] parameters)
+        public LogScope(IVLogger logger, VLoggerVerbosity verbosity, CorrelationID correlationID, string message, object [] parameters)
         {
             _logger = logger;
             _sequenceId = _logger.Start(verbosity, correlationId:correlationID, message, parameters);
