@@ -155,12 +155,28 @@ namespace Meta.Voice.Audio
         // Read raw sample
         private void OnReadRawSamples(float[] samples)
         {
+            // Length of copied samples
+            var length = 0;
+
+            // Copy as many samples as possible from the raw sample buffer
             if (ClipStream is RawAudioClipStream rawAudioClipStream)
             {
-                int start = _offset;
-                int length = Mathf.Min(samples.Length, rawAudioClipStream.AddedSamples - _offset);
-                Array.Copy(rawAudioClipStream.SampleBuffer, start, samples, 0, length);
-                _offset += length;
+                var start = _offset;
+                var available = Mathf.Max(0, rawAudioClipStream.AddedSamples - start);
+                length = Mathf.Min(samples.Length, available);
+                if (length > 0)
+                {
+                    Array.Copy(rawAudioClipStream.SampleBuffer, start, samples, 0, length);
+                    _offset += length;
+                }
+            }
+
+            // Clear unavailable samples
+            if (length < samples.Length)
+            {
+                int dif = samples.Length - length;
+                Array.Clear(samples, length, dif);
+                _offset += dif;
             }
         }
 
