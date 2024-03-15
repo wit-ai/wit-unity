@@ -11,13 +11,13 @@ using Meta.WitAi.Attributes;
 using Meta.WitAi.TTS.Interfaces;
 using UnityEngine;
 
-namespace Meta.Voice.Samples.TTSLipSync
+namespace Meta.WitAi.TTS.Utilities
 {
     /// <summary>
     /// A class that toggles on a 'speaking' animator key
     /// based on a TTSSpeaker's IsSpeaking book
     /// </summary>
-    public class BodySpeakingAnimation : MonoBehaviour
+    public class TTSSpeakerBodyAnimator : MonoBehaviour
     {
         /// <summary>
         /// Speaker to watch for adjusting animation
@@ -102,6 +102,9 @@ namespace Meta.Voice.Samples.TTSLipSync
         }
 
         #if UNITY_EDITOR
+        /// <summary>
+        /// Cached keys used for the animator editor
+        /// </summary>
         private List<string> _animatorKeys = new List<string>();
 
         /// <summary>
@@ -114,12 +117,17 @@ namespace Meta.Voice.Samples.TTSLipSync
             {
                 _animatorKeys = new List<string>();
             }
-            if (Animator != null && Animator.parameters != null && _animatorKeys.Count != Animator.parameters.Length)
+            if (Animator == null
+                || !Animator.gameObject.activeInHierarchy
+                || Animator.runtimeAnimatorController == null
+                || Animator.parameters == null
+                || _animatorKeys.Count == Animator.parameters.Length)
             {
-                foreach (var param in Animator.parameters)
-                {
-                    _animatorKeys.Add(param.name);
-                }
+                return _animatorKeys;
+            }
+            foreach (var param in Animator.parameters)
+            {
+                _animatorKeys.Add(param.name);
             }
             return _animatorKeys;
         }
