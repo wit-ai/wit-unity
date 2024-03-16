@@ -12,10 +12,13 @@ namespace Meta.Voice.Logging
     /// The core log categories used by the VSDK.
     /// This is not an exhaustive list, since additional categories can be specified by name.
     /// </summary>
-    public enum LogCategories
+    public enum LogCategory
     {
         Global,
         Conduit,
         ManifestGenerator,
+        AssemblyMiner,
+        Logging,
+        ErrorMitigator
     }
 }

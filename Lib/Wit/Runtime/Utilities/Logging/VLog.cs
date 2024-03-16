@@ -226,7 +226,7 @@ namespace Meta.WitAi
                         return;
                     }
 #endif
-                    logger.Error(log.ToString());
+                    logger.Error(KnownErrorCode.Unknown, log.ToString());
                     break;
                 case VLogLevel.Warning:
                     logger.Warning(log.ToString());

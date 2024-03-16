@@ -33,7 +33,7 @@ namespace Meta.Voice.Logging
         public IVLogger GetLogger()
         {
             var stackTrace = new StackTrace();
-            var category = LogCategories.Global.ToString();
+            var category = LogCategory.Global.ToString();
 
             var callingFrame = stackTrace.GetFrames()?.Skip(1).FirstOrDefault(frame => frame?.GetMethod()?.DeclaringType != typeof(LoggerRegistry));
             var callerType = callingFrame?.GetMethod()?.DeclaringType;

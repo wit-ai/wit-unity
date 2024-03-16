@@ -22,7 +22,7 @@ namespace Meta.Conduit.Editor
     /// The manifest includes all the information necessary to train the backend services as well as dispatching the
     /// incoming requests to the right methods with the right parameters.
     /// </summary>
-    [LogCategory(LogCategories.Conduit, LogCategories.ManifestGenerator)]
+    [LogCategory(LogCategory.Conduit, LogCategory.ManifestGenerator)]
     internal class ManifestGenerator
     {
         /// <summary>
@@ -47,8 +47,8 @@ namespace Meta.Conduit.Editor
 
         internal ManifestGenerator(IAssemblyWalker assemblyWalker, IAssemblyMiner assemblyMiner)
         {
-            this._assemblyWalker = assemblyWalker;
-            this._assemblyMiner = assemblyMiner;
+            _assemblyWalker = assemblyWalker;
+            _assemblyMiner = assemblyMiner;
         }
 
         #region API
@@ -61,7 +61,7 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         public string GenerateManifest(string domain, string id)
         {
-            VLog.D($"Generate Manifest: {domain}");
+            _log.Debug("Generate Manifest: {0}", domain);
             return GenerateManifest(_assemblyWalker.GetTargetAssemblies(), domain, id);
         }
 
@@ -82,10 +82,10 @@ namespace Meta.Conduit.Editor
         /// <returns>Extracted Intents list</returns>
         public List<string> ExtractManifestData()
         {
-            VLog.D("Extracting manifest actions and entities.");
+            _log.Debug("Extracting manifest actions and entities.");
 
             var (entities, actions, errorHandlers) = ExtractAssemblyData(_assemblyWalker.GetTargetAssemblies());
-            VLog.D($"Extracted {actions.Count} actions and {entities.Count} entities.");
+            _log.Debug("Extracted {0} actions and {1} entities.", actions.Count, entities.Count);
 
             List<string> transformedActions = new HashSet<string>(actions.Select(v => v.Name).Where(v => !string.IsNullOrEmpty(v))).ToList();
 

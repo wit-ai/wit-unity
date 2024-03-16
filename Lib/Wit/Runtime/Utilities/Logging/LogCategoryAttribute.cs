@@ -40,7 +40,7 @@ namespace Meta.Voice.Logging
         /// Constructs the attribute with a category name in enum form. Used internally by the VSDK.
         /// </summary>
         /// <param name="categoryName">The category name.</param>
-        public LogCategoryAttribute(LogCategories categoryName)
+        public LogCategoryAttribute(LogCategory categoryName)
         {
             CategoryName = categoryName.ToString();
         }
@@ -61,7 +61,7 @@ namespace Meta.Voice.Logging
         /// </summary>
         /// <param name="parentCategoryName">The parent category name.</param>
         /// <param name="categoryName">The category name.</param>
-        public LogCategoryAttribute(LogCategories parentCategoryName, LogCategories categoryName) : this(
+        public LogCategoryAttribute(LogCategory parentCategoryName, LogCategory categoryName) : this(
             parentCategoryName.ToString(), categoryName.ToString())
         {
         }

@@ -28,7 +28,7 @@ namespace Meta.Voice.Logging
         public override string ToString() => Value;
 
         public static implicit operator string(CorrelationID correlationId) => correlationId.Value;
-        public static implicit operator CorrelationID(string value) => new CorrelationID(value);
+        public static explicit operator CorrelationID(string value) => new CorrelationID(value);
         public static implicit operator CorrelationID(Guid value) => new CorrelationID(value.ToString());
 
         public override bool Equals(object obj) => obj is CorrelationID other && Value == other.Value;

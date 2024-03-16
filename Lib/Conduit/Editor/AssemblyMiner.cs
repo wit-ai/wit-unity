@@ -11,15 +11,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Meta.WitAi;
+using Meta.Voice.Logging;
 
 namespace Meta.Conduit.Editor
 {
     /// <summary>
     /// Mines assemblies for callback methods and entities.
     /// </summary>
+    [LogCategory(LogCategory.Conduit, LogCategory.AssemblyMiner)]
     internal class AssemblyMiner : IAssemblyMiner
     {
+        /// <summary>
+        /// The logger.
+        /// </summary>
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// Validates that parameters are compatible.
         /// </summary>
@@ -43,7 +49,7 @@ namespace Meta.Conduit.Editor
         /// <param name="parameterValidator">The parameter validator.</param>
         public AssemblyMiner(IParameterValidator parameterValidator)
         {
-            this._parameterValidator = parameterValidator;
+            _parameterValidator = parameterValidator;
         }
 
         /// <inheritdoc/>
@@ -79,7 +85,7 @@ namespace Meta.Conduit.Editor
                 }
                 catch (Exception e)
                 {
-                    VLog.W($"Failed to get enumeration values.\nEnum: {enumType}\n{e}");
+                    _log.Warning("Failed to get enumeration values.\nEnum: {0}\n{1}", enumType, e);
                     continue;
                 }
 
@@ -108,7 +114,7 @@ namespace Meta.Conduit.Editor
 
                     if (enumValue == null)
                     {
-                        VLog.E("Unexpected null enum value");
+                        _log.Error(KnownErrorCode.AssemblyMinerNullEnum, "Unexpected null enum value");
                         continue;
                     }
 
@@ -142,7 +148,6 @@ namespace Meta.Conduit.Editor
 
         private ManifestParameter GetManifestParameters(ParameterInfo parameter, Type attributeType, string actionID)
         {
-
             List<string> aliases;
             List<string> examples;
 
@@ -192,13 +197,13 @@ namespace Meta.Conduit.Editor
             {
                 if (method == null)
                 {
-                    VLog.E($"Found a null method in assembly: {assembly.FullName}");
+                    _log.Error(KnownErrorCode.NullMethodInAssembly, "Found a null method in assembly: {0}", assembly.FullName);
                     continue;
                 }
 
                 if (method.DeclaringType == null)
                 {
-                    VLog.E($"Method {method.Name} in assembly {assembly.FullName} had null declaring type");
+                    _log.Error(KnownErrorCode.NullDeclaringTypeInAssembly,"Method {0} in assembly {1} had null declaring type", method.Name, assembly.FullName);
                     continue;
                 }
 
@@ -216,7 +221,7 @@ namespace Meta.Conduit.Editor
 
                 foreach (ConduitActionAttribute actionAttribute in attributes)
                 {
-                    ExtractAction(attributeType, assembly, actionAttribute, method, actions);    
+                    ExtractAction(attributeType, assembly, actionAttribute, method, actions);
                 }
             }
 
@@ -255,7 +260,7 @@ namespace Meta.Conduit.Editor
                 if (!supported)
                 {
                     compatibleParameters = false;
-                    VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
+                    _log.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
                     continue;
                 }
 
@@ -269,7 +274,7 @@ namespace Meta.Conduit.Editor
             }
             else
             {
-                VLog.W($"{method} has Conduit-Incompatible Parameters");
+                _log.Warning("{0} has Conduit-Incompatible Parameters", method);
                 IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
                 IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
             }
@@ -315,17 +320,17 @@ namespace Meta.Conduit.Editor
                 var methodParameters = method.GetParameters();
                 if (methodParameters.Length < 2)
                 {
-                    VLog.E("Not enough parameters provided for error handler " + method.Name);
+                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Not enough parameters provided for error handler {0}", method.Name);
                     continue;
                 }
                 if (methodParameters[0].ParameterType != typeof(string))
                 {
-                    VLog.E("First parameter must be a string for error handler " + method.Name);
+                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "First parameter must be a string for error handler {0}", method.Name);
                     continue;
                 }
                 if (methodParameters[1].ParameterType != typeof(Exception))
                 {
-                    VLog.E("Second parameter must be an exception for error handler " + method.Name);
+                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Second parameter must be an exception for error handler {0}", method.Name);
                     continue;
                 }
 
@@ -335,7 +340,7 @@ namespace Meta.Conduit.Editor
                     if (!supported)
                     {
                         compatibleParameters = false;
-                        VLog.W($"Conduit does not currently support parameter type: {parameter.ParameterType}");
+                        _log.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
                         continue;
                     }
 
@@ -349,7 +354,7 @@ namespace Meta.Conduit.Editor
                 }
                 else
                 {
-                    VLog.W($"{method} has Conduit-Incompatible Parameters");
+                    _log.Warning("{0} has Conduit-Incompatible Parameters", method);
                     IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
                     IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
                 }

@@ -22,6 +22,7 @@ namespace Meta.Voice.Logging
         private readonly Dictionary<int, LogEntry> _logEntries = new Dictionary<int, LogEntry>();
         private int _nextSequenceId = 1;
         private static readonly ThreadLocal<string> CorrelationIDThreadLocal = new ThreadLocal<string>();
+        private static readonly ErrorMitigator _errorMitigator = ErrorMitigator.Instance;
 
         /// <inheritdoc/>
         public CorrelationID CorrelationID
@@ -33,7 +34,7 @@ namespace Meta.Voice.Logging
                     CorrelationIDThreadLocal.Value = Guid.NewGuid().ToString();
                 }
 
-                return CorrelationIDThreadLocal.Value;
+                return (CorrelationID)CorrelationIDThreadLocal.Value;
             }
             set => CorrelationIDThreadLocal.Value = value;
         }
@@ -88,27 +89,27 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public void Error(CorrelationID correlationId, string message, params object [] parameters)
+        public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Error, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Error, correlationId, errorCode, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(string message, params object [] parameters)
+        public void Error(ErrorCode errorCode, string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Error, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Error, CorrelationID, errorCode, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(CorrelationID correlationId, Exception exception, string message, params object[] parameters)
+        public void Error(CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
         {
-            Log(VLoggerVerbosity.Error, correlationId, exception, message, parameters);
+            Log(VLoggerVerbosity.Error, correlationId, errorCode, exception, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(Exception exception, string message, params object[] parameters)
+        public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters)
         {
-            Log(VLoggerVerbosity.Error, CorrelationID, exception, message, parameters);
+            Log(VLoggerVerbosity.Error, CorrelationID, errorCode, exception, message, parameters);
         }
 
         /// <inheritdoc/>
@@ -123,9 +124,15 @@ namespace Meta.Voice.Logging
             Write(logEntry);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, Exception exception, string message, params object[] parameters)
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationID, exception, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, exception, message, parameters);
+            Write(logEntry);
+        }
+
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, string message, params object[] parameters)
+        {
+            var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, message, parameters);
             Write(logEntry);
         }
 
@@ -168,7 +175,7 @@ namespace Meta.Voice.Logging
         {
             if (!_logEntries.ContainsKey(sequenceId))
             {
-                Error("Attempted to end a scope that was not started. Scope ID: {0}", sequenceId);
+                Error(KnownErrorCode.Logging, "Attempted to end a scope that was not started. Scope ID: {0}", sequenceId);
                 return;
             }
 
@@ -237,7 +244,17 @@ namespace Meta.Voice.Logging
             WrapWithCallingLink(sb, start);
 
             // Append the actual log
-            sb.Append(logEntry.Message == null ? string.Empty : logEntry.Message.ToString());
+            sb.Append(logEntry.Message == null ? string.Empty : string.Format(logEntry.Message, logEntry.Parameters));
+
+            if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
+            {
+                // The mitigator may not be available if the error is coming from the mitigator constructor itself.
+                if (_errorMitigator != null)
+                {
+                    sb.Append("\nMitigation: ");
+                    sb.Append(_errorMitigator.GetMitigation(logEntry.ErrorCode.Value));
+                }
+            }
 
             var message = sb.ToString();
             if (logEntry.Exception != null)
@@ -349,6 +366,8 @@ namespace Meta.Voice.Logging
 
             public Exception Exception { get; }
 
+            public ErrorCode? ErrorCode { get; }
+
             public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, string message, object [] parameters)
             {
                 Category = category;
@@ -358,9 +377,10 @@ namespace Meta.Voice.Logging
                 Verbosity = verbosity;
                 CorrelationID = correlationId;
                 Exception = null;
+                ErrorCode = (ErrorCode)null;
             }
 
-            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, Exception exception, string message, object [] parameters)
+            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, object [] parameters)
             {
                 Category = category;
                 TimeStamp = DateTime.UtcNow;
@@ -369,6 +389,19 @@ namespace Meta.Voice.Logging
                 Verbosity = verbosity;
                 CorrelationID = correlationId;
                 Exception = exception;
+                ErrorCode = errorCode;
+            }
+
+            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, string message, object [] parameters)
+            {
+                Category = category;
+                TimeStamp = DateTime.UtcNow;
+                Message = message;
+                Parameters = parameters;
+                Verbosity = verbosity;
+                CorrelationID = correlationId;
+                Exception = null;
+                ErrorCode = errorCode;
             }
 
             public override string ToString()
