@@ -244,7 +244,17 @@ namespace Meta.Voice.Logging
             WrapWithCallingLink(sb, start);
 
             // Append the actual log
-            sb.Append(logEntry.Message == null ? string.Empty : string.Format(logEntry.Message, logEntry.Parameters));
+            if (!string.IsNullOrEmpty(logEntry.Message))
+            {
+                if (logEntry.Parameters == null || logEntry.Parameters.Length == 0)
+                {
+                    sb.Append(logEntry.Message);
+                }
+                else
+                {
+                    sb.Append(string.Format(logEntry.Message, logEntry.Parameters));
+                }
+            }
 
             if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
             {
