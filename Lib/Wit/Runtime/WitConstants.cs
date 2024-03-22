@@ -43,6 +43,7 @@ namespace Meta.WitAi
 
         // NLP Endpoints
         public const string ENDPOINT_SPEECH = "speech";
+        public const string ENDPOINT_JSON_MIME = "application/json";
         public const int ENDPOINT_SPEECH_SAMPLE_RATE = 16000;
         public const string ENDPOINT_MESSAGE = "message";
         public const string ENDPOINT_MESSAGE_PARAM = "q";
@@ -58,6 +59,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS = "synthesize";
         public const string ENDPOINT_TTS_PARAM = "q";
         public const string ENDPOINT_TTS_EVENTS = "viseme";
+        public const string ENDPOINT_TTS_EVENT_EXTENSION = "v";
         public const string ENDPOINT_TTS_NO_CLIP = "No tts clip provided";
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;
@@ -122,6 +124,7 @@ namespace Meta.WitAi
         /// </summary>
         public const int ERROR_CODE_TIMEOUT = 14;
 
+        #region TTS
         // Wit TTS Settings Nodes
         /// <summary>
         /// /synthesize parameter: The voice id to use when speaking via a voice preset.
@@ -175,6 +178,47 @@ namespace Meta.WitAi
         /// Maximum pitch supported by the endpoint (200%)
         /// </summary>
         public const int TTS_PITCH_MAX = 200;
+
+        /// <summary>
+        /// Method for obtaining audio Mime string for TTSWitAudioType
+        /// </summary>
+        public static string GetAudioMimeType(TTSWitAudioType witAudioType)
+        {
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.PCM:
+                    return "audio/raw";
+                case TTSWitAudioType.MPEG:
+                case TTSWitAudioType.WAV:
+                default:
+                    return $"audio/{witAudioType.ToString().ToLower()}";
+            }
+        }
+
+        /// <summary>
+        /// Method for obtaining audio Mime string for TTSWitAudioType
+        /// </summary>
+        public static string GetAudioExtension(TTSWitAudioType witAudioType, bool includeEvents)
+        {
+            string ext;
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.MPEG:
+                    ext = ".mp3";
+                    break;
+                case TTSWitAudioType.PCM:
+                case TTSWitAudioType.WAV:
+                default:
+                    ext = $".{witAudioType.ToString().ToLower()}";
+                    break;
+            }
+            if (includeEvents)
+            {
+                ext += ENDPOINT_TTS_EVENT_EXTENSION;
+            }
+            return ext;
+        }
+        #endregion TTS
 
         #region Response Body Runtime
         /// <summary>
@@ -254,6 +298,29 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_AUTH_RESPONSE_KEY = "success";
         public const string WIT_SOCKET_AUTH_RESPONSE_VAL = "true";
         public const string WIT_SOCKET_AUTH_RESPONSE_ERROR = "Authentication denied";
+        // Request stream specific data
+        public const string WIT_SOCKET_DATA_KEY = "data";
+        public const string WIT_SOCKET_ACCEPT_KEY = "accept_header";
+        public const string WIT_SOCKET_END_KEY = "end_stream";
         #endregion
+    }
+
+    /// <summary>
+    /// Audio types supported by tts
+    /// </summary>
+    public enum TTSWitAudioType
+    {
+        /// <summary>
+        /// Raw pcm 16 data
+        /// </summary>
+        PCM = 0,
+        /// <summary>
+        /// MP3 data format
+        /// </summary>
+        MPEG = 1,
+        /// <summary>
+        /// Wave data format
+        /// </summary>
+        WAV = 2
     }
 }

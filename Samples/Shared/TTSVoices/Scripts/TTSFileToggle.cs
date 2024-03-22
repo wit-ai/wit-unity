@@ -8,7 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.WitAi.Requests;
+using Meta.WitAi;
 using Meta.WitAi.TTS.Integrations;
 using UnityEngine;
 using UnityEngine.UI;

@@ -246,53 +246,52 @@ namespace Meta.WitAi.Json
 
         public virtual T Cast<T>(T defaultValue = default(T))
         {
-            // Default value
             object result = defaultValue;
-
-            // Cast each node
-            string typeName = typeof(T).ToString();
-            if (string.Equals(typeName, typeof(WitResponseNode).ToString()))
-            {
-                result = this;
-            }
-            else if (string.Equals(typeName, typeof(string).ToString()))
+            var type = typeof(T);
+            if (type == typeof(string))
             {
                 result = this.Value;
             }
-            else if (string.Equals(typeName, typeof(int).ToString()))
+            else if (type == typeof(int))
             {
                 result = this.AsInt;
             }
-            else if (string.Equals(typeName, typeof(float).ToString()))
+            else if (type == typeof(float))
             {
                 result = this.AsFloat;
             }
-            else if (string.Equals(typeName, typeof(double).ToString()))
+            else if (type == typeof(double))
             {
                 result = this.AsDouble;
             }
-            else if (string.Equals(typeName, typeof(bool).ToString()))
+            else if (type == typeof(bool))
             {
                 result = this.AsBool;
             }
-            else if (string.Equals(typeName, typeof(string[]).ToString()))
+            else if (type == typeof(string[]))
             {
                 result = this.AsStringArray;
             }
-            else if (string.Equals(typeName, typeof(WitResponseArray).ToString()))
+            else if (type == typeof(WitResponseNode))
+            {
+                result = this;
+            }
+            else if (type == typeof(WitResponseArray))
             {
                 result = this.AsArray;
             }
-            else if (string.Equals(typeName, typeof(WitResponseClass).ToString()))
+            else if (type == typeof(WitResponseClass))
             {
                 result = this.AsObject;
             }
+            else if (type == typeof(WitResponseData))
+            {
+                result = this as WitResponseData;
+            }
             else
             {
-                VLog.W($"WitResponseNode - Cast to {typeName} not supported");
+                VLog.W(nameof(WitResponseNode), $"Cast {GetType().Name} to {type.Name} not supported");
             }
-
-            // Return result
             return (T)result;
         }
 

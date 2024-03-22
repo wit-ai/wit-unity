@@ -21,17 +21,6 @@ using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
 {
-    // Supported audio types
-    public enum TTSWitAudioType
-    {
-        PCM = 0,
-        MPEG = 1,
-        #if OGG_SUPPORT
-        OGG = 3,
-        #endif
-        WAV = 2
-    }
-
     /// <summary>
     /// A Wit VRequest subclass for handling TTS requests
     /// </summary>
@@ -85,8 +74,8 @@ namespace Meta.WitAi.Requests
         protected override Dictionary<string, string> GetHeaders()
         {
             Dictionary<string, string> headers = base.GetHeaders();
-            headers[WitConstants.HEADER_POST_CONTENT] = "application/json";
-            headers[WitConstants.HEADER_GET_CONTENT] = GetAudioMimeType(FileType);
+            headers[WitConstants.HEADER_POST_CONTENT] = WitConstants.ENDPOINT_JSON_MIME;
+            headers[WitConstants.HEADER_GET_CONTENT] = WitConstants.GetAudioMimeType(FileType);
             return headers;
         }
 
@@ -357,25 +346,6 @@ namespace Meta.WitAi.Requests
                 case TTSWitAudioType.PCM:
                 default:
                     return AudioType.UNKNOWN;
-            }
-        }
-        // Get audio type
-        public static string GetAudioMimeType(TTSWitAudioType witAudioType)
-        {
-            switch (witAudioType)
-            {
-                // PCM
-                case TTSWitAudioType.PCM:
-                    return "audio/raw";
-                #if OGG_SUPPORT
-                // OGG
-                case TTSWitAudioType.OGG:
-                #endif
-                // MP3 & WAV
-                case TTSWitAudioType.MPEG:
-                case TTSWitAudioType.WAV:
-                default:
-                    return $"audio/{witAudioType.ToString().ToLower()}";
             }
         }
         /// <summary>
