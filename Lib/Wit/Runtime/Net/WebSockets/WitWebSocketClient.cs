@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Text;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
@@ -68,17 +67,21 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
 
-        /// <summary>
-        /// Callback when wit chunk has downloaded successfully
-        /// </summary>
-        public event Action<WitChunk> OnDownloadedChunk;
-
         // Stores last request id to handle binary data without headers
         private string _lastRequestId;
         // Total number of chunks currently being uploaded
         private int _uploadCount;
         // Total number of responses currently being decoded
         private int _downloadCount;
+
+        /// <summary>
+        /// The requests currently being tracked by this client. Each access generates
+        /// a new dictionary and should be cached.
+        /// </summary>
+        public Dictionary<string, IWitWebSocketRequest> Requests
+            => new Dictionary<string, IWitWebSocketRequest>(_requests);
+        private Dictionary<string, IWitWebSocketRequest> _requests = new Dictionary<string, IWitWebSocketRequest>();
+        private List<string> _untrackedRequests = new List<string>();
 
         // The web socket client handling all communication
         private WebSocket _socket;
@@ -238,33 +241,15 @@ namespace Meta.Voice.Net.WebSockets
             _dispatcher = CoroutineUtility.StartCoroutine(DispatchResponses());
 
             // Make authentication request & return any encountered error
-            bool complete = false;
-            string error = null;
-            Action<WitChunk> onDownload = (chunk) =>
-            {
-                error = chunk.jsonData[WitConstants.ENDPOINT_ERROR_PARAM];
-                if (string.IsNullOrEmpty(error))
-                {
-                    var authText = chunk.jsonData[WitConstants.WIT_SOCKET_AUTH_RESPONSE_KEY];
-                    if (!string.Equals(authText, WitConstants.WIT_SOCKET_AUTH_RESPONSE_VAL))
-                    {
-                        error = WitConstants.WIT_SOCKET_AUTH_RESPONSE_ERROR;
-                    }
-                }
-                complete = true;
-            };
-            OnDownloadedChunk += onDownload;
-            WitResponseClass authNode = new WitResponseClass();
-            authNode[WitConstants.WIT_SOCKET_AUTH_TOKEN] = clientAccessToken;
-            SendChunk(WitConstants.GetUniqueId(), authNode, null);
-            await TaskUtility.WaitWhile(() => !complete); // TODO: Remove in T181285302
-            OnDownloadedChunk -= onDownload;
+            var authRequest = new Requests.WitWebSocketAuthRequest(clientAccessToken);
+            SendRequest(authRequest);
+            await TaskUtility.WaitWhile(() => !authRequest.IsComplete);
 
             // Auth error
-            IsAuthenticated = string.IsNullOrEmpty(error);
+            IsAuthenticated = string.IsNullOrEmpty(authRequest.Error);
             if (!IsAuthenticated)
             {
-                HandleSetupFailed(error);
+                HandleSetupFailed(authRequest.Error);
                 return;
             }
             // Cancelled elsewhere
@@ -355,6 +340,13 @@ namespace Meta.Voice.Net.WebSockets
                 _dispatcher = null;
             }
 
+            // Untrack all requests
+            var requestIds = new Dictionary<string, IWitWebSocketRequest>(_requests).Keys.ToArray();
+            foreach (var requestId in requestIds)
+            {
+                UntrackRequest(requestId);
+            }
+
             // Close socket connection
             if (_socket != null)
             {
@@ -392,6 +384,22 @@ namespace Meta.Voice.Net.WebSockets
 
         #region UPLOAD
         /// <summary>
+        /// Send a request via this client if possible
+        /// </summary>
+        public bool SendRequest(IWitWebSocketRequest request)
+        {
+            // Begin tracking request
+            if (!TrackRequest(request))
+            {
+                return false;
+            }
+
+            // Begin upload & send method for chunks when ready to be sent
+            request.HandleUpload(SendChunk);
+            return true;
+        }
+
+        /// <summary>
         /// Safely builds WitChunk with request id and then enqueues
         /// </summary>
         private void SendChunk(string requestId, WitResponseNode requestJsonData, byte[] requestBinaryData)
@@ -406,6 +414,19 @@ namespace Meta.Voice.Net.WebSockets
         {
             // Move async
             await Task.Yield();
+
+            // If not authorization chunk, wait
+            bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
+            if (!isAuth)
+            {
+                // Wait while connecting
+                await TaskUtility.WaitWhile(() => ConnectionState == WitWebSocketConnectionState.Connecting);
+                // Not connected
+                if (ConnectionState != WitWebSocketConnectionState.Connected)
+                {
+                    return;
+                }
+            }
 
             // Increment upload count
             _uploadCount++;
@@ -509,8 +530,142 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void HandleChunk(WitChunk chunk)
         {
-            OnDownloadedChunk?.Invoke(chunk);
+            // Iterate safely due to background thread
+            var requestId = chunk.jsonData?[WitConstants.WIT_SOCKET_REQUEST_ID_KEY];
+            if (string.IsNullOrEmpty(requestId))
+            {
+                if (string.IsNullOrEmpty(_lastRequestId))
+                {
+                    VLog.E(GetType().Name,
+                        $"Download Chunk - Failed\nNo request id found in chunk\nJson:\n{(chunk.jsonData?.ToString() ?? "Null")}");
+                    return;
+                }
+                requestId = _lastRequestId;
+                if (chunk.jsonData == null)
+                {
+                    chunk.jsonData = new WitResponseClass();
+                    chunk.jsonData[WitConstants.WIT_SOCKET_REQUEST_ID_KEY] = requestId;
+                }
+            }
+            // Store previous request id
+            else
+            {
+                _lastRequestId = requestId;
+            }
+
+            // Returned untracked request, generate if needed
+            if (!_requests.TryGetValue(requestId, out var request))
+            {
+                request = GenerateRequest(requestId, chunk.jsonData);
+            }
+            if (request == null)
+            {
+                return;
+            }
+
+            // Handle download synchronously
+            try
+            {
+                request.HandleDownload(chunk.jsonData, chunk.binaryData);
+            }
+            // Catch exceptions or else they will be ignored
+            catch (Exception e)
+            {
+                VLog.E(GetType().Name, $"Request HandleDownload method exception caught\n{request}\n\n{e}\n");
+                UntrackRequest(request);
+                return;
+            }
+
+            // Request is complete, remove from tracking list
+            if (request.IsComplete)
+            {
+                // Log erorr
+                if (!string.IsNullOrEmpty(request.Error))
+                {
+                    VLog.E(GetType().Name, $"Request Failed\n{request}");
+                }
+                // Untrack
+                UntrackRequest(request);
+            }
         }
         #endregion DOWNLOAD
+
+        #region REQUESTS
+        /// <summary>
+        /// Safely adds a request to the current request list
+        /// </summary>
+        public bool TrackRequest(IWitWebSocketRequest request)
+        {
+            // Ignore null requests
+            if (request == null)
+            {
+                return false;
+            }
+            // Ensure not already tracked
+            if (_requests.ContainsValue(request))
+            {
+                VLog.E(GetType().Name, $"Track Request - Failed\nReason: Already tracking this request\n{request}");
+                return false;
+            }
+
+            // Begin tracking
+            _requests[request.RequestId] = request;
+            VLog.I(GetType().Name, $"Track Request\n{request}");
+            return true;
+        }
+
+        /// <summary>
+        /// Safely removes a request from the current request list
+        /// </summary>
+        public bool UntrackRequest(IWitWebSocketRequest request)
+        {
+            if (request == null)
+            {
+                return false;
+            }
+            return UntrackRequest(request.RequestId);
+        }
+
+        /// <summary>
+        /// Safely removes a request from the current request list by request id
+        /// </summary>
+        public bool UntrackRequest(string requestId)
+        {
+            // Ensure already tracked
+            if (string.IsNullOrEmpty(requestId) || !_requests.ContainsKey(requestId))
+            {
+                VLog.E(GetType().Name, $"Untrack Request - Failed\nReason: Not tracking this request\nRequest Id: {requestId}");
+                return false;
+            }
+
+            // Remove request from tracking
+            var request = _requests[requestId];
+            _requests.Remove(requestId);
+            _untrackedRequests.Add(requestId);
+            if (!request.IsComplete)
+            {
+                request.Cancel();
+            }
+            VLog.I(GetType().Name, $"Untrack Request\n{request}");
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to generate a request to handle a specific json response
+        /// </summary>
+        /// <param name="requestId">The request id that should be handling the response.</param>
+        /// <param name="jsonData">The json response that is currently unhandled.</param>
+        private IWitWebSocketRequest GenerateRequest(string requestId, WitResponseNode jsonData)
+        {
+            // Ignore no longer tracked requests
+            if (_untrackedRequests.Contains(requestId))
+            {
+                return null;
+            }
+            // TODO: Use response params to determine request & request callback handler
+            VLog.E(GetType().Name, $"Generate Request - Failed\nReason: No information in json can be used to generate request handler\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+            return null;
+        }
+        #endregion REQUESTS
     }
 }
