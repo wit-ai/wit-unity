@@ -67,6 +67,13 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
 
+        /// <summary>
+        /// Total amount of scripts that have called Connect()
+        /// and have not yet called Disconnect().  Used to ensure
+        /// WebSocketClient is only disconnected once no scripts are still referenced.
+        /// </summary>
+        private int _referenceCount;
+
         // Stores last request id to handle binary data without headers
         private string _lastRequestId;
         // Total number of chunks currently being uploaded
@@ -122,20 +129,36 @@ namespace Meta.Voice.Net.WebSockets
 
         #region CONNECT
         /// <summary>
-        /// Connects to specified socket
+        /// Attempts to connect to the specified
         /// </summary>
-        public async Task<string> Connect()
+        public void Connect()
         {
+            // Increment reference count
+            _referenceCount++;
+            if (_referenceCount <= 0)
+            {
+                return;
+            }
+
             // Ignore if already active
             if (ConnectionState == WitWebSocketConnectionState.Connecting
                 || ConnectionState == WitWebSocketConnectionState.Connected)
             {
-                return $"Cannot connect while already {ConnectionState}";
+                return;
             }
 
             // Begin connecting
             SetConnectionState(WitWebSocketConnectionState.Connecting);
 
+            // Connect
+            _ = ConnectAsync();
+        }
+
+        /// <summary>
+        /// Performs connection asynchronously
+        /// </summary>
+        private async Task ConnectAsync()
+        {
             // Connect async to specified server url with specified options
             try
             {
@@ -161,21 +184,15 @@ namespace Meta.Voice.Net.WebSockets
             // Timeout handling
             catch (OperationCanceledException)
             {
-                string error = "Connection timed out";
-                VLog.E(GetType().Name, error);
+                VLog.E(GetType().Name, "Connection timed out");
                 SetConnectionState(WitWebSocketConnectionState.Disconnected);
-                return error;
             }
             // Additional exception handling
             catch (Exception e)
             {
-                string error = $"Connection connect error caught\n{e}";
-                VLog.E(GetType().Name, error);
+                VLog.E(GetType().Name, "Connection connect error caught", e);
                 SetConnectionState(WitWebSocketConnectionState.Disconnected);
-                return error;
             }
-            // Connection completed
-            return string.Empty;
         }
 
         /// <summary>
@@ -216,15 +233,20 @@ namespace Meta.Voice.Net.WebSockets
                 HandleSetupFailed($"Socket is {_socket.State}");
                 return;
             }
+            // Already connected
+            if (ConnectionState == WitWebSocketConnectionState.Connected)
+            {
+                return;
+            }
 
             // Perform final setup
-            _ = Setup();
+            _ = SetupAsync();
         }
 
         /// <summary>
         /// Option to perform additional setup for the socket, including authentication
         /// </summary>
-        private async Task Setup()
+        private async Task SetupAsync()
         {
             // Move async
             await Task.Yield();
@@ -276,7 +298,7 @@ namespace Meta.Voice.Net.WebSockets
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
                 VLog.E(GetType().Name, $"Connection Failed\n{error}");
-                _ = Disconnect();
+                Disconnect(true);
             }
             else
             {
@@ -294,41 +316,62 @@ namespace Meta.Voice.Net.WebSockets
             if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
                 VLog.W(GetType().Name, $"Socket Closed\nReason: {closeCode}");
-                _ = Disconnect();
+                Disconnect(true);
             }
         }
 
         /// <summary>
         /// Disconnects socket after checking state
         /// </summary>
-        public async Task<string> Disconnect()
+        public void Disconnect(bool force = false)
         {
+            // Decrement
+            _referenceCount--;
+            if (_referenceCount > 0 && !force)
+            {
+                return;
+            }
+
+            // Remove reference count
+            _referenceCount = 0;
+
             // Ignore if already disconnecting/disconnected
             if (ConnectionState == WitWebSocketConnectionState.Disconnecting
                 || ConnectionState == WitWebSocketConnectionState.Disconnected)
             {
-                return $"Cannot disconnect while already {ConnectionState}";
+                return;
             }
 
-            // Perform breakdown if possible
-            SetConnectionState(WitWebSocketConnectionState.Disconnecting);
-            await Breakdown();
-
-            // Fail if changed during breakdown
-            if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
-            {
-                return $"State changed to {ConnectionState} during breakdown.";
-            }
-
-            // Disconnected successfully
-            SetConnectionState(WitWebSocketConnectionState.Disconnected);
-            return null;
+            // Perform disconnection
+            _ = DisconnectAsync();
         }
 
         /// <summary>
         /// Disconnects without checking state
         /// </summary>
-        private async Task Breakdown()
+        private async Task DisconnectAsync()
+        {
+            // Sets disconnecting state
+            SetConnectionState(WitWebSocketConnectionState.Disconnecting);
+
+            // Perform breakdown if possible
+            await BreakdownAsync();
+
+            // Fail if changed during breakdown
+            if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
+            {
+                VLog.W(GetType().Name, $"State changed to {ConnectionState} during breakdown.");
+                return;
+            }
+
+            // Disconnected successfully
+            SetConnectionState(WitWebSocketConnectionState.Disconnected);
+        }
+
+        /// <summary>
+        /// Breaks down all
+        /// </summary>
+        private async Task BreakdownAsync()
         {
             // No longer authenticated
             IsAuthenticated = false;
@@ -376,7 +419,7 @@ namespace Meta.Voice.Net.WebSockets
                 && (ConnectionState == WitWebSocketConnectionState.Connecting
                     || ConnectionState == WitWebSocketConnectionState.Connected))
             {
-                _ = Disconnect();
+                Disconnect(true);
             }
         }
         #endif

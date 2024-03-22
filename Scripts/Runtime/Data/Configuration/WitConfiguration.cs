@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Meta.Voice.Net.WebSockets;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
@@ -22,7 +23,7 @@ using UnityEditor;
 
 namespace Meta.WitAi.Data.Configuration
 {
-    public class WitConfiguration : ScriptableObject, IWitRequestConfiguration
+    public class WitConfiguration : ScriptableObject, IWitRequestConfiguration, IWitWebSocketClientProvider
     {
         /// <summary>
         /// Access token used in builds to make requests for data from Wit.ai
@@ -102,6 +103,7 @@ namespace Meta.WitAi.Data.Configuration
                 return _manifestLocalPath;
             }
         }
+
         #if UNITY_EDITOR
         /// <summary>
         /// Returns manifest full editor path
@@ -111,16 +113,15 @@ namespace Meta.WitAi.Data.Configuration
             if (string.IsNullOrEmpty(_manifestLocalPath)) return string.Empty;
 
             string lookup = Path.GetFileNameWithoutExtension(_manifestLocalPath);
-            string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
+            string[] guids = AssetDatabase.FindAssets(lookup);
             if (guids != null && guids.Length > 0)
             {
-                return UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.GUIDToAssetPath(guids[0]);
             }
             return string.Empty;
         }
 
         #region Refresh
-#if UNITY_EDITOR
         private string RefreshKey
         {
             get
@@ -130,7 +131,6 @@ namespace Meta.WitAi.Data.Configuration
                 return $"WitConfig::Refresh::{guid}";
             }
         }
-#endif
 
         /// <summary>
         /// The last time this configuration was refreshed in reference to the UnixEpoch
@@ -147,13 +147,8 @@ namespace Meta.WitAi.Data.Configuration
         /// </summary>
         private double LastRefreshSeconds
         {
-#if UNITY_EDITOR
             get => SessionState.GetFloat(RefreshKey, 0);
             set => SessionState.SetFloat(RefreshKey, (float) value);
-#else
-            get => (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
-            set {}
-#endif
         }
 
 
@@ -209,6 +204,22 @@ namespace Meta.WitAi.Data.Configuration
             }
             return applicationId;
         }
+
+        #region Web Sockets
+        // The web socket client to be used
+        public WitWebSocketClient WebSocketClient
+        {
+            get
+            {
+                if (_client == null)
+                {
+                    _client = new WitWebSocketClient(this);
+                }
+                return _client;
+            }
+        }
+        private WitWebSocketClient _client;
+        #endregion
 
         #region IWitRequestConfiguration
         /// <summary>
