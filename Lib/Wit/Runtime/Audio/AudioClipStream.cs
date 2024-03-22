@@ -115,6 +115,10 @@ namespace Meta.Voice.Audio
         /// <param name="expectedSamples">The final number of samples expected to be received</param>
         public virtual void SetExpectedSamples(int expectedSamples)
         {
+            if (expectedSamples <= 0)
+            {
+                return;
+            }
             ExpectedSamples = expectedSamples;
             StreamReadyLength = Mathf.Min(StreamReadyLength, GetSampleLength(expectedSamples));
             UpdateState();

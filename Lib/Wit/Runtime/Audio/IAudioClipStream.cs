@@ -69,21 +69,21 @@ namespace Meta.Voice.Audio
         /// The callback delegate for stream ready for playback.  This can be set externally but should only be called within
         /// the clip stream itself.
         /// </summary>
-        AudioClipStreamDelegate OnStreamReady { set; }
+        AudioClipStreamDelegate OnStreamReady { get; set; }
 
         /// <summary>
         /// The callback delegate for stream update if any additional data such as the AudioClip is
         /// expected to update mid stream.  This can be set externally but should only be called within
         /// the clip stream itself.
         /// </summary>
-        AudioClipStreamDelegate OnStreamUpdated { set; }
+        AudioClipStreamDelegate OnStreamUpdated { get; set; }
 
         /// <summary>
         /// The callback delegate for stream completion once SetContentLength is called & all samples
         /// have been added via the AddSamples(float[] samples) method.  This can be set externally but
         /// should only be called within the clip stream itself.
         /// </summary>
-        AudioClipStreamDelegate OnStreamComplete { set; }
+        AudioClipStreamDelegate OnStreamComplete { get; set; }
 
         /// <summary>
         /// Adds an array of samples to the current stream

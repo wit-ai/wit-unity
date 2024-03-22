@@ -17,9 +17,10 @@ namespace Meta.Voice.Audio
     public class UnityAudioSystem : MonoBehaviour, IAudioSystem
     {
         /// <summary>
-        /// Uses raw audio data instead of Unity AudioClip
+        /// Uses raw audio data instead of Unity AudioClip.  This is required for web socket requests.
         /// </summary>
-        public bool UseRawAudio = false;
+        [Tooltip("Uses raw audio data instead of Unity AudioClip.  This is required for web socket requests.")]
+        public bool UseRawAudio = true;
 
         /// <summary>
         /// Chunk buffer length in seconds

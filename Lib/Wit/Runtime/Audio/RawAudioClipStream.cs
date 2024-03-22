@@ -23,11 +23,6 @@ namespace Meta.Voice.Audio
         public float[] SampleBuffer { get; }
 
         /// <summary>
-        /// Callback for new samples
-        /// </summary>
-        public Action<float[], int> OnAddSamples;
-
-        /// <summary>
         /// Generates sample buffer on construct
         /// </summary>
         public RawAudioClipStream(int newChannels, int newSampleRate,
@@ -41,23 +36,18 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// Adds an array of samples to the current stream
         /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
+        /// <param name="newSamples">A list of decoded floats from 0f to 1f</param>
         public override void AddSamples(float[] newSamples)
         {
             // Add samples
             int start = AddedSamples;
-            int length = Mathf.Min(newSamples.Length, SampleBuffer.Length - AddedSamples);
+            int max = SampleBuffer.Length - start;
+            int length = Mathf.Min(newSamples.Length, max);
             if (length > 0)
             {
                 // Copy samples
                 Array.Copy(newSamples, 0, SampleBuffer, start, length);
                 AddedSamples += length;
-
-                // On added samples
-                if (OnAddSamples != null)
-                {
-                    OnAddSamples?.Invoke(newSamples, length);
-                }
             }
 
             // Update state

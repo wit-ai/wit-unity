@@ -904,9 +904,10 @@ MonoBehaviour:
           m_Calls: []
   RequestSettings:
     configuration: {fileID: 11400000, guid: a383f193a505b554496ca8f22be900f1, type: 2}
-    audioType: 0
+    audioType: 1
     audioStream: 1
     useEvents: 1
+    useWebSockets: 0
   _presetVoiceSettings:
   - SettingsId: CAEL
     PrependedText: 

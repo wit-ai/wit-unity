@@ -83,9 +83,13 @@ namespace Meta.WitAi.TTS.Data
         [NonSerialized] public float loadProgress;
 
         /// <summary>
-        /// Amount of time from request to ready callback
+        /// Amount of time from request begin to ready callback in seconds
         /// </summary>
         [NonSerialized] public float loadDuration;
+        /// <summary>
+        /// Amount of time from request begin to complete callback in seconds
+        /// </summary>
+        [NonSerialized] public float completeDuration;
 
         // On clip state change
         public Action<TTSClipData, TTSClipLoadState> onStateChange;

@@ -100,8 +100,7 @@ namespace Meta.Voice.Audio.Decoding
                 catch (Exception e)
                 {
                     Debug.LogWarning($"MP3 Frame {_frameIndex} - Header Decode Failed\n\n{e}\n");
-                    _frameOffset += 1;
-                    start += 1;
+                    start += length;
                     return null;
                 }
 

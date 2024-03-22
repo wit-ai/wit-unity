@@ -65,7 +65,7 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_CHANNELS = 1;
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
         public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
-        public const float ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH = 10f;
+        public const float ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH = 15f;
         public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
         public const string ERROR_TTS_CACHE_DOWNLOAD = "Preloaded files cannot be downloaded at runtime.";
@@ -217,6 +217,42 @@ namespace Meta.WitAi
                 ext += ENDPOINT_TTS_EVENT_EXTENSION;
             }
             return ext;
+        }
+
+        /// <summary>
+        /// Converts from TTSWitAudioType to UnityEngine.AudioType
+        /// </summary>
+        public static UnityEngine.AudioType GetUnityAudioType(TTSWitAudioType witAudioType)
+        {
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.MPEG:
+                    return UnityEngine.AudioType.MPEG;
+                case TTSWitAudioType.WAV:
+                    return UnityEngine.AudioType.WAV;
+                // Custom implementation
+                case TTSWitAudioType.PCM:
+                default:
+                    return UnityEngine.AudioType.UNKNOWN;
+            }
+        }
+
+        /// <summary>
+        /// Converts from UnityEngine.AudioType to TTSWitAudioType
+        /// </summary>
+        public static TTSWitAudioType GetWitAudioType(UnityEngine.AudioType unityAudioType)
+        {
+            switch (unityAudioType)
+            {
+                case UnityEngine.AudioType.MPEG:
+                    return TTSWitAudioType.MPEG;
+                case UnityEngine.AudioType.WAV:
+                    return TTSWitAudioType.WAV;
+                // Custom implementation
+                case UnityEngine.AudioType.UNKNOWN:
+                default:
+                    return TTSWitAudioType.PCM;
+            }
         }
         #endregion TTS
 

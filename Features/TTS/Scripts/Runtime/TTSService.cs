@@ -563,7 +563,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Stream from Cache
-            DiskCacheHandler?.StreamFromDiskCache(clipData, OnRequestProgressUpdated);
+            DiskCacheHandler?.StreamFromDiskCache(clipData, RaiseRequestProgressUpdated);
         }
         // Wait a moment
         private IEnumerator CallAfterAMoment(Action call)
@@ -580,7 +580,7 @@ namespace Meta.WitAi.TTS
         }
 
         // On progress update, apply to clip
-        protected virtual void OnRequestProgressUpdated(TTSClipData clipData, float newProgress)
+        protected virtual void RaiseRequestProgressUpdated(TTSClipData clipData, float newProgress)
         {
             if (clipData != null)
             {
