@@ -235,7 +235,6 @@ namespace Meta.WitAi
         /// The active request timed out
         /// </summary>
         public const string ERROR_RESPONSE_TIMEOUT = "timeout";
-        #endregion
 
         /// <summary>
         /// Returns a unique identifier using the current unix timestamp
@@ -243,5 +242,17 @@ namespace Meta.WitAi
         /// </summary>
         public static string GetUniqueId()
             => $"{System.DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{System.Guid.NewGuid()}";
+        #endregion
+
+        #region WEB SOCKETS
+        // Setup constant keys & values
+        public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
+        public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";
+        // Authorization request constant keys & values
+        public const string WIT_SOCKET_AUTH_TOKEN = "wit_auth_token";
+        public const string WIT_SOCKET_AUTH_RESPONSE_KEY = "success";
+        public const string WIT_SOCKET_AUTH_RESPONSE_VAL = "true";
+        public const string WIT_SOCKET_AUTH_RESPONSE_ERROR = "Authentication denied";
+        #endregion
     }
 }
