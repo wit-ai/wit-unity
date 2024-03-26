@@ -15,7 +15,8 @@ namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {
-        private Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
+        private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
+        private static readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
 
         /// <summary>
         /// The singleton instance of the registry.
@@ -30,8 +31,10 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger()
+        public IVLogger GetLogger(ILogWriter logWriter = null)
         {
+            logWriter ??= DefaultLogWriter;
+
             var stackTrace = new StackTrace();
             var category = LogCategory.Global.ToString();
 
@@ -46,7 +49,7 @@ namespace Meta.Voice.Logging
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return new VLogger(category);
+                return new VLogger(category, logWriter);
             }
 
             category = attribute.CategoryName;
@@ -55,11 +58,13 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category)
+        public IVLogger GetLogger(string category, ILogWriter logWriter = null)
         {
+            logWriter ??= DefaultLogWriter;
+
             if (!_loggers.ContainsKey(category))
             {
-                _loggers.Add(category, new VLogger(category));
+                _loggers.Add(category, new VLogger(category, logWriter));
             }
 
             return _loggers[category];

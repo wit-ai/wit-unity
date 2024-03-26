@@ -173,6 +173,11 @@ namespace Meta.Voice.Logging
         void End(int sequenceId);
 
         /// <summary>
+        /// Writes out any high verbosity logs that have been suppressed as part of the specified correlation ID.
+        /// </summary>
+        public void Flush(CorrelationID correlationID);
+
+        /// <summary>
         /// Writes out any high verbosity logs that have been suppressed.
         /// </summary>
         void Flush();

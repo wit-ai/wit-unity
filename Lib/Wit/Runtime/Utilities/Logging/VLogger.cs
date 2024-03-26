@@ -19,10 +19,12 @@ namespace Meta.Voice.Logging
 {
     internal class VLogger : IVLogger
     {
-        private readonly Dictionary<int, LogEntry> _logEntries = new Dictionary<int, LogEntry>();
         private int _nextSequenceId = 1;
+        private readonly Dictionary<int, LogEntry> _scopeEntries = new Dictionary<int, LogEntry>();
         private static readonly ThreadLocal<string> CorrelationIDThreadLocal = new ThreadLocal<string>();
-        private static readonly ErrorMitigator _errorMitigator = ErrorMitigator.Instance;
+        private static readonly ErrorMitigator ErrorMitigator = ErrorMitigator.Instance;
+        private readonly RingDictionaryBuffer<CorrelationID, LogEntry> _logBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
+        private readonly ILogWriter _logWriter;
 
         /// <inheritdoc/>
         public CorrelationID CorrelationID
@@ -41,9 +43,10 @@ namespace Meta.Voice.Logging
 
         private readonly string _category;
 
-        public VLogger(string category)
+        public VLogger(string category, ILogWriter logWriter)
         {
             _category = category;
+            _logWriter = logWriter;
         }
 
         /// <inheritdoc/>
@@ -121,7 +124,7 @@ namespace Meta.Voice.Logging
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationID, message, parameters);
-            Write(logEntry);
+            this._logBuffer.Add(correlationID, logEntry);
         }
 
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
@@ -152,7 +155,7 @@ namespace Meta.Voice.Logging
         public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
-            _logEntries.Add(_nextSequenceId, logEntry);
+            _logBuffer.Add(correlationId, logEntry);
 
             Write(logEntry, "Started: ");
 
@@ -163,7 +166,8 @@ namespace Meta.Voice.Logging
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, CorrelationID, message, parameters);
-            _logEntries.Add(_nextSequenceId, logEntry);
+            _logBuffer.Add(CorrelationID, logEntry);
+            _scopeEntries.Add(_nextSequenceId, logEntry);
 
             Write(logEntry, "Started: ");
 
@@ -173,24 +177,33 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void End(int sequenceId)
         {
-            if (!_logEntries.ContainsKey(sequenceId))
+            if (!_scopeEntries.ContainsKey(sequenceId))
             {
                 Error(KnownErrorCode.Logging, "Attempted to end a scope that was not started. Scope ID: {0}", sequenceId);
                 return;
             }
 
-            var openingEntry = _logEntries[sequenceId];
+            var openingEntry = _scopeEntries[sequenceId];
             Write(openingEntry, "Finished: ");
 
-            _logEntries.Remove(sequenceId);
+            _scopeEntries.Remove(sequenceId);
+        }
+
+        /// <inheritdoc/>
+        public void Flush(CorrelationID correlationID)
+        {
+            foreach (var logEntry in _logBuffer.Extract(correlationID))
+            {
+                Write(logEntry);
+            }
         }
 
         /// <inheritdoc/>
         public void Flush()
         {
-            foreach (var logEntry in _logEntries)
+            foreach (var logEntry in _logBuffer.ExtractAll())
             {
-                Write(logEntry.Value);
+                Write(logEntry);
             }
         }
 
@@ -259,10 +272,10 @@ namespace Meta.Voice.Logging
             if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
             {
                 // The mitigator may not be available if the error is coming from the mitigator constructor itself.
-                if (_errorMitigator != null)
+                if (ErrorMitigator != null)
                 {
                     sb.Append("\nMitigation: ");
-                    sb.Append(_errorMitigator.GetMitigation(logEntry.ErrorCode.Value));
+                    sb.Append(ErrorMitigator.GetMitigation(logEntry.ErrorCode.Value));
                 }
             }
 
@@ -280,23 +293,28 @@ namespace Meta.Voice.Logging
 #if UNITY_EDITOR
                     if (VLog.LogErrorsAsWarnings)
                     {
-                        UnityEngine.Debug.LogWarning($"{prefix}{message}");
+                        _logWriter.WriteWarning($"{prefix}{message}");
                         return;
                     }
 #endif
-                    UnityEngine.Debug.LogError($"{prefix}{message}");
+                    _logWriter.WriteError($"{prefix}{message}");
                     break;
                 case VLoggerVerbosity.Warning:
-                    UnityEngine.Debug.LogWarning($"{prefix}{message}");
+                    _logWriter.WriteWarning($"{prefix}{message}");
                     break;
                 default:
-                    UnityEngine.Debug.Log($"{prefix}{message}");
+                    _logWriter.WriteVerbose($"{prefix}{message}");
                     break;
             }
         }
 
         private void Write(LogEntry logEntry)
         {
+            if (logEntry.Verbosity == VLoggerVerbosity.Error)
+            {
+                Flush(logEntry.CorrelationID);
+            }
+
             Write(logEntry, String.Empty);
         }
 
@@ -365,7 +383,7 @@ namespace Meta.Voice.Logging
             return formattedStackTrace;
         }
 
-        private struct LogEntry
+        private readonly struct LogEntry
         {
             public string Category { get; }
             public DateTime TimeStamp { get; }
@@ -417,6 +435,86 @@ namespace Meta.Voice.Logging
             public override string ToString()
             {
                 return string.Format(Message, Parameters) + $" [{CorrelationID}]";
+            }
+        }
+
+        /// <summary>
+        /// This class will maintain a cache of entries and the oldest ones will expire when it runs out of space.
+        /// </summary>
+        /// <typeparam name="TKey">The key type.</typeparam>
+        /// <typeparam name="TValue">The value type.</typeparam>
+        private class RingDictionaryBuffer<TKey, TValue>
+        {
+            private readonly int _capacity;
+            private readonly Dictionary<TKey, LinkedList<TValue>> _dictionary;
+            private readonly LinkedList<ValueTuple<TKey, TValue>> _order;
+            public RingDictionaryBuffer(int capacity)
+            {
+                _capacity = capacity;
+                _dictionary = new Dictionary<TKey, LinkedList<TValue>>();
+                _order = new LinkedList<ValueTuple<TKey, TValue>>();
+            }
+            public void Add(TKey key, TValue value)
+            {
+                if (!_dictionary.ContainsKey(key))
+                {
+                    _dictionary[key] = new LinkedList<TValue>();
+                }
+                _dictionary[key].AddLast(value);
+                _order.AddLast(ValueTuple.Create(key, value));
+                if (_order.Count > _capacity)
+                {
+                    var oldest = _order.First.Value;
+                    _order.RemoveFirst();
+                    _dictionary[oldest.Item1].RemoveFirst();
+                    if (_dictionary[oldest.Item1].Count == 0)
+                    {
+                        _dictionary.Remove(oldest.Item1);
+                    }
+                }
+            }
+            public IEnumerable<TValue> Extract(TKey key)
+            {
+                if (_dictionary.ContainsKey(key))
+                {
+                    var values = new List<TValue>(_dictionary[key]);
+                    _dictionary.Remove(key);
+                    var node = _order.First;
+                    while (node != null)
+                    {
+                        var nextNode = node.Next; // Save next node
+                        if (node.Value.Item1.Equals(key))
+                        {
+                            _order.Remove(node); // Remove current node
+                        }
+                        node = nextNode; // Move to next node
+                    }
+                    return values;
+                }
+                else
+                {
+                    return new List<TValue>();
+                }
+            }
+
+            /// <summary>
+            /// Drain all the entries from the buffer and return them.
+            /// </summary>
+            /// <returns>All the entries in the buffer by correlation IDs.</returns>
+            public IEnumerable<TValue> ExtractAll()
+            {
+                var allValues = new List<TValue>();
+                foreach (var correlationId in new List<TKey>(_dictionary.Keys))
+                {
+                    allValues.AddRange(Extract(correlationId));
+                }
+                return allValues;
+            }
+
+            public void Clear()
+            {
+                _dictionary.Clear();
+                _order.Clear();
             }
         }
     }

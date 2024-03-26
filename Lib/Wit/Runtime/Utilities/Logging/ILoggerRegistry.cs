@@ -9,11 +9,23 @@
 namespace Meta.Voice.Logging
 {
     /// <summary>
-    /// Used to created VSDK loggers.
+    /// Used to create VSDK loggers.
     /// </summary>
     public interface ILoggerRegistry
     {
-        IVLogger GetLogger();
-        IVLogger GetLogger(string category);
+        /// <summary>
+        /// Gets a logger with an inferred category.
+        /// </summary>
+        /// <param name="logWriter">An optional log writer.</param>
+        /// <returns>The logger</returns>
+        IVLogger GetLogger(ILogWriter logWriter = null);
+
+        /// <summary>
+        /// Gets a logger with an explicitly specified category.
+        /// </summary>
+        /// <param name="category">The category of the logs written by this logger.</param>
+        /// <param name="logWriter">An optional log writer.</param>
+        /// <returns>The logger</returns>
+        IVLogger GetLogger(string category, ILogWriter logWriter = null);
     }
 }

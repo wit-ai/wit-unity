@@ -237,34 +237,6 @@ namespace Meta.WitAi
             }
         }
 
-        public static string FormatStackTrace(string stackTrace)
-        {
-            // Get the project's working directory
-            string workingDirectory = Directory.GetCurrentDirectory();
-            // Use a regular expression to match lines with a file path and line number
-            var regex = new Regex(@"at (.+) in (.*):(\d+)");
-            // Use the MatchEvaluator delegate to format the matched lines
-            MatchEvaluator evaluator = match =>
-            {
-                string method = match.Groups[1].Value;
-                string filePath = match.Groups[2].Value.Replace(workingDirectory, "");
-                string lineNumber = match.Groups[3].Value;
-                // Only format the line as a clickable link if the file exists
-                if (File.Exists(filePath))
-                {
-                    string fileName = Path.GetFileName(filePath);
-                    return $"at {method} in <a href=\"{filePath}\" line=\"{lineNumber}\">{fileName}:<b>{lineNumber}</b></a>";
-                }
-                else
-                {
-                    return match.Value;
-                }
-            };
-            // Replace the matched lines in the stack trace
-            string formattedStackTrace = regex.Replace(stackTrace, evaluator);
-            return formattedStackTrace;
-        }
-
         /// <summary>
         /// Determines a category from the script name that called the previous method
         /// </summary>
