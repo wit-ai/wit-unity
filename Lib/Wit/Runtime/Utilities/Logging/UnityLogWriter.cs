@@ -8,18 +8,24 @@
 
 namespace Meta.Voice.Logging
 {
+    /// <summary>
+    /// A log writer that writes to Unity's console.
+    /// </summary>
     internal class UnityLogWriter : ILogWriter
     {
+        /// <inheritdoc/>
         public void WriteWarning(string message)
         {
             UnityEngine.Debug.LogWarning(message);
         }
 
+        /// <inheritdoc/>
         public void WriteError(string message)
         {
             UnityEngine.Debug.LogError(message);
         }
 
+        /// <inheritdoc/>
         public void WriteVerbose(string message)
         {
             UnityEngine.Debug.Log(message);

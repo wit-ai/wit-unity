@@ -8,10 +8,27 @@
 
 namespace Meta.Voice.Logging
 {
+    /// <summary>
+    /// A log writer is a sink to be used by VLogger to write the logs to a destination.
+    /// </summary>
     public interface ILogWriter
     {
+        /// <summary>
+        /// Writes a warning message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         void WriteWarning(string message);
+
+        /// <summary>
+        /// Writes an error message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         void WriteError(string message);
+
+        /// <summary>
+        /// Writes a verbose message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         void WriteVerbose(string message);
     }
 }

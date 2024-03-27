@@ -20,10 +20,30 @@ namespace Meta.Voice.Logging
     internal class VLogger : IVLogger
     {
         private int _nextSequenceId = 1;
+
+        /// <summary>
+        /// Tracks open scopes by associating sequence ID to log entries.
+        /// </summary>
         private readonly Dictionary<int, LogEntry> _scopeEntries = new Dictionary<int, LogEntry>();
+
+        /// <summary>
+        /// Holds the Correlation ID in the same thread.
+        /// </summary>
         private static readonly ThreadLocal<string> CorrelationIDThreadLocal = new ThreadLocal<string>();
+
+        /// <summary>
+        /// Used to get mitigations for errors.
+        /// </summary>
         private static readonly ErrorMitigator ErrorMitigator = ErrorMitigator.Instance;
+
+        /// <summary>
+        /// Tracks log entries that are part of a specific correlation ID.
+        /// </summary>
         private readonly RingDictionaryBuffer<CorrelationID, LogEntry> _logBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
+
+        /// <summary>
+        /// The final log sink where log data is written.
+        /// </summary>
         private readonly ILogWriter _logWriter;
 
         /// <inheritdoc/>
@@ -473,6 +493,12 @@ namespace Meta.Voice.Logging
                     }
                 }
             }
+
+            /// <summary>
+            /// Drain all the entries from the buffer that match a given key and return them.
+            /// </summary>
+            /// <param name="key">The key we are extracting.</param>
+            /// <returns>All the entries in the buffer for that specific key.</returns>
             public IEnumerable<TValue> Extract(TKey key)
             {
                 if (_dictionary.ContainsKey(key))
@@ -500,7 +526,7 @@ namespace Meta.Voice.Logging
             /// <summary>
             /// Drain all the entries from the buffer and return them.
             /// </summary>
-            /// <returns>All the entries in the buffer by correlation IDs.</returns>
+            /// <returns>All the entries in the buffer ordered by the key (e.g. correlation IDs).</returns>
             public IEnumerable<TValue> ExtractAll()
             {
                 var allValues = new List<TValue>();
