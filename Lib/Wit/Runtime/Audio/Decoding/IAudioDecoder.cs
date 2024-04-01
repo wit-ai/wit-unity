@@ -14,6 +14,16 @@ namespace Meta.Voice.Audio.Decoding
     public interface IAudioDecoder
     {
         /// <summary>
+        /// Once setup this should display the number of channels expected to be decoded
+        /// </summary>
+        int Channels { get; }
+
+        /// <summary>
+        /// Once setup this should display the number of samples per second expected
+        /// </summary>
+        int SampleRate { get; }
+
+        /// <summary>
         /// A property for whether the decoder can decode chunks on separate threads
         /// simultaneously or if they need to be performed sequentially.
         /// </summary>
@@ -23,14 +33,8 @@ namespace Meta.Voice.Audio.Decoding
         /// Initial setup of the decoder
         /// </summary>
         /// <param name="channels">Total channels of audio data</param>
-        /// <param name="sampleRate">The rate of audio data received</param>
+        /// <param name="sampleRate">The total samples per second expected</param>
         void Setup(int channels, int sampleRate);
-
-        /// <summary>
-        /// Determines audio sample length based on content length if possible
-        /// </summary>
-        /// <param name="contentLength">The provided number of bytes</param>
-        int GetTotalSamples(ulong contentLength);
 
         /// <summary>
         /// A method for returning decoded bytes into audio data

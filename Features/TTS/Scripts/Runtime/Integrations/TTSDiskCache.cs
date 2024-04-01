@@ -147,27 +147,29 @@ namespace Meta.WitAi.TTS.Integrations
             // Get file path
             string filePath = GetDiskCachePath(clipData);
 
-            // Load clip async
+            // Generate request & store
             VRequest request = new VRequest((progress) => onProgress?.Invoke(clipData, progress));
-            bool canPerform = request.RequestAudioStream(clipData.clipStream, new Uri(request.CleanUrl(filePath)),
+            _streamRequests[clipData.clipID] = request;
+
+            // Add handlers for ready
+            clipData.clipStream.OnStreamReady = (clipStream) => OnStreamReady(clipData, null);
+            clipData.clipStream.OnStreamComplete = (clipStream) => OnStreamComplete(clipData, null);
+
+            // Perform request
+            request.RequestAudioStream(new Uri(request.CleanUrl(filePath)),
+                clipData.audioType, clipData.useEvents,
+                clipData.clipStream.AddSamples, clipData.Events.AppendJson,
                 (clipStream, error) =>
                 {
-                    if (clipData.loadState != TTSClipLoadState.Preparing)
+                    if (string.IsNullOrEmpty(error))
                     {
-                        clipStream.Unload();
-                        OnStreamComplete(clipData, WitConstants.CANCEL_ERROR);
+                        clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
                     }
                     else
                     {
-                        clipData.clipStream = clipStream;
                         OnStreamComplete(clipData, error);
                     }
-                }, clipData.audioType, clipData.diskCacheSettings.StreamFromDisk, clipData.useEvents,
-                clipData.Events.AppendJson);
-            if (canPerform)
-            {
-                _streamRequests[clipData.clipID] = request;
-            }
+                });
         }
         /// <summary>
         /// Cancels unity request
@@ -175,27 +177,47 @@ namespace Meta.WitAi.TTS.Integrations
         public void CancelDiskCacheStream(TTSClipData clipData)
         {
             // Ignore if not currently streaming
+            if (!_streamRequests.TryGetValue(clipData.clipID, out var request))
+            {
+                return;
+            }
+
+            // Cancel immediately
+            request?.Cancel();
+        }
+
+        /// <summary>
+        /// Performs on ready callback if no error is present, otherwise considered complete
+        /// </summary>
+        /// <param name="clipData">The audio clip data container</param>
+        /// <param name="error">Any error that occured during the stream.</param>
+        protected virtual void OnStreamReady(TTSClipData clipData, string error)
+        {
+            // Errors are considered complete
+            if (!string.IsNullOrEmpty(error))
+            {
+                OnStreamComplete(clipData, error);
+                return;
+            }
+            // Perform ready callback
+            DiskStreamEvents?.OnStreamReady?.Invoke(clipData);
+        }
+
+        /// <summary>
+        /// Removes request from list and performs final callbacks
+        /// </summary>
+        /// <param name="clipData">The audio clip data container</param>
+        /// <param name="error">Any error that occured during the stream.</param>
+        protected virtual void OnStreamComplete(TTSClipData clipData, string error)
+        {
+            // Ignore if already completed
             if (!_streamRequests.ContainsKey(clipData.clipID))
             {
                 return;
             }
 
-            // Get request
-            VRequest request = _streamRequests[clipData.clipID];
+            // Remove request
             _streamRequests.Remove(clipData.clipID);
-
-            // Cancel immediately
-            request?.Cancel();
-            request = null;
-        }
-        // On stream completion
-        protected virtual void OnStreamComplete(TTSClipData clipData, string error)
-        {
-            // Remove request from list
-            if (_streamRequests.ContainsKey(clipData.clipID))
-            {
-                _streamRequests.Remove(clipData.clipID);
-            }
 
             // Cancelled
             if (string.Equals(error, WitConstants.CANCEL_ERROR))
@@ -210,7 +232,14 @@ namespace Meta.WitAi.TTS.Integrations
             // Success
             else
             {
-                DiskStreamEvents?.OnStreamReady?.Invoke(clipData);
+                // If expected samples was never set, assign now
+                if (clipData.clipStream.ExpectedSamples == 0)
+                {
+                    clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+                }
+
+                // Stream complete
+                DiskStreamEvents?.OnStreamComplete?.Invoke(clipData);
             }
         }
     }

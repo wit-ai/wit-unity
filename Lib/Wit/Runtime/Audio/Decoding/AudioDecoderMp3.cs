@@ -23,6 +23,16 @@ namespace Meta.Voice.Audio.Decoding
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
 
         /// <summary>
+        /// Once setup this should display the number of channels expected to be decoded
+        /// </summary>
+        public int Channels { get; private set; }
+
+        /// <summary>
+        /// Once setup this should display the number of samples per second expected
+        /// </summary>
+        public int SampleRate { get; private set; }
+
+        /// <summary>
         /// Mp3 must be decoded sequentially in since frame data could be
         /// carried over to the next chunk
         /// </summary>
@@ -33,13 +43,11 @@ namespace Meta.Voice.Audio.Decoding
         /// </summary>
         /// <param name="channels">Total channels of audio data</param>
         /// <param name="sampleRate">The rate of audio data received</param>
-        public void Setup(int channels, int sampleRate) {}
-
-        /// <summary>
-        /// Mp3 sample count cannot be determined from content length, return -1
-        /// </summary>
-        /// <param name="contentLength">The provided number of bytes</param>
-        public int GetTotalSamples(ulong contentLength) => -1;
+        public void Setup(int channels, int sampleRate)
+        {
+            Channels = channels;
+            SampleRate = sampleRate;
+        }
 
         /// <summary>
         /// A method for returning decoded bytes into audio data

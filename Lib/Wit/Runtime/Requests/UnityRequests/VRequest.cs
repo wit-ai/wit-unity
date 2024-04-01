@@ -1328,19 +1328,18 @@ namespace Meta.WitAi.Requests
         /// complex streaming scenarios
         /// </summary>
         /// <param name="audioType">Audio decoder type allowed</param>
-        /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
-        /// <returns>Instantiated audio decoder</returns>
-        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType, bool textStream = false,
+        /// <param name="includeJson">Whether or not json will be returned within the stream</param>
+        /// <param name="onJsonDecoded">The json decode callback which will be called multiple times</param>
+        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType, bool includeJson = false,
             AudioJsonDecodeDelegate onJsonDecoded = null)
         {
-            Type decoderType = GetAudioDecoderType(audioType);
+            var decoderType = GetAudioDecoderType(audioType);
             if (decoderType == null)
             {
                 return null;
             }
-            IAudioDecoder audioDecoder =  Activator.CreateInstance(decoderType) as IAudioDecoder;
-            if (textStream)
+            var audioDecoder =  Activator.CreateInstance(decoderType) as IAudioDecoder;
+            if (includeJson)
             {
                 return new AudioDecoderJson(audioDecoder, onJsonDecoded);
             }
@@ -1348,257 +1347,60 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
-        /// Request audio clip with audio data, uri & completion delegate
+        /// Request audio clip with uri, audio type, sample decoded delegate & completion delegate
         /// </summary>
-        /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
-        /// <param name="uri">The url to be called</param>
-        /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
-        public bool RequestAudioStream(IAudioClipStream clipStream,
-            Uri uri,
-            RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
-            AudioType audioType, bool audioStream,
-            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null) =>
-            RequestAudioStream(clipStream,
-                new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
-                onClipStreamReady,
-                audioType, audioStream, textStream, onJsonDecoded);
-
-        /// <summary>
-        /// Request audio clip with audio data, web request & completion delegate
-        /// </summary>
-        /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
-        /// <param name="onClipStreamReady">Called when the clip is ready for playback or has failed to load</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
-        public bool RequestAudioStream(IAudioClipStream clipStream,
-            UnityWebRequest unityRequest,
-            RequestCompleteDelegate<IAudioClipStream> onClipStreamReady,
-            AudioType audioType, bool audioStream,
-            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null)
-        {
-            // Setup failed
-            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onJsonDecoded);
-            if (!string.IsNullOrEmpty(errors))
-            {
-                onClipStreamReady?.Invoke(clipStream, errors);
-                return false;
-            }
-
-            // Set stream ready & remove once performed
-            _onStreamReady = (request, error) =>
-            {
-                // Finalize audio request stream
-                if (string.IsNullOrEmpty(error))
-                {
-                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onJsonDecoded);
-                }
-
-                // Unload clip stream if error
-                if (!string.IsNullOrEmpty(error))
-                {
-                    clipStream?.Unload();
-                }
-
-                // Return & remove the reference
-                onClipStreamReady?.Invoke(clipStream, error);
-                _onStreamReady = null;
-            };
-
-            // Perform default request operation & call stream ready if not yet performed
-            return Request(unityRequest, (response, error) =>
-            {
-                _onStreamReady?.Invoke(response, error);
-            });
-        }
-
-        /// <summary>
-        /// Request audio clip with audio data, uri & completion delegate
-        /// </summary>
-        /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
         /// <param name="uri">The url to be called</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
-        /// <returns>Returns the resultant audio clip stream</returns>
-        public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
-            Uri uri,
-            AudioType audioType, bool audioStream,
-            bool textStream = false, AudioJsonDecodeDelegate onJsonDecoded = null) =>
-            await RequestAudioStreamAsync(clipStream,
-                new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
-                audioType, audioStream, textStream, onJsonDecoded);
+        /// <param name="includesJson">Whether or not json will be embedded within the audio stream.</param>
+        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
+        /// <param name="onComplete">Called when the audio request has completed</param>
+        public bool RequestAudioStream(Uri uri, AudioType audioType, bool includesJson,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded,
+            RequestCompleteDelegate<bool> onComplete) =>
+            RequestAudioStream(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
+                audioType, includesJson, onSamplesDecoded, onJsonDecoded, onComplete);
 
         /// <summary>
-        /// Request audio clip with audio data, web request & completion delegate
+        /// Request audio clip with web request, audio type, whether audio includes json data, callback delegates & completion delegate
         /// </summary>
-        /// <param name="clipStream">The clip audio stream handler, one must be provided</param>
         /// <param name="unityRequest">The unity request to add a download handler to</param>
         /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="audioStream">Whether or not audio should be streamed</param>
-        /// <param name="textStream">Whether or not text will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The text decode callback which will be called multiple times</param>
-        /// <returns>Returns the resultant audio clip stream</returns>
-        public async Task<RequestCompleteResponse<IAudioClipStream>> RequestAudioStreamAsync(IAudioClipStream clipStream,
-            UnityWebRequest unityRequest, AudioType audioType, bool audioStream, bool textStream = false,
-            AudioJsonDecodeDelegate onJsonDecoded = null)
+        /// <param name="includesJson">Whether or not json will be embedded within the audio stream.</param>
+        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
+        /// <param name="onComplete">Called when the audio request has completed</param>
+        public bool RequestAudioStream(UnityWebRequest unityRequest, AudioType audioType, bool includesJson,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded,
+            RequestCompleteDelegate<bool> onComplete)
         {
-            // Results
-            RequestCompleteResponse<IAudioClipStream> results = new RequestCompleteResponse<IAudioClipStream>();
-            results.Value = clipStream;
-
-            // Setup failed
-            string errors = SetupAudioRequest(clipStream, unityRequest, audioType, audioStream, textStream, onJsonDecoded);
-            if (!string.IsNullOrEmpty(errors))
-            {
-                results.Error = errors;
-                return results;
-            }
-
-            // Set stream ready & remove once performed
-            _onStreamReady = (request, error) =>
-            {
-                // Finalize audio request stream
-                if (string.IsNullOrEmpty(error))
-                {
-                    error = FinalizeAudioRequest(ref clipStream, request, audioType, textStream, onJsonDecoded);
-                    results.Value = clipStream;
-                }
-
-                // Unload clip stream if error found
-                if (!string.IsNullOrEmpty(error))
-                {
-                    results.Error = error;
-                    clipStream?.Unload();
-                }
-
-                // Return & remove the reference
-                _onStreamReady = null;
-            };
-
-            // Perform async request
-            _ = RequestAsync<string>(unityRequest, null);
-
-            // Wait for stream to be ready or error
-            await TaskUtility.WaitWhile(() => !IsStreamReady && string.IsNullOrEmpty(results.Error));
-
-            // Return results
-            return results;
-        }
-
-        // Sets up audio request & returns any errors encountered during setup process
-        private string SetupAudioRequest(IAudioClipStream clipStream,
-            UnityWebRequest unityRequest,
-            AudioType audioType, bool audioStream,
-            bool textStream, AudioJsonDecodeDelegate onJsonDecoded)
-        {
-            // Add audio download handler
+            // Use custom audio stream handler
             if (unityRequest.downloadHandler == null)
             {
-                // Use buffer stream handler if pcm & not streaming
-                if (!audioStream && CanDecodeAudio(audioType))
+                // Cannot decode
+                if (!CanDecodeAudio(audioType))
                 {
-                    unityRequest.downloadHandler = new DownloadHandlerBuffer();
+                    var error = $"Unable to decode audio: {audioType}";
+                    onComplete?.Invoke(false, error);
+                    return false;
                 }
-                // If streamed, audio stream handler can decode & unity cannot then use audio stream handler
-                else if (audioStream && CanDecodeAudio(audioType) && !CanUnityStreamAudio(audioType))
-                {
-                    // Cannot download via audio stream handler without clip stream info
-                    if (clipStream == null)
-                    {
-                        return "No clip stream provided";
-                    }
-
-                    // Use custom audio stream handler
-                    unityRequest.downloadHandler = new AudioStreamHandler(clipStream, GetAudioDecoder(audioType, textStream, onJsonDecoded));
-                }
-                // Use audio clip download handler
-                else
-                {
-                    unityRequest.downloadHandler = new DownloadHandlerAudioClip(unityRequest.uri, audioType);
-                }
+                // Generate decoder
+                var decoder = GetAudioDecoder(audioType, includesJson, onJsonDecoded);
+                // Set audio stream handler
+                unityRequest.downloadHandler = new AudioStreamHandler(decoder, onSamplesDecoded,
+                    (error) => onComplete?.Invoke(string.IsNullOrEmpty(error), error));
             }
 
-            // Set stream settings if applicable
-            if (unityRequest.downloadHandler is DownloadHandlerAudioClip audioDownloader)
+            // Perform default request operation & call stream complete once finished
+            return Request(unityRequest, (response, error) =>
             {
-                audioDownloader.streamAudio = audioStream;
-            }
-
-            // Success
-            return string.Empty;
-        }
-
-        // Called on audio ready to be decoded
-        private string FinalizeAudioRequest(ref IAudioClipStream clipStream, UnityWebRequest request, AudioType audioType,
-            bool textStream, AudioJsonDecodeDelegate onJsonDecoded)
-        {
-            // Update stream if applicable
-            try
-            {
-                // Unity audio clip download handler using IAudioClipSetter
-                if (request.downloadHandler is DownloadHandlerAudioClip audioDownloader)
+                if (!string.IsNullOrEmpty(error))
                 {
-                    AudioClip clip = audioDownloader.audioClip;
-                    if (clipStream is IAudioClipSetter clipSetter)
-                    {
-                        if (!clipSetter.SetClip(clip))
-                        {
-                            return $"DownloadHandlerAudioClip cannot set AudioClip onto {clipStream.GetType().Name}";
-                        }
-                    }
-                    else
-                    {
-                        return $"DownloadHandlerAudioClip cannot be used for stream: {clipStream?.GetType().Name}";
-                    }
+                    onComplete?.Invoke(string.IsNullOrEmpty(error), error);
                 }
-                // Decode audio data from audio stream handler
-                else if (request.downloadHandler is DownloadHandlerBuffer rawDownloader)
-                {
-                    byte[] data = rawDownloader.data;
-                    float[] samples = GetAudioDecoder(audioType, textStream, onJsonDecoded).Decode(data, 0, data.Length);
-                    clipStream.SetExpectedSamples(samples.Length);
-                    clipStream.AddSamples(samples);
-                }
-                // Custom Raw PCM streaming
-                else if (request.downloadHandler is AudioStreamHandler downloadHandlerRaw)
-                {
-                    if (clipStream != downloadHandlerRaw.ClipStream)
-                    {
-                        return "AudioStreamHandler clip stream no longer matches";
-                    }
-                }
-                // Failed to decode audio clip
-                else if (request.downloadHandler != null)
-                {
-                    return $"Invalid download handler: {request.downloadHandler.GetType()}";
-                }
-                // Failed to decode audio clip
-                else
-                {
-                    return $"Missing download handler";
-                }
-            }
-            catch (Exception e)
-            {
-                return $"Failed to decode audio clip\n{e}";
-            }
-
-            // Invalid clip
-            if (clipStream != null && clipStream.Length == 0)
-            {
-                return "Clip has no samples";
-            }
-
-            // Success
-            return string.Empty;
+            });
         }
         #endregion
     }

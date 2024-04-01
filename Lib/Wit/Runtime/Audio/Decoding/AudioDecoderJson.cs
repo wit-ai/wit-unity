@@ -36,6 +36,16 @@ namespace Meta.Voice.Audio.Decoding
         private readonly AudioJsonDecodeDelegate _onJsonDecoded;
 
         /// <summary>
+        /// Once setup this should display the number of channels expected to be decoded
+        /// </summary>
+        public int Channels => _audioDecoder.Channels;
+
+        /// <summary>
+        /// Once setup this should display the number of samples per second expected
+        /// </summary>
+        public int SampleRate => _audioDecoder.SampleRate;
+
+        /// <summary>
         /// Due to headers, sequential decode is required
         /// </summary>
         public bool RequireSequentialDecode => true;

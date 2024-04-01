@@ -58,11 +58,19 @@ namespace Meta.WitAi.TTS.Integrations
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
     {
         #region TTSService
-        // Voice provider
+        /// <summary>
+        /// The voice provider used for preset voice settings.  Uses TTSWit with TTSWitVoiceSettings
+        /// </summary>
         public override ITTSVoiceProvider VoiceProvider => this;
-        // Request handler
+
+        /// <summary>
+        /// This script provides web request handling
+        /// </summary>
         public override ITTSWebHandler WebHandler => this;
-        // Runtime cache handler
+
+        /// <summary>
+        /// Generates a runtime cache if one is not found
+        /// </summary>
         public override ITTSRuntimeCacheHandler RuntimeCacheHandler
         {
             get
@@ -79,7 +87,10 @@ namespace Meta.WitAi.TTS.Integrations
             }
         }
         private ITTSRuntimeCacheHandler _runtimeCache;
-        // Cache handler
+
+        /// <summary>
+        /// Uses the local disk cache if found
+        /// </summary>
         public override ITTSDiskCacheHandler DiskCacheHandler
         {
             get
@@ -118,10 +129,9 @@ namespace Meta.WitAi.TTS.Integrations
         {
             return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
                 clipData.textToSpeak, clipData.queryParameters,
-                RequestSettings.audioType, clipData.queryStream,
+                RequestSettings.audioType, clipData.queryStream, clipData.useEvents,
                 (progress) => RaiseRequestProgressUpdated(clipData, progress),
-                () => RaiseRequestFirstResponse(clipData),
-                clipData.useEvents, clipData.Events.AppendJson);
+                () => RaiseRequestFirstResponse(clipData));
         }
 
         // Generate tts web socket request and handle responses
@@ -131,7 +141,7 @@ namespace Meta.WitAi.TTS.Integrations
                 RequestSettings.audioType, clipData.useEvents, downloadPath);
             request.OnEventsReceived = clipData.Events.AppendJsonEvents;
             request.OnSamplesReceived = clipData.clipStream.AddSamples;
-            request.OnFirstResponse += (r) => RaiseRequestFirstResponse(clipData);
+            request.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
             _webSocketRequests[clipData.clipID] = request;
             return request;
         }
@@ -256,19 +266,24 @@ namespace Meta.WitAi.TTS.Integrations
             var wsRequest = GetWebSocketRequest(clipData);
             _webSocketRequests[clipData.clipID] = wsRequest;
 
-            // Finalize clip stream and handle error
+            // Add handlers for clip stream ready & complete
             DateTime startTime = DateTime.UtcNow;
-            clipData.clipStream.OnStreamReady += (clipStream) => HandleWebStreamReady(clipData, startTime, null);
-            clipData.clipStream.OnStreamComplete += (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
-            wsRequest.OnComplete += (r) =>
+            clipData.clipStream.OnStreamReady = (clipStream) => HandleWebStreamReady(clipData, startTime, null);
+            clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
+
+            // Set all web socket request callbacks
+            wsRequest.OnEventsReceived = clipData.Events.AppendJsonEvents;
+            wsRequest.OnSamplesReceived = clipData.clipStream.AddSamples;
+            wsRequest.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
+            wsRequest.OnComplete = (r) =>
             {
-                if (!string.IsNullOrEmpty(r.Error))
+                if (string.IsNullOrEmpty(r.Error))
                 {
-                    RaiseWebStreamCompletionCallbacks(clipData, startTime, r.Error);
+                    clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
                 }
                 else
                 {
-                    clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+                    RaiseWebStreamCompletionCallbacks(clipData, startTime, r.Error);
                 }
             };
 
@@ -281,11 +296,28 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         private void RequestStreamViaHttp(TTSClipData clipData)
         {
-            DateTime startTime = DateTime.UtcNow;
+            // Generate request & store it
             var request = GetHttpRequest(clipData);
             _webStreams[clipData.clipID] = request;
-            request.RequestStream(clipData.clipStream,
-                (clipStream, error) => HandleHttpWebStreamReady(clipStream, clipData, startTime, error));
+
+            // Add handlers for clip stream ready & complete
+            DateTime startTime = DateTime.UtcNow;
+            clipData.clipStream.OnStreamReady = (clipStream) => HandleWebStreamReady(clipData, startTime, null);
+            clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
+
+            // Perform stream
+            request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AppendJson,
+                (success, error) =>
+                {
+                    if (string.IsNullOrEmpty(error))
+                    {
+                        clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+                    }
+                    else
+                    {
+                        RaiseWebStreamCompletionCallbacks(clipData, startTime, error);
+                    }
+                });
         }
 
         /// <summary>
@@ -310,19 +342,9 @@ namespace Meta.WitAi.TTS.Integrations
             return false;
         }
 
-        private void HandleHttpWebStreamReady(IAudioClipStream clipStream, TTSClipData clipData, DateTime start, string error)
-        {
-            clipData.clipStream = clipStream;
-            if (clipData.clipStream != null)
-            {
-                clipData.clipStream.OnStreamComplete += (c) => RaiseWebStreamCompletionCallbacks(clipData, start, error);
-            }
-            HandleWebStreamReady(clipData, start, error);
-        }
-        private void HandleWebSocketStreamReady(IAudioClipStream clipStream, TTSClipData clipData, DateTime start, string error)
-        {
-            HandleWebStreamReady(clipData, start, error);
-        }
+        /// <summary>
+        /// Handles stream clip is ready for playback
+        /// </summary>
         private void HandleWebStreamReady(TTSClipData clipData, DateTime start, string error)
         {
             // Set ready duration
@@ -338,12 +360,6 @@ namespace Meta.WitAi.TTS.Integrations
             // Perform on ready callbacks
             WebStreamEvents?.OnStreamReady?.Invoke(clipData);
             WebRequestEvents?.OnRequestReady?.Invoke(clipData);
-
-            // If not streamed, complete
-            if (!clipData.queryStream)
-            {
-                RaiseWebStreamCompletionCallbacks(clipData, start, error);
-            }
         }
 
         /// <summary>

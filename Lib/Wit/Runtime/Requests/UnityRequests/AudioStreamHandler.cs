@@ -7,71 +7,90 @@
  */
 
 using System;
-using System.Collections;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
-using Meta.Voice.Audio;
 using Meta.Voice.Audio.Decoding;
 
 namespace Meta.WitAi.Requests
 {
     /// <summary>
-    /// A download handler for UnityWebRequest that decodes audio data, passes
-    /// the data into an iAudioClipStream & provides download state information.
+    /// A delegate to be called when audio samples are decoded from a web stream
+    /// </summary>
+    public delegate void AudioSampleDecodeDelegate(float[] samples);
+    /// <summary>
+    /// A delegate to be called when all audio samples have been decoded
+    /// </summary>
+    public delegate void AudioDecodeCompleteDelegate(string error);
+
+    /// <summary>
+    /// A download handler for UnityWebRequest that decodes audio data and
+    /// performs audio sample decoded callbacks.
     /// </summary>
     [Preserve]
-    public class AudioStreamHandler : DownloadHandlerScript, IVRequestStreamable
+    public class AudioStreamHandler : DownloadHandlerScript
     {
         /// <summary>
-        /// Clip used to cache audio data
-        /// </summary>
-        public IAudioClipStream ClipStream { get; private set; }
-
-        /// <summary>
-        /// Audio stream data is ready to be played
-        /// </summary>
-        public bool IsStreamReady { get; private set; }
-
-        /// <summary>
-        /// Audio stream data has completed reception
+        /// Whether both the request is complete and decoding is complete
         /// </summary>
         public bool IsComplete { get; private set; }
 
-        // The script responsible for decoding incoming data into audio
-        private IAudioDecoder _decoder;
-        // Current samples received
+        /// <summary>
+        /// The script being used to decode audio
+        /// </summary>
+        public IAudioDecoder AudioDecoder { get; }
+
+        /// <summary>
+        /// Callback for audio sample decode
+        /// </summary>
+        public AudioSampleDecodeDelegate OnSamplesDecoded { get; }
+
+        /// <summary>
+        /// Callback for decode completion
+        /// </summary>
+        public AudioDecodeCompleteDelegate OnComplete { get; }
+
+        // Whether or not the request is complete
+        private bool _requestComplete = false;
+        // Queue of decoding chunks
         private int _receivedChunks = 0;
         private int _decodedChunks = 0;
-        private bool _requestComplete = false;
-        // Error handling
+        // Used to track error responses in audio stream
         private int _errorDecoded;
         private byte[] _errorBytes;
 
-        // Generate
-        public AudioStreamHandler(IAudioClipStream newClipStream, IAudioDecoder newDecoder)
+        /// <summary>
+        /// The constructor that generates the decoder and handles routing callbacks
+        /// </summary>
+        /// <param name="audioDecoder">The audio type requested (Wav, MP3, etc.)</param>
+        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onComplete">Called when all audio samples have been successfully decoded.</param>
+        public AudioStreamHandler(IAudioDecoder audioDecoder,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioDecodeCompleteDelegate onComplete)
         {
-            // Apply parameters
-            ClipStream = newClipStream;
-            _decoder = newDecoder;
-            _decoder?.Setup(ClipStream.Channels, ClipStream.SampleRate);
+            // Set all methods immediately
+            AudioDecoder = audioDecoder;
+            OnSamplesDecoded = onSamplesDecoded;
+            OnComplete = onComplete;
 
             // Setup data
+            _requestComplete = false;
             _receivedChunks = 0;
             _decodedChunks = 0;
-            _requestComplete = false;
-            IsStreamReady = false;
-            IsComplete = false;
             _errorBytes = null;
             _errorDecoded = 0;
 
             // Begin stream
-            VLog.I($"Clip Stream - Began\nClip Stream: {ClipStream.GetType()}\nDecoder: {(newDecoder == null ? "NULL" : newDecoder.GetType().Name)}");
+            VLog.I(GetType().Name, $"Init\nDecoder: {AudioDecoder?.GetType().Name ?? "Null"}");
         }
 
-        // If size is provided, generate clip using size
+        /// <summary>
+        /// If size is provided, generate error buffer size
+        /// </summary>
+        /// <param name="contentLength"></param>
         [Preserve]
         protected override void ReceiveContentLengthHeader(ulong contentLength)
         {
@@ -81,121 +100,105 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // Assume text if less than min chunk size
-            int minChunkSize = Mathf.Max(100, Mathf.CeilToInt(0.1f * ClipStream.Channels * ClipStream.SampleRate));
+            // Assume error if less than 100ms of audio
+            int minChunkSize = Mathf.CeilToInt(0.1f * AudioDecoder.Channels * AudioDecoder.SampleRate);
             if (contentLength < (ulong)minChunkSize)
             {
-                _errorBytes = new byte[minChunkSize];
-                return;
-            }
-
-            // Apply size if possible
-            int totalSamples = _decoder.GetTotalSamples(contentLength);
-            if (totalSamples > 0)
-            {
-                VLog.I($"Clip Stream - Received Size\nTotal Samples: {totalSamples}\nContent Length: {contentLength}");
-                ClipStream.SetExpectedSamples(totalSamples);
+                _errorBytes = new byte[contentLength];
             }
         }
 
-        // Receive data
+        /// <summary>
+        /// Receive data and send it to be decoded asynchronously
+        /// </summary>
         [Preserve]
-        protected override bool ReceiveData(byte[] receiveData, int dataLength)
+        protected override bool ReceiveData(byte[] bufferData, int length)
         {
             // Exit if desired
-            if (!base.ReceiveData(receiveData, dataLength) || IsComplete)
+            if (!base.ReceiveData(bufferData, length) || IsComplete)
             {
                 return false;
             }
+            // Append error bytes
+            if (_errorBytes != null)
+            {
+                length = Mathf.Min(length, _errorBytes.Length - _errorDecoded);
+                Array.Copy(bufferData, 0, _errorBytes, _errorDecoded, length);
+                _errorDecoded += length;
+                return true;
+            }
 
-            // Decode data async
-            #pragma warning disable CS4014
-            DecodeDataAsync(receiveData, dataLength);
-            #pragma warning restore CS4014
+            // Handle decode async
+            _ = ReceiveDataAsync(bufferData, length);
 
             // Success
             return true;
         }
-        // Decode data asynchronously
-        private async Task DecodeDataAsync(byte[] receiveData, int dataLength)
-        {
-            // Append to error async
-            if (_errorBytes != null)
-            {
-                await Task.Run(() =>
-                {
-                    int errorLength = Mathf.Min(dataLength, _errorBytes.Length - _errorDecoded);
-                    Array.Copy(receiveData, 0, _errorBytes, _errorDecoded, errorLength);
-                    _errorDecoded += errorLength;
-                });
-                return;
-            }
 
-            // Increment receive chunk count
-            int current = _receivedChunks;
+        /// <summary>
+        /// Decodes data asynchronously
+        /// </summary>
+        private async Task ReceiveDataAsync(byte[] bufferData, int length)
+        {
+            // Get index & increment
+            int index = _receivedChunks;
             _receivedChunks++;
 
-            // If must decode in sequence, wait for previous to complete
-            bool sequentialDecode = _decoder.RequireSequentialDecode;
-            await TaskUtility.WaitWhile(() => sequentialDecode && _decodedChunks < current);
+            // Create new array & copy received data in
+            var receiveData = new byte[length];
+            Array.Copy(bufferData, receiveData, length);
 
-            // Perform decode async
-            float[] samples = null;
-            string newError = null;
-            await Task.Run(() =>
+            // Run on background thread
+            await Task.Yield();
+
+            // If requires sequential decode, wait for previous decodes to complete
+            if (AudioDecoder.RequireSequentialDecode)
             {
-                try
-                {
-                    samples = _decoder?.Decode(receiveData, 0 /*chunkStart*/, dataLength);
-                }
-                catch (Exception e)
-                {
-                    newError = e.ToString();
-                }
-            });
+                await TaskUtility.WaitWhile(() => index > _decodedChunks);
+            }
 
-            // Needs to wait for sequential prior to returning if not done previously
-            await TaskUtility.WaitWhile(() => !sequentialDecode && _decodedChunks < current);
+            // Decode samples
+            float[] samples = DecodeData(receiveData);
 
-            // Increment decoded chunk count
+            // If not already waited, do so now to ensure all previously decoded chunks have completed
+            if (!AudioDecoder.RequireSequentialDecode)
+            {
+                await TaskUtility.WaitWhile(() => index > _decodedChunks);
+            }
+
+            // Raise sample decoded callback
+            RaiseOnSamplesDecoded(samples);
+
+            // Increment decode count
             _decodedChunks++;
-
-            // Decode complete
-            OnDecodeComplete(samples, newError);
-        }
-        // Decode complete
-        private void OnDecodeComplete(float[] newSamples, string decodeError)
-        {
-            // Fail with error
-            if (!string.IsNullOrEmpty(decodeError))
-            {
-                VLog.W($"Decode Chunk Failed\n{decodeError}");
-                TryToFinalize();
-                return;
-            }
-            // Fail without samples
-            if (newSamples == null)
-            {
-                VLog.W($"Decode Chunk Failed\nNo samples returned");
-                TryToFinalize();
-                return;
-            }
-
-            // Add to clip
-            if (newSamples.Length > 0)
-            {
-                ClipStream.AddSamples(newSamples);
-            }
-
-            // Stream is now ready
-            if (!IsStreamReady && ClipStream.IsReady)
-            {
-                IsStreamReady = true;
-                VLog.I($"Clip Stream - Stream Ready");
-            }
 
             // Try to finalize
             TryToFinalize();
+        }
+        // Decode data
+        private float[] DecodeData(byte[] receiveData)
+        {
+            try
+            {
+                return AudioDecoder.Decode(receiveData, 0, receiveData.Length);
+            }
+            catch (Exception e)
+            {
+                VLog.E(GetType().Name, "Decode Failed", e);
+                return null;
+            }
+        }
+        // Return data
+        private void RaiseOnSamplesDecoded(float[] samples)
+        {
+            try
+            {
+                OnSamplesDecoded?.Invoke(samples);
+            }
+            catch (Exception e)
+            {
+                VLog.E(GetType().Name, "RaiseOnSamplesDecoded Failed", e);
+            }
         }
 
         // Used for error handling
@@ -212,10 +215,6 @@ namespace Meta.WitAi.Requests
             if (_errorBytes != null && _errorBytes.Length > 0)
             {
                 return (float) _errorDecoded / _errorBytes.Length;
-            }
-            if (ClipStream.TotalSamples > 0)
-            {
-                return (float) ClipStream.AddedSamples / ClipStream.TotalSamples;
             }
             return 0f;
         }
@@ -239,34 +238,31 @@ namespace Meta.WitAi.Requests
         private void TryToFinalize()
         {
             // Already finalized or not yet complete
-            if (IsComplete || !_requestComplete || _receivedChunks != _decodedChunks || ClipStream == null)
+            if (IsComplete || !_requestComplete || _receivedChunks != _decodedChunks)
             {
-                return;
-            }
-
-            // Wait a single frame prior to final completion to ensure OnReady is called first
-            if (!IsStreamReady)
-            {
-                IsStreamReady = true;
-                VLog.I($"Clip Stream - Stream Ready");
-                CoroutineUtility.StartCoroutine(FinalWait());
                 return;
             }
 
             // Stream complete
             IsComplete = true;
-            ClipStream.SetExpectedSamples(ClipStream.AddedSamples);
-            VLog.I($"Clip Stream - Complete\nLength: {ClipStream.Length:0.00} secs");
+            RaiseOnComplete();
 
             // Dispose
             Dispose();
         }
-
-        // A final wait callback that ensures onready is called first for non-streaming instances
-        private IEnumerator FinalWait()
+        // Return data
+        private void RaiseOnComplete()
         {
-            yield return null;
-            TryToFinalize();
+            try
+            {
+                var error = GetText();
+                OnComplete?.Invoke(error);
+                VLog.I(GetType().Name, $"Complete\nError: {error ?? "Null"}");
+            }
+            catch (Exception e)
+            {
+                VLog.E(GetType().Name, "RaiseOnComplete Failed", e);
+            }
         }
 
         // Destroy old clip
@@ -275,17 +271,8 @@ namespace Meta.WitAi.Requests
             // Already complete
             if (IsComplete)
             {
-                _decoder = null;
                 _errorBytes = null;
-                ClipStream = null;
                 return;
-            }
-
-            // Destroy clip
-            if (ClipStream != null)
-            {
-                ClipStream.Unload();
-                ClipStream = null;
             }
 
             // Dispose handler
@@ -293,7 +280,6 @@ namespace Meta.WitAi.Requests
 
             // Complete
             IsComplete = true;
-            VLog.I($"Clip Stream - Cleaned Up");
         }
     }
 }

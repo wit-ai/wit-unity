@@ -24,6 +24,16 @@ namespace Meta.Voice.Audio.Decoding
         private byte[] _overflow = new byte[2];
 
         /// <summary>
+        /// Once setup this should display the number of channels expected to be decoded
+        /// </summary>
+        public int Channels { get; private set; }
+
+        /// <summary>
+        /// Once setup this should display the number of samples per second expected
+        /// </summary>
+        public int SampleRate { get; private set; }
+
+        /// <summary>
         /// PCM can be decoded in any order prior to merging back in
         /// </summary>
         public bool RequireSequentialDecode => false;
@@ -36,6 +46,8 @@ namespace Meta.Voice.Audio.Decoding
         public void Setup(int channels, int sampleRate)
         {
             _hasOverflow = false;
+            Channels = channels;
+            SampleRate = sampleRate;
         }
 
         /// <summary>
