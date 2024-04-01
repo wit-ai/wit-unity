@@ -36,6 +36,27 @@ namespace Meta.WitAi.Requests
         protected override INLPRequestResponseDecoder<WitResponseNode> ResponseDecoder => _responseDecoder;
         private static WitResponseDecoder _responseDecoder = new WitResponseDecoder();
 
+        /// <summary>
+        /// Check for ignored error status codes & messages.
+        /// </summary>
+        /// <param name="errorStatusCode">The error status code if applicable</param>
+        /// <param name="errorMessage">The error to be returned</param>
+        protected override bool ShouldIgnoreError(int errorStatusCode, string errorMessage)
+        {
+            // Ignore if base allows
+            if (base.ShouldIgnoreError(errorStatusCode, errorMessage))
+            {
+                return true;
+            }
+            // Ignore no transcription responses
+            if (string.Equals(errorMessage, WitConstants.ERROR_NO_TRANSCRIPTION))
+            {
+                return true;
+            }
+            // Don't ignore
+            return false;
+        }
+
         #region Simulation
         protected override bool OnSimulateResponse()
         {

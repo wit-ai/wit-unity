@@ -8,9 +8,7 @@
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Text;
-using System.Threading;
 using Meta.WitAi;
 using Meta.WitAi.Data;
 using UnityEngine.Events;
@@ -425,8 +423,8 @@ namespace Meta.Voice
         /// Method for handling failure that takes an error status code or an error itself
         /// </summary>
         /// <param name="errorStatusCode">The error status code if applicable</param>
-        /// <param name="error">The error to be returned</param>
-        protected virtual void HandleFailure(int errorStatusCode, string error)
+        /// <param name="errorMessage">The error to be returned</param>
+        protected virtual void HandleFailure(int errorStatusCode, string errorMessage)
         {
             // Ignore if not in correct state
             if (!IsActive)
@@ -434,12 +432,34 @@ namespace Meta.Voice
                 LogW($"Request Failure Ignored\nReason: Request is already complete");
                 return;
             }
+            // Cancel immediately
+            if (string.Equals(WitConstants.CANCEL_ERROR, errorMessage))
+            {
+                Cancel();
+                return;
+            }
+            // Assume success
+            if (ShouldIgnoreError(errorStatusCode, errorMessage))
+            {
+                HandleSuccess();
+                return;
+            }
 
             // Apply results with error
-            Results.SetError(errorStatusCode, error);
+            Results.SetError(errorStatusCode, errorMessage);
 
             // Set failure state
             SetState(VoiceRequestState.Failed);
+        }
+
+        /// <summary>
+        /// Check for ignored error status codes & messages.
+        /// </summary>
+        /// <param name="errorStatusCode">The error status code if applicable</param>
+        /// <param name="errorMessage">The error to be returned</param>
+        protected virtual bool ShouldIgnoreError(int errorStatusCode, string errorMessage)
+        {
+            return string.IsNullOrEmpty(errorMessage);
         }
 
         /// <summary>

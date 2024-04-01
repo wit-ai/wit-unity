@@ -722,17 +722,7 @@ namespace Meta.WitAi
                 // Handle failure
                 if (statusCode != (int)HttpStatusCode.OK)
                 {
-                    // Handle error for empty response
-                    if (statusCode == (int)HttpStatusCode.BadRequest &&
-                        string.Equals(error, WitConstants.ERROR_NO_TRANSCRIPTION))
-                    {
-                        Cancel(WitConstants.ERROR_NO_TRANSCRIPTION);
-                    }
-                    // Otherwise error
-                    else
-                    {
-                        HandleFailure(statusCode, error);
-                    }
+                    HandleFailure(statusCode, error);
                 }
                 // No response
                 else if (ResponseData == null && !IsDecoding)
