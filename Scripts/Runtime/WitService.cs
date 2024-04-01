@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,13 +17,14 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
-    public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
+    public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider, IWitWebSocketRequestProvider
     {
         private float _lastMinVolumeLevelTime;
 
@@ -159,6 +161,17 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Get text input request based on incoming response node settings
+        /// </summary>
+        public IWitWebSocketRequest GenerateWebSocketRequest(string requestId, WitResponseNode responseNode)
+        {
+            var options = new WitRequestOptions(requestId);
+            var voiceRequest = new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, responseNode, options);
+            SetupRequest(voiceRequest);
+            return voiceRequest.WebSocketRequest;
+        }
+
+        /// <summary>
         /// Get text input request based on settings
         /// </summary>
         private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
@@ -201,6 +214,7 @@ namespace Meta.WitAi
             {
                 _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
                 _webSocketAdapter.SetClientProvider(RuntimeConfiguration.witConfiguration);
+                _webSocketAdapter.SetRequestProvider(this);
             }
         }
         // Add mic delegates
@@ -385,17 +399,19 @@ namespace Meta.WitAi
         /// <param name="recordingRequest"></param>
         protected void SetupRequest(VoiceServiceRequest newRequest)
         {
-            if (_recordingRequest == newRequest)
-            {
-                return;
-            }
-
-            // Set request & events
-            _recordingRequest = newRequest;
-
             // Setup audio input streams
-            if (_recordingRequest.Options.InputType == NLPRequestInputType.Audio)
+            if (newRequest.Options.InputType == NLPRequestInputType.Audio)
             {
+                // Only allow one at a time
+                if (_recordingRequest == newRequest)
+                {
+                    return;
+                }
+
+                // Apply recording request
+                _recordingRequest = newRequest;
+
+                // Setup input ready callbacks
                 if (_recordingRequest is WitRequest wr)
                 {
                     wr.onInputStreamReady += r => OnWitReadyForData();
@@ -408,14 +424,24 @@ namespace Meta.WitAi
                     wsr.OnInputStreamReady += () => OnWitReadyForData();
                     wsr.AudioEncoding = _buffer.AudioEncoding;
                 }
+
+                // Only used while recording
+                _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
+            }
+            // Add to transmit list
+            else
+            {
+                _transmitRequests.Add(newRequest);
             }
 
-            // Add events
-            _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
-            _recordingRequest.Events.OnCancel.AddListener(HandleResult);
-            _recordingRequest.Events.OnFailed.AddListener(HandleResult);
-            _recordingRequest.Events.OnSuccess.AddListener(HandleResult);
-            _recordingRequest.Events.OnComplete.AddListener(HandleComplete);
+            // Add additional events
+            newRequest.Events.OnCancel.AddListener(HandleResult);
+            newRequest.Events.OnFailed.AddListener(HandleResult);
+            newRequest.Events.OnSuccess.AddListener(HandleResult);
+            newRequest.Events.OnComplete.AddListener(HandleComplete);
+
+            // Consider initialized
+            VoiceEvents.OnRequestInitialized?.Invoke(newRequest);
         }
         /// <summary>
         /// Execute a wit request immediately
@@ -459,11 +485,7 @@ namespace Meta.WitAi
 
             // Generate request
             var request = GetTextRequest(requestOptions, requestEvents);
-            request.Events.OnCancel.AddListener(HandleResult);
-            request.Events.OnFailed.AddListener(HandleResult);
-            request.Events.OnSuccess.AddListener(HandleResult);
-            request.Events.OnComplete.AddListener(HandleComplete);
-            _transmitRequests.Add(request);
+            SetupRequest(request);
 
             // Send & return
             request.Send();
@@ -809,7 +831,10 @@ namespace Meta.WitAi
         private void HandleComplete(VoiceServiceRequest request)
         {
             // Remove all event listeners
-            request.Events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
+            if (request.InputType == NLPRequestInputType.Audio)
+            {
+                request.Events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
+            }
             request.Events.OnCancel.RemoveListener(HandleResult);
             request.Events.OnFailed.RemoveListener(HandleResult);
             request.Events.OnSuccess.RemoveListener(HandleResult);

@@ -296,7 +296,7 @@ namespace Meta.Voice
             string transcription = ResponseDecoder?.GetResponseTranscription(responseData);
             bool hasTranscription = ResponseDecoder != null && ResponseDecoder.GetResponseHasTranscription(responseData);
             bool isTranscriptionFull = ResponseDecoder != null && ResponseDecoder.GetResponseIsTranscriptionFull(responseData);
-            if (InputType == NLPRequestInputType.Audio && hasChanged && hasTranscription)
+            if (hasChanged && hasTranscription)
             {
                 ApplyTranscription(transcription, isTranscriptionFull);
             }

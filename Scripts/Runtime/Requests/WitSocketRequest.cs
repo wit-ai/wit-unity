@@ -58,15 +58,35 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override bool DecodeRawResponses => false;
 
+        /// <summary>
+        /// Web socket request being performed
+        /// </summary>
+        public WitWebSocketMessageRequest WebSocketRequest { get; private set; }
+
         // Lock to ensure initialize callbacks are not performed until all fields are setup
         private bool _initialized = false;
         // Web socket request performing voice service request
         private WitWebSocketMessageRequest _request;
 
         /// <summary>
+        /// Constructor for audio requests using an audio buffer
+        /// </summary>
+        /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
+        /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
+        /// <param name="options">Options used for request parameters</param>
+        /// <param name="events">Event callbacks used for this request</param>
+        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer, WitRequestOptions options = null,
+            VoiceServiceRequestEvents events = null) : base(NLPRequestInputType.Audio, options, events)
+        {
+            Init(configuration, webSocketAdapter, audioBuffer);
+        }
+
+        /// <summary>
         /// Constructor for a text request
         /// </summary>
         /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
         /// <param name="options">Options used for request parameters</param>
         /// <param name="events">Event callbacks used for this request</param>
         public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, WitRequestOptions options = null,
@@ -76,16 +96,16 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
-        /// Constructor for audio requests using an audio buffer
+        /// Constructor for json response turned into message response
         /// </summary>
         /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
-        /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
-        /// <param name="options">Options used for request parameters</param>
-        /// <param name="events">Event callbacks used for this request</param>
-        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer, WitRequestOptions options = null,
-            VoiceServiceRequestEvents events = null) : base(NLPRequestInputType.Audio, options, events)
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
+        /// <param name="jsonData">Initial response from server</param>
+        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, WitResponseNode jsonData,
+            WitRequestOptions options, VoiceServiceRequestEvents events = null
+            ) : base(NLPRequestInputType.Text, options, events)
         {
-            Init(configuration, webSocketAdapter, audioBuffer);
+            Init(configuration, webSocketAdapter, null);
         }
 
         /// <summary>
@@ -140,28 +160,36 @@ namespace Meta.WitAi.Requests
             if (Options.InputType == NLPRequestInputType.Text)
             {
                 Options.QueryParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = Options.Text;
-                _request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                SetWebSocketRequest(request);
             }
             // Generate audio request
             else if (Options.InputType == NLPRequestInputType.Audio)
             {
                 Options.QueryParams[WitConstants.WIT_SOCKET_CONTENT_KEY] = AudioEncoding.ToString();
-                _request = new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                var request = new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                SetWebSocketRequest(request);
             }
 
             // Request generation failed
-            if (_request == null)
+            if (WebSocketRequest == null)
             {
                 return;
             }
 
-            // Apply callback handlers
-            _request.OnFirstResponse += HandleSocketFirstResponse;
-            _request.OnDecodedResponse += HandleSocketDecodedResponse;
-            _request.OnComplete += HandleSocketRequestCompletion;
-
             // Send request
-            WebSocketAdapter.SendRequest(_request);
+            WebSocketAdapter.SendRequest(WebSocketRequest);
+        }
+
+        /// <summary>
+        /// Sets web socket request & applies all callback delegates
+        /// </summary>
+        private void SetWebSocketRequest(WitWebSocketMessageRequest request)
+        {
+            WebSocketRequest = request;
+            WebSocketRequest.OnFirstResponse += HandleSocketFirstResponse;
+            WebSocketRequest.OnDecodedResponse += HandleSocketDecodedResponse;
+            WebSocketRequest.OnComplete += HandleSocketRequestCompletion;
         }
 
         /// <summary>
@@ -218,9 +246,9 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override void HandleCancel()
         {
-            if (_request != null)
+            if (WebSocketRequest != null)
             {
-                _request.Cancel();
+                WebSocketRequest.Cancel();
             }
         }
 
@@ -259,7 +287,7 @@ namespace Meta.WitAi.Requests
             {
                 return;
             }
-            if (_request is WitWebSocketSpeechRequest speechRequest)
+            if (WebSocketRequest is WitWebSocketSpeechRequest speechRequest)
             {
                 speechRequest.SendAudioData(buffer, offset, length);
             }

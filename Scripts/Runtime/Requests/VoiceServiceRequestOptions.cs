@@ -42,26 +42,18 @@ namespace Meta.WitAi.Requests
         public float AudioThreshold { get; set; }
 
         /// <summary>
-        /// Setup with a randomly generated guid
-        /// </summary>
-        public VoiceServiceRequestOptions(params QueryParam[] newParams)
-        {
-            RequestId = GetUniqueRequestId();
-            QueryParams = ConvertQueryParams(newParams);
-        }
-        /// <summary>
         /// Setup with a specific guid
         /// </summary>
         public VoiceServiceRequestOptions(string newRequestId, params QueryParam[] newParams)
         {
-            RequestId = string.IsNullOrEmpty(newRequestId) ? GetUniqueRequestId() : newRequestId;
+            RequestId = string.IsNullOrEmpty(newRequestId) ? WitConstants.GetUniqueId() : newRequestId;
             QueryParams = ConvertQueryParams(newParams);
         }
-
         /// <summary>
-        /// Generates a random guid
+        /// Setup with a randomly generated guid
         /// </summary>
-        protected virtual string GetUniqueRequestId() => WitConstants.GetUniqueId();
+        public VoiceServiceRequestOptions(params QueryParam[] newParams) : this(null, newParams){}
+
         /// <summary>
         /// Generates a dictionary of key/value strings from a query param array
         /// </summary>

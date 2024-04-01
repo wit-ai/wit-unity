@@ -42,6 +42,16 @@ namespace Meta.WitAi.Configuration
         /// </summary>
         public Action<WitRequest> onResponse;
 
+        /// <summary>
+        /// Setup with a randomly generated guid
+        /// </summary>
+        public WitRequestOptions(params QueryParam[] newParams) : base(newParams) {}
+
+        /// <summary>
+        /// Setup with a specific guid
+        /// </summary>
+        public WitRequestOptions(string newRequestId, params QueryParam[] newParams) : base(newRequestId, newParams) {}
+
         // Get json string. Used to get the payload for PI.
         // PI will reparse these parameters and construct it's own request.
         public string ToJsonString()

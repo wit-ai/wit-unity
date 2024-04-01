@@ -21,13 +21,18 @@ namespace Meta.Voice.Net.WebSockets.Requests
     public class WitWebSocketMessageRequest : WitWebSocketJsonRequest
     {
         /// <summary>
-        /// Callback one or more times when raw string has been received
-        /// </summary>
-        public event Action<string> OnRawResponse;
-        /// <summary>
         /// Callback one or more times when a chunk of json is decoded
         /// </summary>
         public event Action<WitResponseNode> OnDecodedResponse;
+
+        /// <summary>
+        /// Constructor for request that generates a WitResponseClass to be posted
+        /// </summary>
+        /// <param name="externalPostData">The data used exernally for the request</param>
+        /// <param name="requestId">A unique id to be used for the request</param>
+        public WitWebSocketMessageRequest(WitResponseNode externalPostData,
+            string requestId)
+            : base(externalPostData, requestId) {}
 
         /// <summary>
         /// Constructor for request that generates a WitResponseClass to be posted
