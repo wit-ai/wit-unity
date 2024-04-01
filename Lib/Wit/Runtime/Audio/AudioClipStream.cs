@@ -60,6 +60,11 @@ namespace Meta.Voice.Audio
         public float StreamReadyLength { get; private set; }
 
         /// <summary>
+        /// The callback delegate for stream samples added.
+        /// </summary>
+        public AudioClipStreamSampleDelegate OnAddSamples { get; set; }
+
+        /// <summary>
         /// The callback delegate for stream completion once SetContentLength is called & all samples
         /// have been added via the AddSamples(float[] samples) method.
         /// </summary>
@@ -102,9 +107,22 @@ namespace Meta.Voice.Audio
         /// Adds an array of samples to the current stream
         /// </summary>
         /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        public virtual void AddSamples(float[] samples)
+        public void AddSamples(float[] samples) => AddSamples(samples, 0, samples.Length);
+
+        /// <summary>
+        /// Adds an array of samples to the current stream
+        /// </summary>
+        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
+        /// <param name="offset">The index of samples to begin adding from</param>
+        /// <param name="length">The total number of samples that should be appended</param>
+        public virtual void AddSamples(float[] samples, int offset, int length)
         {
-            AddedSamples += samples.Length;
+            if (length <= 0)
+            {
+                return;
+            }
+            AddedSamples += length;
+            OnAddSamples?.Invoke(samples, offset, length);
             UpdateState();
         }
 

@@ -14,6 +14,11 @@ namespace Meta.Voice.Audio
     public delegate void AudioClipStreamDelegate(IAudioClipStream clipStream);
 
     /// <summary>
+    /// A delegate for events that provide an IAudioClipStream as a parameter
+    /// </summary>
+    public delegate void AudioClipStreamSampleDelegate(float[] samples, int offset, int length);
+
+    /// <summary>
     /// An interface to be used for audio clip streams.  Samples added to this stream
     /// are always decoded to 0f - 1f.
     /// </summary>
@@ -66,6 +71,11 @@ namespace Meta.Voice.Audio
         float StreamReadyLength { get; }
 
         /// <summary>
+        /// The callback delegate for stream samples added.
+        /// </summary>
+        AudioClipStreamSampleDelegate OnAddSamples { get; set; }
+
+        /// <summary>
         /// The callback delegate for stream ready for playback.  This can be set externally but should only be called within
         /// the clip stream itself.
         /// </summary>
@@ -86,10 +96,18 @@ namespace Meta.Voice.Audio
         AudioClipStreamDelegate OnStreamComplete { get; set; }
 
         /// <summary>
-        /// Adds an array of samples to the current stream
+        /// Adds an array of samples to the current stream in its entirety.
+        /// </summary>
+        /// <param name="samples">A list of decoded floats from 0f to 1f that will be used in their entirety</param>
+        void AddSamples(float[] samples);
+
+        /// <summary>
+        /// Adds an array of samples to the current stream using a specified offset & length.
         /// </summary>
         /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        void AddSamples(float[] samples);
+        /// <param name="offset">The index of samples to begin adding from</param>
+        /// <param name="length">The total number of samples that should be added</param>
+        void AddSamples(float[] samples, int offset, int length);
 
         /// <summary>
         /// Calls on occasions where the total samples are known.  Either prior to a disk load or

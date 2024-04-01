@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Meta.WitAi;
@@ -63,7 +64,9 @@ namespace Meta.Voice.Audio
         /// Adds an array of samples to the current stream
         /// </summary>
         /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        public override void AddSamples(float[] newSamples)
+        /// <param name="offset">The index of samples to begin adding from</param>
+        /// <param name="length">The total number of samples that should be appended</param>
+        public override void AddSamples(float[] samples, int offset, int length)
         {
             // Cannot add samples to non-streamable clip
             if (!_streamable)
@@ -76,25 +79,33 @@ namespace Meta.Voice.Audio
             if (Clip == null)
             {
                 int newMaxSamples = Mathf.Max(_chunkSize,
-                    AddedSamples + newSamples.Length);
+                    AddedSamples + length);
                 UpdateClip(newMaxSamples);
             }
             // Generate larger clip if needed
-            else if (AddedSamples + newSamples.Length > ExpectedSamples)
+            else if (AddedSamples + length > ExpectedSamples)
             {
                 int newMaxSamples = Mathf.Max(TotalSamples + _chunkSize,
-                    AddedSamples + newSamples.Length);
+                    AddedSamples + length);
                 UpdateClip(newMaxSamples);
             }
 
             // Append to audio clip
-            if (newSamples.Length > 0)
+            if (length > 0)
             {
-                Clip.SetData(newSamples, AddedSamples);
+                // Get subsection of array
+                if (length != samples.Length || offset > 0)
+                {
+                    var oldSamples = samples;
+                    samples = new float[length];
+                    Array.Copy(oldSamples, offset, samples, 0, length);
+                }
+                // Set samples
+                Clip.SetData(samples, AddedSamples);
             }
 
             // Increment AddedSamples & check for completion
-            base.AddSamples(newSamples);
+            base.AddSamples(samples, offset, length);
         }
 
         /// <summary>
