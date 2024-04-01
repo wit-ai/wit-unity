@@ -96,6 +96,9 @@ namespace Meta.Voice.Net.WebSockets
         // Script used for decoding server responses
         private WitChunkConverter _decoder = new WitChunkConverter();
 
+        // Request providers grouped by topic
+        private Dictionary<string, IWitWebSocketRequestProvider> _requestProviders = new Dictionary<string, IWitWebSocketRequestProvider>();
+
         // Coroutine utility dispatcher
         private CoroutineUtility.CoroutinePerformer _dispatcher;
 
@@ -688,6 +691,33 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
+        /// Adds a request provider for the specified topic
+        /// </summary>
+        /// <param name="topicId">Unique topic identifier</param>
+        /// <param name="requestProvider">An interface that provides</param>
+        public void AddRequestProvider(string topicId, IWitWebSocketRequestProvider requestProvider)
+        {
+            if (string.IsNullOrEmpty(topicId) || requestProvider == null)
+            {
+                return;
+            }
+            _requestProviders[topicId] = requestProvider;
+        }
+
+        /// <summary>
+        /// Removes the request provider for the specified topic
+        /// </summary>
+        /// <param name="topicId">Unique topic identifier</param>
+        public void RemoveRequestProvider(string topicId)
+        {
+            if (string.IsNullOrEmpty(topicId) || !_requestProviders.ContainsKey(topicId))
+            {
+                return;
+            }
+            _requestProviders.Remove(topicId);
+        }
+
+        /// <summary>
         /// Attempts to generate a request to handle a specific json response
         /// </summary>
         /// <param name="requestId">The request id that should be handling the response.</param>
@@ -697,11 +727,27 @@ namespace Meta.Voice.Net.WebSockets
             // Ignore no longer tracked requests
             if (_untrackedRequests.Contains(requestId))
             {
+                VLog.I(GetType().Name, $"Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
                 return null;
             }
-            // TODO: Use response params to determine request & request callback handler
-            VLog.E(GetType().Name, $"Generate Request - Failed\nReason: No information in json can be used to generate request handler\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
-            return null;
+            // Get topic id if possible
+            var topicId = jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY];
+            if (string.IsNullOrEmpty(topicId))
+            {
+                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: No topic id provided in response\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                return null;
+            }
+            // Get provider if possible
+            if (!_requestProviders.TryGetValue(topicId, out var provider))
+            {
+                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: No request provider for specified topic\nTopic Id: {topicId}\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                return null;
+            }
+            // Generate request for specified response data
+            VLog.I(GetType().Name, $"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
+            var request = provider.GenerateWebSocketRequest(requestId, jsonData);
+            TrackRequest(request);
+            return request;
         }
         #endregion REQUESTS
     }

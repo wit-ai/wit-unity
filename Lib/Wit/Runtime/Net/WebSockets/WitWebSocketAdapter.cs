@@ -32,6 +32,13 @@ namespace Meta.Voice.Net.WebSockets
         public WitWebSocketClient WebSocketClient => WebSocketProvider?.WebSocketClient;
 
         /// <summary>
+        /// The script used to generate requests when external responses are received
+        /// </summary>
+        public IWitWebSocketRequestProvider RequestProvider => _requestProvider as IWitWebSocketRequestProvider;
+        [ObjectType(typeof(IWitWebSocketRequestProvider))] [SerializeField]
+        private Object _requestProvider;
+
+        /// <summary>
         /// The topic to be used for publishing/subscribing to the current client provider
         /// </summary>
         public string TopicId => _topicId;
@@ -61,7 +68,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Safely sets the new web socket client provider if possible
         /// </summary>
-        public void SetClientProvider(IWitWebSocketClientProvider newProvider)
+        public void SetClientProvider(IWitWebSocketClientProvider clientProvider)
         {
             // Disconnect previous web socket client if active
             if (gameObject.activeInHierarchy)
@@ -69,11 +76,8 @@ namespace Meta.Voice.Net.WebSockets
                 Disconnect();
             }
 
-            // Apply new provider if possible
-            if (newProvider is Object obj)
-            {
-                _webSocketProvider = obj;
-            }
+            // Apply new providers if possible
+            _webSocketProvider = clientProvider as Object;
 
             // Connect new web socket client if active
             if (gameObject.activeInHierarchy)
@@ -97,7 +101,7 @@ namespace Meta.Voice.Net.WebSockets
             WebSocketClient.Connect();
 
             // Subscribe to current topic
-            Subscribe();
+            SetTopicId(TopicId);
         }
 
         /// <summary>
@@ -181,6 +185,22 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
+        /// Sets the current request provider
+        /// </summary>
+        public void SetRequestProvider(IWitWebSocketRequestProvider requestProvider)
+        {
+            // Set current request provider
+            _requestProvider = requestProvider as Object;
+
+            // Apply request provider to web socket client if possible
+            var client = WebSocketClient;
+            if (RequestProvider != null && client != null && !string.IsNullOrEmpty(_subscribedTopicId))
+            {
+                WebSocketClient.AddRequestProvider(_subscribedTopicId, RequestProvider);
+            }
+        }
+
+        /// <summary>
         /// Begin subscribing
         /// </summary>
         private void Subscribe()
@@ -200,6 +220,12 @@ namespace Meta.Voice.Net.WebSockets
 
             // Set subscribed topic
             _subscribedTopicId = topicId;
+
+            // Add request provider if it is set
+            if (RequestProvider != null)
+            {
+                WebSocketClient.AddRequestProvider(topicId, RequestProvider);
+            }
 
             // Get & send subscribe request
             VLog.I(GetType().Name, $"Subscribe\nTopic Id: {topicId}");
@@ -221,6 +247,9 @@ namespace Meta.Voice.Net.WebSockets
 
             // Remove subscribed topic
             _subscribedTopicId = null;
+
+            // Remove request provider
+            WebSocketClient.RemoveRequestProvider(topicId);
 
             // Get & send unsubscribe request
             VLog.I(GetType().Name, $"Unsubscribe\nTopic Id: {topicId}");
