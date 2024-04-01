@@ -22,6 +22,10 @@ namespace Meta.WitAi.Configuration
         [SerializeField]
         public WitConfiguration witConfiguration;
 
+        [Tooltip("Whether to use web sockets for web requests.  If false, HTTP requests will be used instead.")]
+        [SerializeField]
+        public bool useWebSockets = false;
+
         [Header("Keepalive")]
         [Tooltip("The minimum volume from the mic needed to keep the activation alive")]
         [SerializeField]

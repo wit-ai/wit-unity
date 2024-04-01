@@ -111,7 +111,13 @@ namespace Meta.WitAi
             }
         }
 
-        private static WitRequestOptions GetSetupOptions(WitRequestOptions newOptions,
+        /// <summary>
+        /// Appends additional options to a wit request prior to submission.
+        /// </summary>
+        /// <param name="newOptions">The base options to be used if initialized elsewhere.</param>
+        /// <param name="additionalDynamicEntities">Used to append dynamic entities
+        /// to request options prior to request.</param>
+        public static WitRequestOptions GetSetupOptions(WitRequestOptions newOptions,
             IDynamicEntitiesProvider[] additionalDynamicEntities)
         {
             // Generate options exist

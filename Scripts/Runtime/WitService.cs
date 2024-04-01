@@ -10,6 +10,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Meta.Voice;
+using Meta.Voice.Net.WebSockets;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
@@ -24,7 +25,13 @@ namespace Meta.WitAi
     public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
         private float _lastMinVolumeLevelTime;
-        private WitRequest _recordingRequest;
+
+        // Web socket pubsub handler
+        private WitWebSocketAdapter _webSocketAdapter;
+
+        // Request options
+        private IWitRequestProvider _witRequestProvider;
+        private VoiceServiceRequest _recordingRequest;
 
         private bool _isSoundWakeActive;
         private RingBuffer<byte>.Marker _lastSampleMarker;
@@ -37,7 +44,6 @@ namespace Meta.WitAi
         private IWitRuntimeConfigProvider _runtimeConfigProvider;
         private ITranscriptionProvider _activeTranscriptionProvider;
         private Coroutine _timeLimitCoroutine;
-        private IWitRequestProvider _witRequestProvider;
 
         // Transcription based endpointing
         private bool _receivedTranscription;
@@ -152,12 +158,44 @@ namespace Meta.WitAi
                    !string.IsNullOrEmpty(RuntimeConfiguration.witConfiguration.GetClientAccessToken());
         }
 
+        /// <summary>
+        /// Get text input request based on settings
+        /// </summary>
+        private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
+        {
+            return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+        }
+
+        /// <summary>
+        /// Get audio input request based on settings
+        /// </summary>
+        private VoiceServiceRequest GetAudioRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
+        {
+            if (RuntimeConfiguration.useWebSockets)
+            {
+                var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, requestEvents);
+            }
+            if (WitRequestProvider != null)
+            {
+                return WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions,
+                    requestEvents, _dynamicEntityProviders);
+            }
+            return RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+        }
+
         #region LIFECYCLE
         // Find transcription provider & Mic
         protected void Awake()
         {
             _dataReadyHandlers = GetComponents<IWitByteDataReadyHandler>();
             _dataSentHandlers = GetComponents<IWitByteDataSentHandler>();
+            _runtimeConfigProvider = GetComponent<IWitRuntimeConfigProvider>();
+            if (RuntimeConfiguration != null && RuntimeConfiguration.useWebSockets)
+            {
+                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
+                _webSocketAdapter.SetClientProvider(RuntimeConfiguration.witConfiguration);
+            }
         }
         // Add mic delegates
         protected void OnEnable()
@@ -268,8 +306,7 @@ namespace Meta.WitAi
             _receivedTranscription = false;
 
             // Generate request
-            WitRequest request = WitRequestProvider != null ? WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions, requestEvents, _dynamicEntityProviders)
-                : RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+            var request = GetAudioRequest(requestOptions, requestEvents);
             SetupRequest(request);
 
             // Start recording if possible
@@ -283,7 +320,7 @@ namespace Meta.WitAi
                 }
                 else
                 {
-                    _recordingRequest.ActivateAudio();
+                    request.ActivateAudio();
                 }
             }
 
@@ -340,7 +377,7 @@ namespace Meta.WitAi
         /// Setup recording request
         /// </summary>
         /// <param name="recordingRequest"></param>
-        protected void SetupRequest(WitRequest newRequest)
+        protected void SetupRequest(VoiceServiceRequest newRequest)
         {
             if (_recordingRequest == newRequest)
             {
@@ -350,8 +387,22 @@ namespace Meta.WitAi
             // Set request & events
             _recordingRequest = newRequest;
 
-            // Add input stream ready check
-            _recordingRequest.onInputStreamReady += r => OnWitReadyForData();
+            // Setup audio input streams
+            if (_recordingRequest.Options.InputType == NLPRequestInputType.Audio)
+            {
+                if (_recordingRequest is WitRequest wr)
+                {
+                    wr.onInputStreamReady += r => OnWitReadyForData();
+                    wr.AudioEncoding = _buffer.AudioEncoding;
+                    wr.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
+                        wr.AudioEncoding);
+                }
+                else if (_recordingRequest is WitSocketRequest wsr)
+                {
+                    wsr.OnInputStreamReady += () => OnWitReadyForData();
+                    wsr.AudioEncoding = _buffer.AudioEncoding;
+                }
+            }
 
             // Add events
             _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
@@ -364,16 +415,13 @@ namespace Meta.WitAi
         /// Execute a wit request immediately
         /// </summary>
         /// <param name="recordingRequest"></param>
-        public void ExecuteRequest(WitRequest newRequest)
+        public void ExecuteRequest(VoiceServiceRequest newRequest)
         {
             if (newRequest == null || newRequest.State != VoiceRequestState.Initialized)
             {
                 return;
             }
             SetupRequest(newRequest);
-            newRequest.AudioEncoding = _buffer.AudioEncoding;
-            newRequest.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
-                newRequest.AudioEncoding);
             #pragma warning disable CS0618
             _timeLimitCoroutine = StartCoroutine(DeactivateDueToTimeLimit());
             newRequest.Send();
@@ -404,7 +452,7 @@ namespace Meta.WitAi
             requestOptions.Text = text;
 
             // Generate request
-            VoiceServiceRequest request = Configuration.CreateMessageRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+            var request = GetTextRequest(requestOptions, requestEvents);
             request.Events.OnCancel.AddListener(HandleResult);
             request.Events.OnFailed.AddListener(HandleResult);
             request.Events.OnSuccess.AddListener(HandleResult);
@@ -499,14 +547,11 @@ namespace Meta.WitAi
                 _minSampleByteCount = _lastSampleMarker.RingBuffer.Capacity;
             }
 
-            if (_recordingRequest.State == VoiceRequestState.Transmitting && _recordingRequest.IsInputStreamReady && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
+            if (_recordingRequest.State == VoiceRequestState.Transmitting && IsInputStreamReady() && _lastSampleMarker.AvailableByteCount >= _minSampleByteCount)
             {
                 // Flush the marker since the last read and send it to Wit
                 _lastSampleMarker.ReadIntoWriters(
-                    (buffer, offset, length) =>
-                    {
-                        _recordingRequest.Write(buffer, offset, length);
-                    },
+                    WriteAudio,
                     (buffer, offset, length) => VoiceEvents?.OnByteDataSent?.Invoke(buffer, offset, length),
                     (buffer, offset, length) =>
                     {
@@ -544,6 +589,31 @@ namespace Meta.WitAi
                 _lastSampleMarker.Offset(RuntimeConfiguration.sampleLengthInMs * -2);
             }
         }
+        // Whether or not the current recording stream is ready for audio data
+        private bool IsInputStreamReady()
+        {
+            if (_recordingRequest is WitRequest wr)
+            {
+                return wr.IsInputStreamReady;
+            }
+            if (_recordingRequest is WitSocketRequest wsr)
+            {
+                return wsr.IsInputStreamReady;
+            }
+            return false;
+        }
+        // Write audio from audio buffer to the specified request
+        private void WriteAudio(byte[] buffer, int offset, int length)
+        {
+            if (_recordingRequest is WitRequest wr)
+            {
+                wr.Write(buffer, offset, length);
+            }
+            if (_recordingRequest is WitSocketRequest wsr)
+            {
+                wsr.SendAudioData(buffer, offset, length);
+            }
+        }
         // Time tracking for multi-threaded callbacks
         private void Update()
         {
@@ -569,18 +639,27 @@ namespace Meta.WitAi
                 OnMicLevelChanged(level);
             }
         }
-        // AudioDurationTracker
+
+        /// <summary>
+        /// Finalizes audio duration tracker if possible
+        /// </summary>
         private void FinalizeAudioDurationTracker()
         {
-            AudioDurationTracker audioDurationTracker = _recordingRequest?.audioDurationTracker;
-            if (audioDurationTracker == null)
+            // Ignore without recording request
+            if (null == _recordingRequest)
             {
                 return;
             }
 
-            if (null == _recordingRequest)
+            // Get audio duration tracker if possible
+            // TODO: Fix audio duration tracker to work with multiple request types (T184166691)
+            AudioDurationTracker audioDurationTracker = null;
+            if (_recordingRequest is WitRequest witRequest)
             {
-                VLog.W($"Missing request for recording.");
+                audioDurationTracker = witRequest.audioDurationTracker;
+            }
+            if (audioDurationTracker == null)
+            {
                 return;
             }
 
@@ -659,7 +738,7 @@ namespace Meta.WitAi
             _activeTranscriptionProvider?.Deactivate();
 
             // Deactivate recording request
-            WitRequest previousRequest = _recordingRequest;
+            var previousRequest = _recordingRequest;
             _recordingRequest = null;
             DeactivateWitRequest(previousRequest, abort);
 
