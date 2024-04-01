@@ -296,8 +296,9 @@ namespace Meta.WitAi
             }
         }
 
-        protected virtual void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             if (UseConduit)
             {
                 _ = InitializeConduit();
@@ -323,8 +324,9 @@ namespace Meta.WitAi
             }
         }
 
-        protected virtual void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             TranscriptionProvider?.OnFullTranscription.RemoveListener(OnFinalTranscription);
             VoiceEvents.OnResponse.RemoveListener(HandleResponse);
         }

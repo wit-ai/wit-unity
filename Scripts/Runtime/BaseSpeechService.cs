@@ -108,6 +108,21 @@ namespace Meta.WitAi
         public virtual bool CanSend() => string.IsNullOrEmpty(GetSendError());
 
         /// <summary>
+        /// On enable, begin watching for request initialized callbacks
+        /// </summary>
+        protected virtual void OnEnable()
+        {
+            GetSpeechEvents()?.OnRequestInitialized.AddListener(OnRequestInit);
+        }
+        /// <summary>
+        /// On enable, stop watching for request initialized callbacks
+        /// </summary>
+        protected virtual void OnDisable()
+        {
+            GetSpeechEvents()?.OnRequestInitialized.RemoveListener(OnRequestInit);
+        }
+
+        /// <summary>
         /// Deactivate all requests
         /// </summary>
         public virtual void Deactivate()
@@ -161,14 +176,10 @@ namespace Meta.WitAi
                 events = new VoiceServiceRequestEvents();
             }
 
-            // Wrap if desired
+            // Call option setup if desired
             if (ShouldWrap)
             {
-                // Call option setup
                 GetSpeechEvents().OnRequestOptionSetup?.Invoke(options);
-
-                // Wait for init
-                SetEventListener(events?.OnInit, OnRequestInit, true);
             }
         }
 
@@ -211,7 +222,10 @@ namespace Meta.WitAi
             // Call init & add delegates
             if (ShouldWrap)
             {
-                OnRequestInit(request);
+                // Call request initialized method
+                GetSpeechEvents()?.OnRequestInitialized?.Invoke(request);
+
+                // Send if desired
                 if (request.State == VoiceRequestState.Transmitting)
                 {
                     OnRequestSend(request);
@@ -257,10 +271,9 @@ namespace Meta.WitAi
 
             // Add to request list
             Requests.Add(request);
+            Log(request, "Request Initialized");
 
             // Now initialized
-            Log(request, "Request Initialized");
-            GetSpeechEvents()?.OnRequestInitialized?.Invoke(request);
 #pragma warning disable CS0618
             GetSpeechEvents()?.OnRequestCreated?.Invoke(request is WitRequest witRequest ? witRequest : null);
 #pragma warning restore CS0618
@@ -372,7 +385,6 @@ namespace Meta.WitAi
             var events = request.Events;
 
             // Add/Remove 1 : 1 listeners
-            SetEventListener(events.OnInit, OnRequestInit, addListeners);
             SetEventListener(events.OnStartListening, OnRequestStartListening, addListeners);
             SetEventListener(events.OnStopListening, OnRequestStopListening, addListeners);
             SetEventListener(events.OnSend, OnRequestSend, addListeners);
