@@ -163,6 +163,12 @@ namespace Meta.WitAi
         /// </summary>
         private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
+            // Generate web socket edition
+            if (RuntimeConfiguration.useWebSockets)
+            {
+                var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, requestEvents);
+            }
             return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, requestEvents, _dynamicEntityProviders);
         }
 
