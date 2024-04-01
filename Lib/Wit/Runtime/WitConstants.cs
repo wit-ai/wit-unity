@@ -344,6 +344,9 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_PUBSUB_SUBSCRIBE_KEY = "subscribe";
         public const string WIT_SOCKET_PUBSUB_UNSUBSCRIBE_KEY = "unsubscribe";
         public const string WIT_SOCKET_PUBSUB_TOPIC_KEY = "topic";
+        public const string WIT_SOCKET_PUBSUB_PUBLISH_KEY = "publish_topics";
+        public const string WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY = "1";//"TRANSCRIPTION";
+        public const string WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY = "2";//"COMPOSER_RESULT";
         #endregion
     }
 

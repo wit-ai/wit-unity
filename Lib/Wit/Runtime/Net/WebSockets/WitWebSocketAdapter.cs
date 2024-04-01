@@ -8,6 +8,7 @@
 
 using UnityEngine;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 using Meta.WitAi.Attributes;
 using Meta.Voice.Net.WebSockets.Requests;
 
@@ -124,8 +125,39 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SendRequest(IWitWebSocketRequest request)
         {
+            // Append topic
+            Publish(request, TopicId);
+
             // Send request
             WebSocketClient.SendRequest(request);
+        }
+
+        /// <summary>
+        /// Attempt to publish request if applicable
+        /// </summary>
+        private void Publish(IWitWebSocketRequest request, string topicId)
+        {
+            // Ignore if topic is null
+            if (string.IsNullOrEmpty(topicId))
+            {
+                return;
+            }
+            // Append if json request
+            if (request is WitWebSocketJsonRequest jsonRequest)
+            {
+                AppendPublishNode(jsonRequest.PostData, topicId);
+            }
+        }
+
+        /// <summary>
+        /// Append publish topic to an existing post node
+        /// </summary>
+        private static void AppendPublishNode(WitResponseNode postNode, string topicId)
+        {
+            var publish = new WitResponseClass();
+            publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY] = topicId;
+            publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY] = topicId;
+            postNode[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
         }
         #endregion SEND & PUBLISH
 
