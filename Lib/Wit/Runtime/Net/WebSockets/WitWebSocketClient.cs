@@ -15,6 +15,7 @@ using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Net.NativeWebSocket;
 using Meta.Voice.Net.Encoding.Wit;
+using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -58,6 +59,24 @@ namespace Meta.Voice.Net.WebSockets
         public bool IsDownloading => _downloadCount > 0;
 
         /// <summary>
+        /// Whether there currently are any scripts that have called Connect()
+        /// and not yet requested a Disconnect().
+        /// </summary>
+        public bool IsReferenced => ReferenceCount > 0;
+
+        /// <summary>
+        /// Total amount of scripts that have called Connect()
+        /// and have not yet called Disconnect().  Used to ensure
+        /// WebSocketClient is only disconnected once no scripts are still referenced.
+        /// </summary>
+        public int ReferenceCount { get; private set; }
+
+        /// <summary>
+        /// Total amount of failed connection attempts made
+        /// </summary>
+        public int FailedConnectionAttempts { get; private set; }
+
+        /// <summary>
         /// The utc time of the last response from the server
         /// </summary>
         public DateTime LastResponseTime { get; private set; }
@@ -66,13 +85,6 @@ namespace Meta.Voice.Net.WebSockets
         /// Callback on connection state change.
         /// </summary>
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
-
-        /// <summary>
-        /// Total amount of scripts that have called Connect()
-        /// and have not yet called Disconnect().  Used to ensure
-        /// WebSocketClient is only disconnected once no scripts are still referenced.
-        /// </summary>
-        private int _referenceCount;
 
         // Stores last request id to handle binary data without headers
         private string _lastRequestId;
@@ -125,8 +137,11 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
-            VLog.I(GetType().Name, $"State: {newConnectionState}");
             ConnectionState = newConnectionState;
+            if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
+            {
+                VLog.I(GetType().Name, ConnectionState);
+            }
             OnConnectionStateChanged?.Invoke(ConnectionState);
         }
 
@@ -137,8 +152,8 @@ namespace Meta.Voice.Net.WebSockets
         public void Connect()
         {
             // Increment reference count
-            _referenceCount++;
-            if (_referenceCount <= 0)
+            ReferenceCount++;
+            if (ReferenceCount <= 0)
             {
                 return;
             }
@@ -150,9 +165,6 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
-            // Begin connecting
-            SetConnectionState(WitWebSocketConnectionState.Connecting);
-
             // Connect
             _ = ConnectAsync();
         }
@@ -162,6 +174,9 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private async Task ConnectAsync()
         {
+            // Begin connecting
+            SetConnectionState(WitWebSocketConnectionState.Connecting);
+
             // Connect async to specified server url with specified options
             try
             {
@@ -181,20 +196,17 @@ namespace Meta.Voice.Net.WebSockets
                 _socket.OnClose += HandleSocketDisconnect;
 
                 // Connect and wait until connection completes
-                VLog.I(GetType().Name, $"Connection Start\nId: {requestId}");
                 await _socket.Connect();
             }
             // Timeout handling
             catch (OperationCanceledException)
             {
-                VLog.E(GetType().Name, "Connection timed out");
-                SetConnectionState(WitWebSocketConnectionState.Disconnected);
+                HandleSetupFailed("Connection timed out");
             }
             // Additional exception handling
             catch (Exception e)
             {
-                VLog.E(GetType().Name, "Connection connect error caught", e);
-                SetConnectionState(WitWebSocketConnectionState.Disconnected);
+                HandleSetupFailed($"Connection connect error caught\n{e}");
             }
         }
 
@@ -274,6 +286,7 @@ namespace Meta.Voice.Net.WebSockets
             IsAuthenticated = string.IsNullOrEmpty(authRequest.Error);
             if (!IsAuthenticated)
             {
+                Settings.ReconnectAttempts = 0; // Don't retry
                 HandleSetupFailed(authRequest.Error);
                 return;
             }
@@ -290,6 +303,7 @@ namespace Meta.Voice.Net.WebSockets
 #endif
 
             // Connected successfully
+            FailedConnectionAttempts = 0;
             SetConnectionState(WitWebSocketConnectionState.Connected);
         }
 
@@ -301,7 +315,8 @@ namespace Meta.Voice.Net.WebSockets
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
                 VLog.E(GetType().Name, $"Connection Failed\n{error}");
-                Disconnect(true);
+                FailedConnectionAttempts++;
+                ForceDisconnect();
             }
             else
             {
@@ -319,25 +334,34 @@ namespace Meta.Voice.Net.WebSockets
             if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
                 VLog.W(GetType().Name, $"Socket Closed\nReason: {closeCode}");
-                Disconnect(true);
+                ForceDisconnect();
             }
         }
 
         /// <summary>
         /// Disconnects socket after checking state
         /// </summary>
-        public void Disconnect(bool force = false)
+        public void Disconnect()
         {
             // Decrement
-            _referenceCount--;
-            if (_referenceCount > 0 && !force)
+            ReferenceCount--;
+            if (ReferenceCount > 0)
             {
                 return;
             }
 
             // Remove reference count
-            _referenceCount = 0;
+            ReferenceCount = 0;
 
+            // Disconnect without reference count
+            ForceDisconnect();
+        }
+
+        /// <summary>
+        /// Forces a disconnect independent from reference count
+        /// </summary>
+        private void ForceDisconnect()
+        {
             // Ignore if already disconnecting/disconnected
             if (ConnectionState == WitWebSocketConnectionState.Disconnecting
                 || ConnectionState == WitWebSocketConnectionState.Disconnected)
@@ -369,6 +393,12 @@ namespace Meta.Voice.Net.WebSockets
 
             // Disconnected successfully
             SetConnectionState(WitWebSocketConnectionState.Disconnected);
+
+            // Attempt to reconnect
+            if (ReferenceCount > 0)
+            {
+                Reconnect();
+            }
         }
 
         /// <summary>
@@ -422,11 +452,61 @@ namespace Meta.Voice.Net.WebSockets
                 && (ConnectionState == WitWebSocketConnectionState.Connecting
                     || ConnectionState == WitWebSocketConnectionState.Connected))
             {
-                Disconnect(true);
+                ReferenceCount = 0;
+                ForceDisconnect();
             }
         }
         #endif
         #endregion DISCONNECT
+
+        #region RECONNECT
+        /// <summary>
+        /// Waits an interval and then attempts to connect once again
+        /// </summary>
+        private void Reconnect()
+        {
+            // Ignore if not referenced or disconnected
+            if (ReferenceCount <= 0 || ConnectionState != WitWebSocketConnectionState.Disconnected)
+            {
+                return;
+            }
+            // Ignore if failed too many times
+            if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
+            {
+                VLog.E(GetType().Name, $"Reconnect Failed\nToo many failed reconnect attempts\nFailures: {FailedConnectionAttempts}\nAttempts Allowed: {Settings.ReconnectAttempts}");
+                return;
+            }
+            // Wait & reconnect
+            _ = WaitAndConnect();
+        }
+        /// <summary>
+        /// Wait and attempt to connect
+        /// </summary>
+        private async Task WaitAndConnect()
+        {
+            // Wait for reconnect interval
+            var delay = Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
+            if (delay > 0f)
+            {
+                await Task.Delay(delay);
+            }
+            // Don't allow immediate reconnect
+            else
+            {
+                await TaskUtility.Wait();
+            }
+
+            // Ignore if no longer referenced or disconnected
+            if (ReferenceCount <= 0 || ConnectionState != WitWebSocketConnectionState.Disconnected)
+            {
+                return;
+            }
+
+            // Wait for reconnection
+            VLog.I(GetType().Name, $"Reconnect Attempt {FailedConnectionAttempts}");
+            await ConnectAsync();
+        }
+        #endregion RECONNECT
 
         #region UPLOAD
         /// <summary>
@@ -519,7 +599,7 @@ namespace Meta.Voice.Net.WebSockets
             // Dispatch queue until no longer open
             while (_socket != null && _socket.State == WebSocketState.Open)
             {
-                yield return new UnityEngine.WaitForEndOfFrame();
+                yield return new WaitForEndOfFrame();
                 _socket.DispatchMessageQueue();
             }
             // Destroy & remove reference

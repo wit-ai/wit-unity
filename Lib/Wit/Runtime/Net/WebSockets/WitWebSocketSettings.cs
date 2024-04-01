@@ -18,7 +18,19 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// The url to connect with on client.Connect()
         /// </summary>
-        public string ServerUrl => WitConstants.WIT_SOCKET_URL;
+        public string ServerUrl { get; set; } = WitConstants.WIT_SOCKET_URL;
+
+        /// <summary>
+        /// The total amount of reconnects that will be attempted if disconnected from the server.
+        /// If 0, it will not attempt to reconnect.
+        /// If -1, it will continuously attempt to reconnect.
+        /// </summary>
+        public int ReconnectAttempts { get; set; } = WitConstants.WIT_SOCKET_RECONNECT_ATTEMPTS;
+
+        /// <summary>
+        /// The interval in seconds between reconnects when disconnected
+        /// </summary>
+        public float ReconnectInterval { get; set; } = WitConstants.WIT_SOCKET_RECONNECT_INTERVAL;
 
         /// <summary>
         /// The configuration used for wit web socket communication

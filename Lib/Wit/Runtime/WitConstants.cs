@@ -328,6 +328,8 @@ namespace Meta.WitAi
         #region WEB SOCKETS
         // Setup constant keys & values
         public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
+        public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Retry infinitely by default
+        public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Once per second by default
         public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";
         public const string WIT_SOCKET_API_KEY = "api_version";
         public const string WIT_SOCKET_CONTENT_KEY = "content_type";
