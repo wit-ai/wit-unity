@@ -622,12 +622,6 @@ namespace Meta.Voice.Net.WebSockets
             // Request is complete, remove from tracking list
             if (request.IsComplete)
             {
-                // Log erorr
-                if (!string.IsNullOrEmpty(request.Error))
-                {
-                    VLog.E(GetType().Name, $"Request Failed\n{request}");
-                }
-                // Untrack
                 UntrackRequest(request);
             }
         }

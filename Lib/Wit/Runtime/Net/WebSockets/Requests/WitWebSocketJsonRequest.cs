@@ -41,7 +41,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// A response code if applicable
         /// </summary>
-        public int Code { get; protected set; }
+        public string Code { get; protected set; }
 
         /// <summary>
         /// An error if applicable
@@ -100,7 +100,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
-            Code = WitConstants.ERROR_CODE_ABORTED;
+            Code = WitConstants.ERROR_CODE_ABORTED.ToString();
             Error = WitConstants.CANCEL_ERROR;
             HandleComplete();
         }
@@ -119,14 +119,23 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
 
             // Store downloaded json data
-            ResponseData = jsonData;
-            Code = ResponseData[WitConstants.KEY_RESPONSE_CODE].Cast((int)HttpStatusCode.OK);
-            Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];
+            SetResponseData(jsonData);
 
             // Download begin
             HandleDownloadBegin();
             // Download complete
             HandleComplete();
+        }
+
+        /// <summary>
+        /// Apply response data
+        /// </summary>
+        /// <param name="newResponseData">New response data received</param>
+        protected virtual void SetResponseData(WitResponseNode newResponseData)
+        {
+            ResponseData = newResponseData;
+            Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
+            Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];
         }
 
         /// <summary>

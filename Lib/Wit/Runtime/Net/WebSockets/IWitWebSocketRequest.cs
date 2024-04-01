@@ -61,7 +61,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         ///  The response code if applicable
         /// </summary>
-        int Code { get; }
+        string Code { get; }
 
         /// <summary>
         /// Error that occured during upload and/or download
