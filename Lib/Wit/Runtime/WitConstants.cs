@@ -36,6 +36,7 @@ namespace Meta.WitAi
         public const string RESPONSE_TYPE_FINAL_TRANSCRIPTION = "FINAL_TRANSCRIPTION";
         public const string RESPONSE_TYPE_PARTIAL_NLP = "PARTIAL_UNDERSTANDING";
         public const string RESPONSE_TYPE_FINAL_NLP = "FINAL_UNDERSTANDING";
+        public const string RESPONSE_TYPE_READY_FOR_AUDIO = "INITIALIZED";
         public const string RESPONSE_TYPE_TTS = "SYNTHESIZE_DATA";
         public const string RESPONSE_TYPE_ERROR = "ERROR";
         public const string RESPONSE_TYPE_ABORTED = "ABORTED";
@@ -329,6 +330,7 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
         public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";
         public const string WIT_SOCKET_API_KEY = "api_version";
+        public const string WIT_SOCKET_CONTENT_KEY = "content_type";
         // Authorization request constant keys & values
         public const string WIT_SOCKET_AUTH_TOKEN = "wit_auth_token";
         public const string WIT_SOCKET_AUTH_RESPONSE_KEY = "success";
