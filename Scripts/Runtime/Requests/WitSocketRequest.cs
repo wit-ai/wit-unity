@@ -106,6 +106,8 @@ namespace Meta.WitAi.Requests
             WitRequestOptions options, VoiceServiceRequestEvents events = null
             ) : base(NLPRequestInputType.Text, options, events)
         {
+            var request = new WitWebSocketMessageRequest(jsonData, Options.RequestId);
+            SetWebSocketRequest(request);
             Init(configuration, webSocketAdapter, null);
         }
 
