@@ -19,6 +19,7 @@ using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine.Networking;
@@ -31,7 +32,7 @@ namespace Meta.WitAi
     /// Note: This is not intended to be instantiated directly. Requests should be created with the
     /// WitRequestFactory
     /// </summary>
-    public class WitRequest : VoiceServiceRequest
+    public class WitRequest : VoiceServiceRequest, IAudioUploadHandler
     {
         #region PARAMETERS
         /// <summary>
@@ -153,7 +154,14 @@ namespace Meta.WitAi
         /// Callback called when the server is ready to receive data from the WitRequest's input
         /// stream. See WitRequest.Write()
         /// </summary>
+        [Obsolete("Use OnInputStreamReady instead")]
         public event Action<WitRequest> onInputStreamReady;
+
+        /// <summary>
+        /// Callback called when the server is ready to receive audio data from WitRequest's input stream.
+        /// </summary>
+        public Action OnInputStreamReady { get; set; }
+
         /// <summary>
         /// Returns the raw string response that was received before converting it to a JSON object.
         ///
@@ -292,7 +300,7 @@ namespace Meta.WitAi
                 return "Client access token is not defined. Cannot start request.";
             }
             // Cannot perform without input stream delegate
-            if (onInputStreamReady == null)
+            if (OnInputStreamReady == null)
             {
                 return "No input stream delegate found";
             }
@@ -530,9 +538,13 @@ namespace Meta.WitAi
                     _writeStream = stream;
 
                     // Call input stream ready delegate
-                    if (onInputStreamReady != null)
+                    if (OnInputStreamReady != null)
                     {
-                        MainThreadCallback(() => onInputStreamReady(this));
+                        MainThreadCallback(() =>
+                        {
+                            onInputStreamReady?.Invoke(this);
+                            OnInputStreamReady();
+                        });
                     }
                 }
             }

@@ -13,6 +13,7 @@ using Meta.Voice.Net.WebSockets.Requests;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Requests
@@ -21,7 +22,7 @@ namespace Meta.WitAi.Requests
     /// A WitSocketRequest implementation using web sockets
     /// </summary>
     [Serializable]
-    public class WitSocketRequest : VoiceServiceRequest
+    public class WitSocketRequest : VoiceServiceRequest, IAudioUploadHandler
     {
         /// <summary>
         /// The configuration to be used for the request
@@ -51,7 +52,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Callback when socket connection is ready to send data
         /// </summary>
-        public event Action OnInputStreamReady;
+        public Action OnInputStreamReady { get; set; }
 
         /// <summary>
         /// Web socket decodes responses automatically
@@ -281,7 +282,7 @@ namespace Meta.WitAi.Requests
         /// <param name="buffer">The buffer used for uploading data</param>
         /// <param name="offset">The starting offset of the buffer selection</param>
         /// <param name="length">The length of the buffer to be used</param>
-        public void SendAudioData(byte[] buffer, int offset, int length)
+        public void Write(byte[] buffer, int offset, int length)
         {
             if (!IsListening)
             {

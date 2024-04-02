@@ -399,7 +399,7 @@ namespace Meta.WitAi
         /// <param name="recordingRequest"></param>
         protected void SetupRequest(VoiceServiceRequest newRequest)
         {
-            // Setup audio input streams
+            // Setup audio recording request
             if (newRequest.Options.InputType == NLPRequestInputType.Audio)
             {
                 // Only allow one at a time
@@ -411,24 +411,23 @@ namespace Meta.WitAi
                 // Apply recording request
                 _recordingRequest = newRequest;
 
-                // Setup input ready callbacks
+                // Setup audio upload settings & callback
+                if (_recordingRequest is IAudioUploadHandler audioUploader)
+                {
+                    audioUploader.AudioEncoding = _buffer.AudioEncoding;
+                    audioUploader.OnInputStreamReady = OnWitReadyForData;
+                }
+                // TODO: Fix audio duration tracker to work with multiple request types (T184166691)
                 if (_recordingRequest is WitRequest wr)
                 {
-                    wr.onInputStreamReady += r => OnWitReadyForData();
-                    wr.AudioEncoding = _buffer.AudioEncoding;
                     wr.audioDurationTracker = new AudioDurationTracker(_recordingRequest.Options?.RequestId,
                         wr.AudioEncoding);
-                }
-                else if (_recordingRequest is WitSocketRequest wsr)
-                {
-                    wsr.OnInputStreamReady += () => OnWitReadyForData();
-                    wsr.AudioEncoding = _buffer.AudioEncoding;
                 }
 
                 // Only used while recording
                 _recordingRequest.Events.OnPartialTranscription.AddListener(OnPartialTranscription);
             }
-            // Add to transmit list
+            // Add to text request to transmit list
             else
             {
                 _transmitRequests.Add(newRequest);
@@ -620,26 +619,18 @@ namespace Meta.WitAi
         // Whether or not the current recording stream is ready for audio data
         private bool IsInputStreamReady()
         {
-            if (_recordingRequest is WitRequest wr)
+            if (_recordingRequest is IAudioUploadHandler wr)
             {
                 return wr.IsInputStreamReady;
-            }
-            if (_recordingRequest is WitSocketRequest wsr)
-            {
-                return wsr.IsInputStreamReady;
             }
             return false;
         }
         // Write audio from audio buffer to the specified request
         private void WriteAudio(byte[] buffer, int offset, int length)
         {
-            if (_recordingRequest is WitRequest wr)
+            if (_recordingRequest is IDataUploadHandler uploadHandler)
             {
-                wr.Write(buffer, offset, length);
-            }
-            if (_recordingRequest is WitSocketRequest wsr)
-            {
-                wsr.SendAudioData(buffer, offset, length);
+                uploadHandler.Write(buffer, offset, length);
             }
         }
         // Time tracking for multi-threaded callbacks
