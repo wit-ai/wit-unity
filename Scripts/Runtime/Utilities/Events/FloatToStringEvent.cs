@@ -6,10 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using Meta.WitAi.Attributes;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 namespace Meta.WitAi.Utilities
@@ -53,7 +51,4 @@ namespace Meta.WitAi.Utilities
             }
         }
     }
-
-    [Serializable]
-    public class StringEvent : UnityEvent<string> {}
 }
