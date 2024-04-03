@@ -65,6 +65,14 @@ namespace Meta.Voice.Net.WebSockets
         public bool IsReferenced => ReferenceCount > 0;
 
         /// <summary>
+        /// Whether will be reconnecting
+        /// </summary>
+        public bool IsReconnecting => IsReferenced
+                                      && ConnectionState == WitWebSocketConnectionState.Disconnected
+                                      && (Settings.ReconnectAttempts < 0
+                                          || FailedConnectionAttempts <= Settings.ReconnectAttempts);
+
+        /// <summary>
         /// Total amount of scripts that have called Connect()
         /// and have not yet called Disconnect().  Used to ensure
         /// WebSocketClient is only disconnected once no scripts are still referenced.
@@ -153,7 +161,7 @@ namespace Meta.Voice.Net.WebSockets
         {
             // Increment reference count
             ReferenceCount++;
-            if (ReferenceCount <= 0)
+            if (!IsReferenced)
             {
                 return;
             }
@@ -345,7 +353,7 @@ namespace Meta.Voice.Net.WebSockets
         {
             // Decrement
             ReferenceCount--;
-            if (ReferenceCount > 0)
+            if (IsReferenced)
             {
                 return;
             }
@@ -395,7 +403,7 @@ namespace Meta.Voice.Net.WebSockets
             SetConnectionState(WitWebSocketConnectionState.Disconnected);
 
             // Attempt to reconnect
-            if (ReferenceCount > 0)
+            if (IsReferenced)
             {
                 Reconnect();
             }
@@ -416,11 +424,17 @@ namespace Meta.Voice.Net.WebSockets
                 _dispatcher = null;
             }
 
-            // Untrack all requests
-            var requestIds = new Dictionary<string, IWitWebSocketRequest>(_requests).Keys.ToArray();
-            foreach (var requestId in requestIds)
+            // Unload all requests, uploads & downloads
+            if (!IsReferenced)
             {
-                UntrackRequest(requestId);
+                // Untrack all running requests
+                var requestIds = new Dictionary<string, IWitWebSocketRequest>(_requests).Keys.ToArray();
+                foreach (var requestId in requestIds)
+                {
+                    UntrackRequest(requestId);
+                }
+                // Clear untracked list
+                _untrackedRequests.Clear();
             }
 
             // Close socket connection
@@ -466,7 +480,7 @@ namespace Meta.Voice.Net.WebSockets
         private void Reconnect()
         {
             // Ignore if not referenced or disconnected
-            if (ReferenceCount <= 0 || ConnectionState != WitWebSocketConnectionState.Disconnected)
+            if (!IsReferenced || ConnectionState != WitWebSocketConnectionState.Disconnected)
             {
                 return;
             }
@@ -496,8 +510,8 @@ namespace Meta.Voice.Net.WebSockets
                 await TaskUtility.Wait();
             }
 
-            // Ignore if no longer referenced or disconnected
-            if (ReferenceCount <= 0 || ConnectionState != WitWebSocketConnectionState.Disconnected)
+            // Ignore should no longer reconnect
+            if (!IsReconnecting)
             {
                 return;
             }
@@ -545,10 +559,9 @@ namespace Meta.Voice.Net.WebSockets
             bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
             if (!isAuth)
             {
-                // Wait while connecting
-                await TaskUtility.WaitWhile(() => ConnectionState == WitWebSocketConnectionState.Connecting);
-                // Not connected
-                if (ConnectionState != WitWebSocketConnectionState.Connected)
+                // Wait while connecting or reconnecting
+                await TaskUtility.WaitWhile(() => ConnectionState == WitWebSocketConnectionState.Connecting || IsReconnecting);
+                if (ConnectionState != WitWebSocketConnectionState.Connected && !IsReconnecting)
                 {
                     return;
                 }
