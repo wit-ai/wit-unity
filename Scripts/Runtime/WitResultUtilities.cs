@@ -77,6 +77,13 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Gets the unique request id if included in the response
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        public static string GetRequestId(this WitResponseNode witResponse) =>
+            witResponse?[WitConstants.HEADER_REQUEST_ID].Value ?? string.Empty;
+
+        /// <summary>
         /// Gets the content of a witResponse's partial or final response whichever is present.
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
