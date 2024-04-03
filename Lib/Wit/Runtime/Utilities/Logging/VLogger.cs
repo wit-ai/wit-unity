@@ -152,7 +152,7 @@ namespace Meta.Voice.Logging
                 return;
             }
 #endif
-            
+
             Write(logEntry);
         }
 
@@ -185,6 +185,7 @@ namespace Meta.Voice.Logging
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             _logBuffer.Add(correlationId, logEntry);
+            _scopeEntries.Add(_nextSequenceId, logEntry);
 
             Write(logEntry, "Started: ");
 
