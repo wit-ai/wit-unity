@@ -59,11 +59,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
             _performUpload = uploadChunk;
         }
 
+
         /// <summary>
-        /// Handles download of one or
+        /// Called multiple times as partial responses are received. Determines if ready for input and if so,
+        /// performs the appropriate callback following the application of data.
         /// </summary>
-        /// <param name="jsonData"></param>
-        /// <param name="binaryData"></param>
+        /// <param name="jsonData">Decoded json data object.</param>
+        /// <param name="binaryData">Decoded binary data chunk which should be null or empty.</param>
         public override void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
         {
             bool callback = false;

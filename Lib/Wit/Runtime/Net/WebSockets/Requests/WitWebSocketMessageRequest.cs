@@ -68,7 +68,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         }
 
         /// <summary>
-        /// Called multiple times
+        /// Called multiple times as partial responses are received.
         /// </summary>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which may be null or empty.</param>
