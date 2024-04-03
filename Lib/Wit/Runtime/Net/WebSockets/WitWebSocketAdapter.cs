@@ -229,7 +229,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Get & send subscribe request
             VLog.I(GetType().Name, $"Subscribe\nTopic Id: {topicId}");
-            var subscribeRequest = new WitWebSocketSubscribeRequest(topicId);
+            var subscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Subscribe);
             WebSocketClient.SendRequest(subscribeRequest);
         }
 
@@ -253,7 +253,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Get & send unsubscribe request
             VLog.I(GetType().Name, $"Unsubscribe\nTopic Id: {topicId}");
-            var unsubscribeRequest = new WitWebSocketSubscribeRequest(topicId, true);
+            var unsubscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Unsubscribe);
             WebSocketClient.SendRequest(unsubscribeRequest);
         }
         #endregion SUBSCRIBE & UNSUBSCRIBE
