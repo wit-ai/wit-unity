@@ -252,22 +252,5 @@ namespace Meta.WitAi
             // Return path
             return path;
         }
-
-        private static VLoggerVerbosity LogLevelToVerbosity(VLogLevel logLevel)
-        {
-            switch (logLevel)
-            {
-                case VLogLevel.Log:
-                    return VLoggerVerbosity.Log;
-                case VLogLevel.Error:
-                    return VLoggerVerbosity.Error;
-                case VLogLevel.Info:
-                    return VLoggerVerbosity.Info;
-                case VLogLevel.Warning:
-                    return VLoggerVerbosity.Warning;
-                default:
-                    return VLoggerVerbosity.Log;
-            }
-        }
     }
 }

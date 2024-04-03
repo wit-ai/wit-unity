@@ -144,7 +144,16 @@ namespace Meta.Voice.Logging
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationID, message, parameters);
-            this._logBuffer.Add(correlationID, logEntry);
+            _logBuffer.Add(correlationID, logEntry);
+
+#if UNITY_EDITOR
+            if (LogLevelToVerbosity(VLog.EditorLogLevel) > verbosity)
+            {
+                return;
+            }
+#endif
+            
+            Write(logEntry);
         }
 
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
@@ -401,6 +410,23 @@ namespace Meta.Voice.Logging
             // Replace the matched lines in the stack trace
             var formattedStackTrace = regex.Replace(stackTrace, (MatchEvaluator)Evaluator);
             return formattedStackTrace;
+        }
+
+        private static VLoggerVerbosity LogLevelToVerbosity(VLogLevel logLevel)
+        {
+            switch (logLevel)
+            {
+                case VLogLevel.Log:
+                    return VLoggerVerbosity.Log;
+                case VLogLevel.Error:
+                    return VLoggerVerbosity.Error;
+                case VLogLevel.Info:
+                    return VLoggerVerbosity.Info;
+                case VLogLevel.Warning:
+                    return VLoggerVerbosity.Warning;
+                default:
+                    return VLoggerVerbosity.Log;
+            }
         }
 
         private readonly struct LogEntry
