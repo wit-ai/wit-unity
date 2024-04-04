@@ -1002,11 +1002,27 @@ namespace Meta.WitAi.Json
             return node == null ? defaultValue : node.Cast<T>(defaultValue);
         }
 
-        public override string ToString()
+        public override string ToString() => ToFilteredString(false);
+
+        /// <summary>
+        /// Converts this object into a JSON string.
+        /// </summary>
+        /// <param name="ignoreEmptyFields">when true, will skip KeyValue pairs which have empty values</param>
+        /// <returns>a JSON string representing this object</returns>
+        public string ToString(bool ignoreEmptyFields) => ToFilteredString(ignoreEmptyFields);
+
+        /// <summary>
+        /// Converts this object into a JSON string.
+        /// </summary>
+        /// <param name="ignoreEmptyFields">when true, will skip KeyValue pairs which have empty values</param>
+        /// <returns>a JSON string representing this object</returns>
+        private string ToFilteredString(bool ignoreEmptyFields = false)
         {
             string result = "{";
             foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
             {
+                if(ignoreEmptyFields && String.IsNullOrEmpty(N.Value)) continue;
+
                 if (result.Length > 2)
                     result += ", ";
                 result += "\"" + Escape(N.Key) + "\": " + (N.Value?.ToString() ?? "\"\"");
