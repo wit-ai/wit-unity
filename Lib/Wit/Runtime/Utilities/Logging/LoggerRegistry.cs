@@ -31,7 +31,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(ILogWriter logWriter = null)
+        public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
         {
             logWriter ??= DefaultLogWriter;
 
@@ -49,7 +49,14 @@ namespace Meta.Voice.Logging
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return new VLogger(category, logWriter);
+                if (verbosity.HasValue)
+                {
+                    return new VLogger(category, logWriter, verbosity.Value);
+                }
+                else
+                {
+                    return new VLogger(category, logWriter);
+                }
             }
 
             category = attribute.CategoryName;
@@ -58,13 +65,20 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, ILogWriter logWriter = null)
+        public IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
         {
             logWriter ??= DefaultLogWriter;
 
             if (!_loggers.ContainsKey(category))
             {
-                _loggers.Add(category, new VLogger(category, logWriter));
+                if (verbosity.HasValue)
+                {
+                    _loggers.Add(category, new VLogger(category, logWriter, verbosity.Value));
+                }
+                else
+                {
+                    _loggers.Add(category, new VLogger(category, logWriter));
+                }
             }
 
             return _loggers[category];

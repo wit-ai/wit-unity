@@ -14,6 +14,18 @@ namespace Meta.Voice.Logging
     internal class UnityLogWriter : ILogWriter
     {
         /// <inheritdoc/>
+        public void WriteVerbose(string message)
+        {
+            UnityEngine.Debug.Log(message);
+        }
+
+        /// <inheritdoc/>
+        public void WriteInfo(string message)
+        {
+            UnityEngine.Debug.Log(message);
+        }
+
+        /// <inheritdoc/>
         public void WriteWarning(string message)
         {
             UnityEngine.Debug.LogWarning(message);
@@ -23,12 +35,6 @@ namespace Meta.Voice.Logging
         public void WriteError(string message)
         {
             UnityEngine.Debug.LogError(message);
-        }
-
-        /// <inheritdoc/>
-        public void WriteVerbose(string message)
-        {
-            UnityEngine.Debug.Log(message);
         }
     }
 }

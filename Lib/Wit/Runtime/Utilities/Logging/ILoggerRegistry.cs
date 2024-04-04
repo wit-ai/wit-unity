@@ -17,15 +17,17 @@ namespace Meta.Voice.Logging
         /// Gets a logger with an inferred category.
         /// </summary>
         /// <param name="logWriter">An optional log writer.</param>
+        /// <param name="verbosity">Minimum verbosity that will be logged.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(ILogWriter logWriter = null);
+        IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null);
 
         /// <summary>
         /// Gets a logger with an explicitly specified category.
         /// </summary>
         /// <param name="category">The category of the logs written by this logger.</param>
         /// <param name="logWriter">An optional log writer.</param>
+        /// /// <param name="verbosity">Minimum verbosity that will be logged.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(string category, ILogWriter logWriter = null);
+        IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null);
     }
 }

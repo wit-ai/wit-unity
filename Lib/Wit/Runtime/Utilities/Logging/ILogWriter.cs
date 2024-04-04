@@ -14,6 +14,18 @@ namespace Meta.Voice.Logging
     public interface ILogWriter
     {
         /// <summary>
+        /// Writes a verbose message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void WriteVerbose(string message);
+
+        /// <summary>
+        /// Writes an info message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void WriteInfo(string message);
+
+        /// <summary>
         /// Writes a warning message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -24,11 +36,5 @@ namespace Meta.Voice.Logging
         /// </summary>
         /// <param name="message">The message.</param>
         void WriteError(string message);
-
-        /// <summary>
-        /// Writes a verbose message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        void WriteVerbose(string message);
     }
 }

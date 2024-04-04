@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -42,9 +43,20 @@ namespace Meta.Voice.Logging
         private readonly RingDictionaryBuffer<CorrelationID, LogEntry> _logBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
 
         /// <summary>
+        /// Caches the last few messages so we can omit repeated correlation IDs.
+        /// </summary>
+        private readonly RingDictionaryBuffer<string, CorrelationID> _messagesCache =
+            new RingDictionaryBuffer<string, CorrelationID>(100);
+
+        /// <summary>
         /// The final log sink where log data is written.
         /// </summary>
         private readonly ILogWriter _logWriter;
+
+        /// <summary>
+        /// The minimum verbosity this logger will log.
+        /// </summary>
+        private readonly VLoggerVerbosity _minimumVerbosity;
 
         /// <inheritdoc/>
         public CorrelationID CorrelationID
@@ -63,10 +75,25 @@ namespace Meta.Voice.Logging
 
         private readonly string _category;
 
-        public VLogger(string category, ILogWriter logWriter)
+
+        internal VLogger(string category, ILogWriter logWriter):
+            this(
+                category,
+                logWriter,
+#if UNITY_EDITOR
+                LogLevelToVerbosity(VLog.EditorLogLevel)
+#else
+                VLoggerVerbosity.Verbose
+#endif
+            )
+        {
+        }
+
+        internal VLogger(string category, ILogWriter logWriter, VLoggerVerbosity verbosity)
         {
             _category = category;
             _logWriter = logWriter;
+            _minimumVerbosity = verbosity;
         }
 
         /// <inheritdoc/>
@@ -146,12 +173,10 @@ namespace Meta.Voice.Logging
             var logEntry = new LogEntry(_category, verbosity, correlationID, message, parameters);
             _logBuffer.Add(correlationID, logEntry);
 
-#if UNITY_EDITOR
-            if (LogLevelToVerbosity(VLog.EditorLogLevel) > verbosity)
+            if (_minimumVerbosity > verbosity)
             {
                 return;
             }
-#endif
 
             Write(logEntry);
         }
@@ -159,13 +184,47 @@ namespace Meta.Voice.Logging
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, exception, message, parameters);
+
+            if (IsFiltered(logEntry))
+            {
+                return;
+            }
+
             Write(logEntry);
         }
 
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, message, parameters);
+
+            if (IsFiltered(logEntry))
+            {
+                return;
+            }
+
             Write(logEntry);
+        }
+
+        /// <summary>
+        /// Returns true if the log should be filtered out and not written.
+        /// </summary>
+        /// <param name="logEntry">The log entry.</param>
+        /// <returns>True if it is filtered/suppressed. False otherwise.</returns>
+        private bool IsFiltered(LogEntry logEntry)
+        {
+#if UNITY_EDITOR
+            // Skip logs with higher log type then minimum log level
+            if ((int) logEntry.Verbosity < (int) _minimumVerbosity)
+            {
+                return true;
+            }
+
+            if (VLog.FilteredTagSet.Contains(logEntry.Category))
+            {
+                return true;
+            }
+#endif
+            return false;
         }
 
         /// <inheritdoc/>
@@ -244,19 +303,6 @@ namespace Meta.Voice.Logging
         /// <param name="prefix">Any prefix that should go before the log.</param>
         private void Write(LogEntry logEntry, string prefix)
         {
-#if UNITY_EDITOR
-            // Skip logs with higher log type then global log level
-            if ((int) logEntry.Verbosity < (int)VLog.EditorLogLevel)
-            {
-                return;
-            }
-
-            if (VLog.FilteredTagSet.Contains(logEntry.Category))
-            {
-                return;
-            }
-#endif
-
             // Suppress all except errors if needed
             if (VLog.SuppressLogs && (int)logEntry.Verbosity < (int)VLoggerVerbosity.Error)
             {
@@ -286,18 +332,37 @@ namespace Meta.Voice.Logging
             }
             WrapWithCallingLink(sb, start);
 
-            // Append the actual log
-            if (!string.IsNullOrEmpty(logEntry.Message))
+            var formattedCoreMessage =
+                (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
+                 logEntry.Parameters.Length != 0)
+                    ? string.Format(logEntry.Message, logEntry.Parameters)
+                    : logEntry.Message;
+
+            sb.Append(formattedCoreMessage);
+
+            // Append the correlation ID if not repeated.
+            // We use the formatted message so we split on different parameter values even for same format string.
+            if (_messagesCache.ContainsKey(formattedCoreMessage))
             {
-                if (logEntry.Parameters == null || logEntry.Parameters.Length == 0)
+                // Move it to the top of the cache.
+                var lastId = _messagesCache.Extract(logEntry.Message);
+                _messagesCache.Add(logEntry.Message, logEntry.CorrelationID);
+
+                if (lastId.First() == logEntry.CorrelationID)
                 {
-                    sb.Append(logEntry.Message);
+                    sb.Append($" [{logEntry.CorrelationID}]");
                 }
                 else
                 {
-                    sb.Append(string.Format(logEntry.Message, logEntry.Parameters));
+                    sb.Append($" [...]");
                 }
             }
+            else
+            {
+                sb.Append($" [{logEntry.CorrelationID}]");
+
+            }
+
 
             if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
             {
@@ -331,6 +396,9 @@ namespace Meta.Voice.Logging
                     break;
                 case VLoggerVerbosity.Warning:
                     _logWriter.WriteWarning($"{prefix}{message}");
+                    break;
+                case VLoggerVerbosity.Log:
+                    _logWriter.WriteInfo($"{prefix}{message}");
                     break;
                 default:
                     _logWriter.WriteVerbose($"{prefix}{message}");
@@ -522,6 +590,16 @@ namespace Meta.Voice.Logging
             }
 
             /// <summary>
+            /// Returns true if the key exists in the buffer.
+            /// </summary>
+            /// <param name="key">The key to check.</param>
+            /// <returns>True if the key exists in the buffer. False otherwise.</returns>
+            public bool ContainsKey(TKey key)
+            {
+                return _dictionary.ContainsKey(key);
+            }
+
+            /// <summary>
             /// Drain all the entries from the buffer that match a given key and return them.
             /// </summary>
             /// <param name="key">The key we are extracting.</param>
@@ -564,6 +642,9 @@ namespace Meta.Voice.Logging
                 return allValues;
             }
 
+            /// <summary>
+            /// Clears the buffer.
+            /// </summary>
             public void Clear()
             {
                 _dictionary.Clear();
