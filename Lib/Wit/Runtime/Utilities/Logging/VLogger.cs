@@ -58,23 +58,35 @@ namespace Meta.Voice.Logging
         /// </summary>
         private readonly VLoggerVerbosity _minimumVerbosity;
 
+        private CorrelationID _correlationID;
+
         /// <inheritdoc/>
         public CorrelationID CorrelationID
         {
             get
             {
+                if (_correlationID.IsAssigned)
+                {
+                    return _correlationID;
+                }
+
                 if (!CorrelationIDThreadLocal.IsValueCreated)
                 {
                     CorrelationIDThreadLocal.Value = Guid.NewGuid().ToString();
                 }
 
-                return (CorrelationID)CorrelationIDThreadLocal.Value;
+                _correlationID = (CorrelationID)CorrelationIDThreadLocal.Value;
+
+                return _correlationID;
             }
-            set => CorrelationIDThreadLocal.Value = value;
+            set
+            {
+                _correlationID = value;
+                CorrelationIDThreadLocal.Value = _correlationID;
+            }
         }
 
         private readonly string _category;
-
 
         internal VLogger(string category, ILogWriter logWriter):
             this(
@@ -96,6 +108,22 @@ namespace Meta.Voice.Logging
             _minimumVerbosity = verbosity;
         }
 
+        /// <summary>
+        /// Sets the correlation ID if it's not already set. If it's set and different, will correlate the two.
+        /// </summary>
+        private void CorrelateIds(CorrelationID correlationId)
+        {
+            if (!_correlationID.IsAssigned)
+            {
+                CorrelationID = correlationId;
+            }
+
+            if (CorrelationID != correlationId)
+            {
+                Correlate(CorrelationID, correlationId);
+            }
+        }
+
         /// <inheritdoc/>
         public void Verbose(string message, params object [] parameters)
         {
@@ -105,6 +133,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Verbose, correlationId, message, parameters);
         }
 
@@ -117,6 +146,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Info(CorrelationID correlationId, string message, params object [] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Info, correlationId, message, parameters);
         }
 
@@ -129,6 +159,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Log, correlationId, message, parameters);
         }
 
@@ -141,6 +172,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Error, correlationId, errorCode, message, parameters);
         }
 
@@ -153,6 +185,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Error(CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Error, correlationId, errorCode, exception, message, parameters);
         }
 
@@ -165,13 +198,20 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Warning(CorrelationID correlationId, string message, params object [] parameters)
         {
+            CorrelateIds(correlationId);
             Log(VLoggerVerbosity.Warning, correlationId, message, parameters);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, string message, params object[] parameters)
+        /// <inheritdoc/>
+        public void Correlate(CorrelationID originalCorrelationId, CorrelationID newCorrelationId)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationID, message, parameters);
-            _logBuffer.Add(correlationID, logEntry);
+            Log(VLoggerVerbosity.Verbose, originalCorrelationId, "Correlated:{0}&{1}", originalCorrelationId, newCorrelationId);
+        }
+
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        {
+            var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
+            _logBuffer.Add(correlationId, logEntry);
 
             if (_minimumVerbosity > verbosity)
             {
@@ -181,9 +221,9 @@ namespace Meta.Voice.Logging
             Write(logEntry);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, exception, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, exception, message, parameters);
 
             if (IsFiltered(logEntry))
             {
@@ -193,9 +233,9 @@ namespace Meta.Voice.Logging
             Write(logEntry);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationID, ErrorCode errorCode, string message, params object[] parameters)
+        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationID, errorCode, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, message, parameters);
 
             if (IsFiltered(logEntry))
             {
@@ -360,7 +400,7 @@ namespace Meta.Voice.Logging
             else
             {
                 sb.Append($" [{logEntry.CorrelationID}]");
-
+                _messagesCache.Add(logEntry.Message, logEntry.CorrelationID);
             }
 
 

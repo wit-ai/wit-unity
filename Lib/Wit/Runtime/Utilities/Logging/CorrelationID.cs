@@ -25,6 +25,11 @@ namespace Meta.Voice.Logging
             Value = value;
         }
 
+        /// <summary>
+        /// Returns true if the correlation ID has a value.
+        /// </summary>
+        public bool IsAssigned => Value != null;
+
         public override string ToString() => Value;
 
         public static implicit operator string(CorrelationID correlationId) => correlationId.Value;

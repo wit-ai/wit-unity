@@ -84,7 +84,6 @@ namespace Meta.Voice.Logging
         /// <param name="parameters">The parameters.</param>
         void Warning(string message, params object [] parameters);
 
-
         /// <summary>
         /// Logs an error with an exception.
         /// </summary>
@@ -121,6 +120,14 @@ namespace Meta.Voice.Logging
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
         public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters);
+
+        /// <summary>
+        /// Correlates two correlation IDs. This is used to indicate nesting, branching, or exchanges.
+        /// The purpose is to allow a complete trail up to the source when needed.
+        /// </summary>
+        /// <param name="originalCorrelationId">The original correlation ID.</param>
+        /// <param name="newCorrelationId">The new correlation ID.</param>
+        public void Correlate(CorrelationID originalCorrelationId, CorrelationID newCorrelationId);
 
         /// <summary>
         /// Returns a logging scope to be used in a "using" block.
