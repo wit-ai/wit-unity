@@ -8,14 +8,11 @@
 
 using System;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.WitAi;
 using Meta.WitAi.Json;
-using Meta.Net.NativeWebSocket;
 using Meta.Voice.Net.Encoding.Wit;
-using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -111,7 +108,7 @@ namespace Meta.Voice.Net.WebSockets
         private List<string> _untrackedRequests = new List<string>();
 
         // The web socket client handling all communication
-        private WebSocket _socket;
+        private IWebSocket _socket;
 
         // Script used for decoding server responses
         private WitChunkConverter _decoder = new WitChunkConverter();
@@ -119,8 +116,12 @@ namespace Meta.Voice.Net.WebSockets
         // Request providers grouped by topic
         private Dictionary<string, IWitWebSocketRequestProvider> _requestProviders = new Dictionary<string, IWitWebSocketRequestProvider>();
 
-        // Coroutine utility dispatcher
-        private CoroutineUtility.CoroutinePerformer _dispatcher;
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor only option to get a custom web socket
+        /// </summary>
+        public Func<string, Dictionary<string, string>, IWebSocket> GetWebSocket;
+#endif
 
         /// <summary>
         /// Constructor with settings data
@@ -197,7 +198,7 @@ namespace Meta.Voice.Net.WebSockets
                 }
 
                 // Generate socket wrapper & assign message callback method
-                _socket = new WebSocket(Settings.ServerUrl, headers);
+                _socket = GenerateWebSocket(Settings.ServerUrl, headers);
                 _socket.OnOpen += HandleSocketConnected;
                 _socket.OnMessage += HandleSocketResponse;
                 _socket.OnError += HandleSocketError;
@@ -216,6 +217,24 @@ namespace Meta.Voice.Net.WebSockets
             {
                 HandleSetupFailed($"Connection connect error caught\n{e}");
             }
+        }
+
+        /// <summary>
+        /// Generates a new web socket using specified url and headers
+        /// </summary>
+        private IWebSocket GenerateWebSocket(string url, Dictionary<string, string> headers)
+        {
+            #if UNITY_EDITOR
+            if (GetWebSocket != null)
+            {
+                var socket = GetWebSocket.Invoke(url, headers);
+                if (socket != null)
+                {
+                    return socket;
+                }
+            }
+            #endif
+            return new NativeWebSocketWrapper(url, headers);
         }
 
         /// <summary>
@@ -251,7 +270,7 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             // Ensure socket is open
-            if (_socket.State != WebSocketState.Open)
+            if (_socket.State != WitWebSocketConnectionState.Connected)
             {
                 HandleSetupFailed($"Socket is {_socket.State}");
                 return;
@@ -281,9 +300,6 @@ namespace Meta.Voice.Net.WebSockets
                 HandleSetupFailed("Cannot connect to Wit server without client access token");
                 return;
             }
-
-            // Begin dispatching responses
-            _dispatcher = CoroutineUtility.StartCoroutine(DispatchResponses());
 
             // Make authentication request & return any encountered error
             var authRequest = new Requests.WitWebSocketAuthRequest(clientAccessToken);
@@ -417,13 +433,6 @@ namespace Meta.Voice.Net.WebSockets
             // No longer authenticated
             IsAuthenticated = false;
 
-            // Destroy dispatcher
-            if (_dispatcher != null)
-            {
-                _dispatcher.DestroySafely();
-                _dispatcher = null;
-            }
-
             // Unload all requests, uploads & downloads
             if (!IsReferenced)
             {
@@ -444,10 +453,7 @@ namespace Meta.Voice.Net.WebSockets
                 _socket.OnMessage -= HandleSocketResponse;
                 _socket.OnError -= HandleSocketError;
                 _socket.OnClose -= HandleSocketDisconnect;
-                if (_socket.State == WebSocketState.Open)
-                {
-                    await _socket.Close();
-                }
+                await _socket.Close();
                 _socket = null;
             }
 
@@ -499,7 +505,7 @@ namespace Meta.Voice.Net.WebSockets
         private async Task WaitAndConnect()
         {
             // Wait for reconnect interval
-            var delay = Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
+            var delay = UnityEngine.Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
             if (delay > 0f)
             {
                 await Task.Delay(delay);
@@ -604,25 +610,6 @@ namespace Meta.Voice.Net.WebSockets
         #endregion UPLOAD
 
         #region DOWNLOAD
-        /// <summary>
-        /// Dispatches responses every frame while connected
-        /// </summary>
-        private IEnumerator DispatchResponses()
-        {
-            // Dispatch queue until no longer open
-            while (_socket != null && _socket.State == WebSocketState.Open)
-            {
-                yield return new WaitForEndOfFrame();
-                _socket.DispatchMessageQueue();
-            }
-            // Destroy & remove reference
-            if (_dispatcher != null)
-            {
-                _dispatcher.DestroySafely();
-                _dispatcher = null;
-            }
-        }
-
         /// <summary>
         /// When dispatched, begins async decoding of response bytes
         /// </summary>

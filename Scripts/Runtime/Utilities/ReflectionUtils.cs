@@ -212,7 +212,7 @@ namespace Meta.WitAi.Utilities
         /// Check namespace prior to access
         /// </summary>
         private static bool IsValidNamespace(Type type) =>
-            type.Namespace != null && type.Namespace.StartsWith(NAMESPACE_PREFIX);
+            type?.Namespace != null && type.Namespace.StartsWith(NAMESPACE_PREFIX);
 
         /// <summary>
         /// Hefty editor method that iterates all assemblies
