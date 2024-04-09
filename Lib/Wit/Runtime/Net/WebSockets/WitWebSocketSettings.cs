@@ -21,6 +21,11 @@ namespace Meta.Voice.Net.WebSockets
         public string ServerUrl { get; set; } = WitConstants.WIT_SOCKET_URL;
 
         /// <summary>
+        /// The interval in seconds before a connection is timed out
+        /// </summary>
+        public int ServerConnectionTimeoutMs { get; set; } = WitConstants.WIT_SOCKET_CONNECT_TIMEOUT;
+
+        /// <summary>
         /// The total amount of reconnects that will be attempted if disconnected from the server.
         /// If 0, it will not attempt to reconnect.
         /// If -1, it will continuously attempt to reconnect.

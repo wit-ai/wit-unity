@@ -145,7 +145,6 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-
             ConnectionState = newConnectionState;
             if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
             {
@@ -204,19 +203,40 @@ namespace Meta.Voice.Net.WebSockets
                 _socket.OnError += HandleSocketError;
                 _socket.OnClose += HandleSocketDisconnect;
 
+                // Begin a timeout check
+                _ = WaitForConnectionTimeout();
+
                 // Connect and wait until connection completes
                 await _socket.Connect();
             }
             // Timeout handling
             catch (OperationCanceledException)
             {
-                HandleSetupFailed("Connection timed out");
+                HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
             }
             // Additional exception handling
             catch (Exception e)
             {
                 HandleSetupFailed($"Connection connect error caught\n{e}");
             }
+        }
+
+        /// <summary>
+        /// Wait for connection timeout to ensure it occured
+        /// </summary>
+        private async Task WaitForConnectionTimeout()
+        {
+            // Wait for connection timeout
+            await Task.Delay(Settings.ServerConnectionTimeoutMs);
+
+            // Invalid socket or connected
+            if (_socket == null || _socket.State != WitWebSocketConnectionState.Connecting)
+            {
+                return;
+            }
+
+            // Consider a timeout
+            HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
         }
 
         /// <summary>
@@ -434,7 +454,7 @@ namespace Meta.Voice.Net.WebSockets
             IsAuthenticated = false;
 
             // Unload all requests, uploads & downloads
-            if (!IsReferenced)
+            if (!IsReconnecting)
             {
                 // Untrack all running requests
                 var requestIds = new Dictionary<string, IWitWebSocketRequest>(_requests).Keys.ToArray();
@@ -561,16 +581,21 @@ namespace Meta.Voice.Net.WebSockets
             // Move async
             await Task.Yield();
 
-            // If not authorization chunk, wait
+            // If not authorization chunk, wait while connecting or reconnecting
             bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
             if (!isAuth)
             {
-                // Wait while connecting or reconnecting
                 await TaskUtility.WaitWhile(() => ConnectionState == WitWebSocketConnectionState.Connecting || IsReconnecting);
                 if (ConnectionState != WitWebSocketConnectionState.Connected && !IsReconnecting)
                 {
                     return;
                 }
+            }
+            // If auth chunk, ignore connecting or connected
+            else if (ConnectionState != WitWebSocketConnectionState.Connecting
+                     && ConnectionState != WitWebSocketConnectionState.Connected)
+            {
+                return;
             }
 
             // Increment upload count
