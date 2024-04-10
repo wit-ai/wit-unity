@@ -19,6 +19,7 @@ namespace Meta.Voice.Logging
         ManifestGenerator,
         AssemblyMiner,
         Logging,
-        ErrorMitigator
+        ErrorMitigator,
+        ContextSystem,
     }
 }
