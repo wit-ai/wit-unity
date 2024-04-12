@@ -79,6 +79,12 @@ namespace Meta.Voice.Net.WebSockets
             // Apply new providers if possible
             _webSocketProvider = clientProvider as Object;
 
+            // Log warning for non UnityEngine.Objects
+            if (clientProvider != null && _webSocketProvider == null)
+            {
+                VLog.W(GetType().Name, $"SetClientProvider failed\nReason: {clientProvider.GetType()} does not inherit from UnityEngine.Object");
+            }
+
             // Connect new web socket client if active
             if (gameObject.activeInHierarchy)
             {
