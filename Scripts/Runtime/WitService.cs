@@ -6,25 +6,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Meta.Voice;
 using Meta.Voice.Net.WebSockets;
+using Meta.Voice.Net.WebSockets.Requests;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
-using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
-    public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider, IWitWebSocketRequestProvider
+    public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
         private float _lastMinVolumeLevelTime;
 
@@ -161,17 +161,6 @@ namespace Meta.WitAi
         }
 
         /// <summary>
-        /// Get text input request based on incoming response node settings
-        /// </summary>
-        public IWitWebSocketRequest GenerateWebSocketRequest(string requestId, WitResponseNode responseNode)
-        {
-            var options = new WitRequestOptions(requestId);
-            var voiceRequest = new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, responseNode, options);
-            SetupRequest(voiceRequest);
-            return voiceRequest.WebSocketRequest;
-        }
-
-        /// <summary>
         /// Get text input request based on settings
         /// </summary>
         private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
@@ -214,7 +203,6 @@ namespace Meta.WitAi
             {
                 _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
                 _webSocketAdapter.SetClientProvider(RuntimeConfiguration.witConfiguration);
-                _webSocketAdapter.SetRequestProvider(this);
             }
         }
         // Add mic delegates
@@ -231,12 +219,19 @@ namespace Meta.WitAi
             }
 
             SetMicDelegates(true);
-
+            if (_webSocketAdapter != null)
+            {
+                _webSocketAdapter.OnRequestGenerated += HandleWebSocketRequestGeneration;
+            }
             _dynamicEntityProviders = GetComponents<IDynamicEntitiesProvider>();
         }
         // Remove mic delegates
         protected void OnDisable()
         {
+            if (_webSocketAdapter != null)
+            {
+                _webSocketAdapter.OnRequestGenerated -= HandleWebSocketRequestGeneration;
+            }
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SetMicDelegates(false);
         }
@@ -288,6 +283,52 @@ namespace Meta.WitAi
             }
         }
         #endregion
+
+        #region WEB SOCKETS
+        /// <summary>
+        /// Handle web socket request if possible
+        /// </summary>
+        public void HandleWebSocketRequestGeneration(IWitWebSocketRequest webSocketRequest)
+        {
+            // Ignore if not message request
+            var messageRequest = webSocketRequest as WitWebSocketMessageRequest;
+            if (messageRequest == null)
+            {
+                return;
+            }
+            // Ignore if already wrapped by a voice service request
+            if (IsWebSocketRequestWrapped(webSocketRequest))
+            {
+                return;
+            }
+            // Wrap web socket request
+            var options = new WitRequestOptions(webSocketRequest.RequestId);
+            var voiceRequest = new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, messageRequest, options);
+            SetupRequest(voiceRequest);
+        }
+        /// <summary>
+        /// Returns true if the web socket request is wrapped by a referenced VoiceServiceRequest
+        /// </summary>
+        private bool IsWebSocketRequestWrapped(IWitWebSocketRequest webSocketRequest)
+        {
+            // True if recording audio request tracks this web socket request
+            if (IsWebSocketRequestWrapped(_recordingRequest, webSocketRequest))
+            {
+                return true;
+            }
+            // True if any transmitting requests track this web socket request
+            return _transmitRequests.FirstOrDefault((tRequest) => IsWebSocketRequestWrapped(tRequest, webSocketRequest)) != null;
+        }
+        /// <summary>
+        /// Returns true if the voice service request wraps the specified web socket request
+        /// </summary>
+        private bool IsWebSocketRequestWrapped(VoiceServiceRequest voiceServiceRequest,
+            IWitWebSocketRequest webSocketRequest)
+        {
+            return voiceServiceRequest is WitSocketRequest vsSocketRequest &&
+                   vsSocketRequest.WebSocketRequest == webSocketRequest;
+        }
+        #endregion WEB SOCKETS
 
         #region ACTIVATION
         /// <summary>

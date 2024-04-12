@@ -102,12 +102,12 @@ namespace Meta.WitAi.Requests
         /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
         /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
         /// <param name="jsonData">Initial response from server</param>
-        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, WitResponseNode jsonData,
+        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter,
+            WitWebSocketMessageRequest webSocketRequest,
             WitRequestOptions options, VoiceServiceRequestEvents events = null
             ) : base(NLPRequestInputType.Text, options, events)
         {
-            var request = new WitWebSocketMessageRequest(jsonData, Options.RequestId);
-            SetWebSocketRequest(request);
+            SetWebSocketRequest(webSocketRequest);
             Init(configuration, webSocketAdapter, null);
         }
 

@@ -116,9 +116,6 @@ namespace Meta.Voice.Net.WebSockets
         // Script used for decoding server responses
         private WitChunkConverter _decoder = new WitChunkConverter();
 
-        // Request providers grouped by topic
-        private Dictionary<string, IWitWebSocketRequestProvider> _requestProviders = new Dictionary<string, IWitWebSocketRequestProvider>();
-
 #if UNITY_EDITOR
         /// <summary>
         /// Editor only option to get a custom web socket
@@ -808,33 +805,6 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
-        /// Adds a request provider for the specified topic
-        /// </summary>
-        /// <param name="topicId">Unique topic identifier</param>
-        /// <param name="requestProvider">An interface that provides</param>
-        public void AddRequestProvider(string topicId, IWitWebSocketRequestProvider requestProvider)
-        {
-            if (string.IsNullOrEmpty(topicId) || requestProvider == null)
-            {
-                return;
-            }
-            _requestProviders[topicId] = requestProvider;
-        }
-
-        /// <summary>
-        /// Removes the request provider for the specified topic
-        /// </summary>
-        /// <param name="topicId">Unique topic identifier</param>
-        public void RemoveRequestProvider(string topicId)
-        {
-            if (string.IsNullOrEmpty(topicId) || !_requestProviders.ContainsKey(topicId))
-            {
-                return;
-            }
-            _requestProviders.Remove(topicId);
-        }
-
-        /// <summary>
         /// Attempts to generate a request to handle a specific json response
         /// </summary>
         /// <param name="requestId">The request id that should be handling the response.</param>
@@ -848,21 +818,24 @@ namespace Meta.Voice.Net.WebSockets
                 return null;
             }
             // Get topic id if possible
-            var topicId = jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY];
+            var topicId = jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY].Value;
             if (string.IsNullOrEmpty(topicId))
             {
                 VLog.W(GetType().Name, $"Generate Request - Failed\nReason: No topic id provided in response\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
                 return null;
             }
-            // Get provider if possible
-            if (!_requestProviders.TryGetValue(topicId, out var provider))
+            // Check if topic is subscribed
+            var subState = GetTopicSubscriptionState(topicId);
+            if (subState != PubSubSubscriptionState.Subscribed
+                && subState != PubSubSubscriptionState.Subscribing)
             {
-                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: No request provider for specified topic\nTopic Id: {topicId}\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: Topic id is not currently subscribed to\nTopic Id: {topicId}\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
                 return null;
             }
-            // Generate request for specified response data
+            // Generate message request if topic is found
             VLog.I(GetType().Name, $"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
-            var request = provider.GenerateWebSocketRequest(requestId, jsonData);
+            var request = new WitWebSocketMessageRequest(jsonData, requestId);
+            request.TopicId = topicId;
             TrackRequest(request);
             return request;
         }

@@ -6,11 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
+using Meta.Voice.Net.PubSub;
 using UnityEngine;
 using Meta.WitAi;
-using Meta.WitAi.Json;
 using Meta.WitAi.Attributes;
-using Meta.Voice.Net.WebSockets.Requests;
+using UnityEngine.Events;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -24,7 +25,7 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public IWitWebSocketClientProvider WebSocketProvider => _webSocketProvider as IWitWebSocketClientProvider;
         [ObjectType(typeof(IWitWebSocketClientProvider))] [SerializeField]
-        private Object _webSocketProvider;
+        private UnityEngine.Object _webSocketProvider;
 
         /// <summary>
         /// The current web socket client
@@ -32,27 +33,58 @@ namespace Meta.Voice.Net.WebSockets
         public WitWebSocketClient WebSocketClient => WebSocketProvider?.WebSocketClient;
 
         /// <summary>
-        /// The script used to generate requests when external responses are received
-        /// </summary>
-        public IWitWebSocketRequestProvider RequestProvider => _requestProvider as IWitWebSocketRequestProvider;
-        [ObjectType(typeof(IWitWebSocketRequestProvider))] [SerializeField]
-        private Object _requestProvider;
-
-        /// <summary>
         /// The topic to be used for publishing/subscribing to the current client provider
         /// </summary>
         public string TopicId => _topicId;
         [SerializeField] private string _topicId;
 
+        /// <summary>
+        /// Callback when successfully subscribed to the current topic
+        /// </summary>
+        public UnityEvent OnSubscribed { get; private set; } = new UnityEvent();
+
+        /// <summary>
+        /// Callback when successfully unsubscribed from the current topic
+        /// </summary>
+        public UnityEvent OnUnsubscribed { get; private set; } = new UnityEvent();
+
+        /// <summary>
+        /// Callback when a request is generated for the subscribed topic
+        /// </summary>
+        public event Action<IWitWebSocketRequest> OnRequestGenerated;
+
         // Whether or not connection to server has been requested
-        private bool _connectRequested = false;
-        // Whether or not subscription to a topic has been requested
-        private string _subscribedTopicId;
+        private bool _connected = false;
 
         #region LIFECYCLE
         protected virtual void OnEnable()
         {
             Connect();
+        }
+        protected virtual void HandleSubscriptionStateChange(string topicId,
+            PubSubSubscriptionState state)
+        {
+            if (!string.Equals(TopicId, topicId))
+            {
+                return;
+            }
+            if (state == PubSubSubscriptionState.Subscribed)
+            {
+                OnSubscribed?.Invoke();
+            }
+            else if (state == PubSubSubscriptionState.NotSubscribed)
+            {
+                OnUnsubscribed?.Invoke();
+            }
+        }
+        protected virtual void HandleRequestGenerated(string topicId,
+            IWitWebSocketRequest request)
+        {
+            if (!string.Equals(TopicId, topicId))
+            {
+                return;
+            }
+            OnRequestGenerated?.Invoke(request);
         }
         protected virtual void OnDisable()
         {
@@ -77,7 +109,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Apply new providers if possible
-            _webSocketProvider = clientProvider as Object;
+            _webSocketProvider = clientProvider as UnityEngine.Object;
 
             // Log warning for non UnityEngine.Objects
             if (clientProvider != null && _webSocketProvider == null)
@@ -97,17 +129,19 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Connect()
         {
-            if (WebSocketClient == null || _connectRequested)
+            if (WebSocketClient == null || _connected)
             {
                 return;
             }
-            _connectRequested = true;
+            _connected = true;
 
             // Connect to server if possible
+            WebSocketClient.OnTopicSubscriptionStateChange += HandleSubscriptionStateChange;
+            WebSocketClient.OnTopicRequestTracked += HandleRequestGenerated;
             WebSocketClient.Connect();
 
             // Subscribe to current topic
-            SetTopicId(TopicId);
+            Subscribe();
         }
 
         /// <summary>
@@ -115,16 +149,18 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Disconnect()
         {
-            if (WebSocketClient == null || !_connectRequested)
+            if (WebSocketClient == null || !_connected)
             {
                 return;
             }
-            _connectRequested = false;
 
             // Unsubscribe from current topic
             Unsubscribe();
 
             // Disconnect if possible
+            _connected = false;
+            WebSocketClient.OnTopicSubscriptionStateChange -= HandleSubscriptionStateChange;
+            WebSocketClient.OnTopicRequestTracked -= HandleRequestGenerated;
             WebSocketClient.Disconnect();
         }
         #endregion CONNECT & DISCONNECT
@@ -152,22 +188,8 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-            // Append if json request
-            if (request is WitWebSocketJsonRequest jsonRequest)
-            {
-                AppendPublishNode(jsonRequest.PostData, topicId);
-            }
-        }
-
-        /// <summary>
-        /// Append publish topic to an existing post node
-        /// </summary>
-        private static void AppendPublishNode(WitResponseNode postNode, string topicId)
-        {
-            var publish = new WitResponseClass();
-            publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY] = topicId;
-            publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY] = topicId;
-            postNode[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
+            // Set request's topic id
+            request.TopicId = topicId;
         }
         #endregion SEND & PUBLISH
 
@@ -183,84 +205,32 @@ namespace Meta.Voice.Net.WebSockets
             // Set new topic
             _topicId = newTopicId;
 
-            // Subscribe to new topic if connected
-            if (_connectRequested)
-            {
-                Subscribe();
-            }
+            // Subscribe to new topic
+            Subscribe();
         }
 
         /// <summary>
-        /// Sets the current request provider
-        /// </summary>
-        public void SetRequestProvider(IWitWebSocketRequestProvider requestProvider)
-        {
-            // Set current request provider
-            _requestProvider = requestProvider as Object;
-
-            // Apply request provider to web socket client if possible
-            var client = WebSocketClient;
-            if (RequestProvider != null && client != null && !string.IsNullOrEmpty(_subscribedTopicId))
-            {
-                WebSocketClient.AddRequestProvider(_subscribedTopicId, RequestProvider);
-            }
-        }
-
-        /// <summary>
-        /// Begin subscribing
+        /// Subscribe if topic id exists and connected
         /// </summary>
         private void Subscribe()
         {
-            // Unsubscribe previous topic if not already done
-            if (!string.IsNullOrEmpty(_subscribedTopicId))
-            {
-                Unsubscribe();
-            }
-
-            // Ignore without a topic id
-            var topicId = TopicId;
-            if (string.IsNullOrEmpty(topicId))
+            if (string.IsNullOrEmpty(TopicId) || !_connected)
             {
                 return;
             }
-
-            // Set subscribed topic
-            _subscribedTopicId = topicId;
-
-            // Add request provider if it is set
-            if (RequestProvider != null)
-            {
-                WebSocketClient.AddRequestProvider(topicId, RequestProvider);
-            }
-
-            // Get & send subscribe request
-            VLog.I(GetType().Name, $"Subscribe\nTopic Id: {topicId}");
-            var subscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Subscribe);
-            WebSocketClient.SendRequest(subscribeRequest);
+            WebSocketClient.Subscribe(TopicId);
         }
 
         /// <summary>
-        /// Stop subscribing
+        /// Unsubscribe if topic id exists and connected
         /// </summary>
         private void Unsubscribe()
         {
-            // Ignore if not subscribed
-            var topicId = _subscribedTopicId;
-            if (string.IsNullOrEmpty(topicId))
+            if (string.IsNullOrEmpty(TopicId) || !_connected)
             {
                 return;
             }
-
-            // Remove subscribed topic
-            _subscribedTopicId = null;
-
-            // Remove request provider
-            WebSocketClient.RemoveRequestProvider(topicId);
-
-            // Get & send unsubscribe request
-            VLog.I(GetType().Name, $"Unsubscribe\nTopic Id: {topicId}");
-            var unsubscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Unsubscribe);
-            WebSocketClient.SendRequest(unsubscribeRequest);
+            WebSocketClient.Unsubscribe(TopicId);
         }
         #endregion SUBSCRIBE & UNSUBSCRIBE
     }
