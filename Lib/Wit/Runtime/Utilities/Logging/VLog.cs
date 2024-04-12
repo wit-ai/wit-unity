@@ -215,18 +215,17 @@ namespace Meta.WitAi
 
             var logger = _loggerRegistry.GetLogger(category);
 
-            // Log
             switch (logType)
             {
                 case VLogLevel.Error:
 #if UNITY_EDITOR
                     if (LogErrorsAsWarnings)
                     {
-                        logger.Warning(log.ToString());
+                        logger.Warning(log + (exception == null ? "" : $"\n{exception}"));
                         return;
                     }
 #endif
-                    logger.Error(KnownErrorCode.Unknown, log.ToString());
+                    logger.Error(KnownErrorCode.Unknown, log + (exception == null ? "" : $"\n{exception}"));
                     break;
                 case VLogLevel.Warning:
                     logger.Warning(log.ToString());
