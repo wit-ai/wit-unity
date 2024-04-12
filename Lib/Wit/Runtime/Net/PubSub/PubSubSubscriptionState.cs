@@ -13,10 +13,34 @@ namespace Meta.Voice.Net.PubSub
     /// </summary>
     public enum PubSubSubscriptionState
     {
+        /// <summary>
+        /// Not subscribed to a topic whatsoever
+        /// </summary>
         NotSubscribed,
+
+        /// <summary>
+        /// Currently attempting to subscribe to a topic
+        /// </summary>
         Subscribing,
+
+        /// <summary>
+        /// Currently subscribed to a topic
+        /// </summary>
         Subscribed,
+
+        /// <summary>
+        /// Currently sending an unsubscribe request to the server
+        /// </summary>
         Unsubscribing,
-        Error
+
+        /// <summary>
+        /// An error occured while subscribing, will attempt again if connected
+        /// </summary>
+        SubscribeError,
+
+        /// <summary>
+        /// An error occured while unsubscribing, will attempt again if connected
+        /// </summary>
+        UnsubscribeError
     }
 }

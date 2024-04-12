@@ -146,10 +146,7 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             ConnectionState = newConnectionState;
-            if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
-            {
-                VLog.I(GetType().Name, ConnectionState);
-            }
+            VLog.I(GetType().Name, ConnectionState);
             OnConnectionStateChanged?.Invoke(ConnectionState);
         }
 
@@ -349,6 +346,13 @@ namespace Meta.Voice.Net.WebSockets
             // Connected successfully
             FailedConnectionAttempts = 0;
             SetConnectionState(WitWebSocketConnectionState.Connected);
+
+            // Attempt to subscribe to all existing subscriptions
+            var topicIds = _subscriptions.Keys.ToArray();
+            foreach (var topicId in topicIds)
+            {
+                Subscribe(topicId, true);
+            }
         }
 
         /// <summary>
@@ -446,25 +450,28 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
-        /// Breaks down all
+        /// Unloads all requests & ensures socket disconnection
         /// </summary>
         private async Task BreakdownAsync()
         {
             // No longer authenticated
             IsAuthenticated = false;
 
-            // Unload all requests, uploads and downloads
-            if (!IsReconnecting)
+            // Sets all currently subscribed topics to 'Subscribing' state
+            var topicIds = _subscriptions.Keys.ToArray();
+            foreach (var topicId in topicIds)
             {
-                // Untrack all running requests
-                var requestIds = new Dictionary<string, IWitWebSocketRequest>(_requests).Keys.ToArray();
-                foreach (var requestId in requestIds)
-                {
-                    UntrackRequest(requestId);
-                }
-                // Clear untracked list
-                _untrackedRequests.Clear();
+                Subscribe(topicId, true);
             }
+
+            // Untrack all running requests
+            var requestIds = _requests.Keys.ToArray();
+            foreach (var requestId in requestIds)
+            {
+                UntrackRequest(requestId);
+            }
+            // Clear untracked list
+            _untrackedRequests.Clear();
 
             // Close socket connection
             if (_socket != null)
@@ -845,7 +852,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// A private struct used to track pubsub topic subscription and reference count
         /// </summary>
-        private struct PubSubSubscription
+        private class PubSubSubscription
         {
             /// <summary>
             /// The current subscription state
@@ -887,7 +894,13 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Method to subscribe to a specific topic id
         /// </summary>
-        public void Subscribe(string topicId)
+        public void Subscribe(string topicId) => Subscribe(topicId, false);
+
+        /// <summary>
+        /// Method to subscribe to a specific topic id with a parameter to ignore
+        /// ref count for local subscribing following reconnect/error.
+        /// </summary>
+        private void Subscribe(string topicId, bool ignoreRefCount)
         {
             // Ignore if null
             if (string.IsNullOrEmpty(topicId))
@@ -899,39 +912,43 @@ namespace Meta.Voice.Net.WebSockets
             {
                 subscription = new PubSubSubscription();
             }
-
-            // Increment reference count
-            subscription.referenceCount++;
-
-            // Ignore if subscribed or already subscribing
-            if (subscription.state == PubSubSubscriptionState.Subscribed
-                || subscription.state == PubSubSubscriptionState.Subscribing)
+            // Increment reference count if not ignored
+            if (!ignoreRefCount)
             {
-                _subscriptions[topicId] = subscription;
+                subscription.referenceCount++;
+            }
+            // If not connected, set as subscribe error and retry when connected
+            if (ConnectionState != WitWebSocketConnectionState.Connected)
+            {
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.SubscribeError);
+                return;
+            }
+            // Ignore if already subscribing or subscribed
+            if (subscription.state == PubSubSubscriptionState.Subscribing
+                || subscription.state == PubSubSubscriptionState.Subscribed)
+            {
                 return;
             }
 
-            // Begin subscribing
+            // Subscribing
             SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Subscribing);
 
             // Generate and send subscribe request
             var subscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Subscribe);
-            subscribeRequest.OnComplete += HandleSubscriptionComplete;
+            subscribeRequest.OnComplete += FinalizeSubscription;
             SendRequest(subscribeRequest);
         }
 
         /// <summary>
-        /// Method to unsubscribe from a specific topic id
+        /// Method to unsubscribe to a specific topic id
         /// </summary>
         public void Unsubscribe(string topicId) => Unsubscribe(topicId, false);
 
         /// <summary>
-        /// Method to unsubscribe from a specific topic id with a force
-        /// option which will unsubscribe no matter the reference count.
+        /// Method to subscribe to a specific topic id with a parameter to ignore
+        /// ref count for local unsubscribing following disconnect/error.
         /// </summary>
-        /// <param name="force">If false, only unsubscribes when reference count is 0.
-        /// If true, unsubscribes no matter the reference count.</param>
-        private void Unsubscribe(string topicId, bool force)
+        public void Unsubscribe(string topicId, bool ignoreRefCount)
         {
             // Ignore if null
             if (string.IsNullOrEmpty(topicId))
@@ -943,20 +960,27 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-
-            // Decrement reference count
-            subscription.referenceCount--;
-            if (force || subscription.referenceCount < 0)
+            // Decrement reference count if not ignored
+            if (!ignoreRefCount)
             {
-                subscription.referenceCount = 0;
+                subscription.referenceCount = Mathf.Max(0, subscription.referenceCount - 1);
             }
-
-            // Ignore if not subscribed, already unsubscribing or reference count is > 0
-            if (subscription.state == PubSubSubscriptionState.Unsubscribing
-                || subscription.state == PubSubSubscriptionState.NotSubscribed
-                || subscription.referenceCount > 0)
+            // Ignore if still referenced
+            if (subscription.referenceCount > 0)
             {
-                _subscriptions[topicId] = subscription;
+                return;
+            }
+            // If not connected, unsubscribe immediately
+            if (ConnectionState != WitWebSocketConnectionState.Connected)
+            {
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Unsubscribing);
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.NotSubscribed);
+                return;
+            }
+            // Ignore if already unsubscribing
+            if (subscription.state == PubSubSubscriptionState.Unsubscribing
+                || subscription.state == PubSubSubscriptionState.NotSubscribed)
+            {
                 return;
             }
 
@@ -965,14 +989,15 @@ namespace Meta.Voice.Net.WebSockets
 
             // Get and send unsubscribe request
             var unsubscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Unsubscribe);
-            unsubscribeRequest.OnComplete += HandleSubscriptionComplete;
+            unsubscribeRequest.OnComplete += FinalizeSubscription;
             SendRequest(unsubscribeRequest);
         }
 
         /// <summary>
-        /// Handles subscription completion
+        /// Called once subscribe or unsubscribe completes.
+        /// Sets the resultant subscription state & retries if applicable.
         /// </summary>
-        private void HandleSubscriptionComplete(IWitWebSocketRequest request)
+        private void FinalizeSubscription(IWitWebSocketRequest request)
         {
             // Ignore non-subscription requests
             var subRequest = request as WitWebSocketSubscriptionRequest;
@@ -981,25 +1006,41 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             // Remove on complete delegate
-            subRequest.OnComplete -= HandleSubscriptionComplete;
-            // Ignore unhandled topic ids
+            subRequest.OnComplete -= FinalizeSubscription;
+            // Ignore not subscribed topic ids
             var topicId = subRequest.TopicId;
             if (!_subscriptions.TryGetValue(topicId, out var subscription))
             {
                 return;
             }
-            // Set error, then not subscribed
+
+            // Check for error
+            bool subscribing = subRequest.SubscriptionType == WitWebSocketSubscriptionType.Subscribe;
             if (!string.IsNullOrEmpty(request.Error))
             {
-                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Error);
-                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.NotSubscribed);
+                // Set subscribe or unsubscribe error
+                var errorType = subscribing
+                    ? PubSubSubscriptionState.SubscribeError
+                    : PubSubSubscriptionState.UnsubscribeError;
+                SetTopicSubscriptionState(subscription, topicId, errorType);
+
+                // Retry
+                if (subscribing)
+                {
+                    Subscribe(topicId, true);
+                }
+                else
+                {
+                    Unsubscribe(topicId, true);
+                }
                 return;
             }
+
             // Set subscribed or not subscribed
-            var type = subRequest.SubscriptionType == WitWebSocketSubscriptionType.Subscribe
+            var successType = subscribing
                 ? PubSubSubscriptionState.Subscribed
                 : PubSubSubscriptionState.NotSubscribed;
-            SetTopicSubscriptionState(subscription, topicId, type);
+            SetTopicSubscriptionState(subscription, topicId, successType);
         }
 
         /// <summary>
