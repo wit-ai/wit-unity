@@ -10,16 +10,19 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Voice.Net.Encoding.Wit;
+using Meta.Voice.Net.PubSub;
+using Meta.Voice.Net.WebSockets.Requests;
 
 namespace Meta.Voice.Net.WebSockets
 {
     /// <summary>
     /// An class for performing multi-threaded web socket communication to a Wit endpoint
     /// WitWebSocketClient is a wrapper for web socket communication that facilitates the safe upload and
-    /// download of data between the Voice SDK and Wit.ai.  The class handles connection, transmission &amp; response handling
+    /// download of data between the Voice SDK and Wit.ai.  The class handles connection, transmission and response handling
     /// for all socket communication.  Three background threads are spawned by each WitWebSocketClient in order to handle
     /// encoding/uploading, downloading/decoding and response handling respectively.  WitWebSocketClients contain a list of
     /// IWitWebSocketRequests which are used to facilitate upload and download of data.  When sending a WitChunk the IWitWebSocketRequest’s
@@ -27,7 +30,7 @@ namespace Meta.Voice.Net.WebSockets
     /// the appropriate IWitWebSocketRequest will handle the response.  If no matching request is found, the WitChunk’s topic id will be
     /// used to find the appropriate IWitWebSocketSubscriber which then will generate a request to handle the response.
     /// </summary>
-    public class WitWebSocketClient
+    public class WitWebSocketClient : IPubSubSubscriber
     {
         /// <summary>
         /// The settings required to connect, authenticate and drive server/client communication.
@@ -196,7 +199,7 @@ namespace Meta.Voice.Net.WebSockets
                     headers.Remove(WitConstants.HEADER_AUTH);
                 }
 
-                // Generate socket wrapper & assign message callback method
+                // Generate socket wrapper and assign message callback method
                 _socket = GenerateWebSocket(Settings.ServerUrl, headers);
                 _socket.OnOpen += HandleSocketConnected;
                 _socket.OnMessage += HandleSocketResponse;
@@ -321,8 +324,8 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
-            // Make authentication request & return any encountered error
-            var authRequest = new Requests.WitWebSocketAuthRequest(clientAccessToken);
+            // Make authentication request and return any encountered error
+            var authRequest = new WitWebSocketAuthRequest(clientAccessToken);
             SendRequest(authRequest);
             await TaskUtility.WaitWhile(() => !authRequest.IsComplete);
 
@@ -453,7 +456,7 @@ namespace Meta.Voice.Net.WebSockets
             // No longer authenticated
             IsAuthenticated = false;
 
-            // Unload all requests, uploads & downloads
+            // Unload all requests, uploads and downloads
             if (!IsReconnecting)
             {
                 // Untrack all running requests
@@ -516,7 +519,7 @@ namespace Meta.Voice.Net.WebSockets
                 VLog.E(GetType().Name, $"Reconnect Failed\nToo many failed reconnect attempts\nFailures: {FailedConnectionAttempts}\nAttempts Allowed: {Settings.ReconnectAttempts}");
                 return;
             }
-            // Wait & reconnect
+            // Wait and reconnect
             _ = WaitAndConnect();
         }
         /// <summary>
@@ -525,7 +528,7 @@ namespace Meta.Voice.Net.WebSockets
         private async Task WaitAndConnect()
         {
             // Wait for reconnect interval
-            var delay = UnityEngine.Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
+            var delay = Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
             if (delay > 0f)
             {
                 await Task.Delay(delay);
@@ -560,7 +563,7 @@ namespace Meta.Voice.Net.WebSockets
                 return false;
             }
 
-            // Begin upload & send method for chunks when ready to be sent
+            // Begin upload and send method for chunks when ready to be sent
             request.HandleUpload(SendChunk);
             return true;
         }
@@ -756,6 +759,15 @@ namespace Meta.Voice.Net.WebSockets
             // Begin tracking
             _requests[request.RequestId] = request;
             VLog.I(GetType().Name, $"Track Request\n{request}");
+
+            // Invoke callback for subscribed topics
+            var topicId = request.TopicId;
+            if (GetTopicSubscriptionState(topicId) != PubSubSubscriptionState.NotSubscribed)
+            {
+                OnTopicRequestTracked?.Invoke(topicId, request);
+            }
+
+            // Success
             return true;
         }
 
@@ -855,5 +867,197 @@ namespace Meta.Voice.Net.WebSockets
             return request;
         }
         #endregion REQUESTS
+
+        #region SUBSCRIPTION
+        /// <summary>
+        /// A private struct used to track pubsub topic subscription and reference count
+        /// </summary>
+        private struct PubSubSubscription
+        {
+            /// <summary>
+            /// The current subscription state
+            /// </summary>
+            public PubSubSubscriptionState state;
+            /// <summary>
+            /// The current reference count
+            /// </summary>
+            public int referenceCount;
+        }
+        /// <summary>
+        /// Dictionary with keys for topic id and values containing subscription state and reference count
+        /// </summary>
+        private Dictionary<string, PubSubSubscription> _subscriptions = new Dictionary<string, PubSubSubscription>();
+
+        /// <summary>
+        /// Callback when subscription state changes for a specific topic id
+        /// </summary>
+        public event PubSubTopicSubscriptionDelegate OnTopicSubscriptionStateChange;
+
+        /// <summary>
+        /// Callback when a tracked topic generates a request
+        /// </summary>
+        public event Action<string, IWitWebSocketRequest> OnTopicRequestTracked;
+
+        /// <summary>
+        /// Obtains the current subscription state for a specific topic
+        /// </summary>
+        public PubSubSubscriptionState GetTopicSubscriptionState(string topicId)
+        {
+            if (!string.IsNullOrEmpty(topicId)
+                && _subscriptions.TryGetValue(topicId, out var subscription))
+            {
+                return subscription.state;
+            }
+            return PubSubSubscriptionState.NotSubscribed;
+        }
+
+        /// <summary>
+        /// Method to subscribe to a specific topic id
+        /// </summary>
+        public void Subscribe(string topicId)
+        {
+            // Ignore if null
+            if (string.IsNullOrEmpty(topicId))
+            {
+                return;
+            }
+            // Add to subscription list if not added
+            if (!_subscriptions.TryGetValue(topicId, out var subscription))
+            {
+                subscription = new PubSubSubscription();
+            }
+
+            // Increment reference count
+            subscription.referenceCount++;
+
+            // Ignore if subscribed or already subscribing
+            if (subscription.state == PubSubSubscriptionState.Subscribed
+                || subscription.state == PubSubSubscriptionState.Subscribing)
+            {
+                _subscriptions[topicId] = subscription;
+                return;
+            }
+
+            // Begin subscribing
+            SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Subscribing);
+
+            // Generate and send subscribe request
+            var subscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Subscribe);
+            subscribeRequest.OnComplete += HandleSubscriptionComplete;
+            SendRequest(subscribeRequest);
+        }
+
+        /// <summary>
+        /// Method to unsubscribe from a specific topic id
+        /// </summary>
+        public void Unsubscribe(string topicId) => Unsubscribe(topicId, false);
+
+        /// <summary>
+        /// Method to unsubscribe from a specific topic id with a force
+        /// option which will unsubscribe no matter the reference count.
+        /// </summary>
+        /// <param name="force">If false, only unsubscribes when reference count is 0.
+        /// If true, unsubscribes no matter the reference count.</param>
+        private void Unsubscribe(string topicId, bool force)
+        {
+            // Ignore if null
+            if (string.IsNullOrEmpty(topicId))
+            {
+                return;
+            }
+            // Ignore if not subscribed
+            if (!_subscriptions.TryGetValue(topicId, out var subscription))
+            {
+                return;
+            }
+
+            // Decrement reference count
+            subscription.referenceCount--;
+            if (force || subscription.referenceCount < 0)
+            {
+                subscription.referenceCount = 0;
+            }
+
+            // Ignore if not subscribed, already unsubscribing or reference count is > 0
+            if (subscription.state == PubSubSubscriptionState.Unsubscribing
+                || subscription.state == PubSubSubscriptionState.NotSubscribed
+                || subscription.referenceCount > 0)
+            {
+                _subscriptions[topicId] = subscription;
+                return;
+            }
+
+            // Begin unsubscribing
+            SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Unsubscribing);
+
+            // Get and send unsubscribe request
+            var unsubscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Unsubscribe);
+            unsubscribeRequest.OnComplete += HandleSubscriptionComplete;
+            SendRequest(unsubscribeRequest);
+        }
+
+        /// <summary>
+        /// Handles subscription completion
+        /// </summary>
+        private void HandleSubscriptionComplete(IWitWebSocketRequest request)
+        {
+            // Ignore non-subscription requests
+            var subRequest = request as WitWebSocketSubscriptionRequest;
+            if (subRequest == null)
+            {
+                return;
+            }
+            // Remove on complete delegate
+            subRequest.OnComplete -= HandleSubscriptionComplete;
+            // Ignore unhandled topic ids
+            var topicId = subRequest.TopicId;
+            if (!_subscriptions.TryGetValue(topicId, out var subscription))
+            {
+                return;
+            }
+            // Set error, then not subscribed
+            if (!string.IsNullOrEmpty(request.Error))
+            {
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.Error);
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.NotSubscribed);
+                return;
+            }
+            // Set subscribed or not subscribed
+            var type = subRequest.SubscriptionType == WitWebSocketSubscriptionType.Subscribe
+                ? PubSubSubscriptionState.Subscribed
+                : PubSubSubscriptionState.NotSubscribed;
+            SetTopicSubscriptionState(subscription, topicId, type);
+        }
+
+        /// <summary>
+        /// Sets the current subscription state using the subscription asset and the topic id
+        /// </summary>
+        private void SetTopicSubscriptionState(PubSubSubscription subscription, string topicId, PubSubSubscriptionState state)
+        {
+            // Ignore if same state
+            if (subscription.state == state)
+            {
+                return;
+            }
+
+            // Apply state
+            subscription.state = state;
+            VLog.I(GetType().Name, $"{state}\nTopic Id: {topicId}");
+
+            // Remove reference
+            if (state == PubSubSubscriptionState.NotSubscribed)
+            {
+                _subscriptions.Remove(topicId);
+            }
+            // Set reference
+            else
+            {
+                _subscriptions[topicId] = subscription;
+            }
+
+            // Call delegate
+            OnTopicSubscriptionStateChange?.Invoke(topicId, state);
+        }
+        #endregion SUBSCRIPTION
     }
 }
