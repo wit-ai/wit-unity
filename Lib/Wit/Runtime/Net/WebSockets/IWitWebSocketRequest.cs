@@ -31,6 +31,11 @@ namespace Meta.Voice.Net.WebSockets
         string RequestId { get; }
 
         /// <summary>
+        /// The specific topic id that is being published to or received via subscription, if applicable.
+        /// </summary>
+        string TopicId { get; set; }
+
+        /// <summary>
         /// Whether currently uploading data
         /// </summary>
         bool IsUploading { get; }

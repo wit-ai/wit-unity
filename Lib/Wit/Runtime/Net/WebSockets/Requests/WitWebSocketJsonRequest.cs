@@ -24,6 +24,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public string RequestId { get; }
 
         /// <summary>
+        /// The specific topic id that is being published to or received via subscription, if applicable.
+        /// </summary>
+        public string TopicId { get; set; }
+
+        /// <summary>
         /// Whether or not uploading has begun
         /// </summary>
         public bool IsUploading { get; protected set; }
@@ -88,6 +93,17 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 return;
             }
             IsUploading = true;
+
+            // Append topic id if applicable
+            if (!string.IsNullOrEmpty(TopicId) && PostData != null)
+            {
+                var publish = new WitResponseClass();
+                publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY] = TopicId;
+                publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY] = TopicId;
+                PostData[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
+            }
+
+            // Upload chunk
             uploadChunk?.Invoke(RequestId, PostData, null);
         }
 
@@ -136,6 +152,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
             ResponseData = newResponseData;
             Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];
+            var topicId = ResponseData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY]?.Value;
+            if (!string.IsNullOrEmpty(topicId))
+            {
+                TopicId = topicId;
+            }
         }
 
         /// <summary>
@@ -188,8 +209,17 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            var error = string.IsNullOrEmpty(Error) ? "" : $"\nError: {Error}";
-            return $"Type: {GetType().Name}\nId: {RequestId}{error}";
+            var result = $"Type: {GetType().Name}";
+            result += $"\nId: {RequestId}";
+            if (!string.IsNullOrEmpty(TopicId))
+            {
+                result += $"\nTopic Id: {TopicId}";
+            }
+            if (!string.IsNullOrEmpty(Error))
+            {
+                result += $"\nError: {Error}";
+            }
+            return result;
         }
     }
 }

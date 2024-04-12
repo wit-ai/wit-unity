@@ -26,11 +26,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
     public class WitWebSocketSubscriptionRequest : WitWebSocketJsonRequest
     {
         /// <summary>
-        /// The specific topic id being subscribed to
-        /// </summary>
-        public string TopicId { get; }
-
-        /// <summary>
         /// Whether to subscribe or unsubscribe
         /// </summary>
         public WitWebSocketSubscriptionType SubscriptionType { get; }
@@ -49,7 +44,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            return $"{base.ToString()}\nTopic Id: {TopicId}\nSub Type: {SubscriptionType}";
+            return $"{base.ToString()}\nSubscription Type: {SubscriptionType}";
         }
 
         /// <summary>
