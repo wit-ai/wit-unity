@@ -460,12 +460,27 @@ namespace Meta.Voice.Logging
         {
 #if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
             var stackTrace = new StackTrace(true);
-            var stackFrame = stackTrace.GetFrame(3);
-            var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
-            var callingFileLine = stackFrame.GetFileLineNumber();
-            builder.Insert(startIndex, $"<a href=\"{callingFileName}\" line=\"{callingFileLine}\">");
-            builder.Append("</a>");
+            for (int i = 3; i < stackTrace.FrameCount; i++)
+            {
+                var stackFrame = stackTrace.GetFrame(i);
+                var method = stackFrame.GetMethod();
+                if (IsLoggingClass(method.DeclaringType))
+                {
+                    continue;
+                }
+
+                var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
+                var callingFileLine = stackFrame.GetFileLineNumber();
+                builder.Insert(startIndex, $"<a href=\"{callingFileName}\" line=\"{callingFileLine}\">");
+                builder.Append("</a>");
+                return;
+            }
 #endif
+        }
+
+        private static bool IsLoggingClass(Type type)
+        {
+            return typeof(IVLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
         }
 
         /// <summary>
