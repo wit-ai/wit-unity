@@ -21,5 +21,6 @@ namespace Meta.Voice.Logging
         Logging,
         ErrorMitigator,
         ContextSystem,
+        Requests,
     }
 }

@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
-using Meta.Voice.Audio;
 using Meta.Voice.Audio.Decoding;
+using Meta.Voice.Logging;
 
 namespace Meta.WitAi.Requests
 {
@@ -44,6 +44,7 @@ namespace Meta.WitAi.Requests
     /// <summary>
     /// Class for performing web requests using UnityWebRequest
     /// </summary>
+    [LogCategory(LogCategory.Requests)]
     public class VRequest
     {
         /// <summary>
@@ -53,6 +54,8 @@ namespace Meta.WitAi.Requests
         public static int MaxConcurrentRequests = 3;
         // Currently transmitting requests
         private static int _requestCount = 0;
+
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Request progress delegate
         public delegate void RequestProgressDelegate(float progress);
@@ -198,6 +201,8 @@ namespace Meta.WitAi.Requests
             // Dispose handlers automatically
             _request.disposeUploadHandlerOnDispose = true;
             _request.disposeDownloadHandlerOnDispose = true;
+
+            _log.Verbose("Setup request with URL: {0}", _request.uri);
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
@@ -32,8 +33,11 @@ namespace Meta.WitAi
     /// Note: This is not intended to be instantiated directly. Requests should be created with the
     /// WitRequestFactory
     /// </summary>
+    [LogCategory(LogCategory.Requests)]
     public class WitRequest : VoiceServiceRequest, IAudioUploadHandler
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         #region PARAMETERS
         /// <summary>
         /// The wit Configuration to be used with this request
@@ -68,7 +72,7 @@ namespace Meta.WitAi
                 }
                 else
                 {
-                    VLog.W($"Cannot set WitRequest.Path while after transmission.");
+                    _log.Warning("Cannot set WitRequest.Path while after transmission.");
                 }
             }
         }
@@ -370,21 +374,25 @@ namespace Meta.WitAi
             #if UNITY_WEBGL && UNITY_EDITOR
             if (IsPost)
             {
-                VLog.W("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
+                _log.Warning("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
 
             // Run on background thread
-            _requestThread = new Thread(async () => await StartThreadedRequest());
+            _requestThread = new Thread(async () => await StartThreadedRequest(_log.CorrelationID));
             _requestThread.Start();
             #endif
         }
 
-        private void SetupSend(out Uri uri, out Dictionary<string, string> headers)
+        private void SetupSend(out Uri uri, out Dictionary<string, string> headers, CorrelationID correlationID)
         {
+            _log.CorrelationID = correlationID;
+
             // Get uri & prevent further path changes
             uri = GetUri();
             _canSetPath = false;
+
+            _log.Verbose(correlationID, "Setup request with URL: {0}", uri);
 
             // Get headers
             headers = GetHeaders();
@@ -398,13 +406,14 @@ namespace Meta.WitAi
         /// <summary>
         /// Performs a threaded http request
         /// </summary>
-        private async Task StartThreadedRequest()
+        private async Task StartThreadedRequest(CorrelationID correlationID)
         {
             // Get uri & headers
-            SetupSend(out Uri uri, out Dictionary<string, string> headers);
+            SetupSend(out Uri uri, out Dictionary<string, string> headers, correlationID);
 
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
+            _log.Verbose("Created web request: {0}", _request?.RequestUri.AbsoluteUri);
 
             // Off to not wait for a response indefinitely
             _request.KeepAlive = false;
@@ -869,7 +878,7 @@ namespace Meta.WitAi
                     }
                     catch (Exception e)
                     {
-                        VLog.W($"Write Stream - Close Failed\n{e}");
+                        _log.Warning("Write Stream - Close Failed\n{0}", e);
                     }
                     _writeStream = null;
                 }
