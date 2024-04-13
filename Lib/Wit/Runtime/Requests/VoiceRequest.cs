@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Text;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Data;
 using UnityEngine.Events;
@@ -312,7 +313,7 @@ namespace Meta.Voice
         /// <summary>
         /// Internal method for
         /// </summary>
-        protected void Log(string log, VLogLevel logLevel = VLogLevel.Info)
+        protected void Log(string log, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
             // Start log
             StringBuilder requestLog = new StringBuilder();
@@ -323,15 +324,15 @@ namespace Meta.Voice
             // Log
             VLog.Log(logLevel, GetType().Name, requestLog);
         }
-        protected void LogW(string log) => Log(log, VLogLevel.Warning);
-        protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLogLevel.Error);
+        protected void LogW(string log) => Log(log, VLoggerVerbosity.Warning);
+        protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLoggerVerbosity.Error);
 
         /// <summary>
         /// Append request specific data to log
         /// </summary>
         /// <param name="log">Building log</param>
         /// <param name="warning">True if this is a warning log</param>
-        protected virtual void AppendLogData(StringBuilder log, VLogLevel logLevel)
+        protected virtual void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
         {
             #if UNITY_EDITOR
             // Append request id

@@ -6,17 +6,39 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using UnityEditor;
 
 namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {
+        private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
+        private const VLoggerVerbosity EDITOR_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Warning;
         private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
         private static readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
+        private static VLoggerVerbosity _editorLogLevel = (VLoggerVerbosity)(-1);
+
+        /// <inheritdoc/>
+        public VLoggerVerbosity EditorLogLevel
+        {
+            get => _editorLogLevel;
+            set
+            {
+                _editorLogLevel = value;
+#if UNITY_EDITOR
+                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
+#endif
+                foreach (var logger in _loggers.Values)
+                {
+                    logger.MinimumVerbosity = value;
+                }
+            }
+        }
 
         /// <summary>
         /// The singleton instance of the registry.
@@ -29,6 +51,31 @@ namespace Meta.Voice.Logging
         private LoggerRegistry()
         {
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Initialize the registry.
+        /// </summary>
+        [UnityEngine.RuntimeInitializeOnLoadMethod]
+        public static void Initialize()
+        {
+            // Already init
+            if (Instance.EditorLogLevel != (VLoggerVerbosity) (-1))
+            {
+                return;
+            }
+
+            // Load log
+            var editorLogLevel = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
+
+            // Try parsing
+            if (!Enum.TryParse(editorLogLevel, out _editorLogLevel))
+            {
+                // If parsing fails, use default log level
+                Instance.EditorLogLevel = EDITOR_LOG_LEVEL_DEFAULT;
+            }
+        }
+#endif
 
         /// <inheritdoc/>
         public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
@@ -55,7 +102,11 @@ namespace Meta.Voice.Logging
                 }
                 else
                 {
-                    return new VLogger(category, logWriter);
+#if UNITY_EDITOR
+                    return new VLogger(category, logWriter, EditorLogLevel);
+#else
+                    return new VLogger(category, logWriter, VLoggerVerbosity.Verbose);
+#endif
                 }
             }
 
@@ -77,7 +128,7 @@ namespace Meta.Voice.Logging
                 }
                 else
                 {
-                    _loggers.Add(category, new VLogger(category, logWriter));
+                    _loggers.Add(category, new VLogger(category, logWriter, EditorLogLevel));
                 }
             }
 

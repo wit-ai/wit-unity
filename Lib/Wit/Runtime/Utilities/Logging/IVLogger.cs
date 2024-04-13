@@ -17,6 +17,11 @@ namespace Meta.Voice.Logging
     public interface IVLogger
     {
         /// <summary>
+        /// The minimum verbosity this logger will log.
+        /// </summary>
+        public VLoggerVerbosity MinimumVerbosity { get; set; }
+
+        /// <summary>
         /// The correlation ID allows the tracing of an operation from beginning to end.
         /// It can be linked to other IDs to form a full chain when it branches out or moves to other domains.
         /// If not supplied explicitly while logging, it will be inherited from the thread storage or a

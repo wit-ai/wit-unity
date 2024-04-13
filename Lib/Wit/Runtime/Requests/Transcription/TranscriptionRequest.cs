@@ -7,6 +7,7 @@
  */
 
 using System.Text;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using UnityEngine.Events;
 
@@ -108,7 +109,7 @@ namespace Meta.Voice
         /// Append request specific data to log
         /// </summary>
         /// <param name="log">Building log</param>
-        protected override void AppendLogData(StringBuilder log, VLogLevel logLevel)
+        protected override void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
         {
             base.AppendLogData(log, logLevel);
             // Append audio input state

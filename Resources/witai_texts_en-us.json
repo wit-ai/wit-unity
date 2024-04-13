@@ -6,7 +6,7 @@
   "WitAppSettingsEndpoint": "/[APP_ID]/settings",
   "WitAppUnderstandingEndpoint": "/[APP_ID]/understanding",
   "WitOpenButtonLabel": "Open Wit.ai",
-  "VLogLevelLabel": "VLog Min Console Level",
+  "VLogLevelLabel": "Log Min Console Level",
   "TelemetryLevelLabel": "Telemetry Logging Level",
   "TelemetryEnabledLabel": "Share telemetry with Meta",
   "TelemetryConsentTitle": "Share edit-time telemetry with Meta?",

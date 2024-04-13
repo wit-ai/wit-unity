@@ -9,6 +9,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using UnityEngine.Events;
 
@@ -82,7 +83,7 @@ namespace Meta.Voice
         /// </summary>
         /// <param name="log">Building log</param>
         /// <param name="warning">True if this is a warning log</param>
-        protected override void AppendLogData(StringBuilder log, VLogLevel logLevel)
+        protected override void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
         {
             base.AppendLogData(log, logLevel);
             log.AppendLine($"Input Type: {InputType}");

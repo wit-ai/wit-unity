@@ -9,7 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Meta.Voice.TelemetryUtilities;
+using Meta.Voice.Logging;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,7 +25,7 @@ namespace Meta.WitAi.Windows
         // VLog log level
         private static int _logLevel = -1;
         private static string[] _logLevelNames;
-        private static readonly VLogLevel[] _logLevels = (Enum.GetValues(typeof(VLogLevel)) as VLogLevel[])?.Reverse().ToArray();
+        private static readonly VLoggerVerbosity[] _logLevels = (Enum.GetValues(typeof(VLoggerVerbosity)) as VLoggerVerbosity[])?.Reverse().ToArray();
         private string _newFilter;
 
 #if VSDK_TELEMETRY_AVAILABLE
@@ -89,7 +89,7 @@ namespace Meta.WitAi.Windows
             {
                 SetLogLevel(logLevel);
             }
-            
+
             GUILayout.Label("Log Filters", EditorStyles.boldLabel);
             for (int i = 0; i < VLog.FilteredTags.Count; i++)
             {
@@ -152,7 +152,7 @@ namespace Meta.WitAi.Windows
                 witInspector.OnInspectorGUI();
             }
         }
-        
+
         private static void RefreshLogLevel()
         {
             if (_logLevelNames != null && _logLevelNames.Length == _logLevels.Length)
@@ -165,13 +165,13 @@ namespace Meta.WitAi.Windows
                 logLevelOptions.Add(level.ToString());
             }
             _logLevelNames = logLevelOptions.ToArray();
-            VLog.Init();
-            _logLevel = logLevelOptions.IndexOf(VLog.EditorLogLevel.ToString());
+            LoggerRegistry.Initialize();
+            _logLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.EditorLogLevel.ToString());
         }
         private void SetLogLevel(int newLevel)
         {
             _logLevel = Mathf.Clamp(0, newLevel, _logLevels.Length);
-            VLog.EditorLogLevel = _logLevels[_logLevel];
+            LoggerRegistry.Instance.EditorLogLevel = _logLevels[_logLevel];
         }
 
         private static void InitializeTelemetryLevelOptions()

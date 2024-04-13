@@ -53,11 +53,12 @@ namespace Meta.Voice.Logging
         /// </summary>
         private readonly ILogWriter _logWriter;
 
-        /// <summary>
-        /// The minimum verbosity this logger will log.
-        /// </summary>
-        private readonly VLoggerVerbosity _minimumVerbosity;
+        /// <inheritdoc/>
+        public VLoggerVerbosity MinimumVerbosity { get; set; }
 
+        /// <summary>
+        /// The current correlation ID of this logger. This can be changed at will.
+        /// </summary>
         private CorrelationID _correlationID;
 
         /// <inheritdoc/>
@@ -88,24 +89,11 @@ namespace Meta.Voice.Logging
 
         private readonly string _category;
 
-        internal VLogger(string category, ILogWriter logWriter):
-            this(
-                category,
-                logWriter,
-#if UNITY_EDITOR
-                LogLevelToVerbosity(VLog.EditorLogLevel)
-#else
-                VLoggerVerbosity.Verbose
-#endif
-            )
-        {
-        }
-
         internal VLogger(string category, ILogWriter logWriter, VLoggerVerbosity verbosity)
         {
             _category = category;
             _logWriter = logWriter;
-            _minimumVerbosity = verbosity;
+            MinimumVerbosity = verbosity;
         }
 
         /// <summary>
@@ -213,7 +201,7 @@ namespace Meta.Voice.Logging
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             _logBuffer.Add(correlationId, logEntry);
 
-            if (_minimumVerbosity > verbosity)
+            if (MinimumVerbosity > verbosity)
             {
                 return;
             }
@@ -254,7 +242,7 @@ namespace Meta.Voice.Logging
         {
 #if UNITY_EDITOR
             // Skip logs with higher log type then minimum log level
-            if ((int) logEntry.Verbosity < (int) _minimumVerbosity)
+            if ((int) logEntry.Verbosity < (int) MinimumVerbosity)
             {
                 return true;
             }
@@ -534,23 +522,6 @@ namespace Meta.Voice.Logging
             // Replace the matched lines in the stack trace
             var formattedStackTrace = regex.Replace(stackTrace, (MatchEvaluator)Evaluator);
             return formattedStackTrace;
-        }
-
-        private static VLoggerVerbosity LogLevelToVerbosity(VLogLevel logLevel)
-        {
-            switch (logLevel)
-            {
-                case VLogLevel.Log:
-                    return VLoggerVerbosity.Log;
-                case VLogLevel.Error:
-                    return VLoggerVerbosity.Error;
-                case VLogLevel.Info:
-                    return VLoggerVerbosity.Info;
-                case VLogLevel.Warning:
-                    return VLoggerVerbosity.Warning;
-                default:
-                    return VLoggerVerbosity.Log;
-            }
         }
 
         private readonly struct LogEntry

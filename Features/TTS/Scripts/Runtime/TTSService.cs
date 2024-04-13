@@ -12,6 +12,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using Meta.Voice.Audio;
+using Meta.Voice.Logging;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
@@ -122,7 +123,7 @@ namespace Meta.WitAi.TTS
             string validError = GetInvalidError();
             if (!string.IsNullOrEmpty(validError))
             {
-                Log(validError, null, VLogLevel.Warning);
+                Log(validError, null, VLoggerVerbosity.Warning);
             }
         }
         // Remove delegates
@@ -213,7 +214,7 @@ namespace Meta.WitAi.TTS
         /// <summary>
         /// Get clip log data
         /// </summary>
-        private void Log(string logMessage, TTSClipData clipData = null, VLogLevel logLevel = VLogLevel.Info)
+        private void Log(string logMessage, TTSClipData clipData = null, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
             VLog.Log(logLevel, GetType().Name, logMessage + (clipData == null ? "" : "\n" + clipData));
         }
@@ -415,13 +416,13 @@ namespace Meta.WitAi.TTS
             TTSClipData clipData = CreateClipData(textToSpeak, clipID, voiceSettings, diskCacheSettings);
             if (clipData == null)
             {
-                Log("No clip provided", null, VLogLevel.Error);
+                Log("No clip provided", null, VLoggerVerbosity.Error);
                 onStreamReady?.Invoke(clipData, "No clip provided");
                 return null;
             }
             if (!gameObject.activeSelf)
             {
-                Log("Cannot load clip while inactive", null, VLogLevel.Error);
+                Log("Cannot load clip while inactive", null, VLoggerVerbosity.Error);
                 onStreamReady?.Invoke(clipData, "TTSService inactive");
                 return null;
             }
@@ -664,7 +665,7 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady = null;
 
             // Stream error
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Error\nError: {error}", clipData, VLogLevel.Error);
+            Log($"{(fromDisk ? "Disk" : "Web")} Stream Error\nError: {error}", clipData, VLoggerVerbosity.Error);
             Events?.Stream?.OnStreamError?.Invoke(clipData, error);
 
             // Unload clip
@@ -990,7 +991,7 @@ namespace Meta.WitAi.TTS
             clipData.onDownloadComplete = null;
 
             // Log
-            Log($"Download Clip - Failed\nPath: {downloadPath}\nError: {error}", clipData, VLogLevel.Error);
+            Log($"Download Clip - Failed\nPath: {downloadPath}\nError: {error}", clipData, VLoggerVerbosity.Error);
             Events?.Download?.OnDownloadError?.Invoke(clipData, downloadPath, error);
         }
         #endregion

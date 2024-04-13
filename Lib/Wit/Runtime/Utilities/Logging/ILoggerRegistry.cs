@@ -14,6 +14,12 @@ namespace Meta.Voice.Logging
     public interface ILoggerRegistry
     {
         /// <summary>
+        /// Ignores logs in editor if less than log level.
+        /// Changing this value at runtime will update it for all existing VLoggers.
+        /// </summary>
+        public VLoggerVerbosity EditorLogLevel { get; set; }
+
+        /// <summary>
         /// Gets a logger with an inferred category.
         /// </summary>
         /// <param name="logWriter">An optional log writer.</param>
