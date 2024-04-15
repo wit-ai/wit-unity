@@ -48,7 +48,7 @@ namespace Meta.WitAi
         /// Safely calls an action on the main thread using a scheduler.
         /// </summary>
         /// <param name="callback">The action to be performed on the main thread</param>
-        public static void CallOnMainThread(Action callback)
+        public static Task CallOnMainThread(Action callback)
         {
             #if THREADING_ENABLED
 
@@ -59,7 +59,7 @@ namespace Meta.WitAi
             if (_mainThreadScheduler != null)
             {
                 task.Start(_mainThreadScheduler);
-                return;
+                return task;
             }
 
             // Start here
@@ -71,6 +71,7 @@ namespace Meta.WitAi
             callback?.Invoke();
 
             #endif
+            return task;
         }
     }
 }

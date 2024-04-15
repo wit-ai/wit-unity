@@ -40,7 +40,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Tracks log entries that are part of a specific correlation ID.
         /// </summary>
-        private readonly RingDictionaryBuffer<CorrelationID, LogEntry> _logBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
+        private static readonly RingDictionaryBuffer<CorrelationID, LogEntry> LogBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
 
         /// <summary>
         /// Caches the last few messages so we can omit repeated correlation IDs.
@@ -199,7 +199,7 @@ namespace Meta.Voice.Logging
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
-            _logBuffer.Add(correlationId, logEntry);
+            LogBuffer.Add(correlationId, logEntry);
 
             if (MinimumVerbosity > verbosity)
             {
@@ -271,7 +271,7 @@ namespace Meta.Voice.Logging
         public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
-            _logBuffer.Add(correlationId, logEntry);
+            LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
             Write(logEntry, "Started: ");
@@ -283,7 +283,7 @@ namespace Meta.Voice.Logging
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, CorrelationID, message, parameters);
-            _logBuffer.Add(CorrelationID, logEntry);
+            LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
             Write(logEntry, "Started: ");
@@ -309,7 +309,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Flush(CorrelationID correlationID)
         {
-            foreach (var logEntry in _logBuffer.Extract(correlationID))
+            foreach (var logEntry in LogBuffer.Extract(correlationID))
             {
                 Write(logEntry);
             }
@@ -318,7 +318,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Flush()
         {
-            foreach (var logEntry in _logBuffer.ExtractAll())
+            foreach (var logEntry in LogBuffer.ExtractAll())
             {
                 Write(logEntry);
             }
