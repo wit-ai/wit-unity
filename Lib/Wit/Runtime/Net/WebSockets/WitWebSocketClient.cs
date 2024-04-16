@@ -1022,7 +1022,7 @@ namespace Meta.Voice.Net.WebSockets
                 var errorType = subscribing
                     ? PubSubSubscriptionState.SubscribeError
                     : PubSubSubscriptionState.UnsubscribeError;
-                SetTopicSubscriptionState(subscription, topicId, errorType);
+                SetTopicSubscriptionState(subscription, topicId, errorType, request.Error);
 
                 // Retry
                 if (subscribing)
@@ -1046,7 +1046,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Sets the current subscription state using the subscription asset and the topic id
         /// </summary>
-        private void SetTopicSubscriptionState(PubSubSubscription subscription, string topicId, PubSubSubscriptionState state)
+        private void SetTopicSubscriptionState(PubSubSubscription subscription, string topicId, PubSubSubscriptionState state, string error = null)
         {
             // Ignore if same state
             if (subscription.state == state)
@@ -1056,7 +1056,6 @@ namespace Meta.Voice.Net.WebSockets
 
             // Apply state
             subscription.state = state;
-            VLog.I(GetType().Name, $"{state}\nTopic Id: {topicId}");
 
             // Remove reference
             if (state == PubSubSubscriptionState.NotSubscribed)
@@ -1067,6 +1066,16 @@ namespace Meta.Voice.Net.WebSockets
             else
             {
                 _subscriptions[topicId] = subscription;
+            }
+
+            // Log
+            if (!string.IsNullOrEmpty(error))
+            {
+                VLog.W(GetType().Name, $"{state}\nError: {error}\nTopic Id: {topicId}");
+            }
+            else
+            {
+                VLog.I(GetType().Name, $"{state}\nTopic Id: {topicId}");
             }
 
             // Call delegate
