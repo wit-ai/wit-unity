@@ -175,7 +175,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Request generation failed
-            if (WebSocketRequest == null)
+            if (WebSocketRequest == null || WebSocketAdapter == null)
             {
                 return;
             }

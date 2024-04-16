@@ -28,7 +28,9 @@ namespace Meta.WitAi
     {
         private float _lastMinVolumeLevelTime;
 
-        // Web socket pubsub handler
+        /// <summary>
+        /// Script used for publishing and subscribing to topics
+        /// </summary>
         private WitWebSocketAdapter _webSocketAdapter;
 
         // Request options
@@ -168,6 +170,7 @@ namespace Meta.WitAi
             // Generate web socket edition
             if (RuntimeConfiguration.useWebSockets)
             {
+                SetupWebSockets();
                 var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
                 return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, requestEvents);
             }
@@ -181,6 +184,7 @@ namespace Meta.WitAi
         {
             if (RuntimeConfiguration.useWebSockets)
             {
+                SetupWebSockets();
                 var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
                 return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, requestEvents);
             }
@@ -199,11 +203,6 @@ namespace Meta.WitAi
             _dataReadyHandlers = GetComponents<IWitByteDataReadyHandler>();
             _dataSentHandlers = GetComponents<IWitByteDataSentHandler>();
             _runtimeConfigProvider = GetComponent<IWitRuntimeConfigProvider>();
-            if (RuntimeConfiguration != null && RuntimeConfiguration.useWebSockets)
-            {
-                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
-                _webSocketAdapter.SetClientProvider(RuntimeConfiguration.witConfiguration);
-            }
         }
         // Add mic delegates
         protected void OnEnable()
@@ -217,8 +216,13 @@ namespace Meta.WitAi
             {
                 TranscriptionProvider = RuntimeConfiguration.customTranscriptionProvider;
             }
+            if (RuntimeConfiguration != null)
+            {
+                RuntimeConfiguration.OnConfigurationUpdated += RefreshConfigurationSettings;
+            }
 
             SetMicDelegates(true);
+            SetupWebSockets();
             if (_webSocketAdapter != null)
             {
                 _webSocketAdapter.OnRequestGenerated += HandleWebSocketRequestGeneration;
@@ -228,12 +232,24 @@ namespace Meta.WitAi
         // Remove mic delegates
         protected void OnDisable()
         {
+            if (RuntimeConfiguration != null)
+            {
+                RuntimeConfiguration.OnConfigurationUpdated -= RefreshConfigurationSettings;
+            }
             if (_webSocketAdapter != null)
             {
                 _webSocketAdapter.OnRequestGenerated -= HandleWebSocketRequestGeneration;
             }
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SetMicDelegates(false);
+        }
+        /// <summary>
+        /// Method called whenever the OnConfigurationUpdated action is invoked to re-init
+        /// all runtime configuration based setup.
+        /// </summary>
+        protected virtual void RefreshConfigurationSettings(WitRuntimeConfiguration runtimeConfig)
+        {
+            SetupWebSockets();
         }
         // On scene refresh
         protected virtual void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -285,6 +301,23 @@ namespace Meta.WitAi
         #endregion
 
         #region WEB SOCKETS
+        /// <summary>
+        /// Setup web socket adapter
+        /// </summary>
+        private void SetupWebSockets()
+        {
+            // Get/Add web socket adapter if not yet set
+            if (!_webSocketAdapter)
+            {
+                _webSocketAdapter = gameObject.GetOrAddComponent<WitWebSocketAdapter>();
+            }
+
+            // Apply client provider and topic id if applicable
+            bool useWebSockets = RuntimeConfiguration != null && RuntimeConfiguration.useWebSockets;
+            _webSocketAdapter.SetClientProvider(useWebSockets ? RuntimeConfiguration.witConfiguration : null);
+            _webSocketAdapter.SetTopicId(useWebSockets ? RuntimeConfiguration.pubSubTopicId : null);
+        }
+
         /// <summary>
         /// Handle web socket request if possible
         /// </summary>

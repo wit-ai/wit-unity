@@ -55,6 +55,8 @@ namespace Meta.Voice.Net.WebSockets
 
         // Whether or not connection to server has been requested
         private bool _connected = false;
+        // The actually subscribed topic
+        private string _subscribedTopicId;
 
         #region LIFECYCLE
         protected virtual void OnEnable()
@@ -102,6 +104,12 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SetClientProvider(IWitWebSocketClientProvider clientProvider)
         {
+            // Ignore if already set
+            if (_webSocketProvider != null && _webSocketProvider.Equals(WebSocketProvider))
+            {
+                return;
+            }
+
             // Disconnect previous web socket client if active
             if (gameObject.activeInHierarchy)
             {
@@ -199,6 +207,12 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SetTopicId(string newTopicId)
         {
+            // Ignore if same topic
+            if (string.Equals(TopicId, newTopicId, StringComparison.CurrentCultureIgnoreCase))
+            {
+                return;
+            }
+
             // Unsubscribe previous topic
             Unsubscribe();
 
@@ -214,11 +228,16 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Subscribe()
         {
+            if (!string.IsNullOrEmpty(_subscribedTopicId))
+            {
+                Unsubscribe();
+            }
             if (string.IsNullOrEmpty(TopicId) || !_connected)
             {
                 return;
             }
-            WebSocketClient.Subscribe(TopicId);
+            _subscribedTopicId = TopicId;
+            WebSocketClient.Subscribe(_subscribedTopicId);
         }
 
         /// <summary>
@@ -226,11 +245,13 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Unsubscribe()
         {
-            if (string.IsNullOrEmpty(TopicId) || !_connected)
+            if (string.IsNullOrEmpty(_subscribedTopicId) || !_connected)
             {
                 return;
             }
-            WebSocketClient.Unsubscribe(TopicId);
+            var oldTopic = _subscribedTopicId;
+            _subscribedTopicId = null;
+            WebSocketClient.Unsubscribe(oldTopic);
         }
         #endregion SUBSCRIBE & UNSUBSCRIBE
     }

@@ -12,15 +12,17 @@ namespace Meta.WitAi
 {
     public static class UnityObjectExtensions
     {
-        // Safely destroys
+        /// <summary>
+        /// Properly determines whether to use DestroyImmediate or Destroy
+        /// dependent on the current state of the Editor.
+        /// </summary>
         public static void DestroySafely(this Object unityObject)
         {
-            // Ignore null
-            if (unityObject == null)
+            // Ignore null/already destroyed
+            if (!unityObject)
             {
                 return;
             }
-
             #if UNITY_EDITOR
             // Editor only destroy
             if (!Application.isPlaying)
@@ -29,9 +31,19 @@ namespace Meta.WitAi
                 return;
             }
             #endif
-
             // Destroy object
             MonoBehaviour.Destroy(unityObject);
+        }
+
+        /// <summary>
+        /// Attempts to obtain a component and adds it if it does not already exist
+        /// </summary>
+        public static T GetOrAddComponent<T>(this GameObject unityObject) where T : Component
+        {
+            if (!unityObject) return null;
+            T comp = unityObject.GetComponent<T>();
+            if (comp) return comp;
+            return unityObject.AddComponent<T>();
         }
     }
 }

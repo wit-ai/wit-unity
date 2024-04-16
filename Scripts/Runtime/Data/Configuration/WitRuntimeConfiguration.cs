@@ -22,10 +22,6 @@ namespace Meta.WitAi.Configuration
         [SerializeField]
         public WitConfiguration witConfiguration;
 
-        [Tooltip("Whether to use web sockets for web requests.  If false, HTTP requests will be used instead.")]
-        [SerializeField]
-        public bool useWebSockets = false;
-
         [Header("Keepalive")]
         [Tooltip("The minimum volume from the mic needed to keep the activation alive")]
         [SerializeField]
@@ -79,5 +75,20 @@ namespace Meta.WitAi.Configuration
 
         [Tooltip("The preferred number of seconds to offset from the time the activation happens. A negative value here could help to catch any words that may have been cut off at the beginning of an activation (assuming input is already being read into the buffer)")]
         public float preferredActivationOffset = -.5f;
+
+        [Header("Web Sockets")]
+        [Tooltip("Whether to use web sockets for web requests.  If false, HTTP requests will be used instead.")]
+        [SerializeField]
+        public bool useWebSockets;
+
+        [Tooltip("If using web sockets, the topic id will publish and subscribe to all requests made for the specified topic.")]
+        [SerializeField]
+        public string pubSubTopicId;
+
+        /// <summary>
+        /// An action to be invoked following any configuration data change.
+        /// Multiple scripts will watch this action in order to Re-Init their configuration.
+        /// </summary>
+        public Action<WitRuntimeConfiguration> OnConfigurationUpdated;
     }
 }
