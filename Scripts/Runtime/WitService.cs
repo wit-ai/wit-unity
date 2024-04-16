@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.Voice;
+using Meta.Voice.Net.PubSub;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
 using Meta.WitAi.Configuration;
@@ -32,6 +33,17 @@ namespace Meta.WitAi
         /// Script used for publishing and subscribing to topics
         /// </summary>
         private WitWebSocketAdapter _webSocketAdapter;
+        /// <summary>
+        /// Access pub sub
+        /// </summary>
+        public IPubSubAdapter PubSub
+        {
+            get
+            {
+                SetupWebSockets();
+                return _webSocketAdapter;
+            }
+        }
 
         // Request options
         private IWitRequestProvider _witRequestProvider;

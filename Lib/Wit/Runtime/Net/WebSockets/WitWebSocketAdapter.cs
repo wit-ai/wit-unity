@@ -18,7 +18,7 @@ namespace Meta.Voice.Net.WebSockets
     /// <summary>
     /// A publish/subscribe MonoBehaviour adapter for WitWebSocketClients
     /// </summary>
-    public class WitWebSocketAdapter : MonoBehaviour
+    public class WitWebSocketAdapter : MonoBehaviour, IPubSubAdapter
     {
         /// <summary>
         /// The script used to provide the WitWebSocketClient
@@ -35,18 +35,32 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// The topic to be used for publishing/subscribing to the current client provider
         /// </summary>
-        public string TopicId => _topicId;
+        public string TopicId
+        {
+            get => _topicId;
+            set => SetTopicId(value);
+        }
         [SerializeField] private string _topicId;
+
+        /// <summary>
+        /// The current subscription state of the adapter
+        /// </summary>
+        public PubSubSubscriptionState SubscriptionState { get; private set; }
+
+        /// <summary>
+        /// Event callback for subscription state change
+        /// </summary>
+        public event Action<PubSubSubscriptionState> OnTopicSubscriptionStateChange;
 
         /// <summary>
         /// Callback when successfully subscribed to the current topic
         /// </summary>
-        public UnityEvent OnSubscribed { get; private set; } = new UnityEvent();
+        public UnityEvent OnSubscribed { get; } = new UnityEvent();
 
         /// <summary>
         /// Callback when successfully unsubscribed from the current topic
         /// </summary>
-        public UnityEvent OnUnsubscribed { get; private set; } = new UnityEvent();
+        public UnityEvent OnUnsubscribed { get; } = new UnityEvent();
 
         /// <summary>
         /// Callback when a request is generated for the subscribed topic
@@ -70,6 +84,8 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
+            SubscriptionState = state;
+            OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
             if (state == PubSubSubscriptionState.Subscribed)
             {
                 OnSubscribed?.Invoke();
