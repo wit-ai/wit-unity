@@ -121,7 +121,7 @@ namespace Meta.Voice.Net.WebSockets
         public void SetClientProvider(IWitWebSocketClientProvider clientProvider)
         {
             // Ignore if already set
-            if (_webSocketProvider != null && _webSocketProvider.Equals(WebSocketProvider))
+            if (_webSocketProvider != null && _webSocketProvider.Equals(clientProvider))
             {
                 return;
             }

@@ -920,7 +920,7 @@ namespace Meta.Voice.Net.WebSockets
             // If not connected, set as subscribe error and retry when connected
             if (ConnectionState != WitWebSocketConnectionState.Connected)
             {
-                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.SubscribeError);
+                SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.SubscribeError, "Not connected.  Will retry once connected.");
                 return;
             }
             // Ignore if already subscribing or subscribed
