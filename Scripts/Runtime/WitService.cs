@@ -259,7 +259,7 @@ namespace Meta.WitAi
         /// Method called whenever the OnConfigurationUpdated action is invoked to re-init
         /// all runtime configuration based setup.
         /// </summary>
-        protected virtual void RefreshConfigurationSettings(WitRuntimeConfiguration runtimeConfig)
+        protected virtual void RefreshConfigurationSettings()
         {
             SetupWebSockets();
         }

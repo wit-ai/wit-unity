@@ -89,6 +89,6 @@ namespace Meta.WitAi.Configuration
         /// An action to be invoked following any configuration data change.
         /// Multiple scripts will watch this action in order to Re-Init their configuration.
         /// </summary>
-        public Action<WitRuntimeConfiguration> OnConfigurationUpdated;
+        public Action OnConfigurationUpdated;
     }
 }
