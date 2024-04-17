@@ -20,6 +20,11 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity EditorLogLevel { get; set; }
 
         /// <summary>
+        /// When true, caches the loggers and reuse them for the same category.
+        /// </summary>
+        bool PoolLoggers { get; set; }
+
+        /// <summary>
         /// Gets a logger with an inferred category.
         /// </summary>
         /// <param name="logWriter">An optional log writer.</param>
@@ -35,5 +40,23 @@ namespace Meta.Voice.Logging
         /// /// <param name="verbosity">Minimum verbosity that will be logged.</param>
         /// <returns>The logger</returns>
         IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null);
+
+        /// <summary>
+        /// Gets a logger with an inferred category.
+        /// </summary>
+        /// <param name="options">The options with which to initialize the logger.</param>
+        /// <param name="logWriter">An optional log writer.</param>
+        /// <param name="verbosity">Minimum verbosity that will be logged.</param>
+        /// <returns>The logger</returns>
+        IVLogger GetLogger(LoggerOptions options, ILogWriter logWriter = null);
+
+        /// <summary>
+        /// Gets a logger with an explicitly specified category.
+        /// </summary>
+        /// <param name="options">The options with which to initialize the logger.</param>
+        /// <param name="category">The category of the logs written by this logger.</param>
+        /// <param name="logWriter">An optional log writer.</param>
+        /// <returns>The logger</returns>
+        IVLogger GetLogger(string category, LoggerOptions options, ILogWriter logWriter = null);
     }
 }

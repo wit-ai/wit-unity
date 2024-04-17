@@ -20,6 +20,12 @@ namespace Meta.Voice.Logging
         void WriteVerbose(string message);
 
         /// <summary>
+        /// Writes debug message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void WriteDebug(string message);
+
+        /// <summary>
         /// Writes an info message.
         /// </summary>
         /// <param name="message">The message.</param>

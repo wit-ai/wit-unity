@@ -20,6 +20,12 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        public void WriteDebug(string message)
+        {
+            UnityEngine.Debug.Log(message);
+        }
+
+        /// <inheritdoc/>
         public void WriteInfo(string message)
         {
             UnityEngine.Debug.Log(message);

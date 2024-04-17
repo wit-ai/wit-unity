@@ -24,6 +24,9 @@ namespace Meta.Voice.Logging
         private static VLoggerVerbosity _editorLogLevel = (VLoggerVerbosity)(-1);
 
         /// <inheritdoc/>
+        public bool PoolLoggers { get; set; } = true;
+
+        /// <inheritdoc/>
         public VLoggerVerbosity EditorLogLevel
         {
             get => _editorLogLevel;
@@ -80,6 +83,28 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
         {
+            var options = new LoggerOptions(
+                verbosity ?? EditorLogLevel,
+                true,
+                true);
+
+            return GetLogger(options, logWriter);
+        }
+
+        /// <inheritdoc/>
+        public IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
+        {
+            var options = new LoggerOptions(
+                verbosity ?? EditorLogLevel,
+                true,
+                true);
+
+            return GetLogger(category, options, logWriter);
+        }
+
+        /// <inheritdoc/>
+        public IVLogger GetLogger(LoggerOptions options, ILogWriter logWriter = null)
+        {
             logWriter ??= DefaultLogWriter;
 
             var stackTrace = new StackTrace();
@@ -90,49 +115,38 @@ namespace Meta.Voice.Logging
 
             if (callerType == null)
             {
-                return GetLogger(category);
+                return GetLogger(category, logWriter);
             }
 
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                if (verbosity.HasValue)
-                {
-                    return new VLogger(category, logWriter, verbosity.Value);
-                }
-                else
-                {
-#if UNITY_EDITOR
-                    return new VLogger(category, logWriter, EditorLogLevel);
-#else
-                    return new VLogger(category, logWriter, VLoggerVerbosity.Verbose);
-#endif
-                }
+                return new VLogger(category, logWriter, options);
             }
 
             category = attribute.CategoryName;
 
-            return GetLogger(category);
+            return GetLogger(category, options, logWriter);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
+        public IVLogger GetLogger(string category, LoggerOptions options, ILogWriter logWriter = null)
         {
             logWriter ??= DefaultLogWriter;
 
-            if (!_loggers.ContainsKey(category))
+            if (PoolLoggers)
             {
-                if (verbosity.HasValue)
+                if (!_loggers.ContainsKey(category))
                 {
-                    _loggers.Add(category, new VLogger(category, logWriter, verbosity.Value));
+                    _loggers.Add(category, new VLogger(category, logWriter, options));
                 }
-                else
-                {
-                    _loggers.Add(category, new VLogger(category, logWriter, EditorLogLevel));
-                }
-            }
 
-            return _loggers[category];
+                return _loggers[category];
+            }
+            else
+            {
+                return new VLogger(category, logWriter, options);
+            }
         }
     }
 }

@@ -11,3 +11,4 @@ using System.Runtime.CompilerServices;
 [assembly:InternalsVisibleTo("Meta.WitAi.Lib.Editor")]
 [assembly:InternalsVisibleTo("Meta.WitAi")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Tests")]
+[assembly:InternalsVisibleTo("Meta.WitAi.Tests.Editor")]

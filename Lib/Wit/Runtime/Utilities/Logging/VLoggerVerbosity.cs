@@ -24,14 +24,14 @@ namespace Meta.Voice.Logging
         Warning = 4,
 
         /// <summary>
-        /// Debug logs. Useful for debugging specific things.
-        /// </summary>
-        Log = 3,
-
-        /// <summary>
         /// Information logs. Normal tracing.
         /// </summary>
-        Info = 2,
+        Info = 3,
+
+        /// <summary>
+        /// Debug logs. Useful for debugging specific things.
+        /// </summary>
+        Debug = 2,
 
         /// <summary>
         /// High verbosity information. Helpful for detailed tracing.

@@ -115,8 +115,8 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
-        public static void D(object log) => Log(VLoggerVerbosity.Log, null, log);
-        public static void D(string logCategory, object log) => Log(VLoggerVerbosity.Log, logCategory, log);
+        public static void D(object log) => Log(VLoggerVerbosity.Debug, null, log);
+        public static void D(string logCategory, object log) => Log(VLoggerVerbosity.Debug, logCategory, log);
 
         /// <summary>
         /// Performs a Debug.LogWarning with custom categorization and using the global log level

@@ -49,12 +49,33 @@ namespace Meta.Voice.Logging
             new RingDictionaryBuffer<string, CorrelationID>(100);
 
         /// <summary>
+        /// Caches correlations between IDs. When something branches or exchanges identity, we mark the correlation.
+        /// This allows us to bring everything related when correlating.
+        /// </summary>
+        private readonly RingDictionaryBuffer<CorrelationID, CorrelationID> _correlations =
+            new RingDictionaryBuffer<CorrelationID, CorrelationID>(100);
+
+        /// <summary>
         /// The final log sink where log data is written.
         /// </summary>
         private readonly ILogWriter _logWriter;
 
+        /// <summary>
+        /// The category of the logger.
+        /// </summary>
+        private readonly string _category;
+
+        /// <summary>
+        /// The options that control the logging.
+        /// </summary>
+        private readonly LoggerOptions _options;
+
         /// <inheritdoc/>
-        public VLoggerVerbosity MinimumVerbosity { get; set; }
+        public VLoggerVerbosity MinimumVerbosity
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// The current correlation ID of this logger. This can be changed at will.
@@ -87,14 +108,22 @@ namespace Meta.Voice.Logging
             }
         }
 
-        private readonly string _category;
-
         internal VLogger(string category, ILogWriter logWriter, VLoggerVerbosity verbosity)
         {
             _category = category;
             _logWriter = logWriter;
+            _options = new LoggerOptions();
             MinimumVerbosity = verbosity;
         }
+
+        internal VLogger(string category, ILogWriter logWriter, LoggerOptions options)
+        {
+            _category = category;
+            _logWriter = logWriter;
+            _options = options;
+            MinimumVerbosity = options.MinimumVerbosity;
+        }
+
 
         /// <summary>
         /// Sets the correlation ID if it's not already set. If it's set and different, will correlate the two.
@@ -141,14 +170,14 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Debug(string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Log, CorrelationID, message, parameters);
+            Log(VLoggerVerbosity.Debug, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Log, correlationId, message, parameters);
+            Log(VLoggerVerbosity.Debug, correlationId, message, parameters);
         }
 
         /// <inheritdoc/>
@@ -193,7 +222,17 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Correlate(CorrelationID originalCorrelationId, CorrelationID newCorrelationId)
         {
-            Log(VLoggerVerbosity.Verbose, originalCorrelationId, "Correlated:{0}&{1}", originalCorrelationId, newCorrelationId);
+            if (!_correlations.ContainsKey(originalCorrelationId))
+            {
+                _correlations.Add(originalCorrelationId, newCorrelationId);
+            }
+
+            if (!_correlations.ContainsKey(newCorrelationId))
+            {
+                _correlations.Add(newCorrelationId, originalCorrelationId);
+            }
+
+            Log(VLoggerVerbosity.Verbose, originalCorrelationId, "Correlated: {0} & {1}", originalCorrelationId, newCorrelationId);
         }
 
         private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
@@ -270,6 +309,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
         {
+            CorrelateIds(correlationId);
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
@@ -309,7 +349,21 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Flush(CorrelationID correlationID)
         {
-            foreach (var logEntry in LogBuffer.Extract(correlationID))
+            var allRelatedEntries = new List<LogEntry>();
+
+            allRelatedEntries.AddRange(LogBuffer.Extract(correlationID));
+
+            if (_correlations.ContainsKey(correlationID))
+            {
+                foreach (var relatedID in _correlations[correlationID])
+                {
+                    allRelatedEntries.AddRange(LogBuffer.Extract(relatedID));
+                }
+            }
+
+            allRelatedEntries.Sort();
+
+            foreach (var logEntry in allRelatedEntries)
             {
                 Write(logEntry);
             }
@@ -350,7 +404,11 @@ namespace Meta.Voice.Logging
             // Insert log type
             var start = sb.Length;
             sb.Append($"[VSDK {logEntry.Verbosity.ToString().ToUpper()}] ");
-            WrapWithLogColor(sb, start, logEntry.Verbosity);
+
+            if (_options.ColorLogs)
+            {
+                WrapWithLogColor(sb, start, logEntry.Verbosity);
+            }
 
             // Append VDSK & Category
             start = sb.Length;
@@ -358,7 +416,11 @@ namespace Meta.Voice.Logging
             {
                 sb.Append($"[{logEntry.Category}] ");
             }
-            WrapWithCallingLink(sb, start);
+
+            if (_options.LinkToCallSite)
+            {
+                WrapWithCallingLink(sb, start);
+            }
 
             var formattedCoreMessage =
                 (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
@@ -425,8 +487,11 @@ namespace Meta.Voice.Logging
                 case VLoggerVerbosity.Warning:
                     _logWriter.WriteWarning($"{prefix}{message}");
                     break;
-                case VLoggerVerbosity.Log:
+                case VLoggerVerbosity.Info:
                     _logWriter.WriteInfo($"{prefix}{message}");
+                    break;
+                case VLoggerVerbosity.Debug:
+                    _logWriter.WriteDebug($"{prefix}{message}");
                     break;
                 default:
                     _logWriter.WriteVerbose($"{prefix}{message}");
@@ -524,7 +589,7 @@ namespace Meta.Voice.Logging
             return formattedStackTrace;
         }
 
-        private readonly struct LogEntry
+        private readonly struct LogEntry : IComparable<LogEntry>
         {
             public string Category { get; }
             public DateTime TimeStamp { get; }
@@ -577,6 +642,11 @@ namespace Meta.Voice.Logging
             {
                 return string.Format(Message, Parameters) + $" [{CorrelationID}]";
             }
+
+            public int CompareTo(LogEntry other)
+            {
+                return TimeStamp.CompareTo(other.TimeStamp);
+            }
         }
 
         /// <summary>
@@ -595,6 +665,9 @@ namespace Meta.Voice.Logging
                 _dictionary = new Dictionary<TKey, LinkedList<TValue>>();
                 _order = new LinkedList<ValueTuple<TKey, TValue>>();
             }
+
+            public ICollection<TValue> this[TKey key] => _dictionary[key];
+
             public void Add(TKey key, TValue value)
             {
                 if (!_dictionary.ContainsKey(key))
