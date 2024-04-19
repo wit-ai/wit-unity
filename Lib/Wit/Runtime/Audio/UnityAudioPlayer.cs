@@ -53,13 +53,23 @@ namespace Meta.Voice.Audio
         private bool _local = false;
         private int _offset = 0;
 
+        private void Awake()
+        {
+            // Find base audio source if possible
+            if (!AudioSource)
+            {
+                _audioSource = gameObject.GetComponentInChildren<AudioSource>();
+            }
+        }
+
         /// <summary>
         /// Performs all player initialization
         /// </summary>
         public override void Init()
         {
-            // Find base audio source if possible
-            if (AudioSource == null)
+            // Find base audio source if possible, checking the audio source again in Init just in case the audio source
+            // was delayed in spawning.
+            if (!AudioSource)
             {
                 _audioSource = gameObject.GetComponentInChildren<AudioSource>();
             }
