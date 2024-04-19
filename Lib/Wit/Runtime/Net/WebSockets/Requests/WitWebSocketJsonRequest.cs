@@ -74,6 +74,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public Action<IWitWebSocketRequest> OnComplete { get; set; }
 
         /// <summary>
+        /// The method used to upload chunks
+        /// </summary>
+        protected UploadChunkDelegate _uploader;
+
+        /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
         /// </summary>
         public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null)
@@ -93,6 +98,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 return;
             }
             IsUploading = true;
+            _uploader = uploadChunk;
 
             // Append topic id if applicable
             if (!string.IsNullOrEmpty(TopicId) && PostData != null)
@@ -104,7 +110,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
 
             // Upload chunk
-            uploadChunk?.Invoke(RequestId, PostData, null);
+            _uploader?.Invoke(RequestId, PostData, null);
         }
 
         /// <summary>
@@ -116,9 +122,33 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
+
+            // Send abort method if possible
+            SendAbort();
+
+            // Handle completion
             Code = WitConstants.ERROR_CODE_ABORTED.ToString();
             Error = WitConstants.CANCEL_ERROR;
             HandleComplete();
+        }
+
+        /// <summary>
+        /// Method to perform an abort call
+        /// </summary>
+        protected void SendAbort()
+        {
+            // Ignore if not uploading
+            if (!IsUploading || _uploader == null)
+            {
+                return;
+            }
+
+            // Upload abort data
+            var abortData = new WitResponseClass();
+            var data = new WitResponseClass();
+            data[WitConstants.WIT_SOCKET_ABORT_KEY] = new WitResponseClass();
+            abortData[WitConstants.WIT_SOCKET_DATA_KEY] = data;
+            _uploader?.Invoke(RequestId, abortData, null);
         }
 
         /// <summary>
@@ -191,6 +221,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 return;
             }
             IsUploading = false;
+            _uploader = null;
             IsDownloading = false;
             IsComplete = true;
             ThreadUtility.CallOnMainThread(RaiseComplete);

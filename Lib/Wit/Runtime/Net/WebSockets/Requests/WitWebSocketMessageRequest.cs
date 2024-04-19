@@ -8,10 +8,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using Meta.WitAi;
 using Meta.WitAi.Json;
-using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {

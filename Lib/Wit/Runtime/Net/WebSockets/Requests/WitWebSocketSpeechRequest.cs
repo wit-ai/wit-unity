@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -29,9 +30,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public event Action OnReadyForInput;
 
-        // Method used to upload chunks to a web socket client
-        private UploadChunkDelegate _performUpload;
-
         /// <summary>
         /// Constructor for request that posts binary audio data
         /// </summary>
@@ -40,23 +38,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="requestId">A unique id to be used for the request</param>
         public WitWebSocketSpeechRequest(string endpoint, Dictionary<string, string> parameters, string requestId = null) : base(endpoint, parameters, requestId)
         {
-        }
-
-        /// <summary>
-        /// Called once from the main thread to begin the upload process. Sends a single post chunk.
-        /// </summary>
-        /// <param name="uploadChunk">The method to be called as each json and/or binary chunk is ready to be uploaded</param>
-        public override void HandleUpload(UploadChunkDelegate uploadChunk)
-        {
-            // Ignore if uploading
-            if (IsUploading)
-            {
-                return;
-            }
-            // Perform post with provided post data
-            base.HandleUpload(uploadChunk);
-            // Begin upload process
-            _performUpload = uploadChunk;
         }
 
 
@@ -71,7 +52,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             bool callback = false;
             if (!IsComplete && !IsReadyForInput)
             {
-                var type = jsonData[WitConstants.RESPONSE_TYPE_KEY];
+                var type = jsonData[WitConstants.RESPONSE_TYPE_KEY].Value;
                 IsReadyForInput = string.Equals(type, WitConstants.RESPONSE_TYPE_READY_FOR_AUDIO);
                 callback = IsReadyForInput;
             }
@@ -91,7 +72,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public void SendAudioData(byte[] buffer, int offset, int length)
         {
             // Ignore without upload handler
-            if (_performUpload == null || !IsReadyForInput)
+            if (_uploader == null || !IsReadyForInput)
             {
                 return;
             }
@@ -103,7 +84,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 Array.Copy(buffer, offset, chunk, 0, length);
             }
             // Perform upload
-            _performUpload.Invoke(RequestId, GetAdditionalPostJson(), chunk);
+            _uploader.Invoke(RequestId, GetAdditionalPostJson(), chunk);
         }
 
         /// <summary>
@@ -112,29 +93,20 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public void CloseAudioStream()
         {
             // Ignore without upload handler
-            if (_performUpload == null)
+            if (_uploader == null || !IsReadyForInput)
             {
                 return;
             }
             // Send final post data
             var finalPostData = GetAdditionalPostJson().AsObject;
             finalPostData[WitConstants.WIT_SOCKET_END_KEY] = new WitResponseData(true);
-            _performUpload.Invoke(RequestId, finalPostData, null);
-            _performUpload = null;
+            _uploader.Invoke(RequestId, finalPostData, null);
+            _uploader = null;
         }
 
         /// <summary>
         /// Obtains additional json chunk data if required
         /// </summary>
         private WitResponseNode GetAdditionalPostJson() => new WitResponseClass();
-
-        /// <summary>
-        /// Remove upload handler on completion
-        /// </summary>
-        protected override void HandleComplete()
-        {
-            _performUpload = null;
-            base.HandleComplete();
-        }
     }
 }
