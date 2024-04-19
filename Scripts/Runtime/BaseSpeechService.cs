@@ -315,7 +315,7 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnFullTranscription is returned from request with final ASR
         protected virtual void OnRequestFullTranscription(VoiceServiceRequest request)
         {
-            Log(request, $"Request Final Transcription\nText: {request?.Transcription}");
+            Log(request, $"Request Full Transcription\nText: {request?.Transcription}");
             GetSpeechEvents()?.OnFullTranscription?.Invoke(request?.Transcription);
         }
 

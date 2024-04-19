@@ -46,7 +46,6 @@ namespace Meta.WitAi
         }
 
         // Request options
-        private IWitRequestProvider _witRequestProvider;
         private VoiceServiceRequest _recordingRequest;
 
         private bool _isSoundWakeActive;
@@ -154,11 +153,10 @@ namespace Meta.WitAi
             }
         }
 
-        public IWitRequestProvider WitRequestProvider
-        {
-            get => _witRequestProvider;
-            set => _witRequestProvider = value;
-        }
+        /// <summary>
+        /// Generic voice service request provider
+        /// </summary>
+        public IVoiceServiceRequestProvider RequestProvider { get; set; }
 
         public bool MicActive => _buffer.IsRecording(this);
 
@@ -179,14 +177,26 @@ namespace Meta.WitAi
         /// </summary>
         private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            // Generate web socket edition
+            var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+            var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
+            requestOptions.InputType = NLPRequestInputType.Text;
             if (RuntimeConfiguration.useWebSockets)
             {
                 SetupWebSockets();
-                var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
-                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, requestEvents);
             }
-            return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+            if (RequestProvider != null)
+            {
+                var request = RequestProvider.CreateRequest(RuntimeConfiguration, requestOptions, newEvents);
+                if (request != null)
+                {
+                    return request;
+                }
+            }
+            if (RuntimeConfiguration.useWebSockets)
+            {
+                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, newEvents);
+            }
+            return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, newEvents, _dynamicEntityProviders);
         }
 
         /// <summary>
@@ -194,18 +204,26 @@ namespace Meta.WitAi
         /// </summary>
         private VoiceServiceRequest GetAudioRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
+            var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+            var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
+            requestOptions.InputType = NLPRequestInputType.Audio;
             if (RuntimeConfiguration.useWebSockets)
             {
                 SetupWebSockets();
-                var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
-                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, requestEvents);
             }
-            if (WitRequestProvider != null)
+            if (RequestProvider != null)
             {
-                return WitRequestProvider.CreateWitRequest(RuntimeConfiguration.witConfiguration, requestOptions,
-                    requestEvents, _dynamicEntityProviders);
+                var request = RequestProvider.CreateRequest(RuntimeConfiguration, newOptions, newEvents);
+                if (request != null)
+                {
+                    return request;
+                }
             }
-            return RuntimeConfiguration.witConfiguration.CreateSpeechRequest(requestOptions, requestEvents, _dynamicEntityProviders);
+            if (RuntimeConfiguration.useWebSockets)
+            {
+                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, newEvents);
+            }
+            return RuntimeConfiguration.witConfiguration.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
 
         #region LIFECYCLE
