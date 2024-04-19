@@ -29,7 +29,11 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public VLoggerVerbosity EditorLogLevel
         {
-            get => _editorLogLevel;
+            get
+            {
+                RefreshEditorLogLevel();
+                return _editorLogLevel;
+            }
             set
             {
                 _editorLogLevel = value;
@@ -62,23 +66,34 @@ namespace Meta.Voice.Logging
         [UnityEngine.RuntimeInitializeOnLoadMethod]
         public static void Initialize()
         {
-            // Already init
-            if (Instance.EditorLogLevel != (VLoggerVerbosity) (-1))
+            ((LoggerRegistry)Instance).RefreshEditorLogLevel();
+        }
+#endif
+
+        private void RefreshEditorLogLevel()
+        {
+#if UNITY_EDITOR
+            // Already initialized
+            if (_editorLogLevel != (VLoggerVerbosity) (-1))
             {
                 return;
             }
 
             // Load log
-            var editorLogLevel = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
+            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
 
             // Try parsing
-            if (!Enum.TryParse(editorLogLevel, out _editorLogLevel))
+            if (!Enum.TryParse(editorLogLevelString, out VLoggerVerbosity editorLogLevel))
             {
                 // If parsing fails, use default log level
-                Instance.EditorLogLevel = EDITOR_LOG_LEVEL_DEFAULT;
+                _editorLogLevel = EDITOR_LOG_LEVEL_DEFAULT;
             }
-        }
+            _editorLogLevel = editorLogLevel;
+#else
+            // Outside of editor, we always log verbose.
+            _editorLogLevel = VLoggerVerbosity.Verbose;
 #endif
+        }
 
         /// <inheritdoc/>
         public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
