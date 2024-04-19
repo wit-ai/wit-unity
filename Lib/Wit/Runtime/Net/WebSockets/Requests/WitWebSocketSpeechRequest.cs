@@ -99,7 +99,9 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
             // Send final post data
             var finalPostData = GetAdditionalPostJson().AsObject;
-            finalPostData[WitConstants.WIT_SOCKET_END_KEY] = new WitResponseData(true);
+            var data = new WitResponseClass();
+            data[WitConstants.WIT_SOCKET_END_KEY] = new WitResponseClass();
+            finalPostData[WitConstants.WIT_SOCKET_DATA_KEY] = data;
             _uploader.Invoke(RequestId, finalPostData, null);
             _uploader = null;
         }

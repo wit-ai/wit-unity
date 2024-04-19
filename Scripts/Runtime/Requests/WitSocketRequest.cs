@@ -66,8 +66,6 @@ namespace Meta.WitAi.Requests
 
         // Lock to ensure initialize callbacks are not performed until all fields are setup
         private bool _initialized = false;
-        // Web socket request performing voice service request
-        private WitWebSocketMessageRequest _request;
 
         /// <summary>
         /// Constructor for audio requests using an audio buffer
@@ -300,6 +298,10 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override void HandleAudioDeactivation()
         {
+            if (WebSocketRequest is WitWebSocketSpeechRequest speechRequest)
+            {
+                speechRequest.CloseAudioStream();
+            }
             SetAudioInputState(VoiceAudioInputState.Off);
         }
         #endregion AUDIO
