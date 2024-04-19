@@ -461,7 +461,17 @@ namespace Meta.Voice.Net.WebSockets
             var topicIds = _subscriptions.Keys.ToArray();
             foreach (var topicId in topicIds)
             {
-                Subscribe(topicId, true);
+                var subState = GetTopicSubscriptionState(topicId);
+                if (subState == PubSubSubscriptionState.Subscribing
+                    || subState == PubSubSubscriptionState.Subscribed
+                    || subState == PubSubSubscriptionState.SubscribeError)
+                {
+                    Subscribe(topicId, true);
+                }
+                else
+                {
+                    Unsubscribe(topicId, true);
+                }
             }
 
             // Untrack all running requests

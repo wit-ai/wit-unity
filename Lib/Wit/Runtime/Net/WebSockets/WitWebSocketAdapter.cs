@@ -77,23 +77,32 @@ namespace Meta.Voice.Net.WebSockets
         {
             Connect();
         }
+
+        protected void SetSubscriptionState(PubSubSubscriptionState subscriptionState)
+        {
+            if (SubscriptionState == subscriptionState)
+            {
+                return;
+            }
+            SubscriptionState = subscriptionState;
+            OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
+            if (subscriptionState == PubSubSubscriptionState.Subscribed)
+            {
+                OnSubscribed?.Invoke();
+            }
+            else if (subscriptionState == PubSubSubscriptionState.NotSubscribed)
+            {
+                OnUnsubscribed?.Invoke();
+            }
+        }
         protected virtual void HandleSubscriptionStateChange(string topicId,
-            PubSubSubscriptionState state)
+            PubSubSubscriptionState subscriptionState)
         {
             if (!string.Equals(TopicId, topicId))
             {
                 return;
             }
-            SubscriptionState = state;
-            OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
-            if (state == PubSubSubscriptionState.Subscribed)
-            {
-                OnSubscribed?.Invoke();
-            }
-            else if (state == PubSubSubscriptionState.NotSubscribed)
-            {
-                OnUnsubscribed?.Invoke();
-            }
+            SetSubscriptionState(subscriptionState);
         }
         protected virtual void HandleRequestGenerated(string topicId,
             IWitWebSocketRequest request)
@@ -244,10 +253,6 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Subscribe()
         {
-            if (!string.IsNullOrEmpty(_subscribedTopicId))
-            {
-                Unsubscribe();
-            }
             if (string.IsNullOrEmpty(TopicId) || !_connected)
             {
                 return;
@@ -265,9 +270,14 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-            var oldTopic = _subscribedTopicId;
+
+            // Unsubscribe
+            var oldTopicId = _subscribedTopicId;
             _subscribedTopicId = null;
-            WebSocketClient.Unsubscribe(oldTopic);
+            WebSocketClient.Unsubscribe(oldTopicId);
+
+            // Immediately set not subscribed since no longer receive updates for current topic id
+            SetSubscriptionState(PubSubSubscriptionState.NotSubscribed);
         }
         #endregion SUBSCRIBE & UNSUBSCRIBE
     }
