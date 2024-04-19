@@ -20,64 +20,6 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity MinimumVerbosity { get; set; }
 
         /// <summary>
-        /// Correlates two correlation IDs. This is used to indicate nesting, branching, or exchanges.
-        /// The purpose is to allow a complete trail up to the source when needed.
-        /// </summary>
-        /// <param name="originalCorrelationId">The original correlation ID.</param>
-        /// <param name="newCorrelationId">The new correlation ID.</param>
-        public void Correlate(CorrelationID originalCorrelationId, CorrelationID newCorrelationId);
-
-        /// <summary>
-        /// Returns a logging scope to be used in a "using" block.
-        /// </summary>
-        /// <param name="verbosity">The verbosity of the logging.</param>
-        /// <param name="message">The message to log.</param>
-        /// <param name="parameters">The parameter</param>
-        /// <returns>The scope.</returns>
-        public LogScope Scope(VLoggerVerbosity verbosity, string message, params object[] parameters)
-        {
-            return new LogScope(this, verbosity, CorrelationID, message, parameters);
-        }
-
-        /// <summary>
-        /// Returns a logging scope to be used in a "using" block.
-        /// </summary>
-        /// <param name="verbosity">The verbosity of the logging.</param>
-        /// <param name="correlationId">The correlation ID to use for the scope.</param>
-        /// <param name="message">The message to log.</param>
-        /// <param name="parameters">The parameter</param>
-        /// <returns>The scope.</returns>
-        public LogScope Scope(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
-        {
-            return new LogScope(this, verbosity, correlationId, message, parameters);
-        }
-
-        /// <summary>
-        /// Explicitly start a scope.
-        /// </summary>
-        /// <param name="verbosity"></param>
-        /// <param name="correlationId"></param>
-        /// <param name="message"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
-        public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters);
-
-        /// <summary>
-        /// Explicitly start a scope.
-        /// </summary>
-        /// <param name="verbosity"></param>
-        /// <param name="message"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
-        public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters);
-
-        /// <summary>
-        /// Explicitly end a scope. Must have been started already.
-        /// </summary>
-        /// <param name="sequenceId"></param>
-        void End(int sequenceId);
-
-        /// <summary>
         /// Writes out any high verbosity logs that have been suppressed as part of the specified correlation ID.
         /// </summary>
         public void Flush(CorrelationID correlationID);
@@ -85,6 +27,6 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Writes out any high verbosity logs that have been suppressed.
         /// </summary>
-        void Flush();
+        public void Flush();
     }
 }

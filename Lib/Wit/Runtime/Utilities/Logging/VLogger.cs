@@ -51,8 +51,17 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Caches correlations between IDs. When something branches or exchanges identity, we mark the correlation.
         /// This allows us to bring everything related when correlating.
+        /// The key is the thing we are correlating (eg. child operation) and the value is the target (eg. root).
+        /// This the value list should contain exactly one element given the current implementation.
         /// </summary>
         private readonly RingDictionaryBuffer<CorrelationID, CorrelationID> _correlations =
+            new RingDictionaryBuffer<CorrelationID, CorrelationID>(100);
+
+        /// <summary>
+        /// This is an inverse correlation dictionary holding the "child" correlations.
+        /// The key is the root operation and the value is the target (eg. child operation).
+        /// </summary>
+        private readonly RingDictionaryBuffer<CorrelationID, CorrelationID> _downStreamCorrelations =
             new RingDictionaryBuffer<CorrelationID, CorrelationID>(100);
 
         /// <summary>
@@ -124,6 +133,13 @@ namespace Meta.Voice.Logging
             MinimumVerbosity = options.MinimumVerbosity;
         }
 
+        /// <summary>
+        /// Clears the log buffer.
+        /// </summary>
+        public static void ClearBuffer()
+        {
+            LogBuffer.Clear();
+        }
 
         /// <summary>
         /// Sets the correlation ID if it's not already set. If it's set and different, will correlate the two.
@@ -137,105 +153,111 @@ namespace Meta.Voice.Logging
 
             if (CorrelationID != correlationId)
             {
-                Correlate(CorrelationID, correlationId);
+                if (_correlations.ContainsKey(correlationId))
+                {
+                    // We only correlate if the ID hasn't already been correlated.
+                    return;
+                }
+                Correlate(correlationId, CorrelationID);
             }
         }
 
         /// <inheritdoc/>
         public void Verbose(string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Verbose, CorrelationID, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Verbose, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Verbose, correlationId, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Verbose, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Info, CorrelationID, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Info, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Info, correlationId, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Info, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Debug, CorrelationID, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Debug, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Debug, correlationId, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Debug, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Warning(string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Warning, CorrelationID, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Warning, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Error, correlationId, errorCode, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Error, errorCode, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(ErrorCode errorCode, string message, params object [] parameters)
         {
-            Log(VLoggerVerbosity.Error, CorrelationID, errorCode, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Error, errorCode, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
+        public void Error(CorrelationID correlationId, Exception exception, ErrorCode errorCode, string message,
+            params object[] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Error, correlationId, errorCode, exception, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Error, errorCode, exception, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters)
         {
-            Log(VLoggerVerbosity.Error, CorrelationID, errorCode, exception, message, parameters);
+            Log(CorrelationID, VLoggerVerbosity.Error, errorCode, exception, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Warning(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
-            Log(VLoggerVerbosity.Warning, correlationId, message, parameters);
+            Log(correlationId, VLoggerVerbosity.Warning, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Correlate(CorrelationID originalCorrelationId, CorrelationID newCorrelationId)
+        public void Correlate(CorrelationID newCorrelationId, CorrelationID rootCorrelationId)
         {
-            if (!_correlations.ContainsKey(originalCorrelationId))
+            var correlated = _correlations.Add(newCorrelationId, rootCorrelationId, true);
+            correlated |= _downStreamCorrelations.Add(rootCorrelationId, newCorrelationId, true);
+
+            if (!correlated)
             {
-                _correlations.Add(originalCorrelationId, newCorrelationId);
+                // Attempted to correlate already correlated entries.
+                return;
             }
 
-            if (!_correlations.ContainsKey(newCorrelationId))
-            {
-                _correlations.Add(newCorrelationId, originalCorrelationId);
-            }
-
-            Log(VLoggerVerbosity.Verbose, originalCorrelationId, "Correlated: {0} & {1}", originalCorrelationId, newCorrelationId);
+            Log(newCorrelationId, VLoggerVerbosity.Verbose, "Correlated: {0}", newCorrelationId);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
+            params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             LogBuffer.Add(correlationId, logEntry);
@@ -248,7 +270,9 @@ namespace Meta.Voice.Logging
             Write(logEntry);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
+            Exception exception, ErrorCode errorCode,
+            string message, params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, exception, message, parameters);
 
@@ -260,7 +284,8 @@ namespace Meta.Voice.Logging
             Write(logEntry);
         }
 
-        private void Log(VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, string message, params object[] parameters)
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
+            params object[] parameters)
         {
             var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, message, parameters);
 
@@ -307,14 +332,18 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public int Start(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public int Start(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
+            params object[] parameters)
         {
             CorrelateIds(correlationId);
             var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
-            Write(logEntry, "Started: ");
+            if (!IsFiltered(logEntry))
+            {
+                Write(logEntry, "Started: ");
+            }
 
             return _nextSequenceId++;
         }
@@ -326,7 +355,10 @@ namespace Meta.Voice.Logging
             LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
-            Write(logEntry, "Started: ");
+            if (!IsFiltered(logEntry))
+            {
+                Write(logEntry, "Started: ");
+            }
 
             return _nextSequenceId++;
         }
@@ -341,7 +373,10 @@ namespace Meta.Voice.Logging
             }
 
             var openingEntry = _scopeEntries[sequenceId];
-            Write(openingEntry, "Finished: ");
+            if (!IsFiltered(openingEntry))
+            {
+                Write(openingEntry, "Finished: ");
+            }
 
             _scopeEntries.Remove(sequenceId);
         }
@@ -349,17 +384,7 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Flush(CorrelationID correlationID)
         {
-            var allRelatedEntries = new List<LogEntry>();
-
-            allRelatedEntries.AddRange(LogBuffer.Extract(correlationID));
-
-            if (_correlations.ContainsKey(correlationID))
-            {
-                foreach (var relatedID in _correlations[correlationID])
-                {
-                    allRelatedEntries.AddRange(LogBuffer.Extract(relatedID));
-                }
-            }
+            var allRelatedEntries = ExtractRelatedEntries(correlationID);
 
             allRelatedEntries.Sort();
 
@@ -368,6 +393,50 @@ namespace Meta.Voice.Logging
                 Write(logEntry);
             }
         }
+
+        /// <summary>
+        /// Obtains and removes related entries for the specified correlation ID.
+        /// </summary>
+        /// <param name="correlationID">The correlation ID.</param>
+        /// <returns>The entries extracted.</returns>
+        private List<LogEntry> ExtractRelatedEntries(CorrelationID correlationID)
+        {
+            var allRelatedEntries = new List<LogEntry>();
+            var currentId = correlationID;
+
+            // First we get upstream correlation IDs from the parents chain.
+            allRelatedEntries.AddRange(LogBuffer.Extract(currentId));
+            while (_correlations.ContainsKey(currentId))
+            {
+                if (_correlations[currentId].Count > 1)
+                {
+                    Warning(correlationID, KnownErrorCode.Logging, "Correlation ID {0} had multiple parent IDs. Found: {1} IDs.", correlationID, _correlations[currentId].Count );
+                }
+
+                currentId = _correlations[currentId].First();
+                allRelatedEntries.AddRange(LogBuffer.Extract(currentId));
+            }
+
+            // Then we follow the downstream tree recursively.
+            ExtractDownstreamRelatedEntries(correlationID, ref allRelatedEntries);
+
+            return allRelatedEntries;
+        }
+
+        private void ExtractDownstreamRelatedEntries(CorrelationID correlationID, ref List<LogEntry> entries)
+        {
+            if (!_downStreamCorrelations.ContainsKey(correlationID))
+            {
+                return;
+            }
+
+            foreach (var relatedId in _downStreamCorrelations[correlationID])
+            {
+                entries.AddRange(LogBuffer.Extract(relatedId));
+                ExtractDownstreamRelatedEntries(relatedId, ref entries);
+            }
+        }
+
 
         /// <inheritdoc/>
         public void Flush()
@@ -472,6 +541,33 @@ namespace Meta.Voice.Logging
 #endif
             }
 
+            WriteToSink(logEntry, prefix, message);
+        }
+
+        /// <summary>
+        /// Produce a structure of the correlations.
+        /// </summary>
+        /// <param name="correlationID">The starting correlation ID. If null, will start at current ID.</param>
+        /// <param name="depth">The depth in the dependencies tree.</param>
+        /// <returns>A string showing the tree structure of the correlation IDs.</returns>
+        internal string GetDependenciesStructure(CorrelationID? correlationID = null, int depth = 0)
+        {
+            var currentId = correlationID ?? CorrelationID;
+            var output = new string(' ', depth * 2) + currentId;
+
+            if (_downStreamCorrelations.ContainsKey(currentId))
+            {
+                foreach (var downstreamCorrelation in _downStreamCorrelations[currentId])
+                {
+                    output = output + "\n" + GetDependenciesStructure(downstreamCorrelation, depth + 1);
+                }
+            }
+
+            return output;
+        }
+
+        private void WriteToSink(LogEntry logEntry, string prefix, string message)
+        {
             switch (logEntry.Verbosity)
             {
                 case VLoggerVerbosity.Error:
@@ -651,6 +747,8 @@ namespace Meta.Voice.Logging
 
         /// <summary>
         /// This class will maintain a cache of entries and the oldest ones will expire when it runs out of space.
+        /// Each time an item is added to a key, that key's freshness is refreshed.
+        /// Each key is associated with a list of entries.
         /// </summary>
         /// <typeparam name="TKey">The key type.</typeparam>
         /// <typeparam name="TValue">The value type.</typeparam>
@@ -668,12 +766,25 @@ namespace Meta.Voice.Logging
 
             public ICollection<TValue> this[TKey key] => _dictionary[key];
 
-            public void Add(TKey key, TValue value)
+            /// <summary>
+            /// Adds an entry to the key. This also updates the "freshness" of the entry.
+            /// </summary>
+            /// <param name="key">The key.</param>
+            /// <param name="value">The value to add.</param>
+            /// <param name="unique">Will only add the value if it does not already exist.</param>
+            /// <returns>True if the key value was added. False otherwise.</returns>
+            public bool Add(TKey key, TValue value, bool unique = false)
             {
                 if (!_dictionary.ContainsKey(key))
                 {
                     _dictionary[key] = new LinkedList<TValue>();
                 }
+
+                if (unique && _dictionary[key].Contains(value))
+                {
+                    return false;
+                }
+
                 _dictionary[key].AddLast(value);
                 _order.AddLast(ValueTuple.Create(key, value));
                 if (_order.Count > _capacity)
@@ -686,6 +797,8 @@ namespace Meta.Voice.Logging
                         _dictionary.Remove(oldest.Item1);
                     }
                 }
+
+                return true;
             }
 
             /// <summary>

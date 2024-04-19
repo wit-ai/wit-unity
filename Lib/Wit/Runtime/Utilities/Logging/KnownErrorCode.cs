@@ -18,7 +18,7 @@ namespace Meta.Voice.Logging
         [Description("File a bug report.")]
         Unknown,
 
-        [Description("Report this issue to the Voice SDK team.")]
+        [Description("Inspect the VLogger class or report this issue to the Voice SDK team.")]
         Logging,
 
         [Description("Check that all enums that have the ConduitValue attribute applied are valid.")]

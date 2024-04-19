@@ -13,9 +13,9 @@ namespace Meta.Voice.Logging
     /// <summary>
     /// A logging scope to be used in "using" blocks.
     /// </summary>
-    public class LogScope : IDisposable, ICoreLogger
+    public class LogScope : ILogScope
     {
-        private readonly IVLogger _logger;
+        private readonly ICoreLogger _logger;
         private readonly int _sequenceId;
 
         /// <summary>
@@ -26,11 +26,11 @@ namespace Meta.Voice.Logging
         /// <param name="correlationID">The correlation ID.</param>
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
-        public LogScope(IVLogger logger, VLoggerVerbosity verbosity, CorrelationID correlationID, string message, object [] parameters)
+        public LogScope(ICoreLogger logger, VLoggerVerbosity verbosity, CorrelationID correlationID, string message, object [] parameters)
         {
             CorrelationID = correlationID;
             _logger = logger;
-            _sequenceId = _logger.Start(verbosity, correlationID, message, parameters);
+            _sequenceId = _logger.Start(correlationID, verbosity, message, parameters);
         }
 
         /// <inheritdoc/>
@@ -39,73 +39,123 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Verbose(string message, params object [] parameters)
         {
-            _logger.Verbose(CorrelationID, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Verbose, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
-            _logger.Verbose(correlationId, message, parameters);
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Verbose, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(string message, params object [] parameters)
         {
-            _logger.Info(CorrelationID, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Info, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Info(CorrelationID correlationId, string message, params object [] parameters)
         {
-            _logger.Info(correlationId, message, parameters);
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Info, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(string message, params object [] parameters)
         {
-            _logger.Debug(CorrelationID, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Debug, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
-            _logger.Debug(correlationId, message, parameters);
-        }
-
-        /// <inheritdoc/>
-        public void Warning(CorrelationID correlationId, string message, params object [] parameters)
-        {
-            _logger.Warning(correlationId, message, parameters);
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Debug, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Warning(string message, params object [] parameters)
         {
-            _logger.Warning(CorrelationID, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Warning, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
+        public void Warning(CorrelationID correlationId, string message, params object [] parameters)
         {
-            _logger.Error(correlationId, errorCode, message, parameters);
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Warning, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(ErrorCode errorCode, string message, params object [] parameters)
         {
-            _logger.Error(CorrelationID, errorCode, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Error, message, parameters);
         }
 
         /// <inheritdoc/>
-        public void Error(CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, params object[] parameters)
+        public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
-            _logger.Error(correlationId, errorCode, message, parameters);
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Error, message, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters)
         {
-            _logger.Error(CorrelationID, errorCode, exception, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Verbose, exception, errorCode, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, Exception exception, ErrorCode errorCode, string message,
+            params object[] parameters)
+        {
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Verbose, exception, errorCode, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public int Start(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
+            params object[] parameters)
+        {
+            Correlate(correlationId, CorrelationID);
+            return _logger.Start(correlationId, verbosity, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
+        {
+            return _logger.Start(verbosity, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void End(int sequenceId)
+        {
+            _logger.End(sequenceId);
+        }
+
+        public void Correlate(CorrelationID newCorrelationId, CorrelationID rootCorrelationId)
+        {
+            _logger.Correlate(newCorrelationId, rootCorrelationId);
+        }
+
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message, params object[] parameters)
+        {
+            _logger.Log(correlationId, verbosity, message, parameters);
+        }
+
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, Exception exception,
+            ErrorCode errorCode,
+            string message, params object[] parameters)
+        {
+            _logger.Log(correlationId, verbosity, exception, errorCode, message, parameters);
+        }
+
+        public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
+            params object[] parameters)
+        {
+            _logger.Log(correlationId, verbosity, errorCode, message, parameters);
         }
 
         /// <summary>
