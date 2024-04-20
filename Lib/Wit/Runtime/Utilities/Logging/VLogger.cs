@@ -77,13 +77,21 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The options that control the logging.
         /// </summary>
-        private readonly LoggerOptions _options;
+        private readonly Lazy<LoggerOptions> _options;
 
+        /// <inheritdoc/>
         /// <inheritdoc/>
         public VLoggerVerbosity MinimumVerbosity
         {
-            get;
-            set;
+            get => _options.Value.MinimumVerbosity;
+            set => _options.Value.MinimumVerbosity = value;
+        }
+
+        /// <inheritdoc/>
+        public VLoggerVerbosity SuppressionLevel
+        {
+            get => _options.Value.SuppressionLevel;
+            set => _options.Value.SuppressionLevel = value;
         }
 
         /// <summary>
@@ -117,20 +125,11 @@ namespace Meta.Voice.Logging
             }
         }
 
-        internal VLogger(string category, ILogWriter logWriter, VLoggerVerbosity verbosity)
-        {
-            _category = category;
-            _logWriter = logWriter;
-            _options = new LoggerOptions();
-            MinimumVerbosity = verbosity;
-        }
-
-        internal VLogger(string category, ILogWriter logWriter, LoggerOptions options)
+        internal VLogger(string category, ILogWriter logWriter, Lazy<LoggerOptions> options)
         {
             _category = category;
             _logWriter = logWriter;
             _options = options;
-            MinimumVerbosity = options.MinimumVerbosity;
         }
 
         /// <summary>
@@ -256,32 +255,46 @@ namespace Meta.Voice.Logging
             Log(newCorrelationId, VLoggerVerbosity.Verbose, "Correlated: {0}", newCorrelationId);
         }
 
+        /// <inheritdoc/>
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
-            LogBuffer.Add(correlationId, logEntry);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, String.Empty, message, parameters);
 
-            if (MinimumVerbosity > verbosity)
+            if (IsSuppressed(logEntry))
             {
-                return;
+                LogBuffer.Add(correlationId, logEntry);
             }
+            else
+            {
+                if (IsFiltered(logEntry))
+                {
+                    return;
+                }
 
-            Write(logEntry);
+                Write(logEntry);
+            }
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
             string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, exception, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, exception, string.Empty, message, parameters);
 
             if (IsFiltered(logEntry))
             {
                 return;
             }
 
-            Write(logEntry);
+            if (IsSuppressed(logEntry))
+            {
+                LogBuffer.Add(correlationId, logEntry);
+            }
+            else
+            {
+                Write(logEntry);
+            }
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
@@ -294,7 +307,14 @@ namespace Meta.Voice.Logging
                 return;
             }
 
-            Write(logEntry);
+            if (IsSuppressed(logEntry))
+            {
+                LogBuffer.Add(correlationId, logEntry);
+            }
+            else
+            {
+                Write(logEntry);
+            }
         }
 
         /// <summary>
@@ -305,13 +325,23 @@ namespace Meta.Voice.Logging
         private bool IsFiltered(LogEntry logEntry)
         {
 #if UNITY_EDITOR
-            // Skip logs with higher log type then minimum log level
-            if ((int) logEntry.Verbosity < (int) MinimumVerbosity)
+            if (logEntry.Verbosity < MinimumVerbosity)
             {
                 return true;
             }
 
             if (VLog.FilteredTagSet.Contains(logEntry.Category))
+            {
+                return true;
+            }
+#endif
+            return false;
+        }
+
+        private bool IsSuppressed(LogEntry logEntry)
+        {
+#if UNITY_EDITOR
+            if (logEntry.Verbosity <= SuppressionLevel)
             {
                 return true;
             }
@@ -336,13 +366,13 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             CorrelateIds(correlationId);
-            var logEntry = new LogEntry(_category, verbosity, correlationId, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, "Started: ", message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
             if (!IsFiltered(logEntry))
             {
-                Write(logEntry, "Started: ");
+                Write(logEntry);
             }
 
             return _nextSequenceId++;
@@ -351,13 +381,13 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, CorrelationID, message, parameters);
+            var logEntry = new LogEntry(_category, verbosity, CorrelationID, "Started: ", message, parameters);
             LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
             if (!IsFiltered(logEntry))
             {
-                Write(logEntry, "Started: ");
+                Write(logEntry);
             }
 
             return _nextSequenceId++;
@@ -375,7 +405,8 @@ namespace Meta.Voice.Logging
             var openingEntry = _scopeEntries[sequenceId];
             if (!IsFiltered(openingEntry))
             {
-                Write(openingEntry, "Finished: ");
+                openingEntry.Prefix = "Finished: ";
+                Write(openingEntry);
             }
 
             _scopeEntries.Remove(sequenceId);
@@ -448,12 +479,26 @@ namespace Meta.Voice.Logging
         }
 
         /// <summary>
+        /// Extract all the suppressed entries and returns them.
+        /// </summary>
+        /// <returns>All the log entries.</returns>
+        public IEnumerable<LogEntry> ExtractAllEntries()
+        {
+            return LogBuffer.ExtractAll();
+        }
+
+        /// <summary>
         /// Applies any relevant filtering and formatting, then writes to the log sink.
         /// </summary>
         /// <param name="logEntry">The entry to write.</param>
         /// <param name="prefix">Any prefix that should go before the log.</param>
-        private void Write(LogEntry logEntry, string prefix)
+        private void Write(LogEntry logEntry)
         {
+            if (logEntry.Verbosity == VLoggerVerbosity.Error)
+            {
+                Flush(logEntry.CorrelationID);
+            }
+
             // Suppress all except errors if needed
             if (VLog.SuppressLogs && (int)logEntry.Verbosity < (int)VLoggerVerbosity.Error)
             {
@@ -474,7 +519,7 @@ namespace Meta.Voice.Logging
             var start = sb.Length;
             sb.Append($"[VSDK {logEntry.Verbosity.ToString().ToUpper()}] ");
 
-            if (_options.ColorLogs)
+            if (_options.Value.ColorLogs)
             {
                 WrapWithLogColor(sb, start, logEntry.Verbosity);
             }
@@ -486,7 +531,7 @@ namespace Meta.Voice.Logging
                 sb.Append($"[{logEntry.Category}] ");
             }
 
-            if (_options.LinkToCallSite)
+            if (_options.Value.LinkToCallSite)
             {
                 WrapWithCallingLink(sb, start);
             }
@@ -541,7 +586,9 @@ namespace Meta.Voice.Logging
 #endif
             }
 
-            WriteToSink(logEntry, prefix, message);
+            logEntry.Message = message;
+
+            WriteToSink(logEntry);
         }
 
         /// <summary>
@@ -566,43 +613,9 @@ namespace Meta.Voice.Logging
             return output;
         }
 
-        private void WriteToSink(LogEntry logEntry, string prefix, string message)
+        private void WriteToSink(LogEntry logEntry)
         {
-            switch (logEntry.Verbosity)
-            {
-                case VLoggerVerbosity.Error:
-#if UNITY_EDITOR
-                    if (VLog.LogErrorsAsWarnings)
-                    {
-                        _logWriter.WriteWarning($"{prefix}{message}");
-                        return;
-                    }
-#endif
-                    _logWriter.WriteError($"{prefix}{message}");
-                    break;
-                case VLoggerVerbosity.Warning:
-                    _logWriter.WriteWarning($"{prefix}{message}");
-                    break;
-                case VLoggerVerbosity.Info:
-                    _logWriter.WriteInfo($"{prefix}{message}");
-                    break;
-                case VLoggerVerbosity.Debug:
-                    _logWriter.WriteDebug($"{prefix}{message}");
-                    break;
-                default:
-                    _logWriter.WriteVerbose($"{prefix}{message}");
-                    break;
-            }
-        }
-
-        private void Write(LogEntry logEntry)
-        {
-            if (logEntry.Verbosity == VLoggerVerbosity.Error)
-            {
-                Flush(logEntry.CorrelationID);
-            }
-
-            Write(logEntry, String.Empty);
+            _logWriter.WriteEntry(logEntry);
         }
 
         private static void WrapWithCallingLink(StringBuilder builder, int startIndex)
@@ -683,66 +696,6 @@ namespace Meta.Voice.Logging
             // Replace the matched lines in the stack trace
             var formattedStackTrace = regex.Replace(stackTrace, (MatchEvaluator)Evaluator);
             return formattedStackTrace;
-        }
-
-        private readonly struct LogEntry : IComparable<LogEntry>
-        {
-            public string Category { get; }
-            public DateTime TimeStamp { get; }
-            public string Message { get; }
-            public object[] Parameters { get; }
-            public CorrelationID CorrelationID { get; }
-            public VLoggerVerbosity Verbosity { get; }
-
-            public Exception Exception { get; }
-
-            public ErrorCode? ErrorCode { get; }
-
-            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, string message, object [] parameters)
-            {
-                Category = category;
-                TimeStamp = DateTime.UtcNow;
-                Message = message;
-                Parameters = parameters;
-                Verbosity = verbosity;
-                CorrelationID = correlationId;
-                Exception = null;
-                ErrorCode = (ErrorCode)null;
-            }
-
-            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, string message, object [] parameters)
-            {
-                Category = category;
-                TimeStamp = DateTime.UtcNow;
-                Message = message;
-                Parameters = parameters;
-                Verbosity = verbosity;
-                CorrelationID = correlationId;
-                Exception = exception;
-                ErrorCode = errorCode;
-            }
-
-            public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, string message, object [] parameters)
-            {
-                Category = category;
-                TimeStamp = DateTime.UtcNow;
-                Message = message;
-                Parameters = parameters;
-                Verbosity = verbosity;
-                CorrelationID = correlationId;
-                Exception = null;
-                ErrorCode = errorCode;
-            }
-
-            public override string ToString()
-            {
-                return string.Format(Message, Parameters) + $" [{CorrelationID}]";
-            }
-
-            public int CompareTo(LogEntry other)
-            {
-                return TimeStamp.CompareTo(other.TimeStamp);
-            }
         }
 
         /// <summary>

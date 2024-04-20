@@ -24,6 +24,7 @@ namespace Meta.WitAi.Windows
 
         // VLog log level
         private static int _logLevel = -1;
+        private static int _logSuppressionLevel = 1;
         private static string[] _logLevelNames;
         private static readonly VLoggerVerbosity[] _logLevels = (Enum.GetValues(typeof(VLoggerVerbosity)) as VLoggerVerbosity[])?.Reverse().ToArray();
         private string _newFilter;
@@ -81,24 +82,48 @@ namespace Meta.WitAi.Windows
         private void DrawGeneralSettings()
         {
             // VLog level
-            bool updated = false;
+            var updated = false;
             RefreshLogLevel();
-            int logLevel = _logLevel;
+            var logLevel = _logLevel;
             WitEditorUI.LayoutPopup(WitTexts.Texts.VLogLevelLabel, _logLevelNames, ref logLevel, ref updated);
             if (updated)
             {
                 SetLogLevel(logLevel);
             }
 
+            var logSuppressionLevel = _logSuppressionLevel;
+            WitEditorUI.LayoutPopup(WitTexts.Texts.VLoggerSuppressionLevelLabel, _logLevelNames, ref logSuppressionLevel, ref updated);
+            if (updated)
+            {
+                SetLogSuppressionLevel(logSuppressionLevel);
+            }
+
+            if (WitEditorUI.LayoutTextButton(WitTexts.Texts.VLoggerFlushLabel))
+            {
+                var entries = new List<LogEntry>();
+                foreach (var logger in LoggerRegistry.Instance.AllLoggers)
+                {
+                    if (logger is VLogger vlogger)
+                    {
+                        entries.AddRange(vlogger.ExtractAllEntries());
+                    }
+                }
+                entries.Sort();
+                foreach (var entry in entries)
+                {
+                    LoggerRegistry.Instance.DefaultLogWriter.WriteEntry(entry);
+                }
+            }
+
             GUILayout.Label("Log Filters", EditorStyles.boldLabel);
-            for (int i = 0; i < VLog.FilteredTags.Count; i++)
+            foreach (var tag in VLog.FilteredTags)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(VLog.FilteredTags[i]);
+                GUILayout.Label(tag);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("X", GUILayout.Width(EditorGUIUtility.singleLineHeight)))
                 {
-                    VLog.RemoveTagFilter(VLog.FilteredTags[i]);
+                    VLog.RemoveTagFilter(tag);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -166,12 +191,19 @@ namespace Meta.WitAi.Windows
             }
             _logLevelNames = logLevelOptions.ToArray();
             LoggerRegistry.Initialize();
-            _logLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.EditorLogLevel.ToString());
+            _logLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.EditorLogFilteringLevel.ToString());
+            _logSuppressionLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.LogSuppressionLevel.ToString());
         }
         private void SetLogLevel(int newLevel)
         {
             _logLevel = Mathf.Clamp(0, newLevel, _logLevels.Length);
-            LoggerRegistry.Instance.EditorLogLevel = _logLevels[_logLevel];
+            LoggerRegistry.Instance.EditorLogFilteringLevel = _logLevels[_logLevel];
+        }
+
+        private void SetLogSuppressionLevel(int newLevel)
+        {
+            _logSuppressionLevel = Mathf.Clamp(0, newLevel, _logLevels.Length);
+            LoggerRegistry.Instance.LogSuppressionLevel = _logLevels[_logSuppressionLevel];
         }
 
         private static void InitializeTelemetryLevelOptions()

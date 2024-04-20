@@ -36,6 +36,12 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// High verbosity information. Helpful for detailed tracing.
         /// </summary>
-        Verbose = 1
+        Verbose = 1,
+
+        /// <summary>
+        /// This level means the information will not be written at all.
+        /// This is typically used for disabling suppression, rather than as an actual logging level.
+        /// </summary>
+        None = 0,
     }
 }

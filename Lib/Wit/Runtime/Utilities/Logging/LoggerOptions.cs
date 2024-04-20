@@ -16,7 +16,12 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Minimum verbosity to write.
         /// </summary>
-        public readonly VLoggerVerbosity MinimumVerbosity = VLoggerVerbosity.Debug;
+        public VLoggerVerbosity MinimumVerbosity = VLoggerVerbosity.Debug;
+
+        /// <summary>
+        /// Suppression level.
+        /// </summary>
+        public VLoggerVerbosity SuppressionLevel = VLoggerVerbosity.Debug;
 
         /// <summary>
         /// Whether or not to color the logs.
@@ -28,11 +33,12 @@ namespace Meta.Voice.Logging
         /// </summary>
         public readonly bool LinkToCallSite = true;
 
-        internal LoggerOptions(VLoggerVerbosity minimumVerbosity = VLoggerVerbosity.Debug, bool colorLogs = true, bool linkToCallSite = true)
+        internal LoggerOptions(VLoggerVerbosity minimumVerbosity = VLoggerVerbosity.Debug, VLoggerVerbosity suppressionLevel = VLoggerVerbosity.Verbose, bool colorLogs = true, bool linkToCallSite = true)
         {
             MinimumVerbosity = minimumVerbosity;
             ColorLogs = colorLogs;
             LinkToCallSite = linkToCallSite;
+            SuppressionLevel = suppressionLevel;
         }
     }
 }

@@ -20,6 +20,13 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity MinimumVerbosity { get; set; }
 
         /// <summary>
+        /// The verbosity level at which we suppress logs until they rare flushed.
+        /// Any logs at or below this verbosity level will be suppressed.
+        /// Anything higher will be written out right away.
+        /// </summary>
+        public VLoggerVerbosity SuppressionLevel { get; set; }
+
+        /// <summary>
         /// Writes out any high verbosity logs that have been suppressed as part of the specified correlation ID.
         /// </summary>
         public void Flush(CorrelationID correlationID);

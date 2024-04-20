@@ -17,28 +17,83 @@ namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {
+        public readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
+        private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
         private const VLoggerVerbosity EDITOR_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Warning;
+        private const VLoggerVerbosity SUPPRESSION_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Verbose;
         private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
-        private static readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
-        private static VLoggerVerbosity _editorLogLevel = (VLoggerVerbosity)(-1);
+
+        private static Lazy<VLoggerVerbosity> _editorLogFilteringLevel = new(() =>
+        {
+#if UNITY_EDITOR
+            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
+
+            return !Enum.TryParse(editorLogLevelString, out VLoggerVerbosity editorLogLevel) ? EDITOR_LOG_LEVEL_DEFAULT : editorLogLevel;
+#else
+            // Outside of editor, we always log verbose.
+            return VLoggerVerbosity.Verbose;
+#endif
+        });
+
+        private static Lazy<VLoggerVerbosity> _editorLogSuppressionLevel = new(() =>
+        {
+#if UNITY_EDITOR
+            var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, SUPPRESSION_LOG_LEVEL_DEFAULT.ToString());
+
+            return !Enum.TryParse(suppressionLogLevelString, out VLoggerVerbosity editorLogLevel) ? SUPPRESSION_LOG_LEVEL_DEFAULT : editorLogLevel;
+
+#else
+            // Outside of editor, we always suppress verbose.
+            return VLoggerVerbosity.Verbose;
+#endif
+        });
 
         /// <inheritdoc/>
         public bool PoolLoggers { get; set; } = true;
 
         /// <inheritdoc/>
-        public VLoggerVerbosity EditorLogLevel
+        public VLoggerVerbosity LogSuppressionLevel
         {
             get
             {
-                RefreshEditorLogLevel();
-                return _editorLogLevel;
+                return _editorLogSuppressionLevel.Value;
             }
             set
             {
-                _editorLogLevel = value;
+                if (_editorLogSuppressionLevel.Value == value)
+                {
+                    return;
+                }
+
+                _editorLogSuppressionLevel = new Lazy<VLoggerVerbosity>(value);
 #if UNITY_EDITOR
-                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
+                EditorPrefs.SetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, _editorLogSuppressionLevel.ToString());
+#endif
+                foreach (var logger in _loggers.Values)
+                {
+                    logger.SuppressionLevel = value;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public VLoggerVerbosity EditorLogFilteringLevel
+        {
+            get
+            {
+                return _editorLogFilteringLevel.Value;
+            }
+            set
+            {
+                if (_editorLogFilteringLevel.Value == value)
+                {
+                    return;
+                }
+
+                _editorLogFilteringLevel = new Lazy<VLoggerVerbosity>(value);
+#if UNITY_EDITOR
+                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogFilteringLevel.ToString());
 #endif
                 foreach (var logger in _loggers.Values)
                 {
@@ -50,7 +105,10 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The singleton instance of the registry.
         /// </summary>
-        public static ILoggerRegistry Instance { get; } = new LoggerRegistry();
+        public static LoggerRegistry Instance { get; } = new LoggerRegistry();
+
+        /// <inheritdoc/>
+        public IEnumerable<IVLogger> AllLoggers => _loggers.Values;
 
         /// <summary>
         /// A private constructor to prevent instantiation of this class.
@@ -60,48 +118,25 @@ namespace Meta.Voice.Logging
         }
 
 #if UNITY_EDITOR
+
         /// <summary>
         /// Initialize the registry.
         /// </summary>
         [UnityEngine.RuntimeInitializeOnLoadMethod]
         public static void Initialize()
         {
-            ((LoggerRegistry)Instance).RefreshEditorLogLevel();
+
         }
 #endif
-
-        private void RefreshEditorLogLevel()
-        {
-#if UNITY_EDITOR
-            // Already initialized
-            if (_editorLogLevel != (VLoggerVerbosity) (-1))
-            {
-                return;
-            }
-
-            // Load log
-            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
-
-            // Try parsing
-            if (!Enum.TryParse(editorLogLevelString, out VLoggerVerbosity editorLogLevel))
-            {
-                // If parsing fails, use default log level
-                _editorLogLevel = EDITOR_LOG_LEVEL_DEFAULT;
-            }
-            _editorLogLevel = editorLogLevel;
-#else
-            // Outside of editor, we always log verbose.
-            _editorLogLevel = VLoggerVerbosity.Verbose;
-#endif
-        }
 
         /// <inheritdoc/>
         public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
         {
-            var options = new LoggerOptions(
-                verbosity ?? EditorLogLevel,
+            var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
+                verbosity ?? EditorLogFilteringLevel,
+                _editorLogSuppressionLevel.Value,
                 true,
-                true);
+                true));
 
             return GetLogger(options, logWriter);
         }
@@ -109,16 +144,17 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
         {
-            var options = new LoggerOptions(
-                verbosity ?? EditorLogLevel,
+            var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
+                verbosity ?? EditorLogFilteringLevel,
+                _editorLogSuppressionLevel.Value,
                 true,
-                true);
+                true));
 
             return GetLogger(category, options, logWriter);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(LoggerOptions options, ILogWriter logWriter = null)
+        public IVLogger GetLogger(Lazy<LoggerOptions> options, ILogWriter logWriter = null)
         {
             logWriter ??= DefaultLogWriter;
 
@@ -145,7 +181,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, LoggerOptions options, ILogWriter logWriter = null)
+        public IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogWriter logWriter = null)
         {
             logWriter ??= DefaultLogWriter;
 

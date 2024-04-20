@@ -14,6 +14,12 @@ namespace Meta.Voice.Logging
     public interface ILogWriter
     {
         /// <summary>
+        /// Write a log entry to the sink.
+        /// </summary>
+        /// <param name="logEntry">The log entry to write.</param>
+        void WriteEntry(LogEntry logEntry);
+
+        /// <summary>
         /// Writes a verbose message.
         /// </summary>
         /// <param name="message">The message.</param>
