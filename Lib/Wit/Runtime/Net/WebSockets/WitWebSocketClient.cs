@@ -457,6 +457,15 @@ namespace Meta.Voice.Net.WebSockets
             // No longer authenticated
             IsAuthenticated = false;
 
+            // Untrack all running requests
+            var requestIds = _requests.Keys.ToArray();
+            foreach (var requestId in requestIds)
+            {
+                UntrackRequest(requestId);
+            }
+            // Clear untracked list
+            _untrackedRequests.Clear();
+
             // Sets all currently subscribed topics to 'Subscribing' state
             var topicIds = _subscriptions.Keys.ToArray();
             foreach (var topicId in topicIds)
@@ -473,15 +482,6 @@ namespace Meta.Voice.Net.WebSockets
                     Unsubscribe(topicId, true);
                 }
             }
-
-            // Untrack all running requests
-            var requestIds = _requests.Keys.ToArray();
-            foreach (var requestId in requestIds)
-            {
-                UntrackRequest(requestId);
-            }
-            // Clear untracked list
-            _untrackedRequests.Clear();
 
             // Close socket connection
             if (_socket != null)
@@ -927,8 +927,9 @@ namespace Meta.Voice.Net.WebSockets
             {
                 subscription.referenceCount++;
             }
-            // If not connected, set as subscribe error and retry when connected
-            if (ConnectionState != WitWebSocketConnectionState.Connected)
+            // If not connecting or connected, set as subscribe error and retry when connected
+            if (ConnectionState != WitWebSocketConnectionState.Connected
+                && ConnectionState != WitWebSocketConnectionState.Connecting)
             {
                 SetTopicSubscriptionState(subscription, topicId, PubSubSubscriptionState.SubscribeError, "Not connected.  Will retry once connected.");
                 return;

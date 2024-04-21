@@ -69,40 +69,11 @@ namespace Meta.Voice.Net.WebSockets
 
         // Whether or not connection to server has been requested
         private bool _connected = false;
-        // The actually subscribed topic
-        private string _subscribedTopicId;
 
         #region LIFECYCLE
         protected virtual void OnEnable()
         {
             Connect();
-        }
-
-        protected void SetSubscriptionState(PubSubSubscriptionState subscriptionState)
-        {
-            if (SubscriptionState == subscriptionState)
-            {
-                return;
-            }
-            SubscriptionState = subscriptionState;
-            OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
-            if (subscriptionState == PubSubSubscriptionState.Subscribed)
-            {
-                OnSubscribed?.Invoke();
-            }
-            else if (subscriptionState == PubSubSubscriptionState.NotSubscribed)
-            {
-                OnUnsubscribed?.Invoke();
-            }
-        }
-        protected virtual void HandleSubscriptionStateChange(string topicId,
-            PubSubSubscriptionState subscriptionState)
-        {
-            if (!string.Equals(TopicId, topicId))
-            {
-                return;
-            }
-            SetSubscriptionState(subscriptionState);
         }
         protected virtual void HandleRequestGenerated(string topicId,
             IWitWebSocketRequest request)
@@ -174,7 +145,7 @@ namespace Meta.Voice.Net.WebSockets
             WebSocketClient.Connect();
 
             // Subscribe to current topic
-            Subscribe();
+            Subscribe(TopicId);
         }
 
         /// <summary>
@@ -188,13 +159,13 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Unsubscribe from current topic
-            Unsubscribe();
+            Unsubscribe(TopicId);
 
             // Disconnect if possible
             _connected = false;
+            WebSocketClient.Disconnect();
             WebSocketClient.OnTopicSubscriptionStateChange -= HandleSubscriptionStateChange;
             WebSocketClient.OnTopicRequestTracked -= HandleRequestGenerated;
-            WebSocketClient.Disconnect();
         }
         #endregion CONNECT & DISCONNECT
 
@@ -238,46 +209,92 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
-            // Unsubscribe previous topic
-            Unsubscribe();
+            // Unsubscribe from old topic id
+            Unsubscribe(TopicId);
 
             // Set new topic
             _topicId = newTopicId;
 
             // Subscribe to new topic
-            Subscribe();
-        }
-
-        /// <summary>
-        /// Subscribe if topic id exists and connected
-        /// </summary>
-        private void Subscribe()
-        {
-            if (string.IsNullOrEmpty(TopicId) || !_connected)
-            {
-                return;
-            }
-            _subscribedTopicId = TopicId;
-            WebSocketClient.Subscribe(_subscribedTopicId);
+            Subscribe(TopicId);
         }
 
         /// <summary>
         /// Unsubscribe if topic id exists and connected
         /// </summary>
-        private void Unsubscribe()
+        private void Unsubscribe(string topicId)
         {
-            if (string.IsNullOrEmpty(_subscribedTopicId) || !_connected)
+            // Ignore if null or not subscribing
+            if (string.IsNullOrEmpty(topicId) || !_connected)
             {
                 return;
             }
 
-            // Unsubscribe
-            var oldTopicId = _subscribedTopicId;
-            _subscribedTopicId = null;
-            WebSocketClient.Unsubscribe(oldTopicId);
+            // Unsubscribe from topic id
+            WebSocketClient.Unsubscribe(topicId);
 
-            // Immediately set not subscribed since no longer receive updates for current topic id
+            // Immediately set state as not subscribed
+            SetSubscriptionState(PubSubSubscriptionState.Unsubscribing);
             SetSubscriptionState(PubSubSubscriptionState.NotSubscribed);
+        }
+
+        /// <summary>
+        /// Subscribe if topic id exists and connected
+        /// </summary>
+        private void Subscribe(string topicId)
+        {
+            // Ignore if null or not connected
+            if (string.IsNullOrEmpty(topicId) || !_connected)
+            {
+                return;
+            }
+
+            // Get current state (in case already subscribing elsewhere)
+            SetSubscriptionState(WebSocketClient.GetTopicSubscriptionState(topicId));
+
+            // Begin subscribing
+            WebSocketClient.Subscribe(topicId);
+        }
+
+        /// <summary>
+        /// Handle currently set topic id subscription changes only
+        /// </summary>
+        protected virtual void HandleSubscriptionStateChange(string topicId,
+            PubSubSubscriptionState subscriptionState)
+        {
+            // Only check if currently subscribed
+            if (!string.Equals(TopicId, topicId))
+            {
+                return;
+            }
+            // Set state
+            SetSubscriptionState(subscriptionState);
+        }
+
+        /// <summary>
+        /// Set the current subscription state
+        /// </summary>
+        protected void SetSubscriptionState(PubSubSubscriptionState subscriptionState)
+        {
+            // Ignore if the same state
+            if (SubscriptionState == subscriptionState)
+            {
+                return;
+            }
+
+            // Set the new state
+            SubscriptionState = subscriptionState;
+
+            // Invoke all callbacks
+            OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
+            if (subscriptionState == PubSubSubscriptionState.Subscribed)
+            {
+                OnSubscribed?.Invoke();
+            }
+            else if (subscriptionState == PubSubSubscriptionState.NotSubscribed)
+            {
+                OnUnsubscribed?.Invoke();
+            }
         }
         #endregion SUBSCRIBE & UNSUBSCRIBE
     }
