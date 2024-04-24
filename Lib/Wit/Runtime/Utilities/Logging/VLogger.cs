@@ -20,6 +20,9 @@ namespace Meta.Voice.Logging
 {
     internal class VLogger : IVLogger
     {
+        /// <summary>
+        /// The sequence ID of the next scope to open.
+        /// </summary>
         private int _nextSequenceId = 1;
 
         /// <summary>
@@ -259,62 +262,38 @@ namespace Meta.Voice.Logging
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationId, String.Empty, message, parameters);
-
-            if (IsSuppressed(logEntry))
-            {
-                LogBuffer.Add(correlationId, logEntry);
-            }
-            else
-            {
-                if (IsFiltered(logEntry))
-                {
-                    return;
-                }
-
-                Write(logEntry);
-            }
+            LogEntry(new LogEntry(_category, verbosity, correlationId, String.Empty, message, parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
             string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, exception, string.Empty, message, parameters);
-
-            if (IsFiltered(logEntry))
-            {
-                return;
-            }
-
-            if (IsSuppressed(logEntry))
-            {
-                LogBuffer.Add(correlationId, logEntry);
-            }
-            else
-            {
-                Write(logEntry);
-            }
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, string.Empty, message,
+                parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, correlationId, errorCode, message, parameters);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, message, parameters));
+        }
 
-            if (IsFiltered(logEntry))
+        private void LogEntry(LogEntry logEntry)
+        {
+            if (IsSuppressed(logEntry))
             {
+                LogBuffer.Add(logEntry.CorrelationID, logEntry);
                 return;
             }
 
-            if (IsSuppressed(logEntry))
+            if (IsFiltered(logEntry))
             {
-                LogBuffer.Add(correlationId, logEntry);
+                LogBuffer.Add(logEntry.CorrelationID, logEntry);
+                return;
             }
-            else
-            {
-                Write(logEntry);
-            }
+
+            Write(logEntry);
         }
 
         /// <summary>
@@ -517,24 +496,14 @@ namespace Meta.Voice.Logging
 
             // Insert log type
             var start = sb.Length;
-            sb.Append($"[VSDK {logEntry.Verbosity.ToString().ToUpper()}] ");
+            sb.Append($"[VSDK] ");
 
             if (_options.Value.ColorLogs)
             {
                 WrapWithLogColor(sb, start, logEntry.Verbosity);
             }
 
-            // Append VDSK & Category
-            start = sb.Length;
-            if (!string.IsNullOrEmpty(logEntry.Category))
-            {
-                sb.Append($"[{logEntry.Category}] ");
-            }
-
-            if (_options.Value.LinkToCallSite)
-            {
-                WrapWithCallingLink(sb, start);
-            }
+            Annotate(sb, logEntry);
 
             var formattedCoreMessage =
                 (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
@@ -567,7 +536,6 @@ namespace Meta.Voice.Logging
                 _messagesCache.Add(logEntry.Message, logEntry.CorrelationID);
             }
 
-
             if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
             {
                 // The mitigator may not be available if the error is coming from the mitigator constructor itself.
@@ -589,6 +557,40 @@ namespace Meta.Voice.Logging
             logEntry.Message = message;
 
             WriteToSink(logEntry);
+        }
+
+        /// <summary>
+        /// Adds the VSDK tag and, optionally, call site info to the string builder.
+        /// </summary>
+        /// <param name="sb">The string builder to append to.</param>
+        /// <param name="logEntry">The log entry.</param>
+        private void Annotate(StringBuilder sb, LogEntry logEntry)
+        {
+#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
+            if (!_options.Value.LinkToCallSite)
+            {
+#endif
+                if (!string.IsNullOrEmpty(logEntry.Category))
+                {
+                    sb.Append($"[<b>{logEntry.Category}</b>] ");
+                }
+
+                return;
+#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
+            }
+#endif
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+
+            var fileName = Path.GetFileNameWithoutExtension(callingFileName);
+            if (fileName == logEntry.Category)
+            {
+                sb.Append($"<a href=\"{callingFileName}\" line=\"{callingFileLineNumber}\">[{fileName}.cs:{callingFileLineNumber}]</a> ");
+            }
+            else
+            {
+                sb.Append($"[<b>{logEntry.Category}</b>] ");
+                sb.Append($"<a href=\"{callingFileName}\" line=\"{callingFileLineNumber}\">[{fileName}.cs:{callingFileLineNumber}]</a> ");
+            }
         }
 
         /// <summary>
@@ -618,9 +620,8 @@ namespace Meta.Voice.Logging
             _logWriter.WriteEntry(logEntry);
         }
 
-        private static void WrapWithCallingLink(StringBuilder builder, int startIndex)
+        private (string fileName, int lineNumber) GetCallSite()
         {
-#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
             var stackTrace = new StackTrace(true);
             for (int i = 3; i < stackTrace.FrameCount; i++)
             {
@@ -632,17 +633,17 @@ namespace Meta.Voice.Logging
                 }
 
                 var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
-                var callingFileLine = stackFrame.GetFileLineNumber();
-                builder.Insert(startIndex, $"<a href=\"{callingFileName}\" line=\"{callingFileLine}\">");
-                builder.Append("</a>");
-                return;
+                var callingFileLineNumber = stackFrame.GetFileLineNumber();
+                return (callingFileName, callingFileLineNumber);
             }
-#endif
+
+            _logWriter.WriteError("Failed to get call site information.");
+            return (string.Empty, 0);
         }
 
         private static bool IsLoggingClass(Type type)
         {
-            return typeof(IVLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
+            return typeof(ICoreLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
         }
 
         /// <summary>
@@ -660,6 +661,16 @@ namespace Meta.Voice.Logging
                 case VLoggerVerbosity.Warning:
                     hex = "FFFF00";
                     break;
+                case VLoggerVerbosity.Debug:
+                    hex = "FF80FF";
+                    break;
+                case VLoggerVerbosity.Verbose:
+                    hex = "80FF80";
+                    break;
+                case VLoggerVerbosity.None:
+                    hex = "FFFFFF";
+                    break;
+                case VLoggerVerbosity.Info:
                 default:
                     hex = "00FF00";
                     break;
