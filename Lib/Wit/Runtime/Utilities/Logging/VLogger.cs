@@ -38,7 +38,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Used to get mitigations for errors.
         /// </summary>
-        private static readonly ErrorMitigator ErrorMitigator = ErrorMitigator.Instance;
+        private Lazy<IErrorMitigator> _errorMitigator;
 
         /// <summary>
         /// Tracks log entries that are part of a specific correlation ID.
@@ -128,11 +128,12 @@ namespace Meta.Voice.Logging
             }
         }
 
-        internal VLogger(string category, ILogWriter logWriter, Lazy<LoggerOptions> options)
+        internal VLogger(string category, ILogWriter logWriter, Lazy<LoggerOptions> options, Lazy<IErrorMitigator> errorMitigator)
         {
             _category = category;
             _logWriter = logWriter;
             _options = options;
+            _errorMitigator = errorMitigator;
         }
 
         /// <summary>
@@ -276,7 +277,7 @@ namespace Meta.Voice.Logging
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters)
         {
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, message, parameters));
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, string.Empty, message, parameters));
         }
 
         private void LogEntry(LogEntry logEntry)
@@ -539,10 +540,10 @@ namespace Meta.Voice.Logging
             if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
             {
                 // The mitigator may not be available if the error is coming from the mitigator constructor itself.
-                if (ErrorMitigator != null)
+                if (_errorMitigator != null)
                 {
                     sb.Append("\nMitigation: ");
-                    sb.Append(ErrorMitigator.GetMitigation(logEntry.ErrorCode.Value));
+                    sb.Append(_errorMitigator.Value.GetMitigation(logEntry.ErrorCode.Value));
                 }
             }
 

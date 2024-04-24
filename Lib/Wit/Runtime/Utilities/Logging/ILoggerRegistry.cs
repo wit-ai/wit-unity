@@ -31,6 +31,11 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity LogSuppressionLevel { get; set; }
 
         /// <summary>
+        /// The error mitigator. This is mainly used to supplement the internal error mitigator or replace it.
+        /// </summary>
+        public IErrorMitigator ErrorMitigator { get; set; }
+
+        /// <summary>
         /// When true, caches the loggers and reuse them for the same category.
         /// This should always be set to true, except in rare circumstances (such as unit tests).
         /// </summary>

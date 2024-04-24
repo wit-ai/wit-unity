@@ -17,14 +17,12 @@ namespace Meta.Voice.Logging
     /// A database of mitigations for known error codes.
     /// </summary>
     [LogCategory(LogCategory.Logging, LogCategory.ErrorMitigator)]
-    public class ErrorMitigator
+    public class ErrorMitigator : IErrorMitigator
     {
         /// <summary>
         /// The logger.
         /// </summary>
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
-        public static ErrorMitigator Instance { get; } = new ErrorMitigator();
 
         public ErrorMitigator()
         {

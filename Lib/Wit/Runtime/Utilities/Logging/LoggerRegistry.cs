@@ -18,6 +18,7 @@ namespace Meta.Voice.Logging
     public sealed class LoggerRegistry : ILoggerRegistry
     {
         public readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
+
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
         private const VLoggerVerbosity EDITOR_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Warning;
@@ -48,6 +49,23 @@ namespace Meta.Voice.Logging
             return VLoggerVerbosity.Verbose;
 #endif
         });
+
+        private static IErrorMitigator errorMitigator;
+
+        /// <inheritdoc/>
+        public IErrorMitigator ErrorMitigator
+        {
+            get
+            {
+                if (errorMitigator == null)
+                {
+                    errorMitigator = new ErrorMitigator();
+                }
+
+                return errorMitigator;
+            }
+            set => errorMitigator = value;
+        }
 
         /// <inheritdoc/>
         public bool PoolLoggers { get; set; } = true;
@@ -172,7 +190,7 @@ namespace Meta.Voice.Logging
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return new VLogger(category, logWriter, options);
+                return new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator));
             }
 
             category = attribute.CategoryName;
@@ -189,14 +207,14 @@ namespace Meta.Voice.Logging
             {
                 if (!_loggers.ContainsKey(category))
                 {
-                    _loggers.Add(category, new VLogger(category, logWriter, options));
+                    _loggers.Add(category, new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator)));
                 }
 
                 return _loggers[category];
             }
             else
             {
-                return new VLogger(category, logWriter, options);
+                return new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator));
             }
         }
     }
