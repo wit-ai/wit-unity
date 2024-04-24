@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.Voice.Audio;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
 using UnityEngine;
@@ -109,7 +108,9 @@ namespace Meta.WitAi.TTS.Integrations
         // Configuration provider
         public WitConfiguration Configuration => RequestSettings.configuration;
 
-        // Used for web socket interaction
+        /// <summary>
+        /// The current web socket adapter used to perform web socket requests
+        /// </summary>
         private WitWebSocketAdapter _webSocketAdapter;
 
         // Returns current audio type setting for initial TTSClipData setup
@@ -152,6 +153,39 @@ namespace Meta.WitAi.TTS.Integrations
             if (clipData != null)
             {
                 WebRequestEvents?.OnRequestFirstResponse?.Invoke(clipData);
+            }
+        }
+
+        /// <summary>
+        /// Attempt to instantiate web socket adapter
+        /// </summary>
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (!_webSocketAdapter)
+            {
+                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
+            }
+            RefreshWebSocketSettings();
+        }
+
+        /// <summary>
+        /// Refreshes client provider on web socket settings
+        /// </summary>
+        protected virtual void RefreshWebSocketSettings()
+        {
+            _webSocketAdapter.SetClientProvider(RequestSettings.useWebSockets ? RequestSettings.configuration : null);
+        }
+
+        /// <summary>
+        /// Ensures web socket adapter disconnects from the client
+        /// </summary>
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            if (_webSocketAdapter)
+            {
+                _webSocketAdapter.SetClientProvider(null);
             }
         }
         #endregion
@@ -205,19 +239,6 @@ namespace Meta.WitAi.TTS.Integrations
             WitTTSVRequest.GetWebErrors(clipData?.textToSpeak, Configuration);
 
         /// <summary>
-        /// Setup web socket adapter if needed
-        /// </summary>
-        protected override void Awake()
-        {
-            base.Awake();
-            if (RequestSettings.useWebSockets)
-            {
-                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
-                _webSocketAdapter.SetClientProvider(RequestSettings.configuration);
-            }
-        }
-
-        /// <summary>
         /// Method for performing a web load request
         /// </summary>
         /// <param name="clipData">Clip request data</param>
@@ -247,7 +268,7 @@ namespace Meta.WitAi.TTS.Integrations
             WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
 
             // Request tts via web socket
-            if (RequestSettings.useWebSockets)
+            if (RequestSettings.useWebSockets && _webSocketAdapter)
             {
                 RequestStreamFromWebSocket(clipData);
                 return;
@@ -288,6 +309,7 @@ namespace Meta.WitAi.TTS.Integrations
             };
 
             // Get client and send request asap
+            RefreshWebSocketSettings();
             _webSocketAdapter.SendRequest(wsRequest);
         }
 
