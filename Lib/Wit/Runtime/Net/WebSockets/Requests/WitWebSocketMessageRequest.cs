@@ -94,12 +94,18 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
 
             // Check for end of stream
-            var responseType = ResponseData[WitConstants.RESPONSE_TYPE_KEY].Value;
-            bool endOfStream = !string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_TRANSCRIPTION) && responseType.StartsWith("FINAL");
-            if (endOfStream)
+            if (IsEndOfStream(ResponseData))
             {
                 HandleComplete();
             }
+        }
+
+        /// <summary>
+        /// Returns true if 'is_final' is within the response
+        /// </summary>
+        protected virtual bool IsEndOfStream(WitResponseNode responseData)
+        {
+            return responseData?[WitConstants.KEY_RESPONSE_IS_FINAL].AsBool ?? false;
         }
 
         /// <summary>
