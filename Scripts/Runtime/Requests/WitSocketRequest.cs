@@ -15,9 +15,36 @@ using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.WitAi.Requests
 {
+    /// <summary>
+    /// Options that adjust how audio requests should be handled.
+    /// </summary>
+    public enum WitAudioRequestOption
+    {
+        /// <summary>
+        /// Used when not an audio request
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// An option that provides NLP responses
+        /// </summary>
+        Speech,
+
+        /// <summary>
+        /// An option that provides a single full transcription response
+        /// </summary>
+        Transcribe,
+
+        /// <summary>
+        /// An option that provides a multiple full transcription response
+        /// </summary>
+        Dictation
+    }
+
     /// <summary>
     /// A WitSocketRequest implementation using web sockets
     /// </summary>
@@ -40,6 +67,10 @@ namespace Meta.WitAi.Requests
         /// Endpoint to be used
         /// </summary>
         public string Endpoint { get; set; }
+        /// <summary>
+        /// Whether request is used for transcribing only
+        /// </summary>
+        public WitAudioRequestOption AudioRequestOption { get; private set; }
         /// <summary>
         /// Audio encoding used for audio requests
         /// </summary>
@@ -68,58 +99,117 @@ namespace Meta.WitAi.Requests
         private bool _initialized = false;
 
         /// <summary>
-        /// Constructor for audio requests using an audio buffer
+        /// Internal constructor for WitSocketRequest class.  Use static constructors for generation.
         /// </summary>
-        /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
-        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
+        private WitSocketRequest(NLPRequestInputType inputType, WitRequestOptions options = null,
+            VoiceServiceRequestEvents events = null
+        ) : base(NLPRequestInputType.Text, options, events) {}
+
+        /// <summary>
+        /// Return web socket message request initialized with required data
+        /// </summary>
+        /// <param name="configuration">Configuration to be used when authenticating web socket client.</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client.</param>
+        /// <param name="options">Optional parameter for web request options.</param>
+        /// <param name="events">Optional parameter for request event callbacks.</param>
+        /// <returns></returns>
+        public static WitSocketRequest GetMessageRequest(WitConfiguration configuration,
+            WitWebSocketAdapter webSocketAdapter, WitRequestOptions options = null, VoiceServiceRequestEvents events = null)
+        {
+            var request = new WitSocketRequest(NLPRequestInputType.Text, options, events);
+            request.Init(configuration.GetEndpointInfo().Message, WitAudioRequestOption.None,
+                configuration, webSocketAdapter, null);
+            return request;
+        }
+
+        /// <summary>
+        /// Return web socket speech request initialized with required data to generate an audio request.
+        /// </summary>
+        /// <param name="configuration">Configuration to be used when authenticating web socket client.</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client.</param>
         /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
-        /// <param name="options">Options used for request parameters</param>
-        /// <param name="events">Event callbacks used for this request</param>
-        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer, WitRequestOptions options = null,
-            VoiceServiceRequestEvents events = null) : base(NLPRequestInputType.Audio, options, events)
+        /// <param name="options">Optional parameter for web request options.</param>
+        /// <param name="events">Optional parameter for request event callbacks.</param>
+        /// <returns></returns>
+        public static WitSocketRequest GetSpeechRequest(WitConfiguration configuration,
+            WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer,
+            WitRequestOptions options = null, VoiceServiceRequestEvents events = null)
         {
-            Init(configuration, webSocketAdapter, audioBuffer);
+            var request = new WitSocketRequest(NLPRequestInputType.Audio, options, events);
+            request.Init(configuration.GetEndpointInfo().Speech, WitAudioRequestOption.Speech,
+                configuration, webSocketAdapter, audioBuffer);
+            return request;
         }
 
         /// <summary>
-        /// Constructor for a text request
+        /// Return web socket request initialized on an external client but handled locally.
         /// </summary>
-        /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
-        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
-        /// <param name="options">Options used for request parameters</param>
-        /// <param name="events">Event callbacks used for this request</param>
-        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, WitRequestOptions options = null,
-            VoiceServiceRequestEvents events = null) : base(NLPRequestInputType.Text, options, events)
+        /// <param name="webSocketRequest">The externally generated web socket request.</param>
+        /// <param name="configuration">Configuration to be used when authenticating web socket client.</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client.</param>
+        /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
+        /// <param name="options">Optional parameter for web request options.</param>
+        /// <param name="events">Optional parameter for request event callbacks.</param>
+        public static WitSocketRequest GetExternalRequest(WitWebSocketMessageRequest webSocketRequest,
+            WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter,
+            WitRequestOptions options = null, VoiceServiceRequestEvents events = null)
         {
-            Init(configuration, webSocketAdapter, null);
+            var request = new WitSocketRequest(NLPRequestInputType.Text, options, events);
+            request.SetWebSocketRequest(webSocketRequest);
+            request.Init(webSocketRequest.Endpoint, WitAudioRequestOption.None,
+                configuration, webSocketAdapter, null);
+            return request;
         }
 
         /// <summary>
-        /// Constructor for json response turned into message response
+        /// Return web socket transcribe request initialized with required data to generate a short audio request.
         /// </summary>
-        /// <param name="configuration">Configuration to be used when authenticating web socket client</param>
-        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client</param>
-        /// <param name="jsonData">Initial response from server</param>
-        public WitSocketRequest(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter,
-            WitWebSocketMessageRequest webSocketRequest,
-            WitRequestOptions options, VoiceServiceRequestEvents events = null
-            ) : base(NLPRequestInputType.Text, options, events)
+        /// <param name="configuration">Configuration to be used when authenticating web socket client.</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client.</param>
+        /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
+        /// <param name="options">Optional parameter for web request options.</param>
+        /// <param name="events">Optional parameter for request event callbacks.</param>
+        public static WitSocketRequest GetTranscribeRequest(WitConfiguration configuration,
+            WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer,
+            WitRequestOptions options = null, VoiceServiceRequestEvents events = null)
         {
-            SetWebSocketRequest(webSocketRequest);
-            Init(configuration, webSocketAdapter, null);
+            var request = new WitSocketRequest(NLPRequestInputType.Audio, options, events);
+            request.Init(WitConstants.WIT_SOCKET_TRANSCRIBE_KEY, WitAudioRequestOption.Transcribe,
+                configuration, webSocketAdapter, audioBuffer);
+            return request;
+        }
+
+        /// <summary>
+        /// Return web socket dictation request initialized with required data to generate a long form audio request.
+        /// </summary>
+        /// <param name="configuration">Configuration to be used when authenticating web socket client.</param>
+        /// <param name="webSocketAdapter">Adapter used to communicate with web socket client.</param>
+        /// <param name="audioBuffer">Audio input buffer used to obtain audio data</param>
+        /// <param name="options">Optional parameter for web request options.</param>
+        /// <param name="events">Optional parameter for request event callbacks.</param>
+        public static WitSocketRequest GetDictationRequest(WitConfiguration configuration,
+            WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer,
+            WitRequestOptions options = null, VoiceServiceRequestEvents events = null)
+        {
+            var request = new WitSocketRequest(NLPRequestInputType.Audio, options, events);
+            request.Init(WitConstants.WIT_SOCKET_TRANSCRIBE_KEY, WitAudioRequestOption.Dictation,
+                configuration, webSocketAdapter, audioBuffer);
+            return request;
         }
 
         /// <summary>
         /// Applies all constructor variables and sets init state
         /// </summary>
-        private void Init(WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer)
+        private void Init(string endpoint, WitAudioRequestOption audioOption, WitConfiguration configuration, WitWebSocketAdapter webSocketAdapter, AudioBuffer audioBuffer)
         {
+            Endpoint = endpoint;
+            AudioRequestOption = audioOption;
             Configuration = configuration;
             WebSocketAdapter = webSocketAdapter;
             AudioInput = audioBuffer;
-            Endpoint = InputType == NLPRequestInputType.Audio
-                ? Endpoint = configuration.GetEndpointInfo().Speech
-                : Endpoint = configuration.GetEndpointInfo().Message;
+            Options.InputType = audioOption == WitAudioRequestOption.None
+                ? NLPRequestInputType.Text
+                : NLPRequestInputType.Audio;
             _initialized = true;
             SetState(VoiceRequestState.Initialized);
         }
@@ -168,8 +258,11 @@ namespace Meta.WitAi.Requests
             else if (Options.InputType == NLPRequestInputType.Audio)
             {
                 Options.QueryParams[WitConstants.WIT_SOCKET_CONTENT_KEY] = AudioEncoding.ToString();
-                var request = new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId);
-                SetWebSocketRequest(request);
+                var request = CreateAudioWebSocketRequest();
+                if (request != null)
+                {
+                    SetWebSocketRequest(request);
+                }
             }
 
             // Request generation failed
@@ -180,6 +273,23 @@ namespace Meta.WitAi.Requests
 
             // Send request
             WebSocketAdapter.SendRequest(WebSocketRequest);
+        }
+
+        /// <summary>
+        /// Generates an audio request depending on the audio request option type
+        /// </summary>
+        private WitWebSocketMessageRequest CreateAudioWebSocketRequest()
+        {
+            switch (AudioRequestOption)
+            {
+                case WitAudioRequestOption.Speech:
+                    return new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                case WitAudioRequestOption.Transcribe:
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, false, Options.RequestId);
+                case WitAudioRequestOption.Dictation:
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, true, Options.RequestId);
+            }
+            return null;
         }
 
         /// <summary>

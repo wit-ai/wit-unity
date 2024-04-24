@@ -344,7 +344,10 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_ACCEPT_KEY = "accept_header";
         public const string WIT_SOCKET_END_KEY = "end_stream";
         public const string WIT_SOCKET_ABORT_KEY = "abort";
+        public const string WIT_SOCKET_TRANSCRIBE_KEY = "transcribe";
+        public const string WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY = "multiple_segments";
         // Pub/sub data keys
+        public const string WIT_SOCKET_EXTERNAL_ENDPOINT_KEY = "external";
         public const string WIT_SOCKET_PUBSUB_SUBSCRIBE_KEY = "subscribe";
         public const string WIT_SOCKET_PUBSUB_UNSUBSCRIBE_KEY = "unsubscribe";
         public const string WIT_SOCKET_PUBSUB_TOPIC_KEY = "topic";

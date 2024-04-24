@@ -90,7 +90,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Stop sending audio data
         /// </summary>
-        public void CloseAudioStream()
+        public virtual void CloseAudioStream()
         {
             // Ignore without upload handler
             if (_uploader == null || !IsReadyForInput)

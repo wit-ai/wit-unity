@@ -194,7 +194,7 @@ namespace Meta.WitAi
             }
             if (RuntimeConfiguration.useWebSockets)
             {
-                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, newEvents);
+                return WitSocketRequest.GetMessageRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, newEvents);
             }
             return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, newEvents, _dynamicEntityProviders);
         }
@@ -221,7 +221,7 @@ namespace Meta.WitAi
             }
             if (RuntimeConfiguration.useWebSockets)
             {
-                return new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, newEvents);
+                return WitSocketRequest.GetSpeechRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, newEvents);
             }
             return RuntimeConfiguration.witConfiguration.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
@@ -366,7 +366,7 @@ namespace Meta.WitAi
             }
             // Wrap web socket request
             var options = new WitRequestOptions(webSocketRequest.RequestId);
-            var voiceRequest = new WitSocketRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, messageRequest, options);
+            var voiceRequest = WitSocketRequest.GetExternalRequest(messageRequest, RuntimeConfiguration.witConfiguration, _webSocketAdapter, options);
             SetupRequest(voiceRequest);
         }
         /// <summary>

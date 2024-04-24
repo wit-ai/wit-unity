@@ -19,6 +19,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
     public class WitWebSocketMessageRequest : WitWebSocketJsonRequest
     {
         /// <summary>
+        /// The endpoint being used
+        /// </summary>
+        public string Endpoint { get; }
+
+        /// <summary>
         /// Callback one or more times when a chunk of json is decoded
         /// </summary>
         public event Action<WitResponseNode> OnDecodedResponse;
@@ -30,7 +35,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="requestId">A unique id to be used for the request</param>
         public WitWebSocketMessageRequest(WitResponseNode externalPostData,
             string requestId)
-            : base(externalPostData, requestId) {}
+            : base(externalPostData, requestId)
+        {
+            Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
+        }
 
         /// <summary>
         /// Constructor for request that generates a WitResponseClass to be posted
@@ -40,7 +48,18 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="requestId">A unique id to be used for the request</param>
         public WitWebSocketMessageRequest(string endpoint, Dictionary<string, string> parameters,
             string requestId = null)
-            : base(GetPostData(endpoint, parameters), requestId) {}
+            : base(GetPostData(endpoint, parameters), requestId)
+        {
+            Endpoint = endpoint;
+        }
+
+        /// <summary>
+        /// Logs the currently used endpoint
+        /// </summary>
+        public override string ToString()
+        {
+            return $"{base.ToString()}\nEndpoint: {Endpoint}";
+        }
 
         /// <summary>
         /// Generates a json node with specified endpoint & parameters
