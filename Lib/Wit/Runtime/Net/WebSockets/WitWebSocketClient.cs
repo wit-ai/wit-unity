@@ -494,6 +494,10 @@ namespace Meta.Voice.Net.WebSockets
                 _socket = null;
             }
 
+            // Clear counts
+            _uploadCount = 0;
+            _downloadCount = 0;
+
             #if UNITY_EDITOR
             UnityEditor.EditorApplication.playModeStateChanged -= DisconnectIfExitingPlayMode;
             #endif
@@ -611,6 +615,11 @@ namespace Meta.Voice.Net.WebSockets
             // If auth chunk, ignore connecting or connected
             else if (ConnectionState != WitWebSocketConnectionState.Connecting
                      && ConnectionState != WitWebSocketConnectionState.Connected)
+            {
+                return;
+            }
+            // If request was cancelled, do not send
+            if (!_requests.ContainsKey(requestId))
             {
                 return;
             }
