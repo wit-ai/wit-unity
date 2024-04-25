@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -99,6 +100,16 @@ namespace Meta.WitAi
                 }
             }
             return false;
+        }
+
+        public static T GetFirstComponentOfType<T>(this Component component) {
+            return GetComponentsOfType<T>(component).First();
+        }
+        public static IEnumerable<T> GetComponentsOfType<T>(this Component component)
+        {
+            return component.GetComponents<MonoBehaviour>()
+                .Where(c => c is T)
+                .Cast<T>();
         }
     }
 }
