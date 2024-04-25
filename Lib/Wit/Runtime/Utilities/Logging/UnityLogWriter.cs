@@ -47,31 +47,31 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void WriteVerbose(string message)
         {
-            UnityEngine.Debug.Log(message);
+            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
         }
 
         /// <inheritdoc/>
         public void WriteDebug(string message)
         {
-            UnityEngine.Debug.Log(message);
+            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
         }
 
         /// <inheritdoc/>
         public void WriteInfo(string message)
         {
-            UnityEngine.Debug.Log(message);
+            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
         }
 
         /// <inheritdoc/>
         public void WriteWarning(string message)
         {
-            UnityEngine.Debug.LogWarning(message);
+            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogWarning(message));
         }
 
         /// <inheritdoc/>
         public void WriteError(string message)
         {
-            UnityEngine.Debug.LogError(message);
+            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogError(message));
         }
     }
 }
