@@ -17,7 +17,8 @@ namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {
-        public readonly ILogWriter DefaultLogWriter = new UnityLogWriter();
+        internal readonly ILogWriter DefaultLogWriter;
+        internal readonly ILogSink LogSink;
 
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
@@ -49,23 +50,6 @@ namespace Meta.Voice.Logging
             return VLoggerVerbosity.Verbose;
 #endif
         });
-
-        private static IErrorMitigator errorMitigator;
-
-        /// <inheritdoc/>
-        public IErrorMitigator ErrorMitigator
-        {
-            get
-            {
-                if (errorMitigator == null)
-                {
-                    errorMitigator = new ErrorMitigator();
-                }
-
-                return errorMitigator;
-            }
-            set => errorMitigator = value;
-        }
 
         /// <inheritdoc/>
         public bool PoolLoggers { get; set; } = true;
@@ -133,6 +117,8 @@ namespace Meta.Voice.Logging
         /// </summary>
         private LoggerRegistry()
         {
+            DefaultLogWriter = new UnityLogWriter();
+            LogSink = new LogSink(DefaultLogWriter, new Lazy<LoggerOptions>(new LoggerOptions()));
         }
 
 #if UNITY_EDITOR
@@ -148,7 +134,7 @@ namespace Meta.Voice.Logging
 #endif
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
+        public IVLogger GetLogger(ILogSink logSink = null, VLoggerVerbosity? verbosity = null)
         {
             var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
                 verbosity ?? EditorLogFilteringLevel,
@@ -156,25 +142,25 @@ namespace Meta.Voice.Logging
                 true,
                 true));
 
-            return GetLogger(options, logWriter);
+            return GetLogger(options, logSink);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null)
+        public IVLogger GetLogger(string category)
         {
             var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
-                verbosity ?? EditorLogFilteringLevel,
+                EditorLogFilteringLevel,
                 _editorLogSuppressionLevel.Value,
                 true,
                 true));
 
-            return GetLogger(category, options, logWriter);
+            return GetLogger(category, options);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(Lazy<LoggerOptions> options, ILogWriter logWriter = null)
+        public IVLogger GetLogger(Lazy<LoggerOptions> options, ILogSink logSink = null)
         {
-            logWriter ??= DefaultLogWriter;
+            logSink ??= LogSink;
 
             var stackTrace = new StackTrace();
             var category = LogCategory.Global.ToString();
@@ -184,37 +170,37 @@ namespace Meta.Voice.Logging
 
             if (callerType == null)
             {
-                return GetLogger(category, logWriter);
+                return GetLogger(category, options, logSink);
             }
 
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator));
+                return new VLogger(category, logSink, options);
             }
 
             category = attribute.CategoryName;
 
-            return GetLogger(category, options, logWriter);
+            return GetLogger(category, options, logSink);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogWriter logWriter = null)
+        public IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogSink logSink = null)
         {
-            logWriter ??= DefaultLogWriter;
+            logSink ??= LogSink;
 
             if (PoolLoggers)
             {
                 if (!_loggers.ContainsKey(category))
                 {
-                    _loggers.Add(category, new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator)));
+                    _loggers.Add(category, new VLogger(category, logSink, options));
                 }
 
                 return _loggers[category];
             }
             else
             {
-                return new VLogger(category, logWriter, options, new Lazy<IErrorMitigator>(()=>ErrorMitigator));
+                return new VLogger(category, logSink, options);
             }
         }
     }

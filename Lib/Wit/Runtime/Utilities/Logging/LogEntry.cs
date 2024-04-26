@@ -27,39 +27,48 @@ namespace Meta.Voice.Logging
 
         public ErrorCode? ErrorCode { get; }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, string prefix, string message, object [] parameters)
+        public string CallSiteFileName { get; }
+        public int CallSiteLineNumber { get; }
+
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
+            CallSiteLineNumber = callSiteLineNumber;
+            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = null;
             ErrorCode = (ErrorCode)null;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
+            CallSiteLineNumber = callSiteLineNumber;
+            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = exception;
             ErrorCode = errorCode;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
+            CallSiteLineNumber = callSiteLineNumber;
+            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = null;

@@ -9,10 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using Meta.WitAi;
 
@@ -36,20 +33,9 @@ namespace Meta.Voice.Logging
         private static readonly ThreadLocal<string> CorrelationIDThreadLocal = new ThreadLocal<string>();
 
         /// <summary>
-        /// Used to get mitigations for errors.
-        /// </summary>
-        private Lazy<IErrorMitigator> _errorMitigator;
-
-        /// <summary>
         /// Tracks log entries that are part of a specific correlation ID.
         /// </summary>
         private static readonly RingDictionaryBuffer<CorrelationID, LogEntry> LogBuffer = new RingDictionaryBuffer<CorrelationID, LogEntry>(1000);
-
-        /// <summary>
-        /// Caches the last few messages so we can omit repeated correlation IDs.
-        /// </summary>
-        private readonly RingDictionaryBuffer<string, CorrelationID> _messagesCache =
-            new RingDictionaryBuffer<string, CorrelationID>(100);
 
         /// <summary>
         /// Caches correlations between IDs. When something branches or exchanges identity, we mark the correlation.
@@ -68,9 +54,9 @@ namespace Meta.Voice.Logging
             new RingDictionaryBuffer<CorrelationID, CorrelationID>(100);
 
         /// <summary>
-        /// The final log sink where log data is written.
+        /// The log sink where log data is written.
         /// </summary>
-        private readonly ILogWriter _logWriter;
+        private readonly ILogSink _logSink;
 
         /// <summary>
         /// The category of the logger.
@@ -128,12 +114,11 @@ namespace Meta.Voice.Logging
             }
         }
 
-        internal VLogger(string category, ILogWriter logWriter, Lazy<LoggerOptions> options, Lazy<IErrorMitigator> errorMitigator)
+        internal VLogger(string category, ILogSink logSink, Lazy<LoggerOptions> options)
         {
             _category = category;
-            _logWriter = logWriter;
+            _logSink = logSink;
             _options = options;
-            _errorMitigator = errorMitigator;
         }
 
         /// <summary>
@@ -263,21 +248,24 @@ namespace Meta.Voice.Logging
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters)
         {
-            LogEntry(new LogEntry(_category, verbosity, correlationId, String.Empty, message, parameters));
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+            LogEntry(new LogEntry(_category, verbosity, correlationId, callingFileLineNumber, callingFileName, String.Empty, message, parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
             string message, params object[] parameters)
         {
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, string.Empty, message,
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, callingFileLineNumber, callingFileName, string.Empty, message,
                 parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters)
         {
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, string.Empty, message, parameters));
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, callingFileLineNumber, callingFileName, string.Empty, message, parameters));
         }
 
         private void LogEntry(LogEntry logEntry)
@@ -346,7 +334,8 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             CorrelateIds(correlationId);
-            var logEntry = new LogEntry(_category, verbosity, correlationId, "Started: ", message, parameters);
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+            var logEntry = new LogEntry(_category, verbosity, correlationId, callingFileLineNumber, callingFileName, "Started: ", message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
@@ -361,7 +350,8 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
-            var logEntry = new LogEntry(_category, verbosity, CorrelationID, "Started: ", message, parameters);
+            var (callingFileName, callingFileLineNumber) = GetCallSite();
+            var logEntry = new LogEntry(_category, verbosity, CorrelationID, callingFileLineNumber, callingFileName, "Started: ", message, parameters);
             LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
@@ -485,113 +475,7 @@ namespace Meta.Voice.Logging
                 return;
             }
 
-            var sb = new StringBuilder();
-
-#if !UNITY_EDITOR && !UNITY_ANDROID
-            {
-                // Start with datetime if not done so automatically
-                DateTime now = DateTime.Now;
-                sb.Append($"[{now.ToShortDateString()} {now.ToShortTimeString()}] ");
-            }
-#endif
-
-            // Insert log type
-            var start = sb.Length;
-            sb.Append($"[VSDK] ");
-
-            if (_options.Value.ColorLogs)
-            {
-                WrapWithLogColor(sb, start, logEntry.Verbosity);
-            }
-
-            Annotate(sb, logEntry);
-
-            var formattedCoreMessage =
-                (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
-                 logEntry.Parameters.Length != 0)
-                    ? string.Format(logEntry.Message, logEntry.Parameters)
-                    : logEntry.Message;
-
-            sb.Append(formattedCoreMessage);
-
-            // Append the correlation ID if not repeated.
-            // We use the formatted message so we split on different parameter values even for same format string.
-            if (_messagesCache.ContainsKey(formattedCoreMessage))
-            {
-                // Move it to the top of the cache.
-                var lastId = _messagesCache.Extract(logEntry.Message);
-                _messagesCache.Add(logEntry.Message, logEntry.CorrelationID);
-
-                if (lastId.First() == logEntry.CorrelationID)
-                {
-                    sb.Append($" [{logEntry.CorrelationID}]");
-                }
-                else
-                {
-                    sb.Append($" [...]");
-                }
-            }
-            else
-            {
-                sb.Append($" [{logEntry.CorrelationID}]");
-                _messagesCache.Add(logEntry.Message, logEntry.CorrelationID);
-            }
-
-            if (logEntry.ErrorCode.HasValue && logEntry.ErrorCode.Value != null)
-            {
-                // The mitigator may not be available if the error is coming from the mitigator constructor itself.
-                if (_errorMitigator != null)
-                {
-                    sb.Append("\nMitigation: ");
-                    sb.Append(_errorMitigator.Value.GetMitigation(logEntry.ErrorCode.Value));
-                }
-            }
-
-            var message = sb.ToString();
-            if (logEntry.Exception != null)
-            {
-#if UNITY_EDITOR
-                message = string.Format("{0}\n<color=\"#ff6666\"><b>{1}:</b> {2}</color>\n=== STACK TRACE ===\n{3}\n=====", sb, logEntry.Exception.GetType().Name, logEntry.Exception.Message, FormatStackTrace(logEntry.Exception.StackTrace));
-#endif
-            }
-
-            logEntry.Message = message;
-
             WriteToSink(logEntry);
-        }
-
-        /// <summary>
-        /// Adds the VSDK tag and, optionally, call site info to the string builder.
-        /// </summary>
-        /// <param name="sb">The string builder to append to.</param>
-        /// <param name="logEntry">The log entry.</param>
-        private void Annotate(StringBuilder sb, LogEntry logEntry)
-        {
-#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
-            if (!_options.Value.LinkToCallSite)
-            {
-#endif
-                if (!string.IsNullOrEmpty(logEntry.Category))
-                {
-                    sb.Append($"[<b>{logEntry.Category}</b>] ");
-                }
-
-                return;
-#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
-            }
-#endif
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-
-            var fileName = Path.GetFileNameWithoutExtension(callingFileName);
-            if (fileName == logEntry.Category)
-            {
-                sb.Append($"<a href=\"{callingFileName}\" line=\"{callingFileLineNumber}\">[{fileName}.cs:{callingFileLineNumber}]</a> ");
-            }
-            else
-            {
-                sb.Append($"[<b>{logEntry.Category}</b>] ");
-                sb.Append($"<a href=\"{callingFileName}\" line=\"{callingFileLineNumber}\">[{fileName}.cs:{callingFileLineNumber}]</a> ");
-            }
         }
 
         /// <summary>
@@ -618,7 +502,7 @@ namespace Meta.Voice.Logging
 
         private void WriteToSink(LogEntry logEntry)
         {
-            _logWriter.WriteEntry(logEntry);
+            _logSink.WriteEntry(logEntry);
         }
 
         private (string fileName, int lineNumber) GetCallSite()
@@ -638,195 +522,13 @@ namespace Meta.Voice.Logging
                 return (callingFileName, callingFileLineNumber);
             }
 
-            _logWriter.WriteError("Failed to get call site information.");
+            _logSink.WriteError("Failed to get call site information.");
             return (string.Empty, 0);
         }
 
         private static bool IsLoggingClass(Type type)
         {
             return typeof(ICoreLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
-        }
-
-        /// <summary>
-        /// Get hex value for each log type
-        /// </summary>
-        private static void WrapWithLogColor(StringBuilder builder, int startIndex, VLoggerVerbosity logType)
-        {
-#if UNITY_EDITOR
-            string hex;
-            switch (logType)
-            {
-                case VLoggerVerbosity.Error:
-                    hex = "FF0000";
-                    break;
-                case VLoggerVerbosity.Warning:
-                    hex = "FFFF00";
-                    break;
-                case VLoggerVerbosity.Debug:
-                    hex = "FF80FF";
-                    break;
-                case VLoggerVerbosity.Verbose:
-                    hex = "80FF80";
-                    break;
-                case VLoggerVerbosity.None:
-                    hex = "FFFFFF";
-                    break;
-                case VLoggerVerbosity.Info:
-                default:
-                    hex = "00FF00";
-                    break;
-            }
-            builder.Insert(startIndex, $"<color=#{hex}>");
-            builder.Append("</color>");
-#endif
-        }
-
-        private static string FormatStackTrace(string stackTrace)
-        {
-            // Get the project's working directory
-            var workingDirectory = Directory.GetCurrentDirectory();
-            // Use a regular expression to match lines with a file path and line number
-            var regex = new Regex(@"at (.+) in (.*):(\d+)");
-            // Use the MatchEvaluator delegate to format the matched lines
-            string Evaluator(Match match)
-            {
-                var method = match.Groups[1].Value;
-                var filePath = match.Groups[2].Value.Replace(workingDirectory, "");
-                var lineNumber = match.Groups[3].Value;
-                // Only format the line as a clickable link if the file exists
-                if (File.Exists(filePath))
-                {
-                    var fileName = Path.GetFileName(filePath);
-                    return $"at {method} in <a href=\"{filePath}\" line=\"{lineNumber}\">{fileName}:<b>{lineNumber}</b></a>";
-                }
-                else
-                {
-                    return match.Value;
-                }
-            }
-
-            // Replace the matched lines in the stack trace
-            var formattedStackTrace = regex.Replace(stackTrace, (MatchEvaluator)Evaluator);
-            return formattedStackTrace;
-        }
-
-        /// <summary>
-        /// This class will maintain a cache of entries and the oldest ones will expire when it runs out of space.
-        /// Each time an item is added to a key, that key's freshness is refreshed.
-        /// Each key is associated with a list of entries.
-        /// </summary>
-        /// <typeparam name="TKey">The key type.</typeparam>
-        /// <typeparam name="TValue">The value type.</typeparam>
-        private class RingDictionaryBuffer<TKey, TValue>
-        {
-            private readonly int _capacity;
-            private readonly Dictionary<TKey, LinkedList<TValue>> _dictionary;
-            private readonly LinkedList<ValueTuple<TKey, TValue>> _order;
-            public RingDictionaryBuffer(int capacity)
-            {
-                _capacity = capacity;
-                _dictionary = new Dictionary<TKey, LinkedList<TValue>>();
-                _order = new LinkedList<ValueTuple<TKey, TValue>>();
-            }
-
-            public ICollection<TValue> this[TKey key] => _dictionary[key];
-
-            /// <summary>
-            /// Adds an entry to the key. This also updates the "freshness" of the entry.
-            /// </summary>
-            /// <param name="key">The key.</param>
-            /// <param name="value">The value to add.</param>
-            /// <param name="unique">Will only add the value if it does not already exist.</param>
-            /// <returns>True if the key value was added. False otherwise.</returns>
-            public bool Add(TKey key, TValue value, bool unique = false)
-            {
-                if (!_dictionary.ContainsKey(key))
-                {
-                    _dictionary[key] = new LinkedList<TValue>();
-                }
-
-                if (unique && _dictionary[key].Contains(value))
-                {
-                    return false;
-                }
-
-                _dictionary[key].AddLast(value);
-                _order.AddLast(ValueTuple.Create(key, value));
-                if (_order.Count > _capacity)
-                {
-                    var oldest = _order.First.Value;
-                    _order.RemoveFirst();
-                    _dictionary[oldest.Item1].RemoveFirst();
-                    if (_dictionary[oldest.Item1].Count == 0)
-                    {
-                        _dictionary.Remove(oldest.Item1);
-                    }
-                }
-
-                return true;
-            }
-
-            /// <summary>
-            /// Returns true if the key exists in the buffer.
-            /// </summary>
-            /// <param name="key">The key to check.</param>
-            /// <returns>True if the key exists in the buffer. False otherwise.</returns>
-            public bool ContainsKey(TKey key)
-            {
-                return _dictionary.ContainsKey(key);
-            }
-
-            /// <summary>
-            /// Drain all the entries from the buffer that match a given key and return them.
-            /// </summary>
-            /// <param name="key">The key we are extracting.</param>
-            /// <returns>All the entries in the buffer for that specific key.</returns>
-            public IEnumerable<TValue> Extract(TKey key)
-            {
-                if (_dictionary.ContainsKey(key))
-                {
-                    var values = new List<TValue>(_dictionary[key]);
-                    _dictionary.Remove(key);
-                    var node = _order.First;
-                    while (node != null)
-                    {
-                        var nextNode = node.Next; // Save next node
-                        if (node.Value.Item1.Equals(key))
-                        {
-                            _order.Remove(node); // Remove current node
-                        }
-                        node = nextNode; // Move to next node
-                    }
-                    return values;
-                }
-                else
-                {
-                    return new List<TValue>();
-                }
-            }
-
-            /// <summary>
-            /// Drain all the entries from the buffer and return them.
-            /// </summary>
-            /// <returns>All the entries in the buffer ordered by the key (e.g. correlation IDs).</returns>
-            public IEnumerable<TValue> ExtractAll()
-            {
-                var allValues = new List<TValue>();
-                foreach (var correlationId in new List<TKey>(_dictionary.Keys))
-                {
-                    allValues.AddRange(Extract(correlationId));
-                }
-                return allValues;
-            }
-
-            /// <summary>
-            /// Clears the buffer.
-            /// </summary>
-            public void Clear()
-            {
-                _dictionary.Clear();
-                _order.Clear();
-            }
         }
     }
 }

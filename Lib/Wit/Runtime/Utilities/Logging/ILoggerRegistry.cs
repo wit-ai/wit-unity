@@ -31,11 +31,6 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity LogSuppressionLevel { get; set; }
 
         /// <summary>
-        /// The error mitigator. This is mainly used to supplement the internal error mitigator or replace it.
-        /// </summary>
-        public IErrorMitigator ErrorMitigator { get; set; }
-
-        /// <summary>
         /// When true, caches the loggers and reuse them for the same category.
         /// This should always be set to true, except in rare circumstances (such as unit tests).
         /// </summary>
@@ -44,36 +39,34 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Gets a logger with an inferred category.
         /// </summary>
-        /// <param name="logWriter">An optional log writer.</param>
+        /// <param name="logSink">An optional log sink.</param>
         /// <param name="verbosity">Minimum verbosity that will be logged.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null);
+        IVLogger GetLogger(ILogSink logSink = null, VLoggerVerbosity? verbosity = null);
 
         /// <summary>
         /// Gets a logger with an explicitly specified category.
         /// </summary>
         /// <param name="category">The category of the logs written by this logger.</param>
-        /// <param name="logWriter">An optional log writer.</param>
-        /// <param name="verbosity">Minimum verbosity that will be logged.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(string category, ILogWriter logWriter = null, VLoggerVerbosity? verbosity = null);
+        IVLogger GetLogger(string category);
 
         /// <summary>
         /// Gets a logger with an inferred category.
         /// </summary>
         /// <param name="options">The options with which to initialize the logger.</param>
-        /// <param name="logWriter">An optional log writer.</param>
+        /// <param name="logSync">An optional log sink.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(Lazy<LoggerOptions> options, ILogWriter logWriter = null);
+        IVLogger GetLogger(Lazy<LoggerOptions> options, ILogSink logSink = null);
 
         /// <summary>
         /// Gets a logger with an explicitly specified category.
         /// </summary>
-        /// <param name="options">The options with which to initialize the logger.</param>
         /// <param name="category">The category of the logs written by this logger.</param>
-        /// <param name="logWriter">An optional log writer.</param>
+        /// <param name="options">The options with which to initialize the logger.</param>
+        /// <param name="logSink"></param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogWriter logWriter = null);
+        IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogSink logSink = null);
 
         /// <summary>
         /// Returns a list of all loggers the registry created.

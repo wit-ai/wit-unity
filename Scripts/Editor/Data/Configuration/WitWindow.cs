@@ -111,7 +111,7 @@ namespace Meta.WitAi.Windows
                 entries.Sort();
                 foreach (var entry in entries)
                 {
-                    LoggerRegistry.Instance.DefaultLogWriter.WriteEntry(entry);
+                    LoggerRegistry.Instance.LogSink.WriteEntry(entry);
                 }
             }
 
