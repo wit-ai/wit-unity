@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Threading;
 using Meta.WitAi;
 
 namespace Meta.Voice.Logging
@@ -15,34 +16,81 @@ namespace Meta.Voice.Logging
     /// </summary>
     internal class UnityLogWriter : ILogWriter
     {
+        private static Thread mainThread;
+
+        static UnityLogWriter()
+        {
+            _ = ThreadUtility.CallOnMainThread(() => mainThread = Thread.CurrentThread);
+        }
+
         /// <inheritdoc/>
         public void WriteVerbose(string message)
         {
-            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            if (IsSafeToLog())
+            {
+                UnityEngine.Debug.Log(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            }
         }
 
         /// <inheritdoc/>
         public void WriteDebug(string message)
         {
-            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            if (IsSafeToLog())
+            {
+                UnityEngine.Debug.Log(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            }
         }
 
         /// <inheritdoc/>
         public void WriteInfo(string message)
         {
-            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            if (IsSafeToLog())
+            {
+                UnityEngine.Debug.Log(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
+            }
         }
 
         /// <inheritdoc/>
         public void WriteWarning(string message)
         {
-            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogWarning(message));
+            if (IsSafeToLog())
+            {
+                UnityEngine.Debug.Log(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogWarning(message));
+            }
         }
 
         /// <inheritdoc/>
         public void WriteError(string message)
         {
-            _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogError(message));
+            if (IsSafeToLog())
+            {
+                UnityEngine.Debug.Log(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogError(message));
+            }
+        }
+
+        private bool IsSafeToLog()
+        {
+            return (Thread.CurrentThread.ThreadState & ThreadState.AbortRequested & ThreadState.Aborted) == 0 || Thread.CurrentThread == mainThread;
         }
     }
 }
