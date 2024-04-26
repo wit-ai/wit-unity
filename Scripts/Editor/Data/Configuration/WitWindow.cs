@@ -190,7 +190,9 @@ namespace Meta.WitAi.Windows
                 logLevelOptions.Add(level.ToString());
             }
             _logLevelNames = logLevelOptions.ToArray();
+#if UNITY_EDITOR
             LoggerRegistry.Initialize();
+#endif
             _logLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.EditorLogFilteringLevel.ToString());
             _logSuppressionLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.LogSuppressionLevel.ToString());
         }

@@ -44,7 +44,7 @@ namespace Meta.Conduit
             }
             else
             {
-                VLog.E(GetType().Name, $"Fail to resolve actions from Conduit manifest");
+                VLog.E(GetType().Name, $"Failed to resolve actions from Conduit manifest");
             }
             return manifest;
         }
@@ -92,12 +92,12 @@ namespace Meta.Conduit
                     }
                     else
                     {
-                        VLog.E(GetType().Name, $"Fail to decode actions from Conduit manifest");
+                        VLog.E(GetType().Name, $"Failed to decode actions from Conduit manifest");
                     }
                 }
                 catch (Exception e)
                 {
-                    VLog.E(GetType().Name, $"Fail to decode actions from Conduit manifest\n{e}");
+                    VLog.E(GetType().Name, $"Failed to decode actions from Conduit manifest\n{e}");
                 }
             });
 

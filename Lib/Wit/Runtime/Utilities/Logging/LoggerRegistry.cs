@@ -17,39 +17,17 @@ namespace Meta.Voice.Logging
 {
     public sealed class LoggerRegistry : ILoggerRegistry
     {
-        internal readonly ILogWriter DefaultLogWriter;
-        internal readonly ILogSink LogSink;
+        public ILogSink LogSink { get; set; }
 
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
-        private const VLoggerVerbosity EDITOR_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Warning;
-        private const VLoggerVerbosity SUPPRESSION_LOG_LEVEL_DEFAULT = VLoggerVerbosity.Verbose;
+        private static VLoggerVerbosity _editorLogLevel = VLoggerVerbosity.Warning;
+        private static VLoggerVerbosity _suppressionLogLevel = VLoggerVerbosity.Verbose;
         private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
 
-        private static Lazy<VLoggerVerbosity> _editorLogFilteringLevel = new(() =>
-        {
-#if UNITY_EDITOR
-            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, EDITOR_LOG_LEVEL_DEFAULT.ToString());
+        private static Lazy<VLoggerVerbosity> _editorLogFilteringLevel = new(() => _editorLogLevel);
 
-            return !Enum.TryParse(editorLogLevelString, out VLoggerVerbosity editorLogLevel) ? EDITOR_LOG_LEVEL_DEFAULT : editorLogLevel;
-#else
-            // Outside of editor, we always log verbose.
-            return VLoggerVerbosity.Verbose;
-#endif
-        });
-
-        private static Lazy<VLoggerVerbosity> _editorLogSuppressionLevel = new(() =>
-        {
-#if UNITY_EDITOR
-            var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, SUPPRESSION_LOG_LEVEL_DEFAULT.ToString());
-
-            return !Enum.TryParse(suppressionLogLevelString, out VLoggerVerbosity editorLogLevel) ? SUPPRESSION_LOG_LEVEL_DEFAULT : editorLogLevel;
-
-#else
-            // Outside of editor, we always suppress verbose.
-            return VLoggerVerbosity.Verbose;
-#endif
-        });
+        private static Lazy<VLoggerVerbosity> _editorLogSuppressionLevel = new(() => _suppressionLogLevel);
 
         /// <inheritdoc/>
         public bool PoolLoggers { get; set; } = true;
@@ -117,19 +95,26 @@ namespace Meta.Voice.Logging
         /// </summary>
         private LoggerRegistry()
         {
-            DefaultLogWriter = new UnityLogWriter();
-            LogSink = new LogSink(DefaultLogWriter, new Lazy<LoggerOptions>(new LoggerOptions()));
+            ILogWriter defaultLogWriter = new UnityLogWriter();
+            LogSink = new LogSink(defaultLogWriter, new Lazy<LoggerOptions>(new LoggerOptions()));
         }
 
 #if UNITY_EDITOR
-
         /// <summary>
         /// Initialize the registry.
         /// </summary>
         [UnityEngine.RuntimeInitializeOnLoadMethod]
         public static void Initialize()
         {
+            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
+            Enum.TryParse(editorLogLevelString, out VLoggerVerbosity logLevel);
+            Instance.EditorLogFilteringLevel = logLevel;
 
+            var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY);
+            Enum.TryParse(suppressionLogLevelString, out VLoggerVerbosity suppressionLevel);
+            Instance.EditorLogFilteringLevel = suppressionLevel;
+
+            UnityEngine.Debug.Log($"LoggerRegistry initialized: {_editorLogLevel}-{_suppressionLogLevel}");
         }
 #endif
 

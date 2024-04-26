@@ -17,6 +17,11 @@ namespace Meta.Voice.Logging
     public interface ILoggerRegistry
     {
         /// <summary>
+        /// The log sink loggers will write to by default.
+        /// </summary>
+        public ILogSink LogSink { get; set; }
+
+        /// <summary>
         /// Ignores logs in editor if less than log level.
         /// Changing this value at runtime will update it for all existing VLoggers.
         /// </summary>
