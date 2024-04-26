@@ -750,13 +750,6 @@ namespace Meta.Voice.Net.WebSockets
             {
                 VLog.E(GetType().Name, $"Request HandleDownload method exception caught\n{request}\n\n{e}\n");
                 UntrackRequest(request);
-                return;
-            }
-
-            // Request is complete, remove from tracking list
-            if (request.IsComplete)
-            {
-                UntrackRequest(request);
             }
         }
         #endregion DOWNLOAD
@@ -781,6 +774,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Begin tracking
             _requests[request.RequestId] = request;
+            request.OnComplete += CompleteRequestTracking;
             VLog.I(GetType().Name, $"Track Request\n{request}");
 
             // Invoke callback for subscribed topics
@@ -792,6 +786,21 @@ namespace Meta.Voice.Net.WebSockets
 
             // Success
             return true;
+        }
+
+        /// <summary>
+        /// Callback when request has completed tracking
+        /// </summary>
+        protected virtual void CompleteRequestTracking(IWitWebSocketRequest request)
+        {
+            // Stop tracking the request
+            UntrackRequest(request);
+
+            // Update subscription state if
+            if (request is WitWebSocketSubscriptionRequest subscriptionRequest)
+            {
+                FinalizeSubscription(subscriptionRequest);
+            }
         }
 
         /// <summary>
@@ -820,6 +829,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Remove request from tracking
             var request = _requests[requestId];
+            request.OnComplete -= CompleteRequestTracking;
             _requests.Remove(requestId);
             _untrackedRequests.Add(requestId);
             if (!request.IsComplete)
@@ -955,7 +965,6 @@ namespace Meta.Voice.Net.WebSockets
 
             // Generate and send subscribe request
             var subscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Subscribe);
-            subscribeRequest.OnComplete += FinalizeSubscription;
             SendRequest(subscribeRequest);
         }
 
@@ -1009,7 +1018,6 @@ namespace Meta.Voice.Net.WebSockets
 
             // Get and send unsubscribe request
             var unsubscribeRequest = new WitWebSocketSubscriptionRequest(topicId, WitWebSocketSubscriptionType.Unsubscribe);
-            unsubscribeRequest.OnComplete += FinalizeSubscription;
             SendRequest(unsubscribeRequest);
         }
 
@@ -1017,25 +1025,17 @@ namespace Meta.Voice.Net.WebSockets
         /// Called once subscribe or unsubscribe completes.
         /// Sets the resultant subscription state & retries if applicable.
         /// </summary>
-        private void FinalizeSubscription(IWitWebSocketRequest request)
+        private void FinalizeSubscription(WitWebSocketSubscriptionRequest request)
         {
-            // Ignore non-subscription requests
-            var subRequest = request as WitWebSocketSubscriptionRequest;
-            if (subRequest == null)
-            {
-                return;
-            }
-            // Remove on complete delegate
-            subRequest.OnComplete -= FinalizeSubscription;
             // Ignore not subscribed topic ids
-            var topicId = subRequest.TopicId;
+            var topicId = request.TopicId;
             if (!_subscriptions.TryGetValue(topicId, out var subscription))
             {
                 return;
             }
 
             // Check for error
-            bool subscribing = subRequest.SubscriptionType == WitWebSocketSubscriptionType.Subscribe;
+            bool subscribing = request.SubscriptionType == WitWebSocketSubscriptionType.Subscribe;
             if (!string.IsNullOrEmpty(request.Error))
             {
                 // Set subscribe or unsubscribe error
