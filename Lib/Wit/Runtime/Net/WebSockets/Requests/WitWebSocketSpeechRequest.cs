@@ -98,12 +98,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 return;
             }
             // Send final post data
+            IsReadyForInput = false;
             var finalPostData = GetAdditionalPostJson().AsObject;
             var data = new WitResponseClass();
             data[WitConstants.WIT_SOCKET_END_KEY] = new WitResponseClass();
             finalPostData[WitConstants.WIT_SOCKET_DATA_KEY] = data;
             _uploader.Invoke(RequestId, finalPostData, null);
-            _uploader = null;
         }
 
         /// <summary>

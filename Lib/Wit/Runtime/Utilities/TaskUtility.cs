@@ -19,7 +19,7 @@ namespace Meta.WitAi
         /// <summary>
         /// The default cpu task delay time in ms
         /// </summary>
-        public const int DELAY_DEFAULT = 10;
+        public const int DELAY_DEFAULT = -1;
 
         /// <summary>
         /// Asynchronous task to be used for freeing up the CPU during tasks
@@ -45,8 +45,8 @@ namespace Meta.WitAi
                     return;
                 }
 
-                // Delay for specified amount of time
-                await Task.Delay(delay);
+                // Perform a wait
+                await Wait();
             } while (true);
         }
 
@@ -57,7 +57,15 @@ namespace Meta.WitAi
         public static async Task Wait(int delay = DELAY_DEFAULT)
         {
             // Delay for specified amount of time
-            await Task.Delay(delay);
+            if (delay > 0)
+            {
+                await Task.Delay(delay);
+            }
+            // Delay for a yield
+            else
+            {
+                await Task.Yield();
+            }
         }
     }
 }

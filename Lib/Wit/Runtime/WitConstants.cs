@@ -329,6 +329,8 @@ namespace Meta.WitAi
         // Setup constant keys & values
         public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
         public const int WIT_SOCKET_CONNECT_TIMEOUT = 2000; // Default connection timeout in ms
+        public const int WIT_SOCKET_RESPONSE_TIMEOUT = 5000; // Default response timeout in ms
+        public const int WIT_SOCKET_MESSAGE_TIMEOUT = 10000; // Message/Speech/Event/Converse/Dictation timeout in ms
         public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Default is retry infinitely
         public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Default to one retry per second
         public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";

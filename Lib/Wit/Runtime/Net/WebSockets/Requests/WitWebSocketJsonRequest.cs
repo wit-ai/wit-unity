@@ -8,6 +8,7 @@
 
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -27,6 +28,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// The specific topic id that is being published to or received via subscription, if applicable.
         /// </summary>
         public string TopicId { get; set; }
+
+        /// <summary>
+        /// The timeout in milliseconds from the initial upload to the response from the server.
+        /// If no response in time, the request will fail.
+        /// </summary>
+        public int Timeout { get; set; } = WitConstants.WIT_SOCKET_RESPONSE_TIMEOUT;
 
         /// <summary>
         /// Whether or not uploading has begun
@@ -79,6 +86,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         protected UploadChunkDelegate _uploader;
 
         /// <summary>
+        /// Start of the timeout
+        /// </summary>
+        protected DateTime _timeoutStart;
+
+        /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
         /// </summary>
         public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null)
@@ -111,6 +123,36 @@ namespace Meta.Voice.Net.WebSockets.Requests
 
             // Upload chunk
             _uploader?.Invoke(RequestId, PostData, null);
+
+            // Generate task to handle timeout error
+            BeginTimeout();
+        }
+
+        /// <summary>
+        /// Generates a task to watch for timeout
+        /// </summary>
+        protected void BeginTimeout()
+        {
+            _timeoutStart = DateTime.UtcNow;
+            _ = CheckForTimeout();
+        }
+
+        /// <summary>
+        /// Timeout if needed
+        /// </summary>
+        private async Task CheckForTimeout()
+        {
+            // Wait while not complete and not timed out
+            await TaskUtility.WaitWhile(() => !IsComplete && (DateTime.UtcNow - _timeoutStart).TotalMilliseconds < Timeout);
+
+            // Timed out
+            if (!IsComplete)
+            {
+                SendAbort(WitConstants.ERROR_RESPONSE_TIMEOUT);
+                Code = WitConstants.ERROR_CODE_TIMEOUT.ToString();
+                Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
+                HandleComplete();
+            }
         }
 
         /// <summary>
@@ -124,7 +166,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
 
             // Send abort method if possible
-            SendAbort();
+            SendAbort(WitConstants.CANCEL_ERROR);
 
             // Handle completion
             Code = WitConstants.ERROR_CODE_ABORTED.ToString();
@@ -135,7 +177,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Method to perform an abort call
         /// </summary>
-        protected void SendAbort()
+        protected void SendAbort(string reason)
         {
             // Ignore if not uploading
             if (!IsUploading || _uploader == null)
@@ -147,6 +189,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             var abortData = new WitResponseClass();
             var data = new WitResponseClass();
             data[WitConstants.WIT_SOCKET_ABORT_KEY] = new WitResponseClass();
+            data[WitConstants.WIT_SOCKET_ABORT_KEY]["reason"] = reason;
             abortData[WitConstants.WIT_SOCKET_DATA_KEY] = data;
             _uploader?.Invoke(RequestId, abortData, null);
         }
@@ -179,6 +222,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="newResponseData">New response data received</param>
         protected virtual void SetResponseData(WitResponseNode newResponseData)
         {
+            _timeoutStart = DateTime.UtcNow;
             ResponseData = newResponseData;
             Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];

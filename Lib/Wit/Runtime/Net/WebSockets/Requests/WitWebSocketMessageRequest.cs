@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -38,6 +39,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
             : base(externalPostData, requestId)
         {
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
+            Timeout = WitConstants.WIT_SOCKET_MESSAGE_TIMEOUT;
+            BeginTimeout();
         }
 
         /// <summary>
@@ -51,6 +54,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             : base(GetPostData(endpoint, parameters), requestId)
         {
             Endpoint = endpoint;
+            Timeout = WitConstants.WIT_SOCKET_MESSAGE_TIMEOUT;
         }
 
         /// <summary>

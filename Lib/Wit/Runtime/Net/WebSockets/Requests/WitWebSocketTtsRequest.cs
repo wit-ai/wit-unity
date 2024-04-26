@@ -135,18 +135,18 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
-            // Throw error if found
-            string error = jsonData[WitConstants.KEY_RESPONSE_ERROR];
-            if (!string.IsNullOrEmpty(error))
-            {
-                Error = error;
-                HandleComplete();
-                return;
-            }
             // Begin downloading
             if (!IsDownloading)
             {
                 HandleDownloadBegin();
+            }
+
+            // Throw error if found
+            SetResponseData(jsonData);
+            if (!string.IsNullOrEmpty(Error))
+            {
+                HandleComplete();
+                return;
             }
 
             try
