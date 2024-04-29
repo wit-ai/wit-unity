@@ -251,9 +251,8 @@ namespace Meta.Voice.Logging
                 {
                     sb.Append($"[<b>{logEntry.Category}</b>] ");
                 }
-
-                return;
 #if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
+              return;
             }
 #endif
             var fileName = Path.GetFileNameWithoutExtension(logEntry.CallSiteFileName);
