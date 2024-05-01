@@ -31,14 +31,27 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Whether or not to color the logs.
         /// </summary>
-        public bool ColorLogs = true;
+        public bool ColorLogs;
 
         /// <summary>
         /// Whether or not to link to the call site.
         /// </summary>
-        public bool LinkToCallSite = true;
+        public bool LinkToCallSite;
 
-        internal LoggerOptions(VLoggerVerbosity minimumVerbosity, VLoggerVerbosity suppressionLevel, VLoggerVerbosity stackTraceLevel, bool colorLogs = true, bool linkToCallSite = true)
+        /// <summary>
+        /// Initialize the options class/
+        /// </summary>
+        public LoggerOptions(VLoggerVerbosity minimumVerbosity,
+            VLoggerVerbosity suppressionLevel,
+            VLoggerVerbosity stackTraceLevel,
+#if UNITY_EDITOR
+            bool colorLogs = true,
+            bool linkToCallSite = true
+#else
+            bool colorLogs = false,
+            bool linkToCallSite = false
+#endif
+            )
         {
             MinimumVerbosity = minimumVerbosity;
             ColorLogs = colorLogs;

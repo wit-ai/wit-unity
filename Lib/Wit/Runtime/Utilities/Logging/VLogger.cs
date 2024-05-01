@@ -428,7 +428,7 @@ namespace Meta.Voice.Logging
         {
             foreach (var logEntry in LogBuffer.ExtractAll())
             {
-                Write(logEntry);
+                Write(logEntry, true);
             }
         }
 

@@ -232,12 +232,12 @@ namespace Meta.Voice.Logging
             {
                 var method = frame.GetMethod();
                 var declaringType = method.DeclaringType;
-                if (declaringType == null || IsLoggingClass(declaringType))
+                if (declaringType == null || IsLoggingClass(method.DeclaringType) || IsSystemClass(method.DeclaringType))
                 {
                     continue;
                 }
 
-                var methodName = $"{declaringType?.Name}.{method.Name}";
+
                 var filePath = frame.GetFileName();
                 var lineNumber = frame.GetFileLineNumber();
                 var parameters = string.Join(", ", method.GetParameters().Select(p => $"{p.ParameterType.Name}"));
@@ -254,7 +254,11 @@ namespace Meta.Voice.Logging
 #endif
                 }
 
-                sb.Append($"{methodName}({parameters})\n");
+                var methodName = $"{method.Name}";
+                sb.Append(declaringType?.Name);
+                sb.Append('.');
+                sb.Append(Options.ColorLogs ? $"<color=#39CC8F>{method.Name}</color>" : $"{methodName}");
+                sb.Append($"({parameters})\n");
             }
         }
 
@@ -396,7 +400,7 @@ namespace Meta.Voice.Logging
             {
                 var stackFrame = stackTrace.GetFrame(i);
                 var method = stackFrame.GetMethod();
-                if (IsLoggingClass(method.DeclaringType))
+                if (method.DeclaringType == null || IsLoggingClass(method.DeclaringType) || IsSystemClass(method.DeclaringType))
                 {
                     continue;
                 }
@@ -413,6 +417,18 @@ namespace Meta.Voice.Logging
         private static bool IsLoggingClass(Type type)
         {
             return typeof(ICoreLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
+        }
+
+        private static bool IsSystemClass(Type type)
+        {
+            var nameSpace = type.Namespace;
+            if (nameSpace == null)
+            {
+                return false;
+            }
+            return nameSpace.StartsWith("Unity") ||
+                   nameSpace.StartsWith("System") ||
+                   nameSpace.StartsWith("Microsoft");
         }
 
         private bool IsSafeToLog()
