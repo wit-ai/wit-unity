@@ -17,6 +17,11 @@ namespace Meta.Voice.Logging
     public interface ILoggerRegistry
     {
         /// <summary>
+        /// The logger options. All loggers created by this factory will share these options.
+        /// </summary>
+        LoggerOptions Options { get; }
+
+        /// <summary>
         /// The log sink loggers will write to by default.
         /// </summary>
         public ILogSink LogSink { get; set; }
@@ -44,34 +49,17 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Gets a logger with an inferred category.
         /// </summary>
-        /// <param name="logSink">An optional log sink.</param>
-        /// <param name="verbosity">Minimum verbosity that will be logged.</param>
-        /// <returns>The logger</returns>
-        IVLogger GetLogger(ILogSink logSink = null, VLoggerVerbosity? verbosity = null);
-
-        /// <summary>
-        /// Gets a logger with an explicitly specified category.
-        /// </summary>
-        /// <param name="category">The category of the logs written by this logger.</param>
-        /// <returns>The logger</returns>
-        IVLogger GetLogger(string category);
-
-        /// <summary>
-        /// Gets a logger with an inferred category.
-        /// </summary>
-        /// <param name="options">The options with which to initialize the logger.</param>
         /// <param name="logSync">An optional log sink.</param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(Lazy<LoggerOptions> options, ILogSink logSink = null);
+        IVLogger GetLogger(ILogSink logSink = null);
 
         /// <summary>
         /// Gets a logger with an explicitly specified category.
         /// </summary>
         /// <param name="category">The category of the logs written by this logger.</param>
-        /// <param name="options">The options with which to initialize the logger.</param>
         /// <param name="logSink"></param>
         /// <returns>The logger</returns>
-        IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogSink logSink = null);
+        IVLogger GetLogger(string category, ILogSink logSink = null);
 
         /// <summary>
         /// Returns a list of all loggers the registry created.

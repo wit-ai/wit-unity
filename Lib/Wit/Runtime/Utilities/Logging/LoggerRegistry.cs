@@ -21,39 +21,54 @@ namespace Meta.Voice.Logging
 
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
-        private static VLoggerVerbosity _editorLogLevel = VLoggerVerbosity.Warning;
-        private static VLoggerVerbosity _suppressionLogLevel = VLoggerVerbosity.Verbose;
+        private const string EDITOR_LOG_STACKTRACE_LEVEL_KEY = "VSDK_EDITOR_LOG_STACKTRACE_LEVEL";
+
+        public LoggerOptions Options { get; } =
+            new LoggerOptions(VLoggerVerbosity.Warning, VLoggerVerbosity.Verbose, VLoggerVerbosity.Error);
+
         private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
-
-        private static Lazy<VLoggerVerbosity> _editorLogFilteringLevel = new(() => _editorLogLevel);
-
-        private static Lazy<VLoggerVerbosity> _editorLogSuppressionLevel = new(() => _suppressionLogLevel);
 
         /// <inheritdoc/>
         public bool PoolLoggers { get; set; } = true;
+
+        public VLoggerVerbosity LogStackTraceLevel
+        {
+            get
+            {
+                return Options.StackTraceLevel;
+            }
+            set
+            {
+                if (Options.StackTraceLevel == value)
+                {
+                    return;
+                }
+
+                Options.StackTraceLevel = value;
+#if UNITY_EDITOR
+                EditorPrefs.SetString(EDITOR_LOG_STACKTRACE_LEVEL_KEY, Options.StackTraceLevel.ToString());
+#endif
+            }
+        }
 
         /// <inheritdoc/>
         public VLoggerVerbosity LogSuppressionLevel
         {
             get
             {
-                return _editorLogSuppressionLevel.Value;
+                return Options.SuppressionLevel;
             }
             set
             {
-                if (_editorLogSuppressionLevel.Value == value)
+                if (Options.SuppressionLevel == value)
                 {
                     return;
                 }
 
-                _editorLogSuppressionLevel = new Lazy<VLoggerVerbosity>(value);
+                Options.SuppressionLevel = value;
 #if UNITY_EDITOR
-                EditorPrefs.SetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, _editorLogSuppressionLevel.ToString());
+                EditorPrefs.SetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, Options.SuppressionLevel.ToString());
 #endif
-                foreach (var logger in _loggers.Values)
-                {
-                    logger.SuppressionLevel = value;
-                }
             }
         }
 
@@ -62,23 +77,19 @@ namespace Meta.Voice.Logging
         {
             get
             {
-                return _editorLogFilteringLevel.Value;
+                return Options.MinimumVerbosity;
             }
             set
             {
-                if (_editorLogFilteringLevel.Value == value)
+                if (Options.MinimumVerbosity == value)
                 {
                     return;
                 }
 
-                _editorLogFilteringLevel = new Lazy<VLoggerVerbosity>(value);
+                Options.MinimumVerbosity = value;
 #if UNITY_EDITOR
-                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, _editorLogFilteringLevel.ToString());
+                EditorPrefs.SetString(EDITOR_LOG_LEVEL_KEY, Options.MinimumVerbosity.ToString());
 #endif
-                foreach (var logger in _loggers.Values)
-                {
-                    logger.MinimumVerbosity = value;
-                }
             }
         }
 
@@ -96,7 +107,7 @@ namespace Meta.Voice.Logging
         private LoggerRegistry()
         {
             ILogWriter defaultLogWriter = new UnityLogWriter();
-            LogSink = new LogSink(defaultLogWriter, new Lazy<LoggerOptions>(new LoggerOptions()));
+            LogSink = new LogSink(defaultLogWriter, new LoggerOptions(EditorLogFilteringLevel, LogSuppressionLevel, LogStackTraceLevel));
         }
 
 #if UNITY_EDITOR
@@ -106,44 +117,24 @@ namespace Meta.Voice.Logging
         [UnityEngine.RuntimeInitializeOnLoadMethod]
         public static void Initialize()
         {
-            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, _editorLogLevel.ToString());
+            var editorLogLevelString = EditorPrefs.GetString(EDITOR_LOG_LEVEL_KEY, Instance.Options.MinimumVerbosity.ToString());
             Enum.TryParse(editorLogLevelString, out VLoggerVerbosity logLevel);
             Instance.EditorLogFilteringLevel = logLevel;
 
-            var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY);
+            var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, Instance.Options.SuppressionLevel.ToString());
             Enum.TryParse(suppressionLogLevelString, out VLoggerVerbosity suppressionLevel);
             Instance.EditorLogFilteringLevel = suppressionLevel;
 
-            UnityEngine.Debug.Log($"LoggerRegistry initialized: {_editorLogLevel}-{_suppressionLogLevel}");
+            var stacktraceLogLevelString = EditorPrefs.GetString(EDITOR_LOG_STACKTRACE_LEVEL_KEY, Instance.Options.StackTraceLevel.ToString());
+            Enum.TryParse(stacktraceLogLevelString, out VLoggerVerbosity stacktraceLogLevel);
+            Instance.LogStackTraceLevel = stacktraceLogLevel;
+
+            UnityEngine.Debug.Log($"LoggerRegistry initialized: {editorLogLevelString}-{suppressionLogLevelString}-{stacktraceLogLevelString}");
         }
 #endif
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(ILogSink logSink = null, VLoggerVerbosity? verbosity = null)
-        {
-            var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
-                verbosity ?? EditorLogFilteringLevel,
-                _editorLogSuppressionLevel.Value,
-                true,
-                true));
-
-            return GetLogger(options, logSink);
-        }
-
-        /// <inheritdoc/>
-        public IVLogger GetLogger(string category)
-        {
-            var options = new Lazy<LoggerOptions>(()=> new LoggerOptions(
-                EditorLogFilteringLevel,
-                _editorLogSuppressionLevel.Value,
-                true,
-                true));
-
-            return GetLogger(category, options);
-        }
-
-        /// <inheritdoc/>
-        public IVLogger GetLogger(Lazy<LoggerOptions> options, ILogSink logSink = null)
+        public IVLogger GetLogger(ILogSink logSink = null)
         {
             logSink ??= LogSink;
 
@@ -155,37 +146,38 @@ namespace Meta.Voice.Logging
 
             if (callerType == null)
             {
-                return GetLogger(category, options, logSink);
+                return GetLogger(category, logSink);
             }
 
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return new VLogger(category, logSink, options);
+                return new VLogger(category, logSink);
             }
 
             category = attribute.CategoryName;
 
-            return GetLogger(category, options, logSink);
+            return GetLogger(category, logSink);
         }
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(string category, Lazy<LoggerOptions> options, ILogSink logSink = null)
+        public IVLogger GetLogger(string category, ILogSink logSink)
         {
             logSink ??= LogSink;
+            logSink.Options = Options;
 
             if (PoolLoggers)
             {
                 if (!_loggers.ContainsKey(category))
                 {
-                    _loggers.Add(category, new VLogger(category, logSink, options));
+                    _loggers.Add(category, new VLogger(category, logSink));
                 }
 
                 return _loggers[category];
             }
             else
             {
-                return new VLogger(category, logSink, options);
+                return new VLogger(category, logSink);
             }
         }
     }

@@ -16,29 +16,44 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// Minimum verbosity to write.
         /// </summary>
-        public VLoggerVerbosity MinimumVerbosity = VLoggerVerbosity.Debug;
+        public VLoggerVerbosity MinimumVerbosity;
 
         /// <summary>
         /// Suppression level.
         /// </summary>
-        public VLoggerVerbosity SuppressionLevel = VLoggerVerbosity.Debug;
+        public VLoggerVerbosity SuppressionLevel;
+
+        /// <summary>
+        /// StackTrace inclusion level.
+        /// </summary>
+        public VLoggerVerbosity StackTraceLevel;
 
         /// <summary>
         /// Whether or not to color the logs.
         /// </summary>
-        public readonly bool ColorLogs = true;
+        public bool ColorLogs = true;
 
         /// <summary>
         /// Whether or not to link to the call site.
         /// </summary>
-        public readonly bool LinkToCallSite = true;
+        public bool LinkToCallSite = true;
 
-        internal LoggerOptions(VLoggerVerbosity minimumVerbosity = VLoggerVerbosity.Debug, VLoggerVerbosity suppressionLevel = VLoggerVerbosity.Verbose, bool colorLogs = true, bool linkToCallSite = true)
+        internal LoggerOptions(VLoggerVerbosity minimumVerbosity, VLoggerVerbosity suppressionLevel, VLoggerVerbosity stackTraceLevel, bool colorLogs = true, bool linkToCallSite = true)
         {
             MinimumVerbosity = minimumVerbosity;
             ColorLogs = colorLogs;
             LinkToCallSite = linkToCallSite;
             SuppressionLevel = suppressionLevel;
+            StackTraceLevel = stackTraceLevel;
+        }
+
+        public void CopyFrom(LoggerOptions other)
+        {
+            MinimumVerbosity = other.MinimumVerbosity;
+            ColorLogs = other.ColorLogs;
+            LinkToCallSite = other.LinkToCallSite;
+            SuppressionLevel = other.SuppressionLevel;
+            StackTraceLevel = other.StackTraceLevel;
         }
     }
 }

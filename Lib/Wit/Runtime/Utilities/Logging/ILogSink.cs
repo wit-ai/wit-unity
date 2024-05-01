@@ -23,7 +23,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The logging options.
         /// </summary>
-        public Lazy<LoggerOptions> Options { get; }
+        public LoggerOptions Options { get; set; }
 
         /// <summary>
         /// The log writer to which this sink writes.

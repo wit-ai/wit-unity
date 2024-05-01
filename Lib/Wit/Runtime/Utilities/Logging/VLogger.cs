@@ -64,26 +64,6 @@ namespace Meta.Voice.Logging
         private readonly string _category;
 
         /// <summary>
-        /// The options that control the logging.
-        /// </summary>
-        private readonly Lazy<LoggerOptions> _options;
-
-        /// <inheritdoc/>
-        /// <inheritdoc/>
-        public VLoggerVerbosity MinimumVerbosity
-        {
-            get => _options.Value.MinimumVerbosity;
-            set => _options.Value.MinimumVerbosity = value;
-        }
-
-        /// <inheritdoc/>
-        public VLoggerVerbosity SuppressionLevel
-        {
-            get => _options.Value.SuppressionLevel;
-            set => _options.Value.SuppressionLevel = value;
-        }
-
-        /// <summary>
         /// The current correlation ID of this logger. This can be changed at will.
         /// </summary>
         private CorrelationID _correlationID;
@@ -114,11 +94,10 @@ namespace Meta.Voice.Logging
             }
         }
 
-        internal VLogger(string category, ILogSink logSink, Lazy<LoggerOptions> options)
+        internal VLogger(string category, ILogSink logSink)
         {
             _category = category;
             _logSink = logSink;
-            _options = options;
         }
 
         /// <summary>
@@ -248,24 +227,24 @@ namespace Meta.Voice.Logging
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters)
         {
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-            LogEntry(new LogEntry(_category, verbosity, correlationId, callingFileLineNumber, callingFileName, String.Empty, message, parameters));
+            var stackTrace = new StackTrace(true);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, stackTrace, String.Empty, message, parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
             string message, params object[] parameters)
         {
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, callingFileLineNumber, callingFileName, string.Empty, message,
+            var stackTrace = new StackTrace(true);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, stackTrace, string.Empty, message,
                 parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters)
         {
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, callingFileLineNumber, callingFileName, string.Empty, message, parameters));
+            var stackTrace = new StackTrace(true);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, stackTrace, string.Empty, message, parameters));
         }
 
         private void LogEntry(LogEntry logEntry)
@@ -293,7 +272,7 @@ namespace Meta.Voice.Logging
         private bool IsFiltered(LogEntry logEntry)
         {
 #if UNITY_EDITOR
-            if (logEntry.Verbosity < MinimumVerbosity)
+            if (logEntry.Verbosity < _logSink.Options.MinimumVerbosity)
             {
                 return true;
             }
@@ -308,8 +287,13 @@ namespace Meta.Voice.Logging
 
         private bool IsSuppressed(LogEntry logEntry)
         {
+            if (VLog.SuppressLogs && (int)logEntry.Verbosity < (int)VLoggerVerbosity.Error)
+            {
+                return true;
+            }
+
 #if UNITY_EDITOR
-            if (logEntry.Verbosity <= SuppressionLevel)
+            if (logEntry.Verbosity <= _logSink.Options.SuppressionLevel)
             {
                 return true;
             }
@@ -334,8 +318,8 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             CorrelateIds(correlationId);
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-            var logEntry = new LogEntry(_category, verbosity, correlationId, callingFileLineNumber, callingFileName, "Started: ", message, parameters);
+            var stackTrace = new StackTrace(true);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, stackTrace, "Started: ", message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
@@ -350,8 +334,8 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
-            var (callingFileName, callingFileLineNumber) = GetCallSite();
-            var logEntry = new LogEntry(_category, verbosity, CorrelationID, callingFileLineNumber, callingFileName, "Started: ", message, parameters);
+            var stackTrace = new StackTrace(true);
+            var logEntry = new LogEntry(_category, verbosity, CorrelationID, stackTrace, "Started: ", message, parameters);
             LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
@@ -391,7 +375,7 @@ namespace Meta.Voice.Logging
 
             foreach (var logEntry in allRelatedEntries)
             {
-                Write(logEntry);
+                Write(logEntry, true);
             }
         }
 
@@ -461,8 +445,8 @@ namespace Meta.Voice.Logging
         /// Applies any relevant filtering and formatting, then writes to the log sink.
         /// </summary>
         /// <param name="logEntry">The entry to write.</param>
-        /// <param name="prefix">Any prefix that should go before the log.</param>
-        private void Write(LogEntry logEntry)
+        /// <param name="force">When true will not suppress.</param>
+        private void Write(LogEntry logEntry, bool force = false)
         {
             if (logEntry.Verbosity == VLoggerVerbosity.Error)
             {
@@ -470,12 +454,12 @@ namespace Meta.Voice.Logging
             }
 
             // Suppress all except errors if needed
-            if (VLog.SuppressLogs && (int)logEntry.Verbosity < (int)VLoggerVerbosity.Error)
+            if (!force & IsSuppressed(logEntry))
             {
                 return;
             }
 
-            WriteToSink(logEntry);
+            _logSink.WriteEntry(logEntry);
         }
 
         /// <summary>
@@ -498,37 +482,6 @@ namespace Meta.Voice.Logging
             }
 
             return output;
-        }
-
-        private void WriteToSink(LogEntry logEntry)
-        {
-            _logSink.WriteEntry(logEntry);
-        }
-
-        private (string fileName, int lineNumber) GetCallSite()
-        {
-            var stackTrace = new StackTrace(true);
-            for (int i = 3; i < stackTrace.FrameCount; i++)
-            {
-                var stackFrame = stackTrace.GetFrame(i);
-                var method = stackFrame.GetMethod();
-                if (IsLoggingClass(method.DeclaringType))
-                {
-                    continue;
-                }
-
-                var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
-                var callingFileLineNumber = stackFrame.GetFileLineNumber();
-                return (callingFileName, callingFileLineNumber);
-            }
-
-            _logSink.WriteError("Failed to get call site information.");
-            return (string.Empty, 0);
-        }
-
-        private static bool IsLoggingClass(Type type)
-        {
-            return typeof(ICoreLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
         }
     }
 }

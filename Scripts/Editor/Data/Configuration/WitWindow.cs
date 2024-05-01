@@ -25,6 +25,7 @@ namespace Meta.WitAi.Windows
         // VLog log level
         private static int _logLevel = -1;
         private static int _logSuppressionLevel = 1;
+        private static int _logStackTraceLevel = 1;
         private static string[] _logLevelNames;
         private static readonly VLoggerVerbosity[] _logLevels = (Enum.GetValues(typeof(VLoggerVerbosity)) as VLoggerVerbosity[])?.Reverse().ToArray();
         private string _newFilter;
@@ -96,6 +97,13 @@ namespace Meta.WitAi.Windows
             if (updated)
             {
                 SetLogSuppressionLevel(logSuppressionLevel);
+            }
+
+            var stackTraceLevel = _logStackTraceLevel;
+            WitEditorUI.LayoutPopup(WitTexts.Texts.VLoggerStackTraceLevelLabel, _logLevelNames, ref stackTraceLevel, ref updated);
+            if (updated)
+            {
+                SetLogStackTraceLevel(stackTraceLevel);
             }
 
             if (WitEditorUI.LayoutTextButton(WitTexts.Texts.VLoggerFlushLabel))
@@ -195,6 +203,7 @@ namespace Meta.WitAi.Windows
 #endif
             _logLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.EditorLogFilteringLevel.ToString());
             _logSuppressionLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.LogSuppressionLevel.ToString());
+            _logStackTraceLevel = logLevelOptions.IndexOf(LoggerRegistry.Instance.LogStackTraceLevel.ToString());
         }
         private void SetLogLevel(int newLevel)
         {
@@ -206,6 +215,12 @@ namespace Meta.WitAi.Windows
         {
             _logSuppressionLevel = Mathf.Clamp(0, newLevel, _logLevels.Length);
             LoggerRegistry.Instance.LogSuppressionLevel = _logLevels[_logSuppressionLevel];
+        }
+
+        private void SetLogStackTraceLevel(int newLevel)
+        {
+            _logStackTraceLevel = Mathf.Clamp(0, newLevel, _logLevels.Length);
+            LoggerRegistry.Instance.LogStackTraceLevel = _logLevels[_logStackTraceLevel];
         }
 
         private static void InitializeTelemetryLevelOptions()

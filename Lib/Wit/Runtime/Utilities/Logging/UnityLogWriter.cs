@@ -16,81 +16,34 @@ namespace Meta.Voice.Logging
     /// </summary>
     internal class UnityLogWriter : ILogWriter
     {
-        private static Thread mainThread;
-
-        static UnityLogWriter()
-        {
-            _ = ThreadUtility.CallOnMainThread(() => mainThread = Thread.CurrentThread);
-        }
-
         /// <inheritdoc/>
         public void WriteVerbose(string message)
         {
-            if (IsSafeToLog())
-            {
-                UnityEngine.Debug.Log(message);
-            }
-            else
-            {
-                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
-            }
+            UnityEngine.Debug.Log(message);
         }
 
         /// <inheritdoc/>
         public void WriteDebug(string message)
         {
-            if (IsSafeToLog())
-            {
-                UnityEngine.Debug.Log(message);
-            }
-            else
-            {
-                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
-            }
+            UnityEngine.Debug.Log(message);
         }
 
         /// <inheritdoc/>
         public void WriteInfo(string message)
         {
-            if (IsSafeToLog())
-            {
-                UnityEngine.Debug.Log(message);
-            }
-            else
-            {
-                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.Log(message));
-            }
+            UnityEngine.Debug.Log(message);
         }
 
         /// <inheritdoc/>
         public void WriteWarning(string message)
         {
-            if (IsSafeToLog())
-            {
-                UnityEngine.Debug.Log(message);
-            }
-            else
-            {
-                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogWarning(message));
-            }
+            UnityEngine.Debug.LogWarning(message);
         }
 
         /// <inheritdoc/>
         public void WriteError(string message)
         {
-            if (IsSafeToLog())
-            {
-                UnityEngine.Debug.Log(message);
-            }
-            else
-            {
-                _ = ThreadUtility.CallOnMainThread(() => UnityEngine.Debug.LogError(message));
-            }
-        }
-
-        private bool IsSafeToLog()
-        {
-            return (Thread.CurrentThread.ThreadState & ThreadState.AbortRequested & ThreadState.Aborted) == 0 || Thread.CurrentThread == mainThread;
+            UnityEngine.Debug.LogError(message);
         }
     }
 }

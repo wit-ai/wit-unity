@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Diagnostics;
 
 namespace Meta.Voice.Logging
 {
@@ -22,57 +23,50 @@ namespace Meta.Voice.Logging
         public object[] Parameters { get; }
         public CorrelationID CorrelationID { get; }
         public VLoggerVerbosity Verbosity { get; }
-
         public Exception Exception { get; }
-
         public ErrorCode? ErrorCode { get; }
+        public StackTrace StackTrace { get; }
 
-        public string CallSiteFileName { get; }
-        public int CallSiteLineNumber { get; }
-
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, StackTrace stackTrace, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
-            CallSiteLineNumber = callSiteLineNumber;
-            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = null;
             ErrorCode = (ErrorCode)null;
+            StackTrace = stackTrace;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, StackTrace stackTrace, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
-            CallSiteLineNumber = callSiteLineNumber;
-            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = exception;
             ErrorCode = errorCode;
+            StackTrace = stackTrace;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, int callSiteLineNumber, string callSiteFileName, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, StackTrace stackTrace, string prefix, string message, object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
             Prefix = prefix;
             Message = message;
             Parameters = parameters;
-            CallSiteLineNumber = callSiteLineNumber;
-            CallSiteFileName = callSiteFileName;
             Verbosity = verbosity;
             CorrelationID = correlationId;
             Exception = null;
             ErrorCode = errorCode;
+            StackTrace = stackTrace;
         }
 
         public override string ToString()

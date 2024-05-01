@@ -7,18 +7,30 @@
  */
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Meta.WitAi;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Meta.Voice.Logging
 {
     /// <inheritdoc/>
     internal class LogSink : ILogSink
     {
+        private static Thread mainThread;
+
+        static LogSink()
+        {
+            _ = ThreadUtility.CallOnMainThread(() => mainThread = Thread.CurrentThread);
+        }
+
         private static IErrorMitigator _errorMitigator;
+
+        readonly string _workingDirectory = Directory.GetCurrentDirectory();
 
         /// <inheritdoc/>
         public IErrorMitigator ErrorMitigator
@@ -43,14 +55,14 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The logging options.
         /// </summary>
-        public Lazy<LoggerOptions> Options { get; }
+        public LoggerOptions Options { get; set; }
 
         /// <summary>
         /// Caches the last few messages so we can omit repeated correlation IDs.
         /// </summary>
         private readonly RingDictionaryBuffer<string, CorrelationID> _messagesCache = new(100);
 
-        internal LogSink(ILogWriter logWriter, Lazy<LoggerOptions> options, IErrorMitigator errorMitigator = null)
+        internal LogSink(ILogWriter logWriter, LoggerOptions options, IErrorMitigator errorMitigator = null)
         {
             LogWriter = logWriter;
             if (errorMitigator != null)
@@ -80,7 +92,7 @@ namespace Meta.Voice.Logging
             var start = sb.Length;
             sb.Append($"[VSDK] ");
 
-            if (Options.Value.ColorLogs)
+            if (Options.ColorLogs)
             {
                 WrapWithLogColor(sb, start, logEntry.Verbosity);
             }
@@ -128,6 +140,12 @@ namespace Meta.Voice.Logging
                 }
             }
 
+            if (logEntry.Verbosity >= Options.StackTraceLevel && logEntry.StackTrace != null)
+            {
+                sb.Append("\n");
+                AppendStackTrace(sb, logEntry);
+            }
+
             var message = sb.ToString();
             if (logEntry.Exception != null)
             {
@@ -152,23 +170,23 @@ namespace Meta.Voice.Logging
 #if UNITY_EDITOR
                     if (VLog.LogErrorsAsWarnings)
                     {
-                        LogWriter.WriteWarning($"{logEntry.Prefix}{logEntry.Message}");
+                        WriteWarning($"{logEntry.Prefix}{logEntry.Message}");
                         return;
                     }
 #endif
-                    LogWriter.WriteError($"{logEntry.Prefix}{logEntry.Message}");
+                    WriteError($"{logEntry.Prefix}{logEntry.Message}");
                     break;
                 case VLoggerVerbosity.Warning:
-                    LogWriter.WriteWarning($"{logEntry.Prefix}{logEntry.Message}");
+                    WriteWarning($"{logEntry.Prefix}{logEntry.Message}");
                     break;
                 case VLoggerVerbosity.Info:
-                    LogWriter.WriteInfo($"{logEntry.Prefix}{logEntry.Message}");
+                    WriteInfo($"{logEntry.Prefix}{logEntry.Message}");
                     break;
                 case VLoggerVerbosity.Debug:
-                    LogWriter.WriteDebug($"{logEntry.Prefix}{logEntry.Message}");
+                    WriteDebug($"{logEntry.Prefix}{logEntry.Message}");
                     break;
                 default:
-                    LogWriter.WriteVerbose($"{logEntry.Prefix}{logEntry.Message}");
+                    WriteVerbose($"{logEntry.Prefix}{logEntry.Message}");
                     break;
             }
         }
@@ -207,17 +225,48 @@ namespace Meta.Voice.Logging
 #endif
         }
 
+        private void AppendStackTrace(StringBuilder sb, LogEntry logEntry)
+        {
+            sb.Append("=== STACK TRACE ===\n");
+            foreach (var frame in logEntry.StackTrace.GetFrames())
+            {
+                var method = frame.GetMethod();
+                var declaringType = method.DeclaringType;
+                if (declaringType == null || IsLoggingClass(declaringType))
+                {
+                    continue;
+                }
+
+                var methodName = $"{declaringType?.Name}.{method.Name}";
+                var filePath = frame.GetFileName();
+                var lineNumber = frame.GetFileLineNumber();
+                var parameters = string.Join(", ", method.GetParameters().Select(p => $"{p.ParameterType.Name}"));
+
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    var relativeFilePath = filePath.Replace(_workingDirectory, "");
+
+#if UNITY_EDITOR
+                    sb.Append($"<a href=\"{relativeFilePath}\" line=\"{lineNumber}\">[{fileName}:{lineNumber}] </a>");
+#else
+                    sb.Append($"[{fileName}:{lineNumber}] ");
+#endif
+                }
+
+                sb.Append($"{methodName}({parameters})\n");
+            }
+        }
+
         private string FormatStackTrace(string stackTrace)
         {
-            // Get the project's working directory
-            var workingDirectory = Directory.GetCurrentDirectory();
             // Use a regular expression to match lines with a file path and line number
             var regex = new Regex(@"at (.+) in (.*):(\d+)");
             // Use the MatchEvaluator delegate to format the matched lines
             string Evaluator(Match match)
             {
                 var method = match.Groups[1].Value;
-                var filePath = match.Groups[2].Value.Replace(workingDirectory, "");
+                var filePath = match.Groups[2].Value.Replace(_workingDirectory, "");
                 var lineNumber = match.Groups[3].Value;
                 // Only format the line as a clickable link if the file exists
                 if (File.Exists(filePath))
@@ -244,32 +293,131 @@ namespace Meta.Voice.Logging
         private void Annotate(StringBuilder sb, LogEntry logEntry)
         {
 #if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
-            if (!Options.Value.LinkToCallSite)
+            if (!Options.LinkToCallSite)
             {
 #endif
                 if (!string.IsNullOrEmpty(logEntry.Category))
                 {
+#if UNITY_EDITOR
                     sb.Append($"[<b>{logEntry.Category}</b>] ");
+#else
+                    sb.Append($"[{logEntry.Category}] ");
+#endif
                 }
 #if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
               return;
             }
 #endif
-            var fileName = Path.GetFileNameWithoutExtension(logEntry.CallSiteFileName);
+            var (callSiteFileName, callSiteLineNumber) = GetCallSite(logEntry.StackTrace);
+            var fileName = Path.GetFileNameWithoutExtension(callSiteFileName);
             if (fileName == logEntry.Category)
             {
-                sb.Append($"<a href=\"{logEntry.CallSiteFileName}\" line=\"{logEntry.CallSiteLineNumber}\">[{fileName}.cs:{logEntry.CallSiteLineNumber}]</a> ");
+#if UNITY_EDITOR
+                sb.Append($"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+#else
+                sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
+#endif
             }
             else
             {
+#if UNITY_EDITOR
                 sb.Append($"[<b>{logEntry.Category}</b>] ");
-                sb.Append($"<a href=\"{logEntry.CallSiteFileName}\" line=\"{logEntry.CallSiteLineNumber}\">[{fileName}.cs:{logEntry.CallSiteLineNumber}]</a> ");
+                sb.Append($"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+#else
+                sb.Append($"[{logEntry.Category}] ");
+                sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
+#endif
+            }
+        }
+
+        public void WriteVerbose(string message)
+        {
+            if (IsSafeToLog())
+            {
+                LogWriter.WriteVerbose(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteVerbose(message));
+            }
+        }
+
+        public void WriteDebug(string message)
+        {
+            if (IsSafeToLog())
+            {
+                LogWriter.WriteDebug(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteDebug(message));
+            }
+        }
+
+        public void WriteInfo(string message)
+        {
+            if (IsSafeToLog())
+            {
+                LogWriter.WriteInfo(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteInfo(message));
+            }
+        }
+
+        public void WriteWarning(string message)
+        {
+            if (IsSafeToLog())
+            {
+                LogWriter.WriteWarning(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteWarning(message));
             }
         }
 
         public void WriteError(string message)
         {
-            LogWriter.WriteError(message);
+            if (IsSafeToLog())
+            {
+                LogWriter.WriteError(message);
+            }
+            else
+            {
+                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteError(message));
+            }
+        }
+
+        private (string fileName, int lineNumber) GetCallSite(StackTrace stackTrace)
+        {
+            for (int i = 1; i < stackTrace.FrameCount; i++)
+            {
+                var stackFrame = stackTrace.GetFrame(i);
+                var method = stackFrame.GetMethod();
+                if (IsLoggingClass(method.DeclaringType))
+                {
+                    continue;
+                }
+
+                var callingFileName = stackFrame.GetFileName()?.Replace('\\', '/');
+                var callingFileLineNumber = stackFrame.GetFileLineNumber();
+                return (callingFileName, callingFileLineNumber);
+            }
+
+            WriteError("Failed to get call site information.");
+            return (string.Empty, 0);
+        }
+
+        private static bool IsLoggingClass(Type type)
+        {
+            return typeof(ICoreLogger).IsAssignableFrom(type) || typeof(ILogWriter).IsAssignableFrom(type) || type == typeof(VLog);
+        }
+
+        private bool IsSafeToLog()
+        {
+            return (Thread.CurrentThread.ThreadState & ThreadState.AbortRequested & ThreadState.Aborted) == 0 || Thread.CurrentThread == mainThread;
         }
     }
 }
