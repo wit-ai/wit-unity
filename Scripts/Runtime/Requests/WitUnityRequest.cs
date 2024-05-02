@@ -58,7 +58,6 @@ namespace Meta.WitAi.Requests
             {
                 _request = new WitMessageVRequest(Configuration, newOptions.RequestId, SetDownloadProgress);
                 Endpoint = Configuration.GetEndpointInfo().Message;
-                _request.Timeout = Mathf.RoundToInt(Configuration.timeoutMS / 1000f);
                 ShouldPost = false;
             }
             // Generate an audio WitVRequest

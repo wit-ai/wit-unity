@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Net;
 using System.Threading.Tasks;
 using Meta.WitAi;
 using Meta.WitAi.Json;
@@ -33,7 +32,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// The timeout in milliseconds from the initial upload to the response from the server.
         /// If no response in time, the request will fail.
         /// </summary>
-        public int Timeout { get; set; } = WitConstants.WIT_SOCKET_RESPONSE_TIMEOUT;
+        public int TimeoutMs { get; set; } = WitConstants.DEFAULT_REQUEST_TIMEOUT;
 
         /// <summary>
         /// Whether or not uploading has begun
@@ -143,7 +142,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         private async Task CheckForTimeout()
         {
             // Wait while not complete and not timed out
-            await TaskUtility.WaitWhile(() => !IsComplete && (DateTime.UtcNow - _timeoutStart).TotalMilliseconds < Timeout);
+            await TaskUtility.WaitWhile(() => !IsComplete && (DateTime.UtcNow - _timeoutStart).TotalMilliseconds < TimeoutMs);
 
             // Timed out
             if (!IsComplete)

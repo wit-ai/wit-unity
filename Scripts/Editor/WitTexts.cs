@@ -72,6 +72,7 @@ namespace Meta.WitAi
             public string ConfigurationRefreshingButtonLabel;
             public string ConfigurationServerTokenLabel;
             public string ConfigurationClientTokenLabel;
+            public string ConfigurationRequestTypeLabel;
             public string ConfigurationRequestTimeoutLabel;
 
             [Header("Configuration Endpoint Texts")]
@@ -156,6 +157,7 @@ namespace Meta.WitAi
         public static GUIContent SettingsServerTokenContent;
         public static GUIContent ConfigurationServerTokenContent;
         public static GUIContent ConfigurationClientTokenContent;
+        public static GUIContent ConfigurationRequestTypeContent;
         public static GUIContent ConfigurationRequestTimeoutContent;
 
         // Init
@@ -181,6 +183,7 @@ namespace Meta.WitAi
             UnderstandingTitleContent = new GUIContent(WitTexts.Texts.UnderstandingViewerLabel, TitleIcon);
             ConfigurationServerTokenContent = new GUIContent(WitTexts.Texts.ConfigurationServerTokenLabel);
             ConfigurationClientTokenContent = new GUIContent(WitTexts.Texts.ConfigurationClientTokenLabel);
+            ConfigurationRequestTypeContent = new GUIContent(WitTexts.Texts.ConfigurationRequestTypeLabel);
             ConfigurationRequestTimeoutContent = new GUIContent(WitTexts.Texts.ConfigurationRequestTimeoutLabel);
         }
 

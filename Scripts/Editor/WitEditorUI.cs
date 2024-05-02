@@ -305,6 +305,15 @@ namespace Meta.WitAi
                 isUpdated = true;
             }
         }
+        public static void LayoutEnumField<T>(GUIContent key, ref T fieldValue, ref bool isUpdated) where T : Enum
+        {
+            T newFieldValue = (T)EditorGUILayout.EnumPopup(key, fieldValue, WitStyles.Popup);
+            if (!fieldValue.Equals(newFieldValue))
+            {
+                fieldValue = newFieldValue;
+                isUpdated = true;
+            }
+        }
         public static void LayoutIntField(GUIContent key, ref int fieldValue, ref bool isUpdated)
         {
             // Simple layout

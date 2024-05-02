@@ -22,6 +22,10 @@ namespace Meta.WitAi
 
         public const int URI_DEFAULT_PORT = -1;
 
+        // Default request settings
+        public const WitRequestType DEFAULT_REQUEST_TYPE = WitRequestType.Http;
+        public const int DEFAULT_REQUEST_TIMEOUT = 10_000;
+
         // Wit service header keys
         public const string HEADER_REQUEST_ID = "X-Wit-Client-Request-Id";
         public const string HEADER_AUTH = "Authorization";
@@ -67,7 +71,6 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
         public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
         public const float ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH = 15f;
-        public const int ENDPOINT_TTS_TIMEOUT = 10000; // In ms
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
         public const string ERROR_TTS_CACHE_DOWNLOAD = "Preloaded files cannot be downloaded at runtime.";
         public const string ERROR_TTS_DECODE = "Data failed to encode";
@@ -329,8 +332,6 @@ namespace Meta.WitAi
         // Setup constant keys & values
         public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
         public const int WIT_SOCKET_CONNECT_TIMEOUT = 2000; // Default connection timeout in ms
-        public const int WIT_SOCKET_RESPONSE_TIMEOUT = 5000; // Default response timeout in ms
-        public const int WIT_SOCKET_MESSAGE_TIMEOUT = 10000; // Message/Speech/Event/Converse/Dictation timeout in ms
         public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Default is retry infinitely
         public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Default to one retry per second
         public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";

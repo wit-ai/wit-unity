@@ -12,6 +12,15 @@ using Meta.WitAi.Data.Info;
 namespace Meta.WitAi
 {
     /// <summary>
+    /// The various connection types available
+    /// </summary>
+    public enum WitRequestType
+    {
+        Http,
+        WebSocket
+    }
+
+    /// <summary>
     /// Endpoint overrides
     /// </summary>
     public interface IWitRequestEndpointInfo
@@ -39,6 +48,15 @@ namespace Meta.WitAi
     /// </summary>
     public interface IWitRequestConfiguration
     {
+        /// <summary>
+        /// The request connection type to be used by all requests made with this configuration.
+        /// </summary>
+        WitRequestType RequestType { get; }
+        /// <summary>
+        /// The request timeout in ms to be used by all requests made with this configuration.
+        /// </summary>
+        int RequestTimeoutMs { get; }
+
         string GetConfigurationId();
         string GetApplicationId();
         WitAppInfo GetApplicationInfo();

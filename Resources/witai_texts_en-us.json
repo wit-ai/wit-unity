@@ -47,6 +47,7 @@
   "ConfigurationRefreshingButtonLabel": "Refreshing",
   "ConfigurationServerTokenLabel": "Server Access Token",
   "ConfigurationClientTokenLabel": "Client Access Token",
+  "ConfigurationRequestTypeLabel": "Request Type",
   "ConfigurationRequestTimeoutLabel": "Request Timeout",
   "ConfigurationEndpointTitleLabel": "Endpoint Configuration",
   "ConfigurationEndpointUriLabel": "Uri Scheme",

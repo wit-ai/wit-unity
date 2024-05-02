@@ -773,6 +773,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Begin tracking
+            request.TimeoutMs = Settings.RequestTimeoutMs;
             _requests[request.RequestId] = request;
             request.OnComplete += CompleteRequestTracking;
             VLog.I(GetType().Name, $"Track Request\n{request}");

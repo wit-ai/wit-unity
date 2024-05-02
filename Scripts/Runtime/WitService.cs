@@ -180,7 +180,8 @@ namespace Meta.WitAi
             var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
             requestOptions.InputType = NLPRequestInputType.Text;
-            if (RuntimeConfiguration.useWebSockets)
+            var config = Configuration;
+            if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();
             }
@@ -192,11 +193,11 @@ namespace Meta.WitAi
                     return request;
                 }
             }
-            if (RuntimeConfiguration.useWebSockets)
+            if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
-                return WitSocketRequest.GetMessageRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, newOptions, newEvents);
+                return WitSocketRequest.GetMessageRequest(config, _webSocketAdapter, newOptions, newEvents);
             }
-            return RuntimeConfiguration.witConfiguration.CreateMessageRequest(requestOptions, newEvents, _dynamicEntityProviders);
+            return config.CreateMessageRequest(requestOptions, newEvents, _dynamicEntityProviders);
         }
 
         /// <summary>
@@ -207,7 +208,8 @@ namespace Meta.WitAi
             var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
             requestOptions.InputType = NLPRequestInputType.Audio;
-            if (RuntimeConfiguration.useWebSockets)
+            var config = Configuration;
+            if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();
             }
@@ -219,11 +221,11 @@ namespace Meta.WitAi
                     return request;
                 }
             }
-            if (RuntimeConfiguration.useWebSockets)
+            if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
-                return WitSocketRequest.GetSpeechRequest(RuntimeConfiguration.witConfiguration, _webSocketAdapter, _buffer, newOptions, newEvents);
+                return WitSocketRequest.GetSpeechRequest(config, _webSocketAdapter, _buffer, newOptions, newEvents);
             }
-            return RuntimeConfiguration.witConfiguration.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
+            return config.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
 
         #region LIFECYCLE
@@ -343,8 +345,9 @@ namespace Meta.WitAi
             }
 
             // Apply client provider and topic id if applicable
-            bool useWebSockets = RuntimeConfiguration != null && RuntimeConfiguration.useWebSockets;
-            _webSocketAdapter.SetClientProvider(useWebSockets ? RuntimeConfiguration.witConfiguration : null);
+            var config = Configuration;
+            bool useWebSockets = config != null && config.RequestType == WitRequestType.WebSocket;
+            _webSocketAdapter.SetClientProvider(useWebSockets ? config : null);
             _webSocketAdapter.SetTopicId(useWebSockets ? RuntimeConfiguration.pubSubTopicId : null);
         }
 

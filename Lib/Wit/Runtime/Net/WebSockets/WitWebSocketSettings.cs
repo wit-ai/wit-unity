@@ -43,6 +43,11 @@ namespace Meta.Voice.Net.WebSockets
         public IWitRequestConfiguration Configuration { get; }
 
         /// <summary>
+        /// Request timeout in milliseconds
+        /// </summary>
+        public int RequestTimeoutMs => Configuration.RequestTimeoutMs;
+
+        /// <summary>
         /// Constructor that takes in configuration
         /// </summary>
         public WitWebSocketSettings(IWitRequestConfiguration configuration)

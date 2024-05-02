@@ -49,8 +49,34 @@ namespace Meta.WitAi.Data.Configuration
         [FormerlySerializedAs("configId")]
         [HideInInspector] [SerializeField] private string _configurationId;
 
+        [Tooltip("The request connection type to be used by all requests made with this configuration.")]
+        [SerializeField] private WitRequestType _requestType = WitConstants.DEFAULT_REQUEST_TYPE;
+        /// <summary>
+        /// The request connection type to be used by all requests made with this configuration.
+        /// </summary>
+        public WitRequestType RequestType
+        {
+            get => _requestType;
+            set => _requestType = value;
+        }
+
         [Tooltip("The number of milliseconds to wait before requests to Wit.ai will timeout")]
-        [SerializeField] public int timeoutMS = 10000;
+        [FormerlySerializedAs("timeoutMS")]
+        [SerializeField] private int _requestTimeoutMs = WitConstants.DEFAULT_REQUEST_TIMEOUT;
+        /// <summary>
+        /// The request timeout in ms to be used by all requests made with this configuration.
+        /// </summary>
+        public int RequestTimeoutMs
+        {
+            get => _requestTimeoutMs;
+            set => _requestTimeoutMs = value;
+        }
+        [Obsolete("Deprecated in favor of 'RequestTimeoutMs'. Access will be removed in the future.")]
+        public int timeoutMS
+        {
+            get => RequestTimeoutMs;
+            set => RequestTimeoutMs = value;
+        }
 
         /// <summary>
         /// Configuration parameters to set up a custom endpoint for testing purposes and request forwarding. The default values here will work for most.

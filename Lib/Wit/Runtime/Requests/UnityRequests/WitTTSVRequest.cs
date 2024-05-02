@@ -62,7 +62,6 @@ namespace Meta.WitAi.Requests
             FileType = audioFileType;
             Stream = audioStream;
             UseEvents = useEvents;
-            Timeout = WitConstants.ENDPOINT_TTS_TIMEOUT;
         }
 
         // Add headers to all requests

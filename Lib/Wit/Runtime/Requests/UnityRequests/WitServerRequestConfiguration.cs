@@ -50,6 +50,8 @@ namespace Meta.WitAi
 
         // Endpoint info
         public IWitRequestEndpointInfo GetEndpointInfo() => this;
+        public WitRequestType RequestType => WitRequestType.Http;
+        public int RequestTimeoutMs => WitConstants.DEFAULT_REQUEST_TIMEOUT;
         public string UriScheme => WitConstants.URI_SCHEME;
         public string Authority => WitConstants.URI_AUTHORITY;
         public string WitApiVersion => WitConstants.API_VERSION;

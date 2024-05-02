@@ -367,11 +367,17 @@ namespace Meta.WitAi.Windows
             {
                 VLog.E("Client access token is not defined. Cannot perform requests with '" + Configuration.name + "'.");
             }
+            // Request type field
+            var requestType = Configuration.RequestType;
+            WitEditorUI.LayoutEnumField(WitTexts.ConfigurationRequestTypeContent, ref requestType, ref updated);
             // Timeout field
-            WitEditorUI.LayoutIntField(WitTexts.ConfigurationRequestTimeoutContent, ref Configuration.timeoutMS, ref updated);
+            var requestTimeout = Configuration.RequestTimeoutMs;
+            WitEditorUI.LayoutIntField(WitTexts.ConfigurationRequestTimeoutContent, ref requestTimeout, ref updated);
             // Updated
             if (updated)
             {
+                Configuration.RequestType = requestType;
+                Configuration.RequestTimeoutMs = requestTimeout;
                 Configuration.SetClientAccessToken(clientAccessToken);
             }
 

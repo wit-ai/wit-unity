@@ -77,10 +77,6 @@ namespace Meta.WitAi.Configuration
         public float preferredActivationOffset = -.5f;
 
         [Header("Web Sockets")]
-        [Tooltip("Whether to use web sockets for web requests.  If false, HTTP requests will be used instead.")]
-        [SerializeField]
-        public bool useWebSockets;
-
         [Tooltip("If using web sockets, the topic id will publish and subscribe to all requests made for the specified topic.")]
         [SerializeField]
         public string pubSubTopicId;

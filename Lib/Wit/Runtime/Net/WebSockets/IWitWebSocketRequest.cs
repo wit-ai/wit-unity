@@ -36,6 +36,11 @@ namespace Meta.Voice.Net.WebSockets
         string TopicId { get; set; }
 
         /// <summary>
+        /// The request timeout in milliseconds
+        /// </summary>
+        int TimeoutMs { get; set; }
+
+        /// <summary>
         /// Whether currently uploading data
         /// </summary>
         bool IsUploading { get; }

@@ -255,7 +255,7 @@ namespace Meta.WitAi
         protected override void OnInit()
         {
             // Determine configuration setting
-            TimeoutMs = Configuration == null ? TimeoutMs : Configuration.timeoutMS;
+            TimeoutMs = Configuration == null ? TimeoutMs : Configuration.RequestTimeoutMs;
 
             // Set request settings
             Command = Path.Split('/').First();

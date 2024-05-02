@@ -46,12 +46,6 @@ namespace Meta.WitAi.TTS.Integrations
         /// Whether or not events should be requested along with audio data
         /// </summary>
         public bool useEvents;
-
-        /// <summary>
-        /// Whether or not requests should be sent via web sockets.
-        /// If false, HTTP will be used instead.
-        /// </summary>
-        public bool useWebSockets;
     }
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
@@ -174,7 +168,8 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         protected virtual void RefreshWebSocketSettings()
         {
-            _webSocketAdapter.SetClientProvider(RequestSettings.useWebSockets ? RequestSettings.configuration : null);
+            var config = RequestSettings.configuration;
+            _webSocketAdapter.SetClientProvider(config != null && config.RequestType == WitRequestType.WebSocket ? config : null);
         }
 
         /// <summary>
@@ -198,8 +193,7 @@ namespace Meta.WitAi.TTS.Integrations
         {
             audioType = TTSWitAudioType.MPEG,
             audioStream = true,
-            useEvents = true,
-            useWebSockets = false
+            useEvents = true
         };
 
         // Use settings web stream events
@@ -268,7 +262,9 @@ namespace Meta.WitAi.TTS.Integrations
             WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
 
             // Request tts via web socket
-            if (RequestSettings.useWebSockets && _webSocketAdapter)
+            if (RequestSettings.configuration != null
+                && RequestSettings.configuration.RequestType == WitRequestType.WebSocket
+                && _webSocketAdapter)
             {
                 RequestStreamFromWebSocket(clipData);
                 return;

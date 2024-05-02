@@ -12,6 +12,10 @@ using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi
 {
+    /// <summary>
+    /// A custom configuration class that can be used without the overhead caused using WitConfiguration.
+    /// Used by 1st and 3rd party developers.
+    /// </summary>
     public class WitRuntimeRequestConfiguration : IWitRequestConfiguration, IWitRequestEndpointInfo
     {
         private WitAppInfo _appInfo;
@@ -54,6 +58,8 @@ namespace Meta.WitAi
         }
 
         // Endpoint info
+        public WitRequestType RequestType { get; set; } = WitConstants.DEFAULT_REQUEST_TYPE;
+        public int RequestTimeoutMs => WitConstants.DEFAULT_REQUEST_TIMEOUT;
         public string UriScheme => WitConstants.URI_SCHEME;
         public string Authority => WitConstants.URI_GRAPH_AUTHORITY;
         public string WitApiVersion => WitConstants.API_VERSION;
