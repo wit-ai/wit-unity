@@ -33,7 +33,7 @@ namespace Meta.WitAi.Data
     /// This class is responsible for managing a shared audio buffer for receiving microphone data.
     /// It is used by voice services to grab audio segments from the AudioBuffer's internal ring buffer.
     /// </summary>
-    [LogCategory(LogCategory.Audio)]
+    [LogCategory(LogCategory.Audio, LogCategory.Input)]
     public class AudioBuffer : MonoBehaviour
     {
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();

@@ -31,7 +31,7 @@ namespace Meta.WitAi.Requests
     /// performs audio sample decoded callbacks.
     /// </summary>
     [Preserve]
-    [LogCategory(LogCategory.Audio)]
+    [LogCategory(LogCategory.Audio, LogCategory.Output)]
     public class AudioStreamHandler : DownloadHandlerScript
     {
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();

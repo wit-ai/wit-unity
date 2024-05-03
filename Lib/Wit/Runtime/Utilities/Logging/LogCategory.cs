@@ -29,6 +29,8 @@ namespace Meta.Voice.Logging
         Speaker,
         ActivationSystem,
         SpeechService,
-        Network
+        Network,
+        Input,
+        Output
     }
 }

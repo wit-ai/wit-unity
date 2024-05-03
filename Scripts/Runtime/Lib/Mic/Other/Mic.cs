@@ -43,7 +43,7 @@ namespace Meta.WitAi.Lib
     /// <summary>
     /// A simple mic playback class
     /// </summary>
-    [LogCategory(LogCategory.Audio)]
+    [LogCategory(LogCategory.Audio, LogCategory.Input)]
     public class Mic : BaseAudioClipInput
     {
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
