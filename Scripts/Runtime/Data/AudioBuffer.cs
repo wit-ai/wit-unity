@@ -12,7 +12,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Voice;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
@@ -437,6 +439,8 @@ namespace Meta.WitAi.Data
         private void OnMicSampleReady(int sampleCount, float[] samples, float levelMax)
             => OnAudioSampleReady(samples, 0, samples.Length);
 
+
+
         /// <summary>
         /// Adds all sent audio into an input buffer
         /// </summary>
@@ -445,36 +449,73 @@ namespace Meta.WitAi.Data
         /// <param name="length">The length of samples to be taken</param>
         private void OnAudioSampleReady(float[] samples, int offset, int length)
         {
-            // Resample provided array & determine level max
-            Profiler.BeginSample("Resample & Encode Audio");
+            // Resample on main thread to use sample buffer while it still includes audio data
+            Profiler.BeginSample("AudioBuffer - Resample and Encode");
             Encode(samples, offset, length, out byte[] data, out float levelMax);
             Profiler.EndSample();
 
-            // Set max level for frame
+            // Set max level for frame and perform sample received callback
             MicMaxLevel = Mathf.Max(levelMax, MicMaxLevel);
-
-            // Perform received callback
             events.OnSampleReceived?.Invoke(samples, _totalSampleChunks, levelMax);
-
-            // Create marker
-            var marker = CreateMarker();
-            // Push new data
-            _outputBuffer.Push(data, 0, data.Length);
-            #if DEBUG_MIC
-            // Write to debug
-            DebugWrite(data);
-            #endif
-
-            // Raw data ready
-            if (null != events.OnByteDataReady)
-            {
-                marker.Clone().ReadIntoWriters(events.OnByteDataReady.Invoke);
-            }
-            // Sample ready
-            events.OnSampleReady?.Invoke(marker, levelMax);
 
             // Increment chunk count
             _totalSampleChunks++;
+
+            // Begin a coroutine to call OnSampleReady
+            if (_sampleReadyCoroutine == null)
+            {
+                var marker = CreateMarker();
+                _sampleReadyMaxLevel = levelMax;
+                _sampleReadyCoroutine = StartCoroutine(WaitFrameThenCallback(marker));
+            }
+            // Otherwise, set if higher
+            else if (levelMax > _sampleReadyMaxLevel)
+            {
+                _sampleReadyMaxLevel = levelMax;
+            }
+
+            Profiler.BeginSample("AudioBuffer - Push Raw Data");
+            // Push new data
+            _outputBuffer.Push(data, 0, data.Length);
+#if DEBUG_MIC
+            // Write to debug
+            DebugWrite(data);
+#endif
+            Profiler.EndSample();
+        }
+
+        // Coroutine used for tracking WaitFrameThenCallback
+        private Coroutine _sampleReadyCoroutine;
+        // Float used to return max level across multiple encodes
+        private float _sampleReadyMaxLevel;
+        /// <summary>
+        /// Waits a single frame and then returns the marker
+        /// </summary>
+        private IEnumerator WaitFrameThenCallback(RingBuffer<byte>.Marker marker)
+        {
+            // Wait a single frame
+            if (Application.isPlaying && !Application.isBatchMode)
+            {
+                yield return new WaitForEndOfFrame();
+            }
+            // In editor or batch script yield return asap
+            else
+            {
+                yield return null;
+            }
+
+            Profiler.BeginSample("AudioBuffer - Encoded Data Ready Callbacks");
+            // Invoke byte data ready callback
+            if (events.OnByteDataReady != null)
+            {
+                marker.Clone().ReadIntoWriters(events.OnByteDataReady.Invoke);
+            }
+            // Invoke sample ready callback
+            events.OnSampleReady?.Invoke(marker, _sampleReadyMaxLevel);
+            Profiler.EndSample();
+
+            // Complete
+            _sampleReadyCoroutine = null;
         }
 
         /// <summary>
