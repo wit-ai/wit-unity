@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Meta.Voice.Net.WebSockets;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Info;
@@ -275,7 +276,6 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Returns all the configuration data for this app.
         /// </summary>
-        /// <returns></returns>
         public WitConfigurationAssetData[] GetConfigData()
         {
             if (_configData == null)
@@ -283,6 +283,19 @@ namespace Meta.WitAi.Data.Configuration
                 _configData = Array.Empty<WitConfigurationAssetData>();
             }
             return _configData;
+        }
+
+        /// <summary>
+        /// Get a specific configuration data for this configuration
+        /// </summary>
+        public TConfigData GetConfigData<TConfigData>()
+            where TConfigData : WitConfigurationAssetData
+        {
+            if (_configData == null)
+            {
+                return null;
+            }
+            return _configData.FirstOrDefault((data) => data.GetType() == typeof(TConfigData)) as TConfigData;
         }
 
         /// <summary>
