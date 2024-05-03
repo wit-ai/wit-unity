@@ -15,6 +15,7 @@ using Meta.WitAi.Speech;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.Voice.Audio;
+using Meta.Voice.Logging;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
@@ -22,8 +23,11 @@ using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Utilities
 {
+    [LogCategory(Voice.Logging.LogCategory.TextToSpeech)]
     public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]
         [SerializeField] private TTSSpeakerEvents _events = new TTSSpeakerEvents();
@@ -1566,7 +1570,7 @@ namespace Meta.WitAi.TTS.Utilities
             StringBuilder log = new StringBuilder();
             log.AppendLine(comment);
             log.AppendLine($"Voice: {VoiceSettings?.SettingsId}");
-            VLog.I(LogCategory, log);
+            _log.Info(log.ToString());
         }
         // Perform start of playback queue
         protected virtual void OnPlaybackQueueBegin()
@@ -1597,7 +1601,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
             else
             {
-                VLog.I(LogCategory, log);
+                _log.Info(LogCategory, log);
             }
         }
         // Initial callback as soon as the audio clip speak request is generated

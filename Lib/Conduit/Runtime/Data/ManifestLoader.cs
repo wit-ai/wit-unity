@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
@@ -19,8 +20,11 @@ namespace Meta.Conduit
     /// <summary>
     /// Loads the manifest and resolves its actions so they can be used during dispatching.
     /// </summary>
+    [LogCategory(LogCategory.Conduit)]
     class ManifestLoader : IManifestLoader
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <inheritdoc/>
         public Manifest LoadManifest(string manifestLocalPath)
         {
@@ -40,7 +44,7 @@ namespace Meta.Conduit
             var manifest = JsonConvert.DeserializeObject<Manifest>(manifestText);
             if (manifest.ResolveActions())
             {
-                VLog.I(GetType().Name, $"Successfully Loaded Conduit manifest");
+                _log.Info($"Successfully Loaded Conduit manifest");
             }
             else
             {
@@ -88,7 +92,7 @@ namespace Meta.Conduit
                 {
                     if (manifest.ResolveActions())
                     {
-                        VLog.I(GetType().Name, $"Successfully Loaded Conduit manifest");
+                        _log.Info($"Successfully Loaded Conduit manifest");
                     }
                     else
                     {

@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
 using Meta.Voice.Audio.Decoding;
+using Meta.Voice.Logging;
 
 namespace Meta.WitAi.Requests
 {
@@ -30,8 +31,11 @@ namespace Meta.WitAi.Requests
     /// performs audio sample decoded callbacks.
     /// </summary>
     [Preserve]
+    [LogCategory(LogCategory.Audio)]
     public class AudioStreamHandler : DownloadHandlerScript
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// Whether both the request is complete and decoding is complete
         /// </summary>
@@ -84,7 +88,7 @@ namespace Meta.WitAi.Requests
             _errorDecoded = 0;
 
             // Begin stream
-            VLog.I(GetType().Name, $"Init\nDecoder: {AudioDecoder?.GetType().Name ?? "Null"}");
+            _log.Info($"Init\nDecoder: {AudioDecoder?.GetType().Name ?? "Null"}");
         }
 
         /// <summary>
@@ -257,7 +261,7 @@ namespace Meta.WitAi.Requests
             {
                 var error = GetText();
                 OnComplete?.Invoke(error);
-                VLog.I(GetType().Name, $"Complete\nError: {error ?? "Null"}");
+                _log.Info($"Complete\nError: {error ?? "Null"}");
             }
             catch (Exception e)
             {

@@ -23,12 +23,15 @@ namespace Meta.Voice
     /// <typeparam name="TOptions">The type containing all specific options to be passed to the end service.</typeparam>
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
+    [LogCategory(LogCategory.Requests)]
     public abstract class VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
         where TOptions : IVoiceRequestOptions
         where TEvents : VoiceRequestEvents<TUnityEvent>
         where TResults : IVoiceRequestResults
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         #region SIMULATION
         public static SimulatedResponse simulatedResponse;
         #endregion
@@ -322,7 +325,7 @@ namespace Meta.Voice
             // Append any request specific data
             AppendLogData(requestLog, logLevel);
             // Log
-            VLog.Log(logLevel, GetType().Name, requestLog);
+            _log.Log(_log.CorrelationID, logLevel, log);
         }
         protected void LogW(string log) => Log(log, VLoggerVerbosity.Warning);
         protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLoggerVerbosity.Error);

@@ -21,8 +21,11 @@ using Meta.WitAi.TTS.Interfaces;
 
 namespace Meta.WitAi.TTS
 {
+    [LogCategory(LogCategory.TextToSpeech)]
     public abstract class TTSService : MonoBehaviour
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         #region SETUP
         // Accessor
         public static TTSService Instance
@@ -216,7 +219,7 @@ namespace Meta.WitAi.TTS
         /// </summary>
         private void Log(string logMessage, TTSClipData clipData = null, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
-            VLog.Log(logLevel, GetType().Name, logMessage + (clipData == null ? "" : "\n" + clipData));
+            _log.Log(_log.CorrelationID, logLevel, logMessage + (clipData == null ? "" : "\n" + clipData));
         }
         #endregion
 

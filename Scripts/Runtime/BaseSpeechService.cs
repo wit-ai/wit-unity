@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Events;
 using Meta.WitAi.Json;
@@ -22,8 +23,11 @@ namespace Meta.WitAi
     /// <summary>
     /// A simple base class for wrapping VoiceServiceRequest event callbacks
     /// </summary>
+    [LogCategory(LogCategory.SpeechService)]
     public abstract class BaseSpeechService : MonoBehaviour
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// Whether this script should wrap all request event setups
         /// </summary>
@@ -253,7 +257,7 @@ namespace Meta.WitAi
             }
             else
             {
-                VLog.I(category, result);
+                _log.Info(result.ToString());
             }
         }
 

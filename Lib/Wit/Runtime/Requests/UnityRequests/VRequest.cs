@@ -1009,12 +1009,12 @@ namespace Meta.WitAi.Requests
             {
                 if (!string.IsNullOrEmpty(result.Error))
                 {
-                    VLog.D("VRequest",$"Failed request: [{method}] {uri}. {(string.IsNullOrEmpty(payload)?string.Empty:$"Payload: {payload}.")} Error: {result.Error}");
+                    _log.Debug($"Failed request: [{method}] {uri}. {(string.IsNullOrEmpty(payload)?string.Empty:$"Payload: {payload}.")} Error: {result.Error}");
                 }
             }
             catch
             {
-                VLog.D("Failed to log request details");
+                _log.Debug("Failed to log request details");
             }
 
             onComplete?.Invoke(result.Value, result.Error);

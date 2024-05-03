@@ -22,5 +22,13 @@ namespace Meta.Voice.Logging
         ErrorMitigator,
         ContextSystem,
         Requests,
+        TextToSpeech,
+        Audio,
+        ActivationBlocker,
+        Listener,
+        Speaker,
+        ActivationSystem,
+        SpeechService,
+        Network
     }
 }

@@ -14,6 +14,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
@@ -30,8 +31,11 @@ namespace Meta.WitAi.Data
     /// This class is responsible for managing a shared audio buffer for receiving microphone data.
     /// It is used by voice services to grab audio segments from the AudioBuffer's internal ring buffer.
     /// </summary>
+    [LogCategory(LogCategory.Audio)]
     public class AudioBuffer : MonoBehaviour
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         #region Singleton
         private static bool _isQuitting = false;
         public void OnApplicationQuit() => _isQuitting = true;
@@ -684,7 +688,7 @@ namespace Meta.WitAi.Data
             path += ".pcm";
 
             // Create file stream
-            VLog.D(GetType().Name, $"Start Writing to AudioBuffer Debug File\nPath: {path}");
+            _log.Debug($"Start Writing to AudioBuffer Debug File\nPath: {path}");
             _fileStream = File.Open(path, FileMode.Create);
         }
 
@@ -705,7 +709,7 @@ namespace Meta.WitAi.Data
             {
                 return;
             }
-            VLog.D(GetType().Name, "Stop Writing to AudioBuffer Debug File");
+            _log.Debug(GetType().Name, "Stop Writing to AudioBuffer Debug File");
             _fileStream.Close();
             _fileStream.Dispose();
             _fileStream = null;

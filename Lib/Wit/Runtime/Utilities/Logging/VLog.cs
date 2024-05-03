@@ -108,7 +108,8 @@ namespace Meta.WitAi
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
         public static void I(object log) => Log(VLoggerVerbosity.Info, null, log);
-        public static void I(string logCategory, object log) => Log(VLoggerVerbosity.Info, logCategory, log);
+
+        private static void I(string logCategory, object log) => Log(VLoggerVerbosity.Info, logCategory, log);
 
         /// <summary>
         /// Performs a Debug.Log with custom categorization and using the global log level
@@ -116,7 +117,8 @@ namespace Meta.WitAi
         /// <param name="log">The text to be debugged</param>
         /// <param name="logCategory">The category of the log</param>
         public static void D(object log) => Log(VLoggerVerbosity.Debug, null, log);
-        public static void D(string logCategory, object log) => Log(VLoggerVerbosity.Debug, logCategory, log);
+
+        private static void D(string logCategory, object log) => Log(VLoggerVerbosity.Debug, logCategory, log);
 
         /// <summary>
         /// Performs a Debug.LogWarning with custom categorization and using the global log level
@@ -141,7 +143,7 @@ namespace Meta.WitAi
         /// <param name="logType"></param>
         /// <param name="log"></param>
         /// <param name="category"></param>
-        public static void Log(VLoggerVerbosity logType, string logCategory, object log, Exception exception = null)
+        private static void Log(VLoggerVerbosity logType, string logCategory, object log, Exception exception = null)
         {
             string category = logCategory;
             if (string.IsNullOrEmpty(category))
