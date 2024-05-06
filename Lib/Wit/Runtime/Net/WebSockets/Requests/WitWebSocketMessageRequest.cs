@@ -91,19 +91,22 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which may be null or empty.</param>
-        public override void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
+        public override void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
         {
             // Ignore once complete
             if (IsComplete)
             {
                 return;
             }
+
             // Call begin download methods
             if (!IsDownloading)
             {
                 HandleDownloadBegin();
             }
 
+            // Callback for raw response
+            ReturnRawResponse(jsonString);
             // Set current response data
             SetResponseData(jsonData);
 

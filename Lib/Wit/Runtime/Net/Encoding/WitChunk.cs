@@ -16,7 +16,12 @@ namespace Meta.Voice.Net.Encoding.Wit
     public class WitChunk
     {
         /// <summary>
-        /// Json data ready to be converted
+        /// Encoded json string
+        /// </summary>
+        public string jsonString;
+
+        /// <summary>
+        /// Decoded json data
         /// </summary>
         public WitResponseNode jsonData;
 

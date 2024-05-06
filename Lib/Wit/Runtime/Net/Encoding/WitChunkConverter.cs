@@ -133,11 +133,12 @@ namespace Meta.Voice.Net.Encoding.Wit
             {
                 // Get data chunk
                 WitChunk chunkData = new WitChunk();
-                // Decode json, serialize and apply
                 if (_jsonData != null)
                 {
-                    var jsonString = DecodeString(_jsonData, 0, _jsonData.Length);
-                    chunkData.jsonData = JsonConvert.DeserializeToken(jsonString);
+                    // Decode string
+                    chunkData.jsonString = DecodeString(_jsonData, 0, _jsonData.Length);
+                    // Deserialize string into a token
+                    chunkData.jsonData = JsonConvert.DeserializeToken(chunkData.jsonString);
                 }
                 // Apply binary data
                 chunkData.binaryData = _binaryData;
@@ -291,10 +292,17 @@ namespace Meta.Voice.Net.Encoding.Wit
 
         #region ENCODING
         /// <summary>
-        /// Encodes a json byte[] and raw binary data into a single stream
+        /// Encodes a chunk by using the jsonString if found, otherwise
+        /// serializes the json data itself.
         /// </summary>
         public static byte[] Encode(WitChunk chunkData)
-            => Encode((WitResponseNode)chunkData?.jsonData, chunkData?.binaryData);
+        {
+            if (string.IsNullOrEmpty(chunkData.jsonString))
+            {
+                chunkData.jsonString = chunkData.jsonData?.ToString();
+            }
+            return Encode(chunkData.jsonString, chunkData.binaryData);
+        }
 
         /// <summary>
         /// Encodes a binary data into a wit stream

@@ -45,9 +45,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// Called multiple times as partial responses are received. Determines if ready for input and if so,
         /// performs the appropriate callback following the application of data.
         /// </summary>
+        /// <param name="jsonString">Raw json string.</param>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which should be null or empty.</param>
-        public override void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
+        public override void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
         {
             bool callback = false;
             if (!IsComplete && !IsReadyForInput)
@@ -56,7 +57,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 IsReadyForInput = string.Equals(type, WitConstants.RESPONSE_TYPE_READY_FOR_AUDIO);
                 callback = IsReadyForInput;
             }
-            base.HandleDownload(jsonData, binaryData);
+            base.HandleDownload(jsonString, jsonData, binaryData);
             if (callback)
             {
                 OnReadyForInput?.Invoke();

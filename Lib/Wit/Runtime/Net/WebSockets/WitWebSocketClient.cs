@@ -747,7 +747,7 @@ namespace Meta.Voice.Net.WebSockets
             // Handle download synchronously
             try
             {
-                request.HandleDownload(chunk.jsonData, chunk.binaryData);
+                request.HandleDownload(chunk.jsonString, chunk.jsonData, chunk.binaryData);
             }
             // Catch exceptions or else they will be ignored
             catch (Exception e)

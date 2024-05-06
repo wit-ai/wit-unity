@@ -86,7 +86,8 @@ namespace Meta.WitAi.Requests
         public Action OnInputStreamReady { get; set; }
 
         /// <summary>
-        /// Web socket decodes responses automatically
+        /// Web socket client decodes responses prior to raw response callback
+        /// for request id lookup.
         /// </summary>
         protected override bool DecodeRawResponses => false;
 
@@ -104,6 +105,14 @@ namespace Meta.WitAi.Requests
         private WitSocketRequest(NLPRequestInputType inputType, WitRequestOptions options = null,
             VoiceServiceRequestEvents events = null
         ) : base(NLPRequestInputType.Text, options, events) {}
+
+        /// <summary>
+        /// Destructor removes web socket request references
+        /// </summary>
+        ~WitSocketRequest()
+        {
+            SetWebSocketRequest(null);
+        }
 
         /// <summary>
         /// Return web socket message request initialized with required data
@@ -297,17 +306,37 @@ namespace Meta.WitAi.Requests
         /// </summary>
         private void SetWebSocketRequest(WitWebSocketMessageRequest request)
         {
+            if (WebSocketRequest != null)
+            {
+                WebSocketRequest.OnRawResponse -= ReturnRawResponse;
+                WebSocketRequest.OnFirstResponse -= ReturnInputReady;
+                WebSocketRequest.OnDecodedResponse -= ReturnDecodedResponse;
+                WebSocketRequest.OnComplete -= ReturnSuccessOrError;
+            }
             WebSocketRequest = request;
-            WebSocketRequest.OnFirstResponse += HandleSocketFirstResponse;
-            WebSocketRequest.OnDecodedResponse += HandleSocketDecodedResponse;
-            WebSocketRequest.OnComplete += HandleSocketRequestCompletion;
+            if (WebSocketRequest != null)
+            {
+                WebSocketRequest.OnRawResponse += ReturnRawResponse;
+                WebSocketRequest.OnFirstResponse += ReturnInputReady;
+                WebSocketRequest.OnDecodedResponse += ReturnDecodedResponse;
+                WebSocketRequest.OnComplete += ReturnSuccessOrError;
+            }
         }
 
         /// <summary>
-        /// Callback when a response was received for this request.
+        /// Called when websocket request performs on raw response callback.
+        /// Calls OnRawResponse event
+        /// </summary>
+        private void ReturnRawResponse(string rawResponse)
+        {
+            HandleRawResponse(rawResponse, false);
+        }
+
+        /// <summary>
+        /// Callback when the first response was received for this request.
         /// If an audio response, call OnInputStreamReady
         /// </summary>
-        private void HandleSocketFirstResponse(IWitWebSocketRequest request)
+        private void ReturnInputReady(IWitWebSocketRequest request)
         {
             if (request is WitWebSocketSpeechRequest speechRequest && speechRequest.IsReadyForInput)
             {
@@ -319,7 +348,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Callback when a response node was successfully decoded
         /// </summary>
-        private void HandleSocketDecodedResponse(WitResponseNode responseNode)
+        private void ReturnDecodedResponse(WitResponseNode responseNode)
         {
             ThreadUtility.CallOnMainThread(() => ApplyResponseData(responseNode, false));
         }
@@ -328,7 +357,7 @@ namespace Meta.WitAi.Requests
         /// Callback handler for web socket request completion
         /// </summary>
         /// <param name="request"></param>
-        private void HandleSocketRequestCompletion(IWitWebSocketRequest request)
+        private void ReturnSuccessOrError(IWitWebSocketRequest request)
         {
             // Ignore if already complete
             if (!IsActive)

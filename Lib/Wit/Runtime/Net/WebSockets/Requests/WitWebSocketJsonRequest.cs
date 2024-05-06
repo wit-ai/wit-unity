@@ -70,6 +70,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public WitResponseNode ResponseData { get; protected set; }
 
         /// <summary>
+        /// Callback method when raw json response is received
+        /// </summary>
+        public Action<string> OnRawResponse { get; set; }
+
+        /// <summary>
         /// Callback when request receives the first chunk of data from the server
         /// </summary>
         public Action<IWitWebSocketRequest> OnFirstResponse { get; set; }
@@ -196,9 +201,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Called one or more times from the background thread when a chunk has returned.  Stores the json data from the first response.
         /// </summary>
+        /// <param name="jsonString">Raw json string.</param>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which may be null or empty.</param>
-        public virtual void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
+        public virtual void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
         {
             // Download first only
             if (IsDownloading || IsComplete)
@@ -206,13 +212,28 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 return;
             }
 
+            // Download begin
+            HandleDownloadBegin();
+
+            // Callback for raw response
+            ReturnRawResponse(jsonString);
             // Store downloaded json data
             SetResponseData(jsonData);
 
-            // Download begin
-            HandleDownloadBegin();
             // Download complete
             HandleComplete();
+        }
+
+        /// <summary>
+        /// If raw response callback is implemented, calls on main thread
+        /// </summary>
+        protected virtual void ReturnRawResponse(string jsonString)
+        {
+            if (OnRawResponse == null)
+            {
+                return;
+            }
+            ThreadUtility.CallOnMainThread(() => OnRawResponse.Invoke(jsonString));
         }
 
         /// <summary>

@@ -59,9 +59,10 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Called one or more times from the background thread when a chunk has returned
         /// </summary>
+        /// <param name="jsonString">Raw json string.</param>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which may be null or empty.</param>
-        void HandleDownload(WitResponseNode jsonData, byte[] binaryData);
+        void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData);
 
         /// <summary>
         /// Whether request is currently complete
@@ -82,6 +83,11 @@ namespace Meta.Voice.Net.WebSockets
         /// Method that can be used to perform a cancellation on a request
         /// </summary>
         void Cancel();
+
+        /// <summary>
+        /// Callback method when raw json response is received
+        /// </summary>
+        Action<string> OnRawResponse { get; set; }
 
         /// <summary>
         /// Callback method the request should perform on first download

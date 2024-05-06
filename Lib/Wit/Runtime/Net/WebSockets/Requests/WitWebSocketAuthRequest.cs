@@ -35,11 +35,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Called on server response.  Sets an error if a successful auth response was not received.
         /// </summary>
+        /// <param name="jsonString">Raw json string.</param>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which should be empty.</param>
-        public override void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
+        public override void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
         {
-            base.HandleDownload(jsonData, binaryData);
+            base.HandleDownload(jsonString, jsonData, binaryData);
 
             // Ignore if error already occured
             if (!string.IsNullOrEmpty(Error))

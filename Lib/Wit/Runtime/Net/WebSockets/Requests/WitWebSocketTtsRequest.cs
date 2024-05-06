@@ -128,7 +128,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         /// <param name="jsonData">Decoded json data object.</param>
         /// <param name="binaryData">Decoded binary data chunk which may be null or empty.</param>
-        public override void HandleDownload(WitResponseNode jsonData, byte[] binaryData)
+        public override void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
         {
             // Ignore if complete
             if (IsComplete || jsonData == null)
@@ -141,6 +141,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 HandleDownloadBegin();
             }
 
+            // Callback for raw response
+            ReturnRawResponse(jsonString);
             // Throw error if found
             SetResponseData(jsonData);
             if (!string.IsNullOrEmpty(Error))
