@@ -135,26 +135,26 @@ namespace Meta.WitAi.Data
             buffer = new T[capacity];
         }
 
-        private int CopyToBuffer(T[] data, int offset, int length, int bufferIndex)
+        private int CopyToBuffer(T[] data, int offset, int length, int newBufferIndex)
         {
             if (length > buffer.Length)
                 throw new ArgumentException(
                     "Push data exceeds buffer size.");
 
-            if (bufferIndex + length < buffer.Length)
+            if (newBufferIndex + length < buffer.Length)
             {
-                Array.Copy(data, offset, buffer, bufferIndex, length);
-                return bufferIndex + length;
+                Array.Copy(data, offset, buffer, newBufferIndex, length);
+                return newBufferIndex + length;
             }
             else
             {
                 int len = Mathf.Min(length, buffer.Length);
-                int endChunkLength = buffer.Length - bufferIndex;
+                int endChunkLength = buffer.Length - newBufferIndex;
                 int wrappedChunkLength = len - endChunkLength;
                 try
                 {
 
-                    Array.Copy(data, offset, buffer, bufferIndex, endChunkLength);
+                    Array.Copy(data, offset, buffer, newBufferIndex, endChunkLength);
                     Array.Copy(data, offset + endChunkLength, buffer, 0, wrappedChunkLength);
                     return wrappedChunkLength;
                 }
@@ -165,19 +165,19 @@ namespace Meta.WitAi.Data
             }
         }
 
-        public void WriteFromBuffer(ByteDataWriter writer, long bufferIndex, int length)
+        public void WriteFromBuffer(ByteDataWriter writer, long newBufferIndex, int length)
         {
             lock (buffer)
             {
-                if (bufferIndex + length < buffer.Length)
+                if (newBufferIndex + length < buffer.Length)
                 {
-                    writer(buffer, (int) bufferIndex, length);
+                    writer(buffer, (int) newBufferIndex, length);
                 }
                 else
                 {
                     if (length > bufferDataLength)
                     {
-                        length = (int) (bufferDataLength - bufferIndex);
+                        length = (int) (bufferDataLength - newBufferIndex);
                     }
 
                     if (length > buffer.Length)
@@ -186,33 +186,33 @@ namespace Meta.WitAi.Data
                     }
 
                     var l = Math.Min(buffer.Length, length);
-                    int endChunkLength = (int) (buffer.Length - bufferIndex);
+                    int endChunkLength = (int) (buffer.Length - newBufferIndex);
                     int wrappedChunkLength = l - endChunkLength;
 
-                    writer(buffer, (int) bufferIndex, endChunkLength);
+                    writer(buffer, (int) newBufferIndex, endChunkLength);
                     writer(buffer, 0, wrappedChunkLength);
                 }
             }
         }
 
-        private int CopyFromBuffer(T[] data, int offset, int length, int bufferIndex)
+        private int CopyFromBuffer(T[] data, int offset, int length, int newBufferIndex)
         {
             if (length > buffer.Length)
                 throw new ArgumentException(
                     $"Push data exceeds buffer size {length} < {buffer.Length}" );
 
-            if (bufferIndex + length < buffer.Length)
+            if (newBufferIndex + length < buffer.Length)
             {
-                Array.Copy(buffer, bufferIndex, data, offset, length);
-                return bufferIndex + length;
+                Array.Copy(buffer, newBufferIndex, data, offset, length);
+                return newBufferIndex + length;
             }
             else
             {
                 var l = Mathf.Min(buffer.Length, length);
-                int endChunkLength = buffer.Length - bufferIndex;
+                int endChunkLength = buffer.Length - newBufferIndex;
                 int wrappedChunkLength = l - endChunkLength;
 
-                Array.Copy(buffer, bufferIndex, data, offset, endChunkLength);
+                Array.Copy(buffer, newBufferIndex, data, offset, endChunkLength);
                 Array.Copy(buffer, 0, data, offset + endChunkLength, wrappedChunkLength);
                 return wrappedChunkLength;
             }

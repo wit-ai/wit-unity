@@ -440,6 +440,12 @@ namespace Meta.WitAi.Data
             => OnAudioSampleReady(samples, 0, samples.Length);
 
 
+        // Coroutine used for ensuring a single callback
+        private Coroutine _sampleReadyCoroutine;
+        // Last unsent sample marker
+        private RingBuffer<byte>.Marker _sampleReadyMarker;
+        // Float used to return max level across multiple encodes
+        private float _sampleReadyMaxLevel;
 
         /// <summary>
         /// Adds all sent audio into an input buffer
@@ -449,9 +455,21 @@ namespace Meta.WitAi.Data
         /// <param name="length">The length of samples to be taken</param>
         private void OnAudioSampleReady(float[] samples, int offset, int length)
         {
+            // Begin a coroutine for OnSampleReady callback
+            if (_sampleReadyCoroutine == null)
+            {
+                _sampleReadyCoroutine = StartCoroutine(WaitForSampleReady());
+            }
+            // Generate a new marker if previous has been called
+            if (_sampleReadyMarker == null)
+            {
+                _sampleReadyMarker = CreateMarker();
+                _sampleReadyMaxLevel = float.MinValue;
+            }
+
             // Resample on main thread to use sample buffer while it still includes audio data
-            Profiler.BeginSample("AudioBuffer - Resample and Encode");
-            Encode(samples, offset, length, out byte[] data, out float levelMax);
+            Profiler.BeginSample("AudioBuffer - Resample, Encode and Push");
+            float levelMax = EncodeAndPush(samples, offset, length);
             Profiler.EndSample();
 
             // Set max level for frame and perform sample received callback
@@ -461,50 +479,50 @@ namespace Meta.WitAi.Data
             // Increment chunk count
             _totalSampleChunks++;
 
-            // Begin a coroutine to call OnSampleReady
-            if (_sampleReadyCoroutine == null)
-            {
-                var marker = CreateMarker();
-                _sampleReadyMaxLevel = levelMax;
-                _sampleReadyCoroutine = StartCoroutine(WaitFrameThenCallback(marker));
-            }
             // Otherwise, set if higher
-            else if (levelMax > _sampleReadyMaxLevel)
+            if (levelMax > _sampleReadyMaxLevel)
             {
                 _sampleReadyMaxLevel = levelMax;
             }
-
-            Profiler.BeginSample("AudioBuffer - Push Raw Data");
-            // Push new data
-            _outputBuffer.Push(data, 0, data.Length);
-#if DEBUG_MIC
-            // Write to debug
-            DebugWrite(data);
-#endif
-            Profiler.EndSample();
         }
-
-        // Coroutine used for tracking WaitFrameThenCallback
-        private Coroutine _sampleReadyCoroutine;
-        // Float used to return max level across multiple encodes
-        private float _sampleReadyMaxLevel;
         /// <summary>
         /// Waits a single frame and then returns the marker
         /// </summary>
-        private IEnumerator WaitFrameThenCallback(RingBuffer<byte>.Marker marker)
+        private IEnumerator WaitForSampleReady()
         {
-            // Wait a single frame
-            if (Application.isPlaying && !Application.isBatchMode)
+            // Continue while audio state exists
+            while (AudioState == VoiceAudioInputState.On)
             {
-                yield return new WaitForEndOfFrame();
-            }
-            // In editor or batch script yield return asap
-            else
-            {
-                yield return null;
+                // Wait a single frame
+                if (Application.isPlaying && !Application.isBatchMode)
+                {
+                    yield return new WaitForEndOfFrame();
+                }
+                // In editor or batch script yield return asap
+                else
+                {
+                    yield return null;
+                }
+
+                // Perform on sample change callback
+                if (_sampleReadyMarker != null)
+                {
+                    var marker = _sampleReadyMarker;
+                    _sampleReadyMarker = null;
+                    CallSampleReady(marker);
+                }
             }
 
-            Profiler.BeginSample("AudioBuffer - Encoded Data Ready Callbacks");
+            // Complete
+            _sampleReadyCoroutine = null;
+        }
+
+        /// <summary>
+        /// Perform callbacks for sample encode completion
+        /// </summary>
+        private void CallSampleReady(RingBuffer<byte>.Marker marker)
+        {
+            Profiler.BeginSample("AudioBuffer - OnSampleReady Callbacks");
             // Invoke byte data ready callback
             if (events.OnByteDataReady != null)
             {
@@ -513,9 +531,6 @@ namespace Meta.WitAi.Data
             // Invoke sample ready callback
             events.OnSampleReady?.Invoke(marker, _sampleReadyMaxLevel);
             Profiler.EndSample();
-
-            // Complete
-            _sampleReadyCoroutine = null;
         }
 
         /// <summary>
@@ -557,9 +572,10 @@ namespace Meta.WitAi.Data
         }
 
         /// <summary>
-        /// Resample into a new array & determine max level
+        /// Resample and encode into bytes that are passed into a setByte method.
         /// </summary>
-        private void Encode(float[] samples, int offset, int length, out byte[] results, out float levelMax)
+        /// <returns>Returns the max level of the provided samples</returns>
+        private float EncodeAndPush(float[] samples, int offset, int length)
         {
             // Get mic encoding
             AudioEncoding micEncoding = MicInput.AudioEncoding;
@@ -574,23 +590,19 @@ namespace Meta.WitAi.Data
             GetEncodingMinMax(outEncoding.bits, string.Equals(outEncoding.encoding, AudioEncoding.ENCODING_SIGNED),
                 out long encodingMin, out long encodingMax);
             long encodingDif = encodingMax - encodingMin;
-            bool littleEnd = outEncoding.endian == AudioEncoding.Endian.Little;
-            int byteOffset = littleEnd ? 0 : bytesPerSample - 1;
-            int byteMult = littleEnd ? 1 : -1;
 
             // Determine resize factor & total samples
             float resizeFactor = micSampleRate == outSampleRate ? 1f : (float)micSampleRate / outSampleRate;
             resizeFactor *= micChannels; // Skip all additional channels
-            int totalSamples = Mathf.FloorToInt(length / resizeFactor);
-            results = new byte[totalSamples * bytesPerSample];
+            int totalSamples = (int)(length / resizeFactor);
 
             // Resample
-            levelMax = 0f;
+            float levelMax = 0f;
             for (int i = 0; i < totalSamples; i++)
             {
                 // Get sample
-                int micIndex = offset + Mathf.FloorToInt(i * resizeFactor);
-                float sample = samples[micIndex];
+                var micIndex = offset +  (int)(i * resizeFactor);
+                var sample = samples[micIndex];
 
                 // If signed from source (-1 to 1), convert to unsigned (0 to 1)
                 if (micSigned)
@@ -605,10 +617,10 @@ namespace Meta.WitAi.Data
                 }
 
                 // Encode from unsigned long (auto clamps)
-                long data = (long)(encodingMin + sample * encodingDif);
+                var data = (long)(encodingMin + sample * encodingDif);
                 for (int b = 0; b < bytesPerSample; b++)
                 {
-                    results[i * bytesPerSample + (byteOffset + b * byteMult)] = (byte)(data >> (b * 8));
+                    _outputBuffer.Push((byte)(data >> (b * 8)));
                 }
             }
 
@@ -621,7 +633,7 @@ namespace Meta.WitAi.Data
             }
 
             // Clamp result 0 to 1
-            levelMax = Mathf.Clamp01(levelMax);
+            return Mathf.Clamp01(levelMax);
         }
         // Encoding options
         private void GetEncodingMinMax(int bits, bool signed, out long encodingMin, out long encodingMax)

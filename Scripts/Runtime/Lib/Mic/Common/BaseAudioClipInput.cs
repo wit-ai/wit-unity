@@ -62,12 +62,21 @@ namespace Meta.WitAi.Lib
         /// <summary>
         /// Generates an audio encoding object using the existing settings
         /// </summary>
-        public AudioEncoding AudioEncoding => new AudioEncoding()
+        public AudioEncoding AudioEncoding
         {
-            numChannels = AudioChannels,
-            samplerate = AudioSampleRate,
-            encoding = AudioEncoding.ENCODING_SIGNED
-        };
+            get
+            {
+                if (_audioEncoding == null)
+                {
+                    _audioEncoding = new AudioEncoding();
+                }
+                _audioEncoding.numChannels = AudioChannels;
+                _audioEncoding.samplerate = AudioSampleRate;
+                _audioEncoding.encoding = AudioEncoding.ENCODING_SIGNED;
+                return _audioEncoding;
+            }
+        }
+        private AudioEncoding _audioEncoding;
 
         /// <summary>
         /// Whether audio is activated or not, independent of record state
