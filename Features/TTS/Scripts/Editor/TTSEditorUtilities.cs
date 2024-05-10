@@ -81,7 +81,7 @@ namespace Meta.WitAi.TTS
         {
             // Generate new TTSWit & add caches
             TTSWit ttsWit = GenerateGameObject("TTSWitService", parent).AddComponent<TTSWit>();
-            ttsWit.gameObject.AddComponent<TTSRuntimeCache>();
+            ttsWit.gameObject.AddComponent<TTSRuntimeLRUCache>();
             ttsWit.gameObject.AddComponent<TTSDiskCache>();
             VLog.D($"TTS Service - Instantiated Service {ttsWit.gameObject.name}");
 

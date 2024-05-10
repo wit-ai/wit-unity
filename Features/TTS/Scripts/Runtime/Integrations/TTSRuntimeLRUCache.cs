@@ -16,8 +16,10 @@ using Meta.WitAi.TTS.Events;
 
 namespace Meta.WitAi.TTS.Integrations
 {
-    // A simple LRU Cache
-    public class TTSRuntimeCache : MonoBehaviour, ITTSRuntimeCacheHandler
+    /// <summary>
+    /// An LRU cache that unloads based on least recently used access
+    /// </summary>
+    public class TTSRuntimeLRUCache : BaseTTSRuntimeCache
     {
         /// <summary>
         /// Whether or not to unload clip data after the clip capacity is hit
@@ -48,121 +50,90 @@ namespace Meta.WitAi.TTS.Integrations
         [FormerlySerializedAs("_ramCapacity")]
         [Min(1)] public int RamCapacity = 3600;
 
-        /// <summary>
-        /// On clip added callback
-        /// </summary>
-        public TTSClipEvent OnClipAdded { get; set; } = new TTSClipEvent();
-        /// <summary>
-        /// On clip removed callback
-        /// </summary>
-        public TTSClipEvent OnClipRemoved { get; set; } = new TTSClipEvent();
-
         // Clips & their ids
-        private Dictionary<string, TTSClipData> _clips = new Dictionary<string, TTSClipData>();
         private List<string> _clipOrder = new List<string>();
 
-        /// <summary>
-        /// Simple getter for all clips
-        /// </summary>
-        public TTSClipData[] GetClips() => _clips.Values.ToArray();
-
         // Remove all
-        protected virtual void OnDestroy()
+        protected override void OnDestroy()
         {
-            _clips.Clear();
+            base.OnDestroy();
             _clipOrder.Clear();
+        }
+
+        /// <summary>
+        /// Refresh clip id's least recently used order
+        /// </summary>
+        public bool RefreshClipLRU(string clipId)
+        {
+            int clipIndex = _clipOrder.IndexOf(clipId);
+            if (clipIndex != -1)
+            {
+                _clipOrder.RemoveAt(clipIndex);
+                _clipOrder.Add(clipId);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
         /// Getter for a clip that also moves clip to the back of the queue
         /// </summary>
-        public TTSClipData GetClip(string clipID)
+        public override TTSClipData GetClip(string clipId)
         {
-            // Id not found
-            if (!_clips.ContainsKey(clipID))
-            {
-                return null;
-            }
+            RefreshClipLRU(clipId);
+            return base.GetClip(clipId);
+        }
 
-            // Sort to end
-            int clipIndex = _clipOrder.IndexOf(clipID);
-            _clipOrder.RemoveAt(clipIndex);
-            _clipOrder.Add(clipID);
-
-            // Return clip
-            return _clips[clipID];
+        /// <summary>
+        /// Add clip id to lru order
+        /// </summary>
+        protected override void SetupClip(TTSClipData clipData)
+        {
+            _clipOrder.Add(clipData.clipID);
+            base.SetupClip(clipData);
         }
 
         /// <summary>
         /// Add clip to cache and ensure it is most recently referenced
         /// </summary>
-        /// <param name="clipData"></param>
-        public bool AddClip(TTSClipData clipData)
+        public override bool AddClip(TTSClipData clipData)
         {
-            // Do not add null
-            if (clipData == null)
+            // Ignore if invalid
+            if (!base.AddClip(clipData))
             {
                 return false;
             }
-            // Remove from order
-            bool wasAdded = true;
-            int clipIndex = _clipOrder.IndexOf(clipData.clipID);
-            if (clipIndex != -1)
-            {
-                wasAdded = false;
-                _clipOrder.RemoveAt(clipIndex);
-            }
 
-            // Add clip
-            _clips[clipData.clipID] = clipData;
-            // Add to end of order
-            _clipOrder.Add(clipData.clipID);
+            // Refresh lru order
+            RefreshClipLRU(clipData.clipID);
 
-            // Evict least recently used clips
+            // If not full, evict least recently used clips
             while (IsCacheFull() && _clipOrder.Count > 0)
             {
-                // Remove clip
                 RemoveClip(_clipOrder[0]);
             }
 
-            // Call add delegate even if removed
-            if (wasAdded && _clips.Keys.Count > 0)
-            {
-                OnClipAdded?.Invoke(clipData);
-            }
-
             // True if successfully added
-            return _clips.Keys.Count > 0;
+            return _clipOrder.Count > 0;
         }
 
         /// <summary>
-        /// Remove clip from cache immediately
+        /// Remove clip id from lru order if possible
         /// </summary>
-        /// <param name="clipID"></param>
-        public void RemoveClip(string clipID)
+        protected override void BreakdownClip(TTSClipData clipData)
         {
-            // Id not found
-            if (!_clips.ContainsKey(clipID))
+            int clipIndex = _clipOrder.IndexOf(clipData.clipID);
+            if (clipIndex != -1)
             {
-                return;
+                _clipOrder.RemoveAt(clipIndex);
             }
-
-            // Remove from dictionary
-            TTSClipData clipData = _clips[clipID];
-            _clips.Remove(clipID);
-
-            // Remove from order list
-            int clipIndex = _clipOrder.IndexOf(clipID);
-            _clipOrder.RemoveAt(clipIndex);
-
-            // Call remove delegate
-            OnClipRemoved?.Invoke(clipData);
+            base.BreakdownClip(clipData);
         }
 
         /// <summary>
         /// Check if cache is full
         /// </summary>
-        protected bool IsCacheFull()
+        private bool IsCacheFull()
         {
             // Capacity full
             if (ClipLimit && _clipOrder.Count > ClipCapacity)
