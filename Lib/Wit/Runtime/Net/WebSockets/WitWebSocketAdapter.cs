@@ -30,7 +30,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// The current web socket client
         /// </summary>
-        public WitWebSocketClient WebSocketClient => WebSocketProvider?.WebSocketClient;
+        public WitWebSocketClient WebSocketClient { get; private set; }
 
         /// <summary>
         /// The topic to be used for publishing/subscribing to the current client provider
@@ -73,6 +73,7 @@ namespace Meta.Voice.Net.WebSockets
         #region LIFECYCLE
         protected virtual void OnEnable()
         {
+            SetClientProvider(WebSocketProvider);
             Connect();
         }
         protected virtual void HandleRequestGenerated(string topicId,
@@ -90,6 +91,7 @@ namespace Meta.Voice.Net.WebSockets
         }
         protected virtual void OnDestroy()
         {
+            WebSocketClient = null;
             Disconnect();
         }
         #endregion LIFECYCLE
@@ -101,7 +103,8 @@ namespace Meta.Voice.Net.WebSockets
         public void SetClientProvider(IWitWebSocketClientProvider clientProvider)
         {
             // Ignore if already set
-            if (_webSocketProvider != null && _webSocketProvider.Equals(clientProvider))
+            var newClient = clientProvider?.WebSocketClient;
+            if (WebSocketClient != null && WebSocketClient.Equals(newClient))
             {
                 return;
             }
@@ -114,6 +117,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Apply new providers if possible
             _webSocketProvider = clientProvider as UnityEngine.Object;
+            WebSocketClient = newClient;
 
             // Log warning for non UnityEngine.Objects
             if (clientProvider != null && _webSocketProvider == null)
