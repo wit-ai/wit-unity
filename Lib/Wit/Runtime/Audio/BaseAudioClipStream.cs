@@ -18,6 +18,19 @@ namespace Meta.Voice.Audio
     public abstract class BaseAudioClipStream : IAudioClipStream
     {
         /// <summary>
+        /// The current number of channels in this audio data stream
+        /// </summary>
+        public int Channels { get; }
+        /// <summary>
+        /// A getter for the current sample rate of how many samples per second should be played
+        /// </summary>
+        public int SampleRate { get; }
+        /// <summary>
+        /// A getter for the minimum length in seconds required before the OnStreamReady method is called
+        /// </summary>
+        public float StreamReadyLength { get; }
+
+        /// <summary>
         /// Whether or not the stream is ready for playback
         /// </summary>
         public bool IsReady { get; private set; }
@@ -26,15 +39,6 @@ namespace Meta.Voice.Audio
         /// Whether or not the stream has been completed
         /// </summary>
         public bool IsComplete { get; private set; }
-
-        /// <summary>
-        /// The current number of channels in this audio data stream
-        /// </summary>
-        public int Channels { get; protected set; }
-        /// <summary>
-        /// A getter for the current sample rate of how many samples per second should be played
-        /// </summary>
-        public int SampleRate { get; protected set; }
 
         /// <summary>
         /// The total number of samples currently added to this stream.
@@ -53,11 +57,6 @@ namespace Meta.Voice.Audio
         /// The length of the stream in seconds.
         /// </summary>
         public float Length => GetSampleLength(TotalSamples);
-
-        /// <summary>
-        /// A getter for the minimum length in seconds required before the OnStreamReady method is called
-        /// </summary>
-        public float StreamReadyLength { get; private set; }
 
         /// <summary>
         /// The callback delegate for stream samples added.
@@ -84,6 +83,11 @@ namespace Meta.Voice.Audio
         public AudioClipStreamDelegate OnStreamComplete { get; set; }
 
         /// <summary>
+        /// The callback when the stream has unloaded all data
+        /// </summary>
+        public AudioClipStreamDelegate OnStreamUnloaded { get; set; }
+
+        /// <summary>
         /// The constructor that takes in a total channel & sample rate
         /// </summary>
         /// <param name="newChannels">The channels to be used for streaming</param>
@@ -91,16 +95,25 @@ namespace Meta.Voice.Audio
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
         protected BaseAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH)
         {
-            // Set parameters
             Channels = newChannels;
             SampleRate = newSampleRate;
             StreamReadyLength = newStreamReadyLength;
+        }
 
-            // Clear counts & bools
+        /// <summary>
+        /// Method for clearing all data
+        /// </summary>
+        protected virtual void Reset()
+        {
             AddedSamples = 0;
             ExpectedSamples = 0;
             IsReady = false;
             IsComplete = false;
+            OnAddSamples = null;
+            OnStreamReady = null;
+            OnStreamUpdated = null;
+            OnStreamComplete = null;
+            OnStreamUnloaded = null;
         }
 
         /// <summary>
@@ -138,7 +151,6 @@ namespace Meta.Voice.Audio
                 return;
             }
             ExpectedSamples = expectedSamples;
-            StreamReadyLength = Mathf.Min(StreamReadyLength, GetSampleLength(expectedSamples));
             UpdateState();
         }
 
@@ -147,8 +159,8 @@ namespace Meta.Voice.Audio
         /// </summary>
         public virtual void UpdateState()
         {
-            // Stream ready
-            if (!IsReady && (StreamReadyLength <= 0f || GetSampleLength(AddedSamples) >= StreamReadyLength))
+            // Stream ready check
+            if (!IsReady && IsEnoughBuffered())
             {
                 HandleStreamReady();
             }
@@ -157,6 +169,24 @@ namespace Meta.Voice.Audio
             {
                 HandleStreamComplete();
             }
+        }
+
+        /// <summary>
+        /// A check if the clip stream has buffered enough to be considered ready
+        /// </summary>
+        protected virtual bool IsEnoughBuffered()
+        {
+            // If ready length is ignored, return as soon as samples are added
+            float readyLength = StreamReadyLength;
+            if (readyLength <= 0f)
+            {
+                return AddedSamples > 0;
+            }
+            if (ExpectedSamples > 0)
+            {
+                readyLength = Mathf.Min(StreamReadyLength, GetSampleLength(ExpectedSamples));
+            }
+            return GetSampleLength(AddedSamples) >= readyLength;
         }
 
         /// <summary>
@@ -222,13 +252,13 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Called when clip stream should be completely removed from ram
+        /// Called when clip stream should clear ram and ready for re-use
         /// </summary>
         public virtual void Unload()
         {
-            OnStreamReady = null;
-            OnStreamUpdated = null;
-            OnStreamComplete = null;
+            var onUnload = OnStreamUnloaded;
+            Reset();
+            onUnload?.Invoke(this);
         }
 
         /// <summary>

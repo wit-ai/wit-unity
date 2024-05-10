@@ -368,7 +368,7 @@ namespace Meta.WitAi.TTS
             // Default
             if (AudioSystem == null)
             {
-                return new UnityAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
+                return new RawAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
             }
             // Get audio clip via audio system
             return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,

@@ -71,6 +71,7 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
         public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
         public const float ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH = 15f;
+        public const int ENDPOINT_TTS_DEFAULT_PRELOAD = 5;
         public const int ENDPOINT_TTS_MAX_TEXT_LENGTH = 280;
         public const string ERROR_TTS_CACHE_DOWNLOAD = "Preloaded files cannot be downloaded at runtime.";
         public const string ERROR_TTS_DECODE = "Data failed to encode";

@@ -96,6 +96,11 @@ namespace Meta.Voice.Audio
         AudioClipStreamDelegate OnStreamComplete { get; set; }
 
         /// <summary>
+        /// The callback when the stream has unloaded all data
+        /// </summary>
+        AudioClipStreamDelegate OnStreamUnloaded { get; set; }
+
+        /// <summary>
         /// Adds an array of samples to the current stream in its entirety.
         /// </summary>
         /// <param name="samples">A list of decoded floats from 0f to 1f that will be used in their entirety</param>
