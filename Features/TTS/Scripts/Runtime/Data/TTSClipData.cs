@@ -116,6 +116,19 @@ namespace Meta.WitAi.TTS.Data
         public Action<string> onDownloadComplete;
 
         /// <summary>
+        /// Called when a script has queued playback with this clip
+        /// </summary>
+        public Action<TTSClipData> onPlaybackQueued;
+        /// <summary>
+        /// Called when a script has began playback with this clip
+        /// </summary>
+        public Action<TTSClipData> onPlaybackBegin;
+        /// <summary>
+        /// Called when a script has completed playback with this clip
+        /// </summary>
+        public Action<TTSClipData> onPlaybackComplete;
+
+        /// <summary>
         /// Compare clips if possible
         /// </summary>
         public override bool Equals(object obj)

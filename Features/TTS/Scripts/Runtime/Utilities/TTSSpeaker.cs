@@ -1692,6 +1692,7 @@ namespace Meta.WitAi.TTS.Utilities
             Events?.OnClipDataPlaybackReady?.Invoke(requestData.ClipData);
 
             // Speaker clip events
+            requestData.ClipData?.onPlaybackQueued?.Invoke(requestData.ClipData);
             Events?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
         }
@@ -1713,6 +1714,7 @@ namespace Meta.WitAi.TTS.Utilities
             Events?.OnStartSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
             // Speaker clip events
+            requestData.ClipData?.onPlaybackBegin?.Invoke(requestData.ClipData);
             Events?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
         }
@@ -1734,6 +1736,7 @@ namespace Meta.WitAi.TTS.Utilities
             Events?.OnCancelledSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
             // Speaker clip events
+            requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
             Events?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
             requestData.PlaybackEvents?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
 
@@ -1767,6 +1770,7 @@ namespace Meta.WitAi.TTS.Utilities
             Events?.OnFinishedSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
             // Speaker clip events
+            requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
             Events?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
 
