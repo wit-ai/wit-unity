@@ -15,7 +15,7 @@ namespace Meta.Voice.Audio
     /// <summary>
     /// A data container that stores all data within a float buffer
     /// </summary>
-    public class RawAudioClipStream : AudioClipStream
+    public class RawAudioClipStream : BaseAudioClipStream
     {
         /// <summary>
         /// Sample buffer containing all raw float data

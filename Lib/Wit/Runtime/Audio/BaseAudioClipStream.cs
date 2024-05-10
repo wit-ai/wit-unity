@@ -15,7 +15,7 @@ namespace Meta.Voice.Audio
     /// A simple abstract class that can be used to simplify the code
     /// required for a custom IAudioClipStream
     /// </summary>
-    public abstract class AudioClipStream : IAudioClipStream
+    public abstract class BaseAudioClipStream : IAudioClipStream
     {
         /// <summary>
         /// Whether or not the stream is ready for playback
@@ -89,7 +89,7 @@ namespace Meta.Voice.Audio
         /// <param name="newChannels">The channels to be used for streaming</param>
         /// <param name="newSampleRate">The new sample rate</param>
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
-        protected AudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH)
+        protected BaseAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH)
         {
             // Set parameters
             Channels = newChannels;

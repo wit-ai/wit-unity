@@ -16,7 +16,7 @@ namespace Meta.Voice.Audio
     /// <summary>
     /// A class for generating and appending to audio clips while streaming
     /// </summary>
-    public class UnityAudioClipStream : AudioClipStream, IAudioClipProvider, IAudioClipSetter
+    public class UnityAudioClipStream : BaseAudioClipStream, IAudioClipProvider, IAudioClipSetter
     {
         [SerializeField] private bool debug;
 

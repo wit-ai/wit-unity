@@ -17,7 +17,7 @@ namespace Meta.Voice.Audio
     /// or RawAudioClipStreams via AudioClip streaming.
     /// </summary>
     [Serializable]
-    public class UnityAudioPlayer : AudioPlayer, IAudioSourceProvider
+    public class UnityAudioPlayer : BaseAudioPlayer, IAudioSourceProvider
     {
         /// <summary>
         /// Audio source to be used for text-to-speech playback

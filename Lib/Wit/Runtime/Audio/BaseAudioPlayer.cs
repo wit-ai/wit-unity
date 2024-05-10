@@ -13,7 +13,7 @@ namespace Meta.Voice.Audio
     /// <summary>
     /// Custom MonoBehaviour audio player that handles some custom method handling
     /// </summary>
-    public abstract class AudioPlayer : MonoBehaviour, IAudioPlayer
+    public abstract class BaseAudioPlayer : MonoBehaviour, IAudioPlayer
     {
         /// <summary>
         /// The currently playing clip stream
