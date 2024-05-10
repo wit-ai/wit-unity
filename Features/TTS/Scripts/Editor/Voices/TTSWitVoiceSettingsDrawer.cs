@@ -250,7 +250,7 @@ namespace Meta.WitAi.TTS.Voices
                 return;
             }
             // Get configuration
-            IWitRequestConfiguration configuration = (ttsService as TTSWit).RequestSettings.configuration;
+            IWitRequestConfiguration configuration = (ttsService as TTSWit).Configuration;
             // Set configuration
             if (_configuration != configuration)
             {

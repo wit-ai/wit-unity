@@ -24,7 +24,7 @@ namespace Meta.WitAi.TTS
             base.OnEditTimeGUI();
 
             var ttsWit = (TTSWit)target;
-            var config = ttsWit.RequestSettings.configuration;
+            var config = ttsWit.Configuration;
             if (!config) return;
 
             // Get app info for voices

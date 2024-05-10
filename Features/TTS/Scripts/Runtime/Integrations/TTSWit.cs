@@ -30,7 +30,8 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// The configuration used for audio requests
         /// </summary>
-        public WitConfiguration configuration;
+        [FormerlySerializedAs("configuration")]
+        [SerializeField] internal WitConfiguration _configuration;
 
         /// <summary>
         /// The desired audio type from wit
@@ -48,7 +49,7 @@ namespace Meta.WitAi.TTS.Integrations
         public bool useEvents;
     }
 
-    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider
+    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider, IWitConfigurationSetter
     {
         #region TTSService
         /// <summary>
@@ -99,8 +100,24 @@ namespace Meta.WitAi.TTS.Integrations
 
         // Web request events
         public TTSWebRequestEvents WebRequestEvents => Events.WebRequest;
-        // Configuration provider
-        public WitConfiguration Configuration => RequestSettings.configuration;
+
+        /// <summary>
+        /// The configuration to be updated
+        /// </summary>
+        public WitConfiguration Configuration
+        {
+            get => RequestSettings._configuration;
+            set
+            {
+                RequestSettings._configuration = value;
+                OnConfigurationUpdated?.Invoke(RequestSettings._configuration);
+                RefreshWebSocketSettings();
+            }
+        }
+        /// <summary>
+        /// Callback following configuration change
+        /// </summary>
+        public event Action<WitConfiguration> OnConfigurationUpdated;
 
         /// <summary>
         /// The current web socket adapter used to perform web socket requests
@@ -122,7 +139,7 @@ namespace Meta.WitAi.TTS.Integrations
         // Get tts request prior to transmission
         private WitTTSVRequest GetHttpRequest(TTSClipData clipData)
         {
-            return new WitTTSVRequest(RequestSettings.configuration, clipData.queryRequestId,
+            return new WitTTSVRequest(Configuration, clipData.queryRequestId,
                 clipData.textToSpeak, clipData.queryParameters,
                 RequestSettings.audioType, clipData.queryStream, clipData.useEvents,
                 (progress) => RaiseRequestProgressUpdated(clipData, progress),
@@ -156,10 +173,6 @@ namespace Meta.WitAi.TTS.Integrations
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (!_webSocketAdapter)
-            {
-                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
-            }
             RefreshWebSocketSettings();
         }
 
@@ -168,7 +181,11 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         protected virtual void RefreshWebSocketSettings()
         {
-            var config = RequestSettings.configuration;
+            if (!_webSocketAdapter)
+            {
+                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
+            }
+            var config = Configuration;
             _webSocketAdapter.SetClientProvider(config != null && config.RequestType == WitRequestType.WebSocket ? config : null);
         }
 
@@ -212,11 +229,11 @@ namespace Meta.WitAi.TTS.Integrations
             {
                 return invalidError;
             }
-            if (RequestSettings.configuration == null)
+            if (Configuration == null)
             {
                 return "No WitConfiguration Set";
             }
-            if (string.IsNullOrEmpty(RequestSettings.configuration.GetClientAccessToken()))
+            if (string.IsNullOrEmpty(Configuration.GetClientAccessToken()))
             {
                 return "No WitConfiguration Client Token";
             }
@@ -242,7 +259,7 @@ namespace Meta.WitAi.TTS.Integrations
             WebStreamEvents?.OnStreamBegin?.Invoke(clipData);
 
             // Check if valid
-            string validError = IsRequestValid(clipData, RequestSettings.configuration);
+            string validError = IsRequestValid(clipData, Configuration);
             if (!string.IsNullOrEmpty(validError))
             {
                 WebStreamEvents?.OnStreamError?.Invoke(clipData, validError);
@@ -262,8 +279,8 @@ namespace Meta.WitAi.TTS.Integrations
             WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
 
             // Request tts via web socket
-            if (RequestSettings.configuration != null
-                && RequestSettings.configuration.RequestType == WitRequestType.WebSocket
+            if (Configuration != null
+                && Configuration.RequestType == WitRequestType.WebSocket
                 && _webSocketAdapter)
             {
                 RequestStreamFromWebSocket(clipData);
@@ -465,7 +482,7 @@ namespace Meta.WitAi.TTS.Integrations
             WebDownloadEvents?.OnDownloadBegin?.Invoke(clipData, downloadPath);
 
             // Ensure valid
-            string validError = IsRequestValid(clipData, RequestSettings.configuration);
+            string validError = IsRequestValid(clipData, Configuration);
             if (!string.IsNullOrEmpty(validError))
             {
                 WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, validError);

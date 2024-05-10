@@ -106,9 +106,13 @@ namespace Meta.WitAi.TTS
             }
             // Already setup
             TTSWit ttsWit = instance as TTSWit;
-            if (ttsWit.RequestSettings.configuration != null)
+            if (ttsWit == null)
             {
-                return ttsWit.RequestSettings.configuration;
+                return null;
+            }
+            if (ttsWit.Configuration != null)
+            {
+                return ttsWit.Configuration;
             }
 
             // Refresh configuration list
@@ -120,18 +124,18 @@ namespace Meta.WitAi.TTS
             // Assign first wit configuration found
             if (WitConfigurationUtility.WitConfigs != null && WitConfigurationUtility.WitConfigs.Length > 0)
             {
-                ttsWit.RequestSettings.configuration = WitConfigurationUtility.WitConfigs[0];
-                VLog.D($"TTS Service - Assigned Wit Configuration {ttsWit.RequestSettings.configuration.name}");
+                ttsWit.Configuration = WitConfigurationUtility.WitConfigs[0];
+                VLog.D($"TTS Service - Assigned Wit Configuration {ttsWit.Configuration.name}");
             }
 
             // Warning
-            if (ttsWit.RequestSettings.configuration == null)
+            if (ttsWit.Configuration == null)
             {
                 VLog.W($"TTS Service - Please create and assign a WitConfiguration to TTSWit");
             }
 
             // Return configuration
-            return ttsWit.RequestSettings.configuration;
+            return ttsWit.Configuration;
         }
 
         // Refresh available voices
@@ -143,7 +147,7 @@ namespace Meta.WitAi.TTS
                 VLog.W($"TTS Service - Cannot refresh voices without TTS Wit Service");
                 return;
             }
-            IWitRequestConfiguration configuration = ttsWit.RequestSettings.configuration;
+            IWitRequestConfiguration configuration = ttsWit.Configuration;
             if (configuration == null)
             {
                 VLog.W($"TTS Service - Cannot refresh voices without TTS Wit Configuration");
