@@ -91,14 +91,21 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public void Error(ErrorCode errorCode, string message, params object [] parameters)
         {
-            _logger.Log(CorrelationID, VLoggerVerbosity.Error, message, parameters);
+            _logger.Log(CorrelationID, VLoggerVerbosity.Error, message, errorCode, parameters);
         }
 
         /// <inheritdoc/>
         public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
             Correlate(correlationId, CorrelationID);
-            _logger.Log(correlationId, VLoggerVerbosity.Error, message, parameters);
+            _logger.Log(correlationId, VLoggerVerbosity.Error, message, errorCode, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, Exception exception, string message, params object[] parameters)
+        {
+            Correlate(correlationId, CorrelationID);
+            _logger.Log(correlationId, VLoggerVerbosity.Error, exception, KnownErrorCode.Unknown, message, parameters);
         }
 
         /// <inheritdoc/>
@@ -108,11 +115,29 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        public void Error(Exception exception, string message = "", params object[] parameters)
+        {
+            _logger.Log(CorrelationID, VLoggerVerbosity.Error, exception, KnownErrorCode.Unknown);
+        }
+
+        /// <inheritdoc/>
         public void Error(CorrelationID correlationId, Exception exception, ErrorCode errorCode, string message,
             params object[] parameters)
         {
             Correlate(correlationId, CorrelationID);
             _logger.Log(correlationId, VLoggerVerbosity.Verbose, exception, errorCode, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, string message, params object[] parameters)
+        {
+            _logger.Log(correlationId, VLoggerVerbosity.Error, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(string message, params object[] parameters)
+        {
+            _logger.Log(CorrelationID, VLoggerVerbosity.Error, message, parameters);
         }
 
         /// <inheritdoc/>

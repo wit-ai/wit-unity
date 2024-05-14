@@ -104,7 +104,7 @@ namespace Meta.Voice.Logging
         /// Logs an error with an exception.
         /// </summary>
         /// <param name="correlationId">The correlation ID.</param>
-        /// <param name="exception">The exception to log</param>
+        /// <param name="exception">The exception to log.</param>
         /// <param name="errorCode">The error code.</param>
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
@@ -112,13 +112,45 @@ namespace Meta.Voice.Logging
             params object[] parameters);
 
         /// <summary>
-        /// Logs an error with an exception.
+        /// Logs an error without an exception.
         /// </summary>
-        /// <param name="errorCode">The error code.</param>
-        /// <param name="exception">The exception to log</param>
+        /// <param name="correlationId">The correlation ID.</param>
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
-        public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters);
+        public void Error(CorrelationID correlationId, string message, params object[] parameters);
+
+        /// <summary>
+        /// Logs an error with a message.
+        /// </summary>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        public void Error(string message, params object[] parameters);
+
+        /// <summary>
+        /// Logs an error with an exception.
+        /// </summary>
+        /// <param name="correlationId">The correlation ID.</param>
+        /// <param name="exception">The exception to log.</param>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        public void Error(CorrelationID correlationId, Exception exception, string message = "", params object[] parameters);
+
+        /// <summary>
+        /// Logs an error with an exception, and an error code.
+        /// </summary>
+        /// <param name="errorCode">The error code.</param>
+        /// <param name="exception">The exception to log.</param>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        public void Error(Exception exception, ErrorCode errorCode, string message = "", params object[] parameters);
+
+        /// <summary>
+        /// Logs an error with an exception, without an error code.
+        /// </summary>
+        /// <param name="exception">The exception to log.</param>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="parameters">The parameters.</param>
+        public void Error(Exception exception, string message = "", params object[] parameters);
 
         /// <summary>
         /// Returns a logging scope to be used in a "using" block.
@@ -191,11 +223,27 @@ namespace Meta.Voice.Logging
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters);
 
+        /// <summary>
+        /// Logs a message with an exception.
+        /// </summary>
+        /// <param name="correlationId">The correlation ID.</param>
+        /// <param name="verbosity">The verbosity of the logging.</param>
+        /// <param name="exception">The exception to log.</param>
+        /// <param name="errorCode">The error code.</param>
+        /// <param name="message">The message to log.</param>
+        /// <param name="parameters">The parameter</param>
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
-            string message, params object[] parameters);
+            string message = "", params object[] parameters);
 
-
+        /// <summary>
+        /// Logs a message without an exception.
+        /// </summary>
+        /// <param name="correlationId">The correlation ID.</param>
+        /// <param name="verbosity">The verbosity of the logging.</param>
+        /// <param name="errorCode">The error code.</param>
+        /// <param name="message">The message to log.</param>
+        /// <param name="parameters">The parameter</param>
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters);
     }

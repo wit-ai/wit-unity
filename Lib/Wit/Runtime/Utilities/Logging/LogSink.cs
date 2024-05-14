@@ -97,6 +97,11 @@ namespace Meta.Voice.Logging
                 WrapWithLogColor(sb, start, logEntry.Verbosity);
             }
 
+            if (string.IsNullOrEmpty(logEntry.Message) && !string.IsNullOrEmpty(logEntry.Exception.Message))
+            {
+                logEntry.Message = logEntry.Exception.Message;
+            }
+
             Annotate(sb, logEntry);
 
             var formattedCoreMessage =
@@ -264,6 +269,11 @@ namespace Meta.Voice.Logging
 
         private string FormatStackTrace(string stackTrace)
         {
+            if (stackTrace == null)
+            {
+                return string.Empty;
+            }
+
             // Use a regular expression to match lines with a file path and line number
             var regex = new Regex(@"at (.+) in (.*):(\d+)");
             // Use the MatchEvaluator delegate to format the matched lines

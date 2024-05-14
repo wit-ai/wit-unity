@@ -196,9 +196,35 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, string message, params object[] parameters)
+        {
+            CorrelateIds(correlationId);
+            Log(correlationId, VLoggerVerbosity.Error, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(string message, params object[] parameters)
+        {
+            Log(CorrelationID, VLoggerVerbosity.Error, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(CorrelationID correlationId, Exception exception, string message, params object[] parameters)
+        {
+            CorrelateIds(correlationId);
+            Log(correlationId, VLoggerVerbosity.Error, (ErrorCode)KnownErrorCode.Unknown, exception, message, parameters);
+        }
+
+        /// <inheritdoc/>
         public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Error, errorCode, exception, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Error(Exception exception, string message = "", params object[] parameters)
+        {
+            Log(CorrelationID, VLoggerVerbosity.Error, exception, (ErrorCode)KnownErrorCode.Unknown, message, parameters);
         }
 
         /// <inheritdoc/>
