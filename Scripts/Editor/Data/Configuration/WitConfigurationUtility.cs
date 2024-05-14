@@ -249,11 +249,11 @@ namespace Meta.WitAi.Data.Configuration
         {
             return !string.IsNullOrEmpty(clientToken) && clientToken.Length == 32;
         }
-        
+
         // Sets server token for specified configuration by updating it's application data
         public static void SetServerToken(this WitConfiguration configuration, string serverToken, Action<string> onSetComplete = null)
         {
-            var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.SupplyToken);
+            var instanceKey = Telemetry.Editor.StartEvent(EditorTelemetry.TelemetryEventId.SupplyToken);
 
             // Invalid
             if (!IsServerTokenValid(serverToken))
@@ -278,11 +278,11 @@ namespace Meta.WitAi.Data.Configuration
                 // Complete
                 if (!string.IsNullOrEmpty(error))
                 {
-                    Telemetry.EndEventWithFailure(instanceKey, error);
+                    Telemetry.Editor.EndEventWithFailure(instanceKey, error);
                 }
                 else
                 {
-                    Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+                    Telemetry.Editor.EndEvent(instanceKey, EditorTelemetry.ResultType.Success);
                 }
 
                 onSetComplete?.Invoke(error);

@@ -29,35 +29,35 @@ namespace Meta.WitAi.Windows
         /// The priority for preprocess build callback.
         /// </summary>
         public int callbackOrder => 0;
-        
+
         /// <summary>
         /// The assembly miner.
         /// </summary>
         private static readonly AssemblyMiner AssemblyMiner = new AssemblyMiner(new WitParameterValidator());
-        
+
         /// <summary>
         /// Maps individual configurations to their associated managers. This is needed to allow static resolution
         /// on global events like building or running.
         /// </summary>
         private static readonly Dictionary<string, ConduitManifestGenerationManager> ConfigurationToManagerMap =
             new Dictionary<string, ConduitManifestGenerationManager>();
-        
+
         /// <summary>
         /// Locally collected Conduit statistics.
         /// </summary>
         private static ConduitStatistics _statistics;
-        
+
         /// <summary>
         /// Set to true if code had changed since last manifest generation.
         /// We start with this set to true to handle changes when the editor is not running.
         /// </summary>
         private static bool _codeChanged = true;
-        
+
         /// <summary>
         /// The manifest generator used for this configuration.
         /// </summary>
         private readonly ManifestGenerator _manifestGenerator;
-        
+
         /// <summary>
         /// True when a manifest exists locally for this configuration.
         /// </summary>
@@ -67,7 +67,7 @@ namespace Meta.WitAi.Windows
         /// The assembly walker associated with this configuration.
         /// </summary>
         internal AssemblyWalker AssemblyWalker { get; private set; } = new AssemblyWalker();
-        
+
         /// <summary>
         /// Locally collected Conduit statistics.
         /// </summary>
@@ -90,7 +90,7 @@ namespace Meta.WitAi.Windows
         /// <returns>An instance of this class.</returns>
         public static ConduitManifestGenerationManager GetInstance(WitConfiguration configuration)
         {
-            // This key has to match what we set in the constructor. 
+            // This key has to match what we set in the constructor.
             var configurationKey = configuration.name;
             if (!ConfigurationToManagerMap.ContainsKey(configurationKey))
             {
@@ -123,7 +123,7 @@ namespace Meta.WitAi.Windows
             _manifestGenerator = new ManifestGenerator(AssemblyWalker, AssemblyMiner);
             ConfigurationToManagerMap[configuration.name] = this;
         }
-        
+
         public void OnPreprocessBuild(BuildReport report)
         {
             if (_codeChanged)
@@ -135,7 +135,7 @@ namespace Meta.WitAi.Windows
                 GenerateMissingManifests();
             }
         }
-        
+
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void OnScriptsReloaded()
         {
@@ -167,12 +167,12 @@ namespace Meta.WitAi.Windows
                 {
                     continue;
                 }
-                
+
                 var manager = GetInstance(configuration);
                 manager.GenerateManifest(configuration, false);
             }
         }
-        
+
         private static void GenerateAllManifests()
         {
             foreach (var configuration in WitConfigurationUtility.GetLoadedConfigurations())
@@ -202,7 +202,7 @@ namespace Meta.WitAi.Windows
         {
             return _manifestGenerator.GenerateEmptyManifest(domain, id);
         }
-        
+
         private void GenerateManifestIfNeeded(WitConfiguration configuration)
         {
             if (!configuration.useConduit || configuration == null)
@@ -231,7 +231,7 @@ namespace Meta.WitAi.Windows
             return directory + "/" + configuration.ManifestLocalPath;
         }
 
-        
+
         /// <summary>
         /// Generates a manifest and optionally opens it in the editor.
         /// </summary>
@@ -239,7 +239,7 @@ namespace Meta.WitAi.Windows
         /// <param name="openManifest">If true, will open the manifest file in the code editor.</param>
         public void GenerateManifest(WitConfiguration configuration, bool openManifest)
         {
-            var instanceKey = Telemetry.StartEvent(Telemetry.TelemetryEventId.GenerateManifest);
+            var instanceKey = Telemetry.Editor.StartEvent(EditorTelemetry.TelemetryEventId.GenerateManifest);
             AssemblyWalker.AssembliesToIgnore = new HashSet<string>(configuration.excludedAssemblies);
 
             // Generate
@@ -266,16 +266,16 @@ namespace Meta.WitAi.Windows
             catch (Exception e)
             {
                 VLog.E($"Conduit manifest failed to generate\nPath: {fullPath}\n{e}");
-                Telemetry.EndEventWithFailure(instanceKey, e.Message);
+                Telemetry.Editor.EndEventWithFailure(instanceKey, e.Message);
                 return;
             }
             try
             {
                 var incompatibleSignatures = string.Join(" ", AssemblyMiner.IncompatibleSignatureFrequency.Keys);
-                Telemetry.AnnotateEvent(instanceKey, Telemetry.AnnotationKey.IncompatibleSignatures, incompatibleSignatures);
+                Telemetry.Editor.AnnotateEvent(instanceKey, EditorTelemetry.AnnotationKey.IncompatibleSignatures, incompatibleSignatures);
 
                 var compatibleSignatures = string.Join(" ", AssemblyMiner.SignatureFrequency.Keys);
-                Telemetry.AnnotateEvent(instanceKey, Telemetry.AnnotationKey.CompatibleSignatures, compatibleSignatures);
+                Telemetry.Editor.AnnotateEvent(instanceKey, EditorTelemetry.AnnotationKey.CompatibleSignatures, compatibleSignatures);
             }
             catch (Exception e)
             {
@@ -283,7 +283,7 @@ namespace Meta.WitAi.Windows
             }
 
 
-            Telemetry.EndEvent(instanceKey, Telemetry.ResultType.Success);
+            Telemetry.Editor.EndEvent(instanceKey, EditorTelemetry.ResultType.Success);
             Statistics.SuccessfulGenerations++;
             Statistics.AddFrequencies(AssemblyMiner.SignatureFrequency);
             Statistics.AddIncompatibleFrequencies(AssemblyMiner.IncompatibleSignatureFrequency);

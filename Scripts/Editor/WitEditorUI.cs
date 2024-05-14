@@ -92,10 +92,10 @@ namespace Meta.WitAi
             var isClicked = EditorGUILayout.LinkButton(content);
             if (isClicked)
             {
-                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, new Dictionary<Telemetry.AnnotationKey, string>
+                Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.ClickButton, new Dictionary<EditorTelemetry.AnnotationKey, string>
                 {
-                    {Telemetry.AnnotationKey.ControlId, text},
-                    {Telemetry.AnnotationKey.Type, "Link"}
+                    {EditorTelemetry.AnnotationKey.ControlId, text},
+                    {EditorTelemetry.AnnotationKey.Type, "Link"}
                 });
             }
 #else
@@ -138,17 +138,17 @@ namespace Meta.WitAi
             var isClicked = GUILayout.Button(content, style, options);
             if (isClicked)
             {
-                var annotations = new Dictionary<Telemetry.AnnotationKey, string>
+                var annotations = new Dictionary<EditorTelemetry.AnnotationKey, string>
                 {
-                    { Telemetry.AnnotationKey.ControlId, content.text }
+                    { EditorTelemetry.AnnotationKey.ControlId, content.text }
                 };
 
                 var name = content.text;
                 if (string.IsNullOrEmpty(name) && content.image != null)
                 {
                     name = content.image.name;
-                    annotations[Telemetry.AnnotationKey.ControlId] = name;
-                    annotations.Add(Telemetry.AnnotationKey.Type, "Image");
+                    annotations[EditorTelemetry.AnnotationKey.ControlId] = name;
+                    annotations.Add(EditorTelemetry.AnnotationKey.Type, "Image");
                 }
 
                 if (string.IsNullOrEmpty(name))
@@ -157,7 +157,7 @@ namespace Meta.WitAi
                     return true;
                 }
 
-                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ClickButton, annotations);
+                Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.ClickButton, annotations);
             }
 
             return isClicked;
@@ -398,10 +398,10 @@ namespace Meta.WitAi
             // Update
             if (toggleValue != newToggleValue)
             {
-                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<Telemetry.AnnotationKey, string>
+                Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<EditorTelemetry.AnnotationKey, string>
                 {
-                    {Telemetry.AnnotationKey.ControlId, key.text},
-                    {Telemetry.AnnotationKey.Value, newToggleValue.ToString()}
+                    {EditorTelemetry.AnnotationKey.ControlId, key.text},
+                    {EditorTelemetry.AnnotationKey.Value, newToggleValue.ToString()}
                 });
                 toggleValue = newToggleValue;
                 isUpdated = true;
@@ -442,11 +442,11 @@ namespace Meta.WitAi
                 {
                     value = $"{newSelectionValue}";
                 }
-                Telemetry.LogInstantEvent(Telemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<Telemetry.AnnotationKey, string>
+                Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.ToggleCheckbox, new Dictionary<EditorTelemetry.AnnotationKey, string>
                 {
-                    {Telemetry.AnnotationKey.ControlId, key},
-                    {Telemetry.AnnotationKey.Type, "Popup"},
-                    {Telemetry.AnnotationKey.Value, value}
+                    {EditorTelemetry.AnnotationKey.ControlId, key},
+                    {EditorTelemetry.AnnotationKey.Type, "Popup"},
+                    {EditorTelemetry.AnnotationKey.Value, value}
                 });
 
                 selectionValue = newSelectionValue;
