@@ -66,14 +66,14 @@ namespace Meta.Voice.Audio
         /// Returns a new audio player for managing audio clip stream playback states
         /// </summary>
         /// <param name="root">The gameobject to add the player to if applicable</param>
-        public IAudioPlayer GetAudioPlayer(GameObject root) => root.AddComponent<TAudioPlayer>();
+        public virtual IAudioPlayer GetAudioPlayer(GameObject root) => root.AddComponent<TAudioPlayer>();
 
         /// <summary>
         /// Returns a new audio clip stream for audio stream handling
         /// </summary>
         /// <param name="channels">Number of channels within audio</param>
         /// <param name="sampleRate">Desired rate of playback</param>
-        public IAudioClipStream GetAudioClipStream(int channels, int sampleRate) => DequeueClip();
+        public virtual IAudioClipStream GetAudioClipStream(int channels, int sampleRate) => DequeueClip();
 
         #region CLIP CACHE
         /// <summary>
