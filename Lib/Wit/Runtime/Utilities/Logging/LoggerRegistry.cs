@@ -128,8 +128,6 @@ namespace Meta.Voice.Logging
             var stacktraceLogLevelString = EditorPrefs.GetString(EDITOR_LOG_STACKTRACE_LEVEL_KEY, Instance.Options.StackTraceLevel.ToString());
             Enum.TryParse(stacktraceLogLevelString, out VLoggerVerbosity stacktraceLogLevel);
             Instance.LogStackTraceLevel = stacktraceLogLevel;
-
-            UnityEngine.Debug.Log($"LoggerRegistry initialized: {editorLogLevelString}-{suppressionLogLevelString}-{stacktraceLogLevelString}");
         }
 #endif
 
