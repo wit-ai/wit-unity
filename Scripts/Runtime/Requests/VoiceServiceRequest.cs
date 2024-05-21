@@ -110,7 +110,7 @@ namespace Meta.WitAi.Requests
         /// Performs an event callback with this request as the parameter
         /// </summary>
         /// <param name="eventCallback">The voice service request event to be called</param>
-        protected override void RaiseEvent(VoiceServiceRequestEvent eventCallback) =>
-            eventCallback?.Invoke(this);
+        protected override void RaiseEvent(VoiceServiceRequestEvent eventCallback) => ThreadUtility.CallOnMainThread(() =>
+            eventCallback?.Invoke(this));
     }
 }

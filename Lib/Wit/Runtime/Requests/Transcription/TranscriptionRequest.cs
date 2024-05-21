@@ -164,7 +164,10 @@ namespace Meta.Voice
         protected virtual void OnPartialTranscription()
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.PartialTranscriptionReceived);
-            Events?.OnPartialTranscription?.Invoke(Transcription);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                Events?.OnPartialTranscription?.Invoke(Transcription);
+            });
         }
 
         /// <summary>
@@ -173,7 +176,10 @@ namespace Meta.Voice
         protected virtual void OnFullTranscription()
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.FullTranscriptionReceived);
-            Events?.OnFullTranscription?.Invoke(Transcription);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                Events?.OnFullTranscription?.Invoke(Transcription);
+            });
         }
         #endregion TRANSCRIPTION
 

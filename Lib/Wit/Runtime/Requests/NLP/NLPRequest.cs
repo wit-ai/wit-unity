@@ -185,8 +185,8 @@ namespace Meta.Voice
         /// <summary>
         /// Called when raw response data has been received
         /// </summary>
-        protected virtual void OnRawResponse(string rawResponse) =>
-            Events?.OnRawResponse?.Invoke(rawResponse);
+        protected virtual void OnRawResponse(string rawResponse) => ThreadUtility.CallOnMainThread(() =>
+            Events?.OnRawResponse?.Invoke(rawResponse));
 
         /// <summary>
         /// Decodes asynchronously and then passes into appropriate locations
@@ -212,7 +212,7 @@ namespace Meta.Voice
 
                     // Enqueue decoded data
                     _rawDecoded++;
-                    MainThreadCallback(() => ApplyDecodedResponseData(responseData));
+                    ApplyDecodedResponseData(responseData);
 
                     // Decode complete
                     _rawDecoding = false;
@@ -341,14 +341,15 @@ namespace Meta.Voice
         protected virtual void OnPartialResponse()
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.PartialResponseReceived);
-            Events?.OnPartialResponse?.Invoke(ResponseData);
+            ThreadUtility.CallOnMainThread(() =>
+            Events?.OnPartialResponse?.Invoke(ResponseData));
         }
 
         /// <summary>
         /// Called when full response has completed
         /// </summary>
-        protected virtual void OnFullResponse() =>
-            Events?.OnFullResponse?.Invoke(ResponseData);
+        protected virtual void OnFullResponse() => ThreadUtility.CallOnMainThread(() =>
+            Events?.OnFullResponse?.Invoke(ResponseData));
 
         /// <summary>
         /// Cancels the current request but handles success immediately if possible
