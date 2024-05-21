@@ -11,6 +11,7 @@
 #endif
 
 using System;
+using Meta.Voice.Logging;
 #if THREADING_ENABLED
 using UnityEngine;
 using System.Threading.Tasks;
@@ -72,6 +73,79 @@ namespace Meta.WitAi
 
             #endif
             return task;
+        }
+
+        /// <summary>
+        /// Safely backgrounds an async task if threading is enabled in this build.
+        /// </summary>
+        /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
+        /// <param name="callback">The callback to execute</param>
+        public static async Task BackgroundAsync(IVLogger logger, Func<Task> callback)
+        {
+#if THREADING_ENABLED
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    await callback();
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e);
+                }
+            });
+#else
+            await callback();
+#endif
+        }
+
+        /// <summary>
+        /// Safely backgrounds an async task if threading is enabled in this build.
+        /// </summary>
+        /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
+        /// <param name="callback">The callback to execute</param>
+        public static async Task<T> BackgroundAsync<T>(IVLogger logger, Func<Task<T>> callback)
+        {
+#if THREADING_ENABLED
+            return await Task.Run<T>(async () =>
+            {
+                try
+                {
+                    return await callback();
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e);
+                    throw e;
+                }
+            });
+#else
+            return await callback();
+#endif
+        }
+
+        /// <summary>
+        /// Safely backgrounds a callback if threading is enabled in this build.
+        /// </summary>
+        /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
+        /// <param name="callback">The callback to execute</param>
+        public static void Background(IVLogger logger, Action callback)
+        {
+#if THREADING_ENABLED
+            Task.Run(() =>
+            {
+                try
+                {
+                    callback();
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e);
+                }
+            });
+#else
+            callback();
+#endif
         }
     }
 }
