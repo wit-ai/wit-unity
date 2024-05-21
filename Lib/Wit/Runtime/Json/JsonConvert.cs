@@ -146,37 +146,37 @@ namespace Meta.WitAi.Json
         /// </summary>
         public static IN_TYPE DeserializeIntoObject<IN_TYPE>(IN_TYPE instance, WitResponseNode jsonToken, JsonConverter[] customConverters = null, bool suppressWarnings = false)
         {
-            // Could not parse
-            if (jsonToken == null)
-            {
-                return instance;
-            }
-            // Use default if no customs are added
-            if (customConverters == null)
-            {
-                customConverters = DefaultConverters;
-            }
-
-            // Auto cast
-            Type iType = typeof(IN_TYPE);
-            if (iType == typeof(WitResponseNode))
-            {
-                object result = jsonToken;
-                return (IN_TYPE)result;
-            }
-            if (iType == typeof(WitResponseClass))
-            {
-                object result = jsonToken.AsObject;
-                return (IN_TYPE)result;
-            }
-            if (iType == typeof(WitResponseArray))
-            {
-                object result = jsonToken.AsArray;
-                return (IN_TYPE)result;
-            }
-
             try
             {
+                // Could not parse
+                if (jsonToken == null)
+                {
+                    return instance;
+                }
+                // Use default if no customs are added
+                if (customConverters == null)
+                {
+                    customConverters = DefaultConverters;
+                }
+
+                // Auto cast
+                Type iType = typeof(IN_TYPE);
+                if (iType == typeof(WitResponseNode))
+                {
+                    object tokenResult = jsonToken;
+                    return (IN_TYPE)tokenResult;
+                }
+                if (iType == typeof(WitResponseClass))
+                {
+                    object tokenResult = jsonToken.AsObject;
+                    return (IN_TYPE)tokenResult;
+                }
+                if (iType == typeof(WitResponseArray))
+                {
+                    object tokenResult = jsonToken.AsArray;
+                    return (IN_TYPE)tokenResult;
+                }
+
                 StringBuilder log = new StringBuilder();
                 IN_TYPE result = (IN_TYPE)DeserializeToken(iType, instance, jsonToken, log, customConverters);
                 if (log.Length > 0 && !suppressWarnings)
