@@ -22,7 +22,7 @@ namespace Meta.WitAi.Data.Entities
 
         private WitDynamicEntities entities = new WitDynamicEntities();
 
-        public static bool HasDynamicEntityRegistry => Instance;
+        public static bool HasDynamicEntityRegistry => instance;
 
         /// <summary>
         /// Gets the instance in the scene if there is one
