@@ -252,17 +252,17 @@ namespace Meta.WitAi
             {
                 return;
             }
-            var category = GetType().Name;
-            var result = new StringBuilder();
-            result.AppendLine(log);
-            result.AppendLine($"Request Id: {request?.Options?.RequestId}");
             if (warn)
             {
+                var category = GetType().Name;
+                var result = new StringBuilder();
+                result.AppendLine(log);
+                result.AppendLine($"Request Id: {request?.Options?.RequestId}");
                 VLog.E(category, result);
             }
             else
             {
-                _log.Info(result.ToString());
+                _log.Info(log);
             }
         }
 
