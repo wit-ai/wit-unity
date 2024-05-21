@@ -14,6 +14,7 @@ using Meta.Voice;
 using Meta.Voice.Net.PubSub;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
@@ -444,6 +445,7 @@ namespace Meta.WitAi
                     _minKeepAliveWasHit = false;
                     _isSoundWakeActive = true;
                     StartRecording();
+                    RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.ListeningStarted);
                 }
                 else
                 {
@@ -547,6 +549,7 @@ namespace Meta.WitAi
             newRequest.Events.OnComplete.AddListener(HandleComplete);
 
             // Consider initialized
+            RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.RequestId, RuntimeTelemetryEventType.VoiceServiceRequest);
             VoiceEvents.OnRequestInitialized?.Invoke(newRequest);
         }
         /// <summary>

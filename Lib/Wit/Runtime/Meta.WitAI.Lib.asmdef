@@ -2,7 +2,9 @@
     "name": "Meta.WitAi.Lib",
     "rootNamespace": "",
     "references": [
-        "GUID:04376767bc1f3b428aefa3d20743e819"
+        "Meta.Net.endel.nativewebsocket",
+        "VoiceSDK.Telemetry",
+        "VoiceSDK.Telemetry.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

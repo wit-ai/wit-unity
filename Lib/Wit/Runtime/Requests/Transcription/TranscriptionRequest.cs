@@ -8,6 +8,7 @@
 
 using System.Text;
 using Meta.Voice.Logging;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
 using UnityEngine.Events;
 
@@ -162,6 +163,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnPartialTranscription()
         {
+            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.PartialTranscriptionReceived);
             Events?.OnPartialTranscription?.Invoke(Transcription);
         }
 
@@ -170,6 +172,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnFullTranscription()
         {
+            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.FullTranscriptionReceived);
             Events?.OnFullTranscription?.Invoke(Transcription);
         }
         #endregion TRANSCRIPTION
@@ -275,6 +278,7 @@ namespace Meta.Voice
         protected virtual void OnStopListening()
         {
             Log("Deactivate Audio Complete");
+            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.ListeningStopped);
             RaiseEvent(Events?.OnStopListening);
 
             // Handle early cancellation

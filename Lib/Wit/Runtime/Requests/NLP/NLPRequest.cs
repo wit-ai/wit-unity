@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 using Meta.Voice.Logging;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
 using UnityEngine.Events;
 
@@ -337,8 +338,11 @@ namespace Meta.Voice
         /// <summary>
         /// Called when response data has been updated
         /// </summary>
-        protected virtual void OnPartialResponse() =>
+        protected virtual void OnPartialResponse()
+        {
+            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.PartialResponseReceived);
             Events?.OnPartialResponse?.Invoke(ResponseData);
+        }
 
         /// <summary>
         /// Called when full response has completed

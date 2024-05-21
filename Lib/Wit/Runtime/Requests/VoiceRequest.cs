@@ -10,9 +10,11 @@ using System;
 using System.Collections;
 using System.Text;
 using Meta.Voice.Logging;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
 using Meta.WitAi.Data;
 using UnityEngine.Events;
+using Random = UnityEngine.Random;
 
 namespace Meta.Voice
 {
@@ -528,6 +530,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnCancel()
         {
+            RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Canceled);
             // Log & callbacks
             RaiseEvent(Events?.OnCancel);
         }
@@ -537,6 +540,22 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnComplete()
         {
+            switch (State)
+            {
+                case VoiceRequestState.Canceled:
+                    RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Canceled);
+                    break;
+                case VoiceRequestState.Successful:
+                    RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Successful);
+                    break;
+                case VoiceRequestState.Failed:
+                    RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Failed);
+                    break;
+                default:
+                    RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Undetermined);
+                    break;
+            }
+
             RaiseEvent(Events?.OnComplete);
         }
         #endregion RESULTS

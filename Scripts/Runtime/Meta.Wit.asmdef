@@ -6,7 +6,9 @@
         "Meta.WitAi.Conduit",
         "Meta.VoiceSDK.Mic.Common",
         "Meta.VoiceSDK.Mic.Other",
-        "Meta.VoiceSDK.Mic.WebGL"
+        "Meta.VoiceSDK.Mic.WebGL",
+        "VoiceSDK.Telemetry",
+        "VoiceSDK.Telemetry.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
