@@ -98,11 +98,6 @@ namespace Meta.WitAi
         /// <returns>Returns an error if send will not be allowed.</returns>
         public virtual string GetSendError()
         {
-            // Cannot send if internet is not reachable (Only works on Mobile)
-            if (Application.internetReachability == NetworkReachability.NotReachable)
-            {
-                return "Unable to reach the internet.  Check your connection.";
-            }
             // No error
             return string.Empty;
         }
@@ -117,6 +112,11 @@ namespace Meta.WitAi
         /// </summary>
         protected virtual void OnEnable()
         {
+            // Cannot send if internet is not reachable (Only works on Mobile)
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                _log.Error("Unable to reach the internet. Check your connection.");
+            }
             GetSpeechEvents()?.OnRequestInitialized.AddListener(OnRequestInit);
         }
         /// <summary>
