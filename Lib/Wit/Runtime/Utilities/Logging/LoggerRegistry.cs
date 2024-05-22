@@ -18,6 +18,7 @@ namespace Meta.Voice.Logging
     public sealed class LoggerRegistry : ILoggerRegistry
     {
         public ILogSink LogSink { get; set; }
+        public IVLoggerFactory VLoggerFactory { get; set; } = new VLoggerFactory();
 
         private const string EDITOR_LOG_LEVEL_KEY = "VSDK_EDITOR_LOG_LEVEL";
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
@@ -104,7 +105,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// A private constructor to prevent instantiation of this class.
         /// </summary>
-        private LoggerRegistry()
+        internal LoggerRegistry()
         {
             ILogWriter defaultLogWriter = new UnityLogWriter();
             LogSink = new LogSink(defaultLogWriter, new LoggerOptions(EditorLogFilteringLevel, LogSuppressionLevel, LogStackTraceLevel));
@@ -134,28 +135,9 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public IVLogger GetLogger(ILogSink logSink = null)
         {
-            logSink ??= LogSink;
-
-            var stackTrace = new StackTrace();
-            var category = LogCategory.Global.ToString();
-
-            var callingFrame = stackTrace.GetFrames()?.Skip(1).FirstOrDefault(frame => frame?.GetMethod()?.DeclaringType != typeof(LoggerRegistry));
-            var callerType = callingFrame?.GetMethod()?.DeclaringType;
-
-            if (callerType == null)
-            {
-                return GetLogger(category, logSink);
-            }
-
-            var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
-            if (attribute == null)
-            {
-                return new VLogger(category, logSink);
-            }
-
-            category = attribute.CategoryName;
-
-            return GetLogger(category, logSink);
+            // Send a depth of four to account for the lambda, the lazy logger, and the main logger call
+            // that would have triggered the creation.
+            return new LazyLogger(() => GetCoreLogger(logSink, 4));
         }
 
         /// <inheritdoc/>
@@ -168,15 +150,64 @@ namespace Meta.Voice.Logging
             {
                 if (!_loggers.ContainsKey(category))
                 {
-                    _loggers.Add(category, new VLogger(category, logSink));
+                    _loggers.Add(category, VLoggerFactory.GetLogger(category, logSink));
                 }
 
                 return _loggers[category];
             }
             else
             {
-                return new VLogger(category, logSink);
+                return VLoggerFactory.GetLogger(category, logSink);
             }
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="logSink">The sink to write to.</param>
+        /// <param name="frameDepth">The number of frames to skip to find the real caller.
+        /// This should be higher than 1 when called internally from the logger code.</param>
+        /// <returns></returns>
+        private IVLogger GetCoreLogger(ILogSink logSink = null, int frameDepth = 1)
+        {
+            logSink ??= LogSink;
+
+            var stackTrace = new StackTrace();
+            var category = LogCategory.Global.ToString();
+
+            var callingFrame = stackTrace.GetFrames()?.Skip(frameDepth).FirstOrDefault(IsNonLoggingFrame);
+            var callerType = callingFrame?.GetMethod()?.DeclaringType;
+
+            if (callerType == null)
+            {
+                return GetLogger(category, logSink);
+            }
+
+            var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
+            if (attribute == null)
+            {
+                return VLoggerFactory.GetLogger(category, logSink);
+            }
+
+            category = attribute.CategoryName;
+
+            return GetLogger(category, logSink);
+        }
+
+        private bool IsNonLoggingFrame(StackFrame frame)
+        {
+            var method = frame?.GetMethod();
+            if (method == null || method.DeclaringType == null)
+            {
+                return false;
+            }
+
+            if (typeof(LoggerRegistry).IsAssignableFrom(method.DeclaringType) || typeof(IVLogger).IsAssignableFrom(method.DeclaringType))
+            {
+                return false;
+            }
+
+            return method.DeclaringType.Namespace == null || !method.DeclaringType.Namespace.StartsWith("System");
         }
     }
 }

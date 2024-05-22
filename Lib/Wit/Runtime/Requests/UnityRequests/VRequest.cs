@@ -55,7 +55,7 @@ namespace Meta.WitAi.Requests
         // Currently transmitting requests
         private static int _requestCount = 0;
 
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Request progress delegate
         public delegate void RequestProgressDelegate(float progress);

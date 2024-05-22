@@ -36,7 +36,7 @@ namespace Meta.WitAi.Data
     [LogCategory(LogCategory.Audio, LogCategory.Input)]
     public class AudioBuffer : MonoBehaviour
     {
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         #region Singleton
         private static bool _isQuitting = false;

@@ -36,7 +36,7 @@ namespace Meta.WitAi
     [LogCategory(LogCategory.Requests)]
     public class WitRequest : VoiceServiceRequest, IAudioUploadHandler
     {
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         #region PARAMETERS
         /// <summary>

@@ -21,9 +21,9 @@ namespace Meta.Conduit
     /// Loads the manifest and resolves its actions so they can be used during dispatching.
     /// </summary>
     [LogCategory(LogCategory.Conduit)]
-    class ManifestLoader : IManifestLoader
+    internal class ManifestLoader : IManifestLoader
     {
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <inheritdoc/>
         public Manifest LoadManifest(string manifestLocalPath)

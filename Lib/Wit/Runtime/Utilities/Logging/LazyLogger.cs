@@ -13,7 +13,7 @@ namespace Meta.Voice.Logging
     /// <summary>
     /// A lazy loaded logger to be used to delay the initialization of the logger until first use.
     /// </summary>
-    public class LazyLogger : Lazy<IVLogger>, IVLogger
+    internal class LazyLogger : Lazy<IVLogger>, IVLogger
     {
         public LazyLogger(Func<IVLogger> initializer):base(initializer)
         {

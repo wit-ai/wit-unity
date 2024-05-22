@@ -37,15 +37,20 @@ namespace Meta.WitAi
         {
             get
             {
-                if (null == _filteredTagList)
+                if (null != _filteredTagList)
                 {
-                    _filteredTagList = new List<string>();
+                    return _filteredTagList;
+                }
+
+                _filteredTagList = new List<string>();
+                ThreadUtility.CallOnMainThread(() =>
+                {
                     var filtered = EditorPrefs.GetString(EDITOR_FILTER_LOG_KEY, null);
                     if (!string.IsNullOrEmpty(filtered))
                     {
                         _filteredTagList = JsonConvert.DeserializeObject<List<string>>(filtered);
                     }
-                }
+                });
 
                 return _filteredTagList;
             }
