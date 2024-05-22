@@ -34,6 +34,9 @@ namespace Meta.Voice.Logging
         NullDeclaringTypeInAssembly,
 
         [Description("Conduit error handlers (those marked with HandleEntityResolutionFailure) need two parameters. The first should be a string and the second should be an exception.")]
-        InvalidErrorHandlerParameter
+        InvalidErrorHandlerParameter,
+
+        [Description("An error happened when attempting to decode a TTS audio stream")]
+        TtsStreamError
     }
 }

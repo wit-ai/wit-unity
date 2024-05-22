@@ -217,9 +217,14 @@ namespace Meta.WitAi.TTS
         /// <summary>
         /// Get clip log data
         /// </summary>
-        private void Log(string logMessage, TTSClipData clipData = null, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
+        private void Log(string logMessage, TTSClipData clipData = null, VLoggerVerbosity logLevel = VLoggerVerbosity.Verbose)
         {
-            _log.Log(_log.CorrelationID, logLevel, logMessage + (clipData == null ? "" : "\n" + clipData));
+            _log.Log(_log.CorrelationID, logLevel, "{0}\n{1}", logMessage, (clipData == null ? "" : clipData));
+        }
+
+        private void LogState(bool fromDisk, string message)
+        {
+            _log.Verbose("{0} {1}", fromDisk ? "Disk" : "Web", message);
         }
         #endregion
 
@@ -599,7 +604,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Preparing);
 
             // Begin load
-            Log($"{(download ? "Download" : "Load")} Clip", clipData);
+            _log.Debug("{0} Clip", download ? "Download" : "Load");
             Events?.OnClipCreated?.Invoke(clipData);
         }
         // Handle begin of disk cache streaming
@@ -615,7 +620,8 @@ namespace Meta.WitAi.TTS
             }
 
             // Callback delegate
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Begin", clipData);
+
+            LogState(fromDisk, "Clip Stream Begin");
             Events?.Stream?.OnStreamBegin?.Invoke(clipData);
         }
         // Handle cancel of disk cache streaming
@@ -634,7 +640,7 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady = null;
 
             // Callback delegate
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Canceled", clipData);
+            LogState(fromDisk, "Clip Stream Canceled");
             Events?.Stream?.OnStreamCancel?.Invoke(clipData);
 
             // Unload clip
@@ -668,7 +674,9 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady = null;
 
             // Stream error
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Error\nError: {error}", clipData, VLoggerVerbosity.Error);
+            _log.Error(KnownErrorCode.TtsStreamError, "{0} Stream Error\nError: {1}\nClip Data: {2}",
+                fromDisk ? "Disk" : "Web",
+                error, clipData);
             Events?.Stream?.OnStreamError?.Invoke(clipData, error);
 
             // Unload clip
@@ -705,7 +713,7 @@ namespace Meta.WitAi.TTS
 
             // Set clip stream state
             SetClipLoadState(clipData, TTSClipLoadState.Loaded);
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Ready", clipData);
+            LogState(fromDisk, "Stream Ready");
 
             // Invoke playback is ready
             clipData.onPlaybackReady?.Invoke(string.Empty);
@@ -724,7 +732,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Log & call event
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Updated", clipData);
+            LogState(fromDisk, "Stream Updated");
             Events?.Stream?.OnStreamClipUpdate?.Invoke(clipData);
         }
         // Stream complete
@@ -737,7 +745,7 @@ namespace Meta.WitAi.TTS
             }
 
             // Log & call event
-            Log($"{(fromDisk ? "Disk" : "Web")} Stream Complete", clipData);
+            LogState(fromDisk, "Stream Complete");
             Events?.Stream?.OnStreamComplete?.Invoke(clipData);
 
             // Web request completion

@@ -254,11 +254,7 @@ namespace Meta.WitAi
             }
             if (warn)
             {
-                var category = GetType().Name;
-                var result = new StringBuilder();
-                result.AppendLine(log);
-                result.AppendLine($"Request Id: {request?.Options?.RequestId}");
-                VLog.E(category, result);
+                _log.Error("{0}\nRequest Id: {1}", request?.Options?.RequestId);
             }
             else
             {

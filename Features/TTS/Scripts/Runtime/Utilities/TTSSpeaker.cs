@@ -68,6 +68,8 @@ namespace Meta.WitAi.TTS.Utilities
         [Tooltip("Custom wit specific voice settings used if the preset is null or empty")]
         [HideInInspector] [SerializeField] public TTSWitVoiceSettings customWitVoiceSettings;
 
+        [SerializeField] private bool verboseLogging;
+
         public string VoiceID
         {
             get => presetVoiceID;
@@ -1599,9 +1601,9 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 VLog.W(LogCategory, log);
             }
-            else
+            else if (verboseLogging)
             {
-                _log.Info(LogCategory, log);
+                _log.Verbose(LogCategory, comment);
             }
         }
         // Initial callback as soon as the audio clip speak request is generated
