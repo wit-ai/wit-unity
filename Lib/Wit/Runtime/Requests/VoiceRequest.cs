@@ -32,7 +32,7 @@ namespace Meta.Voice
         where TEvents : VoiceRequestEvents<TUnityEvent>
         where TResults : IVoiceRequestResults
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         #region SIMULATION
         public static SimulatedResponse simulatedResponse;

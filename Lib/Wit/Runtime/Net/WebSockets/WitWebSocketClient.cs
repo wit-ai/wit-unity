@@ -34,7 +34,7 @@ namespace Meta.Voice.Net.WebSockets
     [LogCategory(LogCategory.Network)]
     public class WitWebSocketClient : IPubSubSubscriber
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         /// <summary>
         /// The settings required to connect, authenticate and drive server/client communication.

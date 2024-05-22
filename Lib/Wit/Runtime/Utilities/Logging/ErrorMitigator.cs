@@ -22,7 +22,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The logger.
         /// </summary>
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         public ErrorMitigator()
         {

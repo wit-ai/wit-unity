@@ -24,7 +24,7 @@ namespace Meta.WitAi.TTS
     [LogCategory(LogCategory.TextToSpeech)]
     public abstract class TTSService : MonoBehaviour
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         #region SETUP
         // Accessor

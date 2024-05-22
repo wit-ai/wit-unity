@@ -26,7 +26,7 @@ namespace Meta.WitAi.TTS.Utilities
     [LogCategory(Voice.Logging.LogCategory.TextToSpeech)]
     public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]

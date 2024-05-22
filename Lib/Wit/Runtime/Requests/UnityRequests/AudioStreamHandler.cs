@@ -34,7 +34,7 @@ namespace Meta.WitAi.Requests
     [LogCategory(LogCategory.Audio, LogCategory.Output)]
     public class AudioStreamHandler : DownloadHandlerScript
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         /// <summary>
         /// Whether both the request is complete and decoding is complete
@@ -265,7 +265,7 @@ namespace Meta.WitAi.Requests
             }
             catch (Exception e)
             {
-                VLog.E(GetType().Name, "RaiseOnComplete Failed", e);
+                _log.Error(e, "RaiseOnComplete Failed");
             }
         }
 

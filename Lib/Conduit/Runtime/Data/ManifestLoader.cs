@@ -23,7 +23,7 @@ namespace Meta.Conduit
     [LogCategory(LogCategory.Conduit)]
     class ManifestLoader : IManifestLoader
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         /// <inheritdoc/>
         public Manifest LoadManifest(string manifestLocalPath)

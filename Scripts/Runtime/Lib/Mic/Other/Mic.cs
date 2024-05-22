@@ -46,7 +46,7 @@ namespace Meta.WitAi.Lib
     [LogCategory(LogCategory.Audio, LogCategory.Input)]
     public class Mic : BaseAudioClipInput
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         /// <summary>
         /// The audio clip obtained from Microphone.Start
