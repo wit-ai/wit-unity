@@ -7,10 +7,12 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Scripting;
 using Meta.Audio.NLayer;
+using Meta.Voice.Logging;
 
 namespace Meta.Voice.Audio.Decoding
 {
@@ -20,19 +22,18 @@ namespace Meta.Voice.Audio.Decoding
     [Preserve]
     internal class AudioDecoderMp3Frame : IMpegFrame
     {
-        /// <summary>
-        /// Whether or not the header has been decoded
-        /// </summary>
-        private bool _headerDecoded = false;
-        private byte[] _headerBytes = new byte[4];
+        // Data buffer to ensure all frame data exists across packets
+        private byte[] _dataBuffer = new byte[192]; // Default mpeg packet size
+        private int _dataOffset = 0;
+        // Total header bytes decoded
+        public bool IsHeaderDecoded => _dataOffset >= HeaderLength;
+        private const int HeaderLength = 4;
 
-        // Array buffers used to reduce allocations
-        private byte[] _frameBuffer = null;
-        private float[] _sampleBuffer = null;
-        private int _frameOffset;
+        // Sample buffer with max samples per mpeg frame
+        private float[] _sampleBuffer = new float[576]; // Default mpeg sample size
 
         // Script that handles decoding frames
-        private MpegFrameDecoder _decoder = new MpegFrameDecoder();
+        private readonly MpegFrameDecoder _decoder = new MpegFrameDecoder();
 
         // Bit offset of current bit stream
         private int _readOffset;
@@ -42,20 +43,33 @@ namespace Meta.Voice.Audio.Decoding
         private int _bitsRead;
 
         // Index of how many frames have been decoded
-        private int _frameIndex;
+        private uint _frameIndex;
+
+        // For logging
+        private IVLogger Log
+        {
+            get
+            {
+                if (_log == null)
+                {
+                    _log = LoggerRegistry.Instance.GetLogger();
+                }
+                return _log;
+            }
+        }
+        private IVLogger _log;
 
         /// <summary>
-        /// Resets all frame specific data
+        /// Clears all frame specific data every frame
         /// </summary>
         private void Clear()
         {
-            _headerDecoded = false;
-            _frameOffset = 0;
+            _dataOffset = 0;
             Reset();
         }
 
         /// <summary>
-        /// Resets all read data
+        /// Resets all read specific data
         /// </summary>
         public void Reset()
         {
@@ -65,77 +79,96 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
-        /// Decodes the frame & returns the number of leftover
+        /// Decodes the frame & returns the int of
         /// </summary>
-        /// <param name="chunkData">A chunk of bytes received from a web service</param>
-        /// <param name="start">The location to begin decoding chunkData</param>
-        /// <param name="length">The total number of bytes to be used within chunkData</param>
-        /// <returns>Returns an array of audio data from 0-1</returns>
-        public float[] Decode(byte[] chunkData, ref int start, int length)
+        /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
+        /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
+        /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
+        /// <param name="decodedSamples">The ordered collection of samples being used for audio decoding</param>
+        /// <returns>Returns the total buffer decoded length</returns>
+        public int Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
         {
+            // Total decoded from the buffer
+            int decodedLength = 0;
+
             // Header still needs decode
-            if (!_headerDecoded)
+            if (!IsHeaderDecoded)
             {
-                // Too small
-                if (length < 4)
+                // Get as much of the required header as possible
+                decodedLength = Mathf.Min(HeaderLength - _dataOffset, bufferLength);
+                Array.Copy(buffer, bufferOffset, _dataBuffer, _dataOffset, decodedLength);
+                _dataOffset += decodedLength;
+                if (!IsHeaderDecoded)
                 {
-                    Debug.LogError($"MP3 Frame {_frameIndex} - Not enough bytes for header decode");
-                    start += length;
-                    return null;
+                    return decodedLength;
                 }
 
-                // Get header bytes
-                for (int i = 0; i < _headerBytes.Length; i++)
-                {
-                    _headerBytes[3 - i] = chunkData[start + i];
-                }
-
-                // Decode header
                 try
                 {
-                    int headerData = BitConverter.ToInt32(_headerBytes, 0);
-                    DecodeHeader(headerData);
-                    _headerDecoded = true;
+                    DecodeHeader();
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"MP3 Frame {_frameIndex} - Header Decode Failed\n\n{e}\n");
-                    start += length;
-                    return null;
+                    Log.Error("MP3 Frame {0} - Header Decode Failed\n\n{1}\n{2}", _frameIndex, e, this);
+                    _frameIndex++;
+                    Clear();
+                    return decodedLength;
                 }
 
-                // Generate buffers on first frame (Assumes all frames have same amount
-                if (_frameBuffer == null || _frameBuffer.Length != FrameLength)
+                // Increase data buffer length if needed
+                if (_dataBuffer.Length < FrameLength)
                 {
-                    _frameBuffer = new byte[FrameLength];
+                    Log.Warning("MP3 Frame {0} - Data Buffer Re-generated\nNew Frame Length: {1}\nOld Frame Length: {2}\n{3}",
+                        _frameIndex, FrameLength, _dataBuffer.Length, this);
+                    _dataBuffer = new byte[FrameLength];
+                }
+                // Increase sample buffer length if needed
+                if (_sampleBuffer.Length < SampleCount)
+                {
+                    Log.Warning("MP3 Frame {0} - Sample Buffer Re-generated\nNew Sample Count: {1}\nOld Sample Count: {2}\n{3}",
+                        _frameIndex, SampleCount, _sampleBuffer.Length, this);
                     _sampleBuffer = new float[SampleCount];
                 }
             }
 
-            // Decode either the remainder of bytes
-            int decodeLength = Mathf.Min(length, FrameLength - _frameOffset);
+            // Copy as much as possible for frame
+            var copyLength = Mathf.Min(FrameLength - _dataOffset, bufferLength - decodedLength);
+            Array.Copy(buffer, bufferOffset + decodedLength, _dataBuffer, _dataOffset, copyLength);
+            _dataOffset += copyLength;
+            decodedLength += copyLength;
 
-            // Copy chunk data into frame buffer
-            Array.Copy(chunkData, start, _frameBuffer, _frameOffset, decodeLength);
-            _frameOffset += decodeLength;
-            start += decodeLength;
-
-            // Ignore until finished
-            if (_frameOffset < FrameLength)
+            // Wait until more data arrives
+            if (_dataOffset < FrameLength)
             {
-                return null;
+                return decodedLength;
             }
 
-            // Decode audio into sample buffer
-            _decoder.DecodeFrame(this, _sampleBuffer, 0);
-            var results = _sampleBuffer;
+            // Decode as many as possible that are provided and within the frame remainder
+            const int sampleOffset = 0;
+            var sampleLength = _decoder.DecodeFrame(this, _sampleBuffer, sampleOffset);
+            AddRange(decodedSamples, _sampleBuffer, sampleOffset, sampleLength);
 
             // Increment frame count & clear previous data
             _frameIndex++;
             Clear();
 
-            // Return results
-            return results;
+            // Return total decoded bytes
+            return decodedLength;
+        }
+
+        private void AddRange(List<float> sampleList, float[] samples, int offset, int length)
+        {
+            // If add range can be used, do so
+            if (offset == 0 && length == samples.Length)
+            {
+                sampleList.AddRange(samples);
+                return;
+            }
+            // Otherwise add one by one
+            for (int i = 0; i < length; i++)
+            {
+                sampleList.Add(samples[offset + i]);
+            }
         }
 
         #region HEADER
@@ -225,8 +258,12 @@ namespace Meta.Voice.Audio.Decoding
         public int SampleCount { get; private set; }
 
         // Decode header data
-        private void DecodeHeader(int headerData)
+        private void DecodeHeader()
         {
+            // Reverse header bytes & encode to int32
+            Array.Reverse(_dataBuffer, 0, HeaderLength);
+            int headerData = BitConverter.ToInt32(_dataBuffer, 0);
+
             // Frame sync (31, 21)
             const int frameSyncMask = 2047; // All 1s
             int frameSync = BitRShift(headerData, 21) & frameSyncMask;
@@ -436,15 +473,11 @@ namespace Meta.Voice.Audio.Decoding
         // Read a specific byte from the buffer
         private int ReadByte(int offset)
         {
-            if (_frameBuffer == null || offset < 0)
+            if (_dataBuffer == null || offset < 0)
             {
                 throw new ArgumentOutOfRangeException();
             }
-            if (offset >= _frameBuffer.Length)
-            {
-                return -1;
-            }
-            return (int)_frameBuffer[offset];
+            return (int)_dataBuffer[offset];
         }
         #endregion
 
@@ -453,15 +486,15 @@ namespace Meta.Voice.Audio.Decoding
         {
             StringBuilder log = new StringBuilder();
             log.AppendLine($"MP3 Frame Data");
-            if (!_headerDecoded)
+            if (!IsHeaderDecoded)
             {
                 log.AppendLine($"\tNot yet decoded");
             }
             else
             {
-                int headerData = BitConverter.ToInt32(_headerBytes, 0);
+                int headerData = BitConverter.ToInt32(_dataBuffer, 0);
                 log.AppendLine($"\tBits: {GetBitString(headerData)}");
-                log.AppendLine($"\tRaw: {BitConverter.ToString(_headerBytes)}");
+                log.AppendLine($"\tRaw: {BitConverter.ToString(_dataBuffer)}");
                 log.AppendLine($"\tVersion: {Version.ToString()}");
                 log.AppendLine($"\tLayer: {Layer.ToString()}");
                 log.AppendLine($"\tChannel Mode: {ChannelMode.ToString()}");

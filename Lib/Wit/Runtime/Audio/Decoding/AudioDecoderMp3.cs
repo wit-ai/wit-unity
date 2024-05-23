@@ -21,6 +21,10 @@ namespace Meta.Voice.Audio.Decoding
         /// Decoder on a frame by frame basis
         /// </summary>
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
+        /// <summary>
+        /// The ordered collection of samples being used for audio decoding
+        /// </summary>
+        private List<float> _decodedSamples = new List<float>();
 
         /// <summary>
         /// Once setup this should display the number of channels expected to be decoded
@@ -50,34 +54,30 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
-        /// A method for returning decoded bytes into audio data
+        /// A method for decoded bytes and returning audio data in the form of a float[]
         /// </summary>
-        /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>
-        /// <param name="chunkStart">The array start index into account when decoding</param>
-        /// <param name="chunkLength">The total number of bytes to be used within chunkData</param>
-        /// <returns>Returns an array of audio data from 0-1</returns>
-        public float[] Decode(byte[] chunkData, int chunkStart, int chunkLength)
+        /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
+        /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
+        /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
+        /// <returns>Returns a float[] of audio data to be used for audio playback</returns>
+        public float[] Decode(byte[] buffer, int bufferOffset, int bufferLength)
         {
             // Resultant float array
-            int start = chunkStart;
-            List<float> results = new List<float>();
+            _decodedSamples.Clear();
 
             // Iterate until chunk is complete
-            while (start < chunkLength)
+            while (bufferLength > 0)
             {
-                // Decode a single frame, return samples if possible & update start position
-                int length = chunkLength - start;
-                float[] samples = _frame.Decode(chunkData, ref start, length);
+                // Decode a single frame and append samples
+                var decodeLength = _frame.Decode(buffer, bufferOffset, bufferLength, _decodedSamples);
 
-                // Add all newly decoded samples
-                if (samples != null)
-                {
-                    results.AddRange(samples);
-                }
+                // Increment buffer values
+                bufferOffset += decodeLength;
+                bufferLength -= decodeLength;
             }
 
             // Return results
-            return results.ToArray();
+            return _decodedSamples.ToArray();
         }
     }
 }
