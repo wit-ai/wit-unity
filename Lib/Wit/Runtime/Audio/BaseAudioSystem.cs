@@ -33,7 +33,7 @@ namespace Meta.Voice.Audio
         /// </summary>
         [Tooltip("Maximum length of audio clip stream in seconds.")]
         [FormerlySerializedAs("ChunkBufferLength")]
-        public float maxLength = WitConstants.ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH;
+        public float maxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH;
 
         /// <summary>
         /// Number of audio clip streams to pool immediately on awake.

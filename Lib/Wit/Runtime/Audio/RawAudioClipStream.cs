@@ -26,7 +26,7 @@ namespace Meta.Voice.Audio
         /// Generates sample buffer on construct
         /// </summary>
         public RawAudioClipStream(float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
-            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH)
+            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
             : this(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, newReadyLength,
                 newMaxLength) {}
 
@@ -35,7 +35,7 @@ namespace Meta.Voice.Audio
         /// </summary>
         public RawAudioClipStream(int newChannels, int newSampleRate,
             float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
-            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_BUFFER_LENGTH)
+            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
             : base(newChannels, newSampleRate, newReadyLength)
         {
             SampleBuffer = new float[Mathf.CeilToInt(newChannels * newSampleRate * newMaxLength)];

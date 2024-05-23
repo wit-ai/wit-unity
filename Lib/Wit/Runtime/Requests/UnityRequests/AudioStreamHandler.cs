@@ -9,6 +9,7 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
@@ -34,12 +35,15 @@ namespace Meta.WitAi.Requests
     [LogCategory(LogCategory.Audio, LogCategory.Output)]
     public class AudioStreamHandler : DownloadHandlerScript
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
         /// <summary>
         /// Whether both the request is complete and decoding is complete
         /// </summary>
         public bool IsComplete { get; private set; }
+
+        /// <summary>
+        /// Whether the request was caused by an error
+        /// </summary>
+        public bool IsError { get; private set; }
 
         /// <summary>
         /// The script being used to decode audio
@@ -56,14 +60,22 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public AudioDecodeCompleteDelegate OnComplete { get; }
 
-        // Whether or not the request is complete
+        // Ring buffer and counters for decoding bytes
+        private readonly byte[] _inRingBuffer = new byte[WitConstants.ENDPOINT_TTS_BUFFER_LENGTH];
+        private int _inRingOffset = 0;
+        private ulong _receivedBytes = 0;
+        private ulong _decodedBytes = 0;
+        private ulong _expectedBytes = 0;
+
+        // If true the request is no longer being performed
         private bool _requestComplete = false;
-        // Queue of decoding chunks
-        private int _receivedChunks = 0;
-        private int _decodedChunks = 0;
-        // Used to track error responses in audio stream
-        private int _errorDecoded;
-        private byte[] _errorBytes;
+        // If true there are no more bytes to be decoded
+        private bool _decodeComplete => _decodedBytes == Max(_receivedBytes, _expectedBytes);
+        // Returns the longer of two ulong
+        private ulong Max(ulong var1, ulong var2) => var1 > var2 ? var1 : var2;
+
+        // For logging
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
 
         /// <summary>
         /// The constructor that generates the decoder and handles routing callbacks
@@ -75,24 +87,17 @@ namespace Meta.WitAi.Requests
             AudioSampleDecodeDelegate onSamplesDecoded,
             AudioDecodeCompleteDelegate onComplete)
         {
-            // Set all methods immediately
+            // Store decoder and callbacks
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
             OnComplete = onComplete;
 
-            // Setup data
-            _requestComplete = false;
-            _receivedChunks = 0;
-            _decodedChunks = 0;
-            _errorBytes = null;
-            _errorDecoded = 0;
-
-            // Begin stream
-            _log.Info($"Init\nDecoder: {AudioDecoder?.GetType().Name ?? "Null"}");
+            // Begin decoding async
+            _ = ThreadUtility.BackgroundAsync(_log, DecodeAsync);
         }
 
         /// <summary>
-        /// If size is provided, generate error buffer size
+        /// If size is provided, determine if end size is too small for an audio file
         /// </summary>
         /// <param name="contentLength"></param>
         [Preserve]
@@ -104,16 +109,16 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
+            // Set expected length
+            _expectedBytes = contentLength;
+
             // Assume error if less than 100ms of audio
-            int minChunkSize = Mathf.CeilToInt(0.1f * AudioDecoder.Channels * AudioDecoder.SampleRate);
-            if (contentLength < (ulong)minChunkSize)
-            {
-                _errorBytes = new byte[contentLength];
-            }
+            ulong minChunkSize = (ulong)Mathf.CeilToInt(AudioDecoder.Channels * AudioDecoder.SampleRate * WitConstants.ENDPOINT_TTS_ERROR_LENGTH / 1000f);
+            IsError = _expectedBytes < minChunkSize;
         }
 
         /// <summary>
-        /// Receive data and send it to be decoded asynchronously
+        /// Receive data and push it to the ring buffer
         /// </summary>
         [Preserve]
         protected override bool ReceiveData(byte[] bufferData, int length)
@@ -123,75 +128,103 @@ namespace Meta.WitAi.Requests
             {
                 return false;
             }
-            // Append error bytes
-            if (_errorBytes != null)
-            {
-                length = Mathf.Min(length, _errorBytes.Length - _errorDecoded);
-                Array.Copy(bufferData, 0, _errorBytes, _errorDecoded, length);
-                _errorDecoded += length;
-                return true;
-            }
 
-            // Handle decode async
-            _ = ReceiveDataAsync(bufferData, length);
+            // Push all data to buffer
+            PushChunk(bufferData, 0, length);
 
             // Success
             return true;
         }
 
-        /// <summary>
-        /// Decodes data asynchronously
-        /// </summary>
-        private async Task ReceiveDataAsync(byte[] bufferData, int length)
+        // Push to the ring buffer
+        private void PushChunk(byte[] chunk, int offset, int length)
         {
-            // Get index & increment
-            int index = _receivedChunks;
-            _receivedChunks++;
-
-            // Create new array & copy received data in
-            var receiveData = new byte[length];
-            Array.Copy(bufferData, receiveData, length);
-
-            // Run on background thread
-            await Task.Yield();
-
-            // If requires sequential decode, wait for previous decodes to complete
-            if (AudioDecoder.RequireSequentialDecode)
+            // Log error if looping prior to decoding
+            var unDecoded = length + (int)(_receivedBytes - _decodedBytes);
+            var maxLength = _inRingBuffer.Length;
+            if (unDecoded > maxLength)
             {
-                await TaskUtility.WaitWhile(() => index > _decodedChunks);
+                _log.Error("Buffer Overflow!\nReceived {0} bytes makes {1} bytes not yet decoded thereby overflowing {2} bytes in the entire ring buffer.",
+                    length, unDecoded, maxLength);
             }
 
-            // Decode samples
-            float[] samples = DecodeData(receiveData);
-
-            // If not already waited, do so now to ensure all previously decoded chunks have completed
-            if (!AudioDecoder.RequireSequentialDecode)
+            // Decode a chunk
+            while (length > 0)
             {
-                await TaskUtility.WaitWhile(() => index > _decodedChunks);
+                // Get largest possible push length
+                var pushLength = Mathf.Min(length, maxLength - _inRingOffset);
+
+                // Push chunk
+                Array.Copy(chunk, offset, _inRingBuffer, _inRingOffset, pushLength);
+
+                // Attempt to iterate through the pushed data chunk
+                offset += pushLength;
+                length -= pushLength;
+                // Loop offset as needed
+                _inRingOffset = (_inRingOffset + pushLength) % maxLength;
+                // Keep track of full received content length
+                _receivedBytes += (ulong)pushLength;
             }
-
-            // Raise sample decoded callback
-            RaiseOnSamplesDecoded(samples);
-
-            // Increment decode count
-            _decodedChunks++;
-
-            // Try to finalize
-            TryToFinalize();
         }
-        // Decode data
-        private float[] DecodeData(byte[] receiveData)
+
+        // Decode ring buffer on background thread
+        private async Task DecodeAsync()
+        {
+            // Decoded variables
+            int decodedOffset = 0;
+            List<float> decodedSamples = new List<float>();
+            int maxLength = _inRingBuffer.Length;
+
+            // Decode while not complete
+            while (!_requestComplete || !_decodeComplete)
+            {
+                // Ignore if nothing to decode
+                if (_decodedBytes == _receivedBytes)
+                {
+                    await Task.Yield();
+                    continue;
+                }
+                // If believed to be an error, consider decoded
+                if (IsError)
+                {
+                    _decodedBytes = _receivedBytes;
+                    continue;
+                }
+
+                // Get largest possible amount to decode
+                var unDecoded = (int)(_receivedBytes - _decodedBytes);
+                var decodeLength = Mathf.Min(unDecoded, maxLength - decodedOffset);
+
+                // Decode chunk
+                var appendedSamples = DecodeChunk(decodedOffset, decodeLength, decodedSamples);
+                decodedOffset = (decodedOffset + decodeLength) % maxLength;
+                _decodedBytes += (ulong)decodeLength;
+
+                // Return samples via callback
+                RaiseOnSamplesDecoded(decodedSamples.ToArray());
+                decodedSamples.Clear();
+            }
+
+            // Try to finalize on main thread
+            _ = ThreadUtility.CallOnMainThread(TryToFinalize);
+        }
+
+        // Decode a specific chunk of received bytes
+        private int DecodeChunk(int offset, int length, List<float> samples)
         {
             try
             {
-                return AudioDecoder.Decode(receiveData, 0, receiveData.Length);
+                var newSamples = AudioDecoder.Decode(_inRingBuffer, offset, length);
+                samples.AddRange(newSamples);
+                return newSamples.Length;
             }
             catch (Exception e)
             {
-                VLog.E(GetType().Name, "Decode Failed", e);
-                return null;
+                _log.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
+                return 0;
             }
         }
+
         // Return data
         private void RaiseOnSamplesDecoded(float[] samples)
         {
@@ -201,7 +234,7 @@ namespace Meta.WitAi.Requests
             }
             catch (Exception e)
             {
-                VLog.E(GetType().Name, "RaiseOnSamplesDecoded Failed", e);
+                _log.Error("RaiseOnSamplesDecoded Exception\n\n{0}\n", e);
             }
         }
 
@@ -209,16 +242,20 @@ namespace Meta.WitAi.Requests
         [Preserve]
         protected override string GetText()
         {
-            return _errorBytes != null ? Encoding.UTF8.GetString(_errorBytes) : string.Empty;
+            if (IsError)
+            {
+                return Encoding.UTF8.GetString(_inRingBuffer, 0, _inRingOffset);
+            }
+            return null;
         }
 
         // Return progress if total samples has been determined
         [Preserve]
         protected override float GetProgress()
         {
-            if (_errorBytes != null && _errorBytes.Length > 0)
+            if (_expectedBytes > 0)
             {
-                return (float) _errorDecoded / _errorBytes.Length;
+                return Mathf.Clamp01(_decodedBytes / _expectedBytes);
             }
             return 0f;
         }
@@ -242,7 +279,7 @@ namespace Meta.WitAi.Requests
         private void TryToFinalize()
         {
             // Already finalized or not yet complete
-            if (IsComplete || !_requestComplete || _receivedChunks != _decodedChunks)
+            if (IsComplete || !_requestComplete || !_decodeComplete)
             {
                 return;
             }
@@ -254,28 +291,29 @@ namespace Meta.WitAi.Requests
             // Dispose
             Dispose();
         }
-        // Return data
+
+        // Return
         private void RaiseOnComplete()
         {
             try
             {
                 var error = GetText();
                 OnComplete?.Invoke(error);
-                _log.Info($"Complete\nError: {error ?? "Null"}");
             }
             catch (Exception e)
             {
-                _log.Error(e, "RaiseOnComplete Failed");
+                _log.Error("RaiseOnComplete Exception\n\n{0}\n", e);
             }
         }
 
-        // Destroy old clip
+        /// <summary>
+        /// Dispose and ensure OnComplete cannot be called if not yet done so
+        /// </summary>
         public void CleanUp()
         {
             // Already complete
             if (IsComplete)
             {
-                _errorBytes = null;
                 return;
             }
 

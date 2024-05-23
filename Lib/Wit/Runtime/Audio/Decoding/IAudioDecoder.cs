@@ -37,12 +37,12 @@ namespace Meta.Voice.Audio.Decoding
         void Setup(int channels, int sampleRate);
 
         /// <summary>
-        /// A method for returning decoded bytes into audio data
+        /// A method for decoded bytes and returning audio data in the form of a float[]
         /// </summary>
-        /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>
-        /// <param name="chunkStart">The array start index into account when decoding</param>
-        /// <param name="chunkLength">The total number of bytes to be used within chunkData</param>
-        /// <returns>Returns an array of audio data from 0-1</returns>
-        float[] Decode(byte[] chunkData, int chunkStart, int chunkLength);
+        /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
+        /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
+        /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
+        /// <returns>Returns a float[] of audio data to be used for audio playback</returns>
+        float[] Decode(byte[] buffer, int bufferOffset, int bufferLength);
     }
 }
