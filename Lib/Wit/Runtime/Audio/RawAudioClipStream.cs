@@ -7,6 +7,8 @@
  */
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Meta.WitAi;
 using UnityEngine;
 
@@ -42,27 +44,32 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Adds an array of samples to the current stream
+        /// Adds a list of samples to the current stream in its entirety.
         /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        /// <param name="offset">The index of samples to begin adding from</param>
-        /// <param name="length">The total number of samples that should be appended</param>
-        public override void AddSamples(float[] samples, int offset, int length)
+        /// <param name="decodedSamples">A buffer of decoded floats that were decoded</param>
+        public override void AddSamples(List<float> decodedSamples)
         {
+            // Get decoded sample data
+            const int offset = 0;
+            var length = decodedSamples.Count();
+
             // Ensure length added does not surpass buffer
-            var localOffset = AddedSamples;
-            var localMax = SampleBuffer.Length - localOffset;
-            var localLength = Mathf.Min(length, localMax);
-            if (localLength <= 0)
+            var sampleOffset = AddedSamples;
+            var sampleLength = Mathf.Min(length, SampleBuffer.Length - sampleOffset);
+            if (sampleLength <= 0)
             {
                 return;
             }
 
             // Copy samples
-            Array.Copy(samples, offset, SampleBuffer, localOffset, localLength);
+            decodedSamples.CopyTo(offset, SampleBuffer, sampleOffset, sampleLength);
 
-            // Update count & callbacks
-            base.AddSamples(samples, offset, localLength);
+            // Update count & callback
+            AddedSamples += sampleLength;
+            OnAddSamples?.Invoke(SampleBuffer, sampleOffset, sampleLength);
+
+            // Update state
+            UpdateState();
         }
     }
 }

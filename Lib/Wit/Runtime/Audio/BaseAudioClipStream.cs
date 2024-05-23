@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
+using System.Linq;
 using Meta.WitAi;
 using UnityEngine;
 
@@ -117,27 +119,10 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Adds an array of samples to the current stream
+        /// Adds a list of samples to the current stream in its entirety.
         /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        public void AddSamples(float[] samples) => AddSamples(samples, 0, samples.Length);
-
-        /// <summary>
-        /// Adds an array of samples to the current stream
-        /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        /// <param name="offset">The index of samples to begin adding from</param>
-        /// <param name="length">The total number of samples that should be appended</param>
-        public virtual void AddSamples(float[] samples, int offset, int length)
-        {
-            if (length <= 0)
-            {
-                return;
-            }
-            AddedSamples += length;
-            OnAddSamples?.Invoke(samples, offset, length);
-            UpdateState();
-        }
+        /// <param name="decodedSamples">A buffer of decoded floats that were decoded</param>
+        public abstract void AddSamples(List<float> decodedSamples);
 
         /// <summary>
         /// Calls on occassions where the total samples are known.  Either prior to a disk load or

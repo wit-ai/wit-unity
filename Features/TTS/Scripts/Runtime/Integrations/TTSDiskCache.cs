@@ -158,7 +158,7 @@ namespace Meta.WitAi.TTS.Integrations
             // Perform request
             request.RequestAudioStream(new Uri(request.CleanUrl(filePath)),
                 clipData.audioType, clipData.useEvents,
-                clipData.clipStream.AddSamples, clipData.Events.AppendJson,
+                clipData.clipStream.AddSamples, clipData.Events.AddEvents,
                 (clipStream, error) =>
                 {
                     if (string.IsNullOrEmpty(error))

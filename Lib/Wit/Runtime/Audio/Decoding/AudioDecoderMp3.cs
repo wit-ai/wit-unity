@@ -21,63 +21,26 @@ namespace Meta.Voice.Audio.Decoding
         /// Decoder on a frame by frame basis
         /// </summary>
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
-        /// <summary>
-        /// The ordered collection of samples being used for audio decoding
-        /// </summary>
-        private List<float> _decodedSamples = new List<float>();
 
         /// <summary>
-        /// Once setup this should display the number of channels expected to be decoded
-        /// </summary>
-        public int Channels { get; private set; }
-
-        /// <summary>
-        /// Once setup this should display the number of samples per second expected
-        /// </summary>
-        public int SampleRate { get; private set; }
-
-        /// <summary>
-        /// Mp3 must be decoded sequentially in since frame data could be
-        /// carried over to the next chunk
-        /// </summary>
-        public bool RequireSequentialDecode => true;
-
-        /// <summary>
-        /// Initial setup of the decoder
-        /// </summary>
-        /// <param name="channels">Total channels of audio data</param>
-        /// <param name="sampleRate">The rate of audio data received</param>
-        public void Setup(int channels, int sampleRate)
-        {
-            Channels = channels;
-            SampleRate = sampleRate;
-        }
-
-        /// <summary>
-        /// A method for decoded bytes and returning audio data in the form of a float[]
+        /// A method for decoded bytes and calling an AddSample delegate for each
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <returns>Returns a float[] of audio data to be used for audio playback</returns>
-        public float[] Decode(byte[] buffer, int bufferOffset, int bufferLength)
+        /// <param name="decodedSamples">List to add all decoded samples to</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
         {
-            // Resultant float array
-            _decodedSamples.Clear();
-
             // Iterate until chunk is complete
             while (bufferLength > 0)
             {
                 // Decode a single frame and append samples
-                var decodeLength = _frame.Decode(buffer, bufferOffset, bufferLength, _decodedSamples);
+                var decodeLength = _frame.Decode(buffer, bufferOffset, bufferLength, decodedSamples);
 
                 // Increment buffer values
                 bufferOffset += decodeLength;
                 bufferLength -= decodeLength;
             }
-
-            // Return results
-            return _decodedSamples.ToArray();
         }
     }
 }

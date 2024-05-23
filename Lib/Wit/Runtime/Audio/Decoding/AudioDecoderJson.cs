@@ -6,49 +6,34 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Meta.Voice.Net.Encoding.Wit;
-using Meta.WitAi;
 using Meta.WitAi.Json;
-using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Meta.Voice.Audio.Decoding
 {
     /// <summary>
     /// A delegate to be called when text data is decoded from an audio stream
     /// </summary>
-    public delegate void AudioJsonDecodeDelegate(WitResponseNode[] jsonNodes);
+    public delegate void AudioJsonDecodeDelegate(List<WitResponseNode> jsonNode);
 
     /// <summary>
     /// A decoder for json data and audio within a single data stream.
     /// Decodes the data into split audio and text streams
     /// </summary>
+    [Preserve]
     public class AudioDecoderJson : IAudioDecoder
     {
         // Used for mixed json/binary data decoding
         private readonly WitChunkConverter _chunkDecoder = new WitChunkConverter();
         // Used for audio decoding
         private readonly IAudioDecoder _audioDecoder;
+
+        // Decoded json
+        private readonly List<WitResponseNode> _decodedJson = new List<WitResponseNode>();
         // The decode callback that is called for every json decode
         private readonly AudioJsonDecodeDelegate _onJsonDecoded;
-
-        /// <summary>
-        /// Once setup this should display the number of channels expected to be decoded
-        /// </summary>
-        public int Channels => _audioDecoder.Channels;
-
-        /// <summary>
-        /// Once setup this should display the number of samples per second expected
-        /// </summary>
-        public int SampleRate => _audioDecoder.SampleRate;
-
-        /// <summary>
-        /// Due to headers, sequential decode is required
-        /// </summary>
-        public bool RequireSequentialDecode => true;
 
         /// <summary>
         /// Constructor that takes in an audio decoder and decode callback delegate
@@ -62,55 +47,43 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
-        /// Performs an audio decode setup with specified channels and sample rate
+        /// A method for decoded bytes and calling an AddSample delegate for each sample
         /// </summary>
-        /// <param name="channels">Channels supported by audio file</param>
-        /// <param name="sampleRate">Sample rate supported by audio file</param>
-        public void Setup(int channels, int sampleRate)
+        /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
+        /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
+        /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
+        /// <param name="decodedSamples">List to add all decoded samples to</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
         {
-            _audioDecoder.Setup(channels, sampleRate);
-        }
-
-        /// <summary>
-        /// Cannot determine total samples via content length alone
-        /// </summary>
-        public int GetTotalSamples(ulong contentLength) => -1;
-
-        /// <summary>
-        /// Performs a decode of full chunk data
-        /// </summary>
-        /// <param name="chunkData">A chunk of bytes to be decoded into audio data</param>
-        /// <param name="chunkStart">The array start index into account when decoding</param>
-        /// <param name="chunkLength">The total number of bytes to be used within chunkData</param>
-        /// <returns>Returns an array of audio data floats that range from 0 to 1</returns>
-        public float[] Decode(byte[] chunkData, int chunkStart, int chunkLength)
-        {
-            // Resultant arrays
-            List<WitResponseNode> jsonNodes = new List<WitResponseNode>();
-            List<float> audioSamples = new List<float>();
-
             // Decode into wit chunks
-            var chunks = _chunkDecoder.Decode(chunkData, chunkStart, chunkLength);
+            var chunks = _chunkDecoder.Decode(buffer, bufferOffset, bufferLength);
             foreach (var chunk in chunks)
             {
-                if (chunk.jsonData != null)
-                {
-                    jsonNodes.Add(chunk.jsonData);
-                }
+                // Decode audio data
                 if (chunk.binaryData != null && chunk.binaryData.Length > 0)
                 {
-                    var samples = _audioDecoder.Decode(chunk.binaryData, 0, chunk.binaryData.Length);
-                    audioSamples.AddRange(samples);
+                    _audioDecoder.Decode(chunk.binaryData, 0, chunk.binaryData.Length, decodedSamples);
+                }
+                // Append json chunks
+                if (chunk.jsonData != null)
+                {
+                    if (chunk.jsonData is WitResponseArray array)
+                    {
+                        _decodedJson.AddRange(array.Childs);
+                    }
+                    else
+                    {
+                        _decodedJson.Add(chunk.jsonData);
+                    }
                 }
             }
 
-            // Return json nodes
-            if (jsonNodes.Count > 0)
+            // Json decoded callback
+            if (_decodedJson.Count > 0)
             {
-                _onJsonDecoded?.Invoke(jsonNodes.ToArray());
+                _onJsonDecoded?.Invoke(_decodedJson);
+                _decodedJson.Clear();
             }
-            // Return audio samples
-            return audioSamples.ToArray();
         }
     }
 }

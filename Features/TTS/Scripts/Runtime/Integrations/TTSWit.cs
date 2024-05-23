@@ -151,8 +151,8 @@ namespace Meta.WitAi.TTS.Integrations
         {
             var request = new WitWebSocketTtsRequest(clipData.textToSpeak, clipData.queryParameters,
                 RequestSettings.audioType, clipData.useEvents, downloadPath);
-            request.OnEventsReceived = clipData.Events.AppendJsonEvents;
             request.OnSamplesReceived = clipData.clipStream.AddSamples;
+            request.OnEventsReceived = clipData.Events.AddEvents;
             request.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
             _webSocketRequests[clipData.clipID] = request;
             return request;
@@ -306,8 +306,8 @@ namespace Meta.WitAi.TTS.Integrations
             clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
 
             // Set all web socket request callbacks
-            wsRequest.OnEventsReceived = clipData.Events.AppendJsonEvents;
             wsRequest.OnSamplesReceived = clipData.clipStream.AddSamples;
+            wsRequest.OnEventsReceived = clipData.Events.AddEvents;
             wsRequest.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
             wsRequest.OnComplete = (r) =>
             {
@@ -341,7 +341,7 @@ namespace Meta.WitAi.TTS.Integrations
             clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
 
             // Perform stream
-            request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AppendJson,
+            request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents,
                 (success, error) =>
                 {
                     if (string.IsNullOrEmpty(error))

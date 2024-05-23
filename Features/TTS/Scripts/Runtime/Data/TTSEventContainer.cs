@@ -7,12 +7,9 @@
  */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Meta.WitAi.Json;
-using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Meta.WitAi.TTS.Data
 {
@@ -51,17 +48,12 @@ namespace Meta.WitAi.TTS.Data
 
         // Current event list, not thread safe due to appending on background thread
         private List<ITTSEvent> _events = new List<ITTSEvent>();
-        // Lock to ensure appending of events does not conflict
-        private ConcurrentQueue<WitResponseArray> _decoding = new ConcurrentQueue<WitResponseArray>();
 
         // Json response keys
         internal const string EVENT_TYPE_KEY = "type";
         internal const string EVENT_WORD_TYPE_KEY = "WORD";
         internal const string EVENT_VISEME_TYPE_KEY = "VISEME";
         internal const string EVENT_PHONEME_TYPE_KEY = "PHONE";
-
-        // Background task for decoding
-        private Thread _decodeThread;
 
         /// <summary>
         /// Getters for a list of events based on keys
@@ -87,78 +79,36 @@ namespace Meta.WitAi.TTS.Data
         }
 
         /// <summary>
-        /// Decodes and appends all events included in multiple json nodes.
+        /// Decodes and appends an event included in multiple json nodes.
         /// </summary>
-        public void AppendJson(WitResponseNode[] jsonNodes)
+        public void AddEvents(List<WitResponseNode> events)
         {
-            if (jsonNodes != null)
-            {
-                foreach (var jsonNode in jsonNodes)
-                {
-                    AppendJsonEvents(jsonNode.AsArray);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Decodes and appends all events included in a single json array.
-        /// </summary>
-        public void AppendJsonEvents(WitResponseArray jsonEventArray)
-        {
-            // Ignore without callback or event json
-            if (jsonEventArray == null || jsonEventArray.Count == 0)
+            // Ignore if null
+            if (events == null || events.Count == 0)
             {
                 return;
             }
 
-            // Add to decode list
-            _decoding.Enqueue(jsonEventArray);
-
-            // Start decode thread
-            if (_decodeThread == null)
+            // Decode events
+            var count = 0;
+            for (int i = 0; i < events.Count; i++)
             {
-                _decodeThread = new Thread(DecodeEventsAsync);
-                _decodeThread.Start();
-            }
-        }
-
-        // Decode text async
-        private void DecodeEventsAsync()
-        {
-            // Get new events list
-            List<ITTSEvent> newEvents = new List<ITTSEvent>();
-
-            // Continue decoding while events exist
-            while (_decoding.TryDequeue(out WitResponseArray jsonEventArray))
-            {
-                int index = 0;
-                foreach (var eventNode in jsonEventArray.Childs)
+                ITTSEvent ttsEvent = DecodeEvent(events[i]);
+                if (ttsEvent != null)
                 {
-                    ITTSEvent ttsEvent = DecodeEvent(eventNode);
-                    if (ttsEvent == null)
-                    {
-                        VLog.W(GetType().Name, $"TTS Audio Event[{index}] Decode Failed\n{eventNode}");
-                    }
-                    else
-                    {
-                        newEvents.Add(ttsEvent);
-                    }
-                    index++;
+                    _events.Add(ttsEvent);
+                    count++;
                 }
             }
 
-            // Clear thread
-            _decodeThread = null;
-
-            // Events added callback
-            if (newEvents.Count > 0)
+            // Stop if none were added
+            if (count == 0)
             {
-                // Add events
-                _events.AddRange(newEvents);
-
-                // Events updated callback
-                ThreadUtility.CallOnMainThread(() => OnEventsUpdated?.Invoke(this));
+                return;
             }
+
+            // Raise events changed on main thread
+            _ = ThreadUtility.CallOnMainThread(RaiseEventsUpdated);
         }
 
         // Decodes event based on switch statement
@@ -183,5 +133,9 @@ namespace Meta.WitAi.TTS.Data
                 return null;
             }
         }
+
+        // Callback for events updated
+        [Preserve]
+        private void RaiseEventsUpdated() => OnEventsUpdated?.Invoke(this);
     }
 }

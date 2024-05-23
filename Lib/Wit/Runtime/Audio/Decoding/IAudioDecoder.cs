@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
+
 namespace Meta.Voice.Audio.Decoding
 {
     /// <summary>
@@ -14,35 +16,12 @@ namespace Meta.Voice.Audio.Decoding
     public interface IAudioDecoder
     {
         /// <summary>
-        /// Once setup this should display the number of channels expected to be decoded
-        /// </summary>
-        int Channels { get; }
-
-        /// <summary>
-        /// Once setup this should display the number of samples per second expected
-        /// </summary>
-        int SampleRate { get; }
-
-        /// <summary>
-        /// A property for whether the decoder can decode chunks on separate threads
-        /// simultaneously or if they need to be performed sequentially.
-        /// </summary>
-        bool RequireSequentialDecode { get; }
-
-        /// <summary>
-        /// Initial setup of the decoder
-        /// </summary>
-        /// <param name="channels">Total channels of audio data</param>
-        /// <param name="sampleRate">The total samples per second expected</param>
-        void Setup(int channels, int sampleRate);
-
-        /// <summary>
-        /// A method for decoded bytes and returning audio data in the form of a float[]
+        /// A method for decoded bytes and calling an AddSample delegate for each
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <returns>Returns a float[] of audio data to be used for audio playback</returns>
-        float[] Decode(byte[] buffer, int bufferOffset, int bufferLength);
+        /// <param name="decodedSamples">List to add all decoded samples to</param>
+        void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples);
     }
 }

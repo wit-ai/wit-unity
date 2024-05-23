@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
+
 namespace Meta.Voice.Audio
 {
     /// <summary>
@@ -101,18 +103,10 @@ namespace Meta.Voice.Audio
         AudioClipStreamDelegate OnStreamUnloaded { get; set; }
 
         /// <summary>
-        /// Adds an array of samples to the current stream in its entirety.
+        /// Adds a list of samples to the current stream in its entirety.
         /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f that will be used in their entirety</param>
-        void AddSamples(float[] samples);
-
-        /// <summary>
-        /// Adds an array of samples to the current stream using a specified offset & length.
-        /// </summary>
-        /// <param name="samples">A list of decoded floats from 0f to 1f</param>
-        /// <param name="offset">The index of samples to begin adding from</param>
-        /// <param name="length">The total number of samples that should be added</param>
-        void AddSamples(float[] samples, int offset, int length);
+        /// <param name="decodedSamples">A buffer of decoded floats that were decoded</param>
+        void AddSamples(List<float> decodedSamples);
 
         /// <summary>
         /// Calls on occasions where the total samples are known.  Either prior to a disk load or

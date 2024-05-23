@@ -21,7 +21,8 @@ namespace Meta.WitAi.Requests
     /// <summary>
     /// A delegate to be called when audio samples are decoded from a web stream
     /// </summary>
-    public delegate void AudioSampleDecodeDelegate(float[] samples);
+    public delegate void AudioSampleDecodeDelegate(List<float> samples);
+
     /// <summary>
     /// A delegate to be called when all audio samples have been decoded
     /// </summary>
@@ -81,7 +82,7 @@ namespace Meta.WitAi.Requests
         /// The constructor that generates the decoder and handles routing callbacks
         /// </summary>
         /// <param name="audioDecoder">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onSamplesDecoded">Called on background thread for every chunk of samples decoded.</param>
         /// <param name="onComplete">Called when all audio samples have been successfully decoded.</param>
         public AudioStreamHandler(IAudioDecoder audioDecoder,
             AudioSampleDecodeDelegate onSamplesDecoded,
@@ -112,9 +113,8 @@ namespace Meta.WitAi.Requests
             // Set expected length
             _expectedBytes = contentLength;
 
-            // Assume error if less than 100ms of audio
-            ulong minChunkSize = (ulong)Mathf.CeilToInt(AudioDecoder.Channels * AudioDecoder.SampleRate * WitConstants.ENDPOINT_TTS_ERROR_LENGTH / 1000f);
-            IsError = _expectedBytes < minChunkSize;
+            // Assume error if less than max error length
+            IsError = _expectedBytes < WitConstants.ENDPOINT_TTS_ERROR_MAX_LENGTH;
         }
 
         /// <summary>
@@ -196,13 +196,16 @@ namespace Meta.WitAi.Requests
                 var decodeLength = Mathf.Min(unDecoded, maxLength - decodedOffset);
 
                 // Decode chunk
-                var appendedSamples = DecodeChunk(decodedOffset, decodeLength, decodedSamples);
+                DecodeChunk(decodedOffset, decodeLength, decodedSamples);
                 decodedOffset = (decodedOffset + decodeLength) % maxLength;
                 _decodedBytes += (ulong)decodeLength;
 
-                // Return samples via callback
-                RaiseOnSamplesDecoded(decodedSamples.ToArray());
-                decodedSamples.Clear();
+                // Callback delegate
+                if (decodedSamples.Count > 0)
+                {
+                    OnSamplesDecoded?.Invoke(decodedSamples);
+                    decodedSamples.Clear();
+                }
             }
 
             // Try to finalize on main thread
@@ -210,31 +213,15 @@ namespace Meta.WitAi.Requests
         }
 
         // Decode a specific chunk of received bytes
-        private int DecodeChunk(int offset, int length, List<float> samples)
+        private void DecodeChunk(int offset, int length, List<float> decodedSamples)
         {
             try
             {
-                var newSamples = AudioDecoder.Decode(_inRingBuffer, offset, length);
-                samples.AddRange(newSamples);
-                return newSamples.Length;
+                AudioDecoder.Decode(_inRingBuffer, offset, length, decodedSamples);
             }
             catch (Exception e)
             {
                 _log.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
-                return 0;
-            }
-        }
-
-        // Return data
-        private void RaiseOnSamplesDecoded(float[] samples)
-        {
-            try
-            {
-                OnSamplesDecoded?.Invoke(samples);
-            }
-            catch (Exception e)
-            {
-                _log.Error("RaiseOnSamplesDecoded Exception\n\n{0}\n", e);
             }
         }
 

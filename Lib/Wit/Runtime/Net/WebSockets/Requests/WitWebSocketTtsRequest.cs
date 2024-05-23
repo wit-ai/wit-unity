@@ -9,11 +9,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Voice.Audio.Decoding;
 using Meta.Voice.Net.Encoding.Wit;
+using Meta.WitAi.Requests;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -47,11 +49,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Callback for sample received from service
         /// </summary>
-        public Action<float[]> OnSamplesReceived;
+        public AudioSampleDecodeDelegate OnSamplesReceived;
         /// <summary>
         /// Callback for event json received from service
         /// </summary>
-        public Action<WitResponseArray> OnEventsReceived;
+        public AudioJsonDecodeDelegate OnEventsReceived;
 
         /// <summary>
         /// The audio decoder used to convert byte[] data to float[] samples
@@ -62,6 +64,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// The file stream to be used for downloading audio files directly
         /// </summary>
         private FileStream _fileStream;
+
+        // Re-used list for decoding
+        private readonly List<float> _audioDecoded = new List<float>();
+        private readonly List<WitResponseNode> _jsonDecoded = new List<WitResponseNode>();
 
         /// <summary>
         /// Generates encoded chunk and applies reference data for all parameters
@@ -76,10 +82,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
             UseEvents = useEvents;
             DownloadPath = downloadPath;
             _audioDecoder = GetAudioDecoder(audioType);
-            if (_audioDecoder != null)
-            {
-                _audioDecoder.Setup(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-            }
         }
 
         /// <summary>
@@ -155,19 +157,24 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 // Append json events
                 var events = jsonData[WitConstants.ENDPOINT_TTS_EVENTS]?.AsArray;
-                if (events != null && events.Count > 0)
+                if (events != null && events.Count > 0 && OnEventsReceived != null)
                 {
-                    OnEventsReceived?.Invoke(events);
+                    _jsonDecoded.AddRange(events.Childs);
+                    if (_jsonDecoded.Count > 0)
+                    {
+                        OnEventsReceived.Invoke(_jsonDecoded);
+                        _jsonDecoded.Clear();
+                    }
                 }
 
                 // Append binary audio data
-                if (binaryData != null && binaryData.Length > 0)
+                if (binaryData != null && binaryData.Length > 0 && OnSamplesReceived != null && _audioDecoder != null)
                 {
-                    // Decode samples & perform callback
-                    if (OnSamplesReceived != null && _audioDecoder != null)
+                    _audioDecoder.Decode(binaryData, 0, binaryData.Length, _audioDecoded);
+                    if (_audioDecoded.Count > 0)
                     {
-                        var samples = _audioDecoder.Decode(binaryData, 0, binaryData.Length);
-                        OnSamplesReceived.Invoke(samples);
+                        OnSamplesReceived.Invoke(_audioDecoded);
+                        _audioDecoded.Clear();
                     }
                 }
 

@@ -84,8 +84,7 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">The ordered collection of samples being used for audio decoding</param>
-        /// <returns>Returns the total buffer decoded length</returns>
+        /// <param name="decodedSamples">List to add all decoded samples to</param>
         public int Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
         {
             // Total decoded from the buffer
@@ -146,7 +145,10 @@ namespace Meta.Voice.Audio.Decoding
             // Decode as many as possible that are provided and within the frame remainder
             const int sampleOffset = 0;
             var sampleLength = _decoder.DecodeFrame(this, _sampleBuffer, sampleOffset);
-            AddRange(decodedSamples, _sampleBuffer, sampleOffset, sampleLength);
+            for (int i = 0; i < sampleLength; i++)
+            {
+                decodedSamples.Add(_sampleBuffer[sampleOffset + i]);
+            }
 
             // Increment frame count & clear previous data
             _frameIndex++;
@@ -154,21 +156,6 @@ namespace Meta.Voice.Audio.Decoding
 
             // Return total decoded bytes
             return decodedLength;
-        }
-
-        private void AddRange(List<float> sampleList, float[] samples, int offset, int length)
-        {
-            // If add range can be used, do so
-            if (offset == 0 && length == samples.Length)
-            {
-                sampleList.AddRange(samples);
-                return;
-            }
-            // Otherwise add one by one
-            for (int i = 0; i < length; i++)
-            {
-                sampleList.Add(samples[offset + i]);
-            }
         }
 
         #region HEADER
