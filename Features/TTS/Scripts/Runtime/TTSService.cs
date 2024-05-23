@@ -24,6 +24,7 @@ namespace Meta.WitAi.TTS
     [LogCategory(LogCategory.TextToSpeech)]
     public abstract class TTSService : MonoBehaviour
     {
+        [SerializeField] private bool verboseLogging;
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         #region SETUP
@@ -226,7 +227,7 @@ namespace Meta.WitAi.TTS
 
         private void LogState(bool fromDisk, string message)
         {
-            _log.Verbose("{0} {1}", fromDisk ? "Disk" : "Web", message);
+            if(verboseLogging) _log.Verbose("{0} {1}", fromDisk ? "Disk" : "Web", message);
         }
         #endregion
 
@@ -594,7 +595,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Preparing);
 
             // Begin load
-            _log.Debug("{0} Clip", download ? "Download" : "Load");
+            if(verboseLogging) _log.Debug("{0} Clip", download ? "Download" : "Load");
             Events?.OnClipCreated?.Invoke(clipData);
         }
         // Handle begin of disk cache streaming
