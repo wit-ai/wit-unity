@@ -353,9 +353,9 @@ namespace Meta.Voice.Net.WebSockets
 
             // Attempt to subscribe to all existing subscriptions
             var topicIds = _subscriptions.Keys.ToArray();
-            foreach (var topicId in topicIds)
+            for (int i = 0; i < topicIds.Length; i++)
             {
-                Subscribe(topicId, true);
+                Subscribe(topicIds[i], true);
             }
         }
 
@@ -463,17 +463,18 @@ namespace Meta.Voice.Net.WebSockets
 
             // Untrack all running requests
             var requestIds = _requests.Keys.ToArray();
-            foreach (var requestId in requestIds)
+            for (int i = 0; i < requestIds.Length; i++)
             {
-                UntrackRequest(requestId);
+                UntrackRequest(requestIds[i]);
             }
             // Clear untracked list
             _untrackedRequests.Clear();
 
             // Sets all currently subscribed topics to 'Subscribing' state
             var topicIds = _subscriptions.Keys.ToArray();
-            foreach (var topicId in topicIds)
+            for (int i = 0; i < topicIds.Length; i++)
             {
+                var topicId = topicIds[i];
                 var subState = GetTopicSubscriptionState(topicId);
                 if (subState == PubSubSubscriptionState.Subscribing
                     || subState == PubSubSubscriptionState.Subscribed
@@ -673,6 +674,8 @@ namespace Meta.Voice.Net.WebSockets
             _ = DecodeChunkAsync(rawBytes);
         }
 
+        private readonly List<WitChunk> _decodedChunks = new List<WitChunk>();
+
         /// <summary>
         /// Performs a decode on a background thread
         /// </summary>
@@ -685,15 +688,16 @@ namespace Meta.Voice.Net.WebSockets
             await Task.Yield();
 
             // Decode one or more chunks
-            WitChunk[] chunks = DecodeChunk(rawBytes, 0, rawBytes.Length);
+            DecodeChunk(rawBytes, 0, rawBytes.Length);
 
             // Perform send
-            if (chunks != null && chunks.Length > 0)
+            if (_decodedChunks.Count > 0)
             {
-                foreach (var chunk in chunks)
+                for (int i = 0; i < _decodedChunks.Count; i++)
                 {
-                    HandleChunk(chunk);
+                    HandleChunk(_decodedChunks[i]);
                 }
+                _decodedChunks.Clear();
             }
 
             // Decrement download count
@@ -703,8 +707,8 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Decodes the provided buffer data into one or more WitChunks
         /// </summary>
-        private WitChunk[] DecodeChunk(byte[] rawBytes, int start, int length) =>
-            _decoder.Decode(rawBytes, start, length);
+        private void DecodeChunk(byte[] rawBytes, int start, int length) =>
+            _decoder.Decode(rawBytes, start, length, _decodedChunks);
 
         /// <summary>
         /// Determines request id and applies chunk to the applicable request for handling

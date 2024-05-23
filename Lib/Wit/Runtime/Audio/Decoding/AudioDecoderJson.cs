@@ -7,9 +7,9 @@
  */
 
 using System.Collections.Generic;
-using Meta.Voice.Net.Encoding.Wit;
-using Meta.WitAi.Json;
 using UnityEngine.Scripting;
+using Meta.WitAi.Json;
+using Meta.Voice.Net.Encoding.Wit;
 
 namespace Meta.Voice.Audio.Decoding
 {
@@ -25,15 +25,18 @@ namespace Meta.Voice.Audio.Decoding
     [Preserve]
     public class AudioDecoderJson : IAudioDecoder
     {
-        // Used for mixed json/binary data decoding
+        // Temp list for wit chunk info and the decoder itself
+        private readonly List<WitChunk> _decodedChunks = new List<WitChunk>();
         private readonly WitChunkConverter _chunkDecoder = new WitChunkConverter();
-        // Used for audio decoding
-        private readonly IAudioDecoder _audioDecoder;
 
-        // Decoded json
+        // Temp list for holding decoded json nodes and callback following json decode
         private readonly List<WitResponseNode> _decodedJson = new List<WitResponseNode>();
-        // The decode callback that is called for every json decode
         private readonly AudioJsonDecodeDelegate _onJsonDecoded;
+
+        // Handles audio decoding
+        private readonly IAudioDecoder _audioDecoder;
+        // Used for DecodeAudio method
+        private List<float> _decodedAudio;
 
         /// <summary>
         /// Constructor that takes in an audio decoder and decode callback delegate
@@ -55,35 +58,41 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="decodedSamples">List to add all decoded samples to</param>
         public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
         {
-            // Decode into wit chunks
-            var chunks = _chunkDecoder.Decode(buffer, bufferOffset, bufferLength);
-            foreach (var chunk in chunks)
+            // Decode audio and json
+            _decodedAudio = decodedSamples;
+            _chunkDecoder.Decode(buffer, bufferOffset, bufferLength, _decodedChunks, DecodeAudio);
+            _decodedAudio = null;
+
+            // If chunks exist, iterate
+            if (_decodedChunks.Count == 0)
             {
-                // Decode audio data
-                if (chunk.binaryData != null && chunk.binaryData.Length > 0)
+                return;
+            }
+            for (int i = 0; i < _decodedChunks.Count; i++)
+            {
+                var jsonNode = _decodedChunks[i].jsonData;
+                if (jsonNode is WitResponseArray jsonArray)
                 {
-                    _audioDecoder.Decode(chunk.binaryData, 0, chunk.binaryData.Length, decodedSamples);
+                    _decodedJson.AddRange(jsonArray.Childs);
                 }
-                // Append json chunks
-                if (chunk.jsonData != null)
+                else if (jsonNode != null)
                 {
-                    if (chunk.jsonData is WitResponseArray array)
-                    {
-                        _decodedJson.AddRange(array.Childs);
-                    }
-                    else
-                    {
-                        _decodedJson.Add(chunk.jsonData);
-                    }
+                    _decodedJson.Add(jsonNode);
                 }
+            }
+            _decodedChunks.Clear();
+            if (_decodedJson.Count == 0)
+            {
+                return;
             }
 
-            // Json decoded callback
-            if (_decodedJson.Count > 0)
-            {
-                _onJsonDecoded?.Invoke(_decodedJson);
-                _decodedJson.Clear();
-            }
+            // Return json
+            _onJsonDecoded?.Invoke(_decodedJson);
+            _decodedJson.Clear();
         }
+
+        // Performs the audio decode using the provided buffer offset and length
+        private void DecodeAudio(byte[] buffer, int bufferOffset, int bufferLength)
+            => _audioDecoder.Decode(buffer, bufferOffset, bufferLength, _decodedAudio);
     }
 }

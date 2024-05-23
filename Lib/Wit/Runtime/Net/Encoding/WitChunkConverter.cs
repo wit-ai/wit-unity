@@ -10,7 +10,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
-using Meta.WitAi;
+using Meta.Voice.Logging;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -20,6 +20,7 @@ namespace Meta.Voice.Net.Encoding.Wit
     /// A static class used to encode and decode wit data chunks
     /// consisting of json mixed with binary data.
     /// </summary>
+    [LogCategory(LogCategory.Encoding)]
     public class WitChunkConverter
     {
         /// <summary>
@@ -27,261 +28,230 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// </summary>
         private static UTF8Encoding _textEncoding = new UTF8Encoding();
 
+        // For logging
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+
         #region DECODING
-        // Header decode data
+        // The current chunk being decoded
+        private WitChunk _currentChunk = new WitChunk();
+
+        // Decoding header
         private int _headerDecoded = 0;
         private byte[] _headerBytes = new byte[HEADER_SIZE];
+        private bool IsHeaderDecoded => _headerDecoded >= HEADER_SIZE;
 
-        // Used to count down as bytes arrive
-        private int _jsonLength;
-        private int _binaryLength;
+        // Decoding json
+        private int _jsonDecoded = 0;
+        private StringBuilder _jsonBuilder = new StringBuilder();
+        private bool IsJsonDecoded => _jsonDecoded >= _currentChunk.header.jsonLength;
 
-        // Current json chunk data
-        private byte[] _jsonData;
-
-        // Current binary chunk handler
-        private byte[] _binaryData;
+        // Decoding binary
+        private ulong _binaryDecoded = 0;
+        private bool IsBinaryDecoded => _binaryDecoded >= _currentChunk.header.binaryLength;
 
         // Text constants
         private const int FLAG_SIZE = 1;
         private const int LONG_SIZE = 8;
         private const int HEADER_SIZE = FLAG_SIZE + (LONG_SIZE * 2); // 1 flag byte + 8 json size bytes + 8 audio size bytes
 
-        /// <summary>
-        /// Decodes an array of chunk data
-        /// </summary>
-        /// <param name="rawData">A chunk of bytes to be split into json data and binary data</param>
-        /// <param name="start">The chunk array start index used for decoding</param>
-        /// <param name="length">The total number of bytes to be used within chunkData</param>
-        public WitChunk[] Decode(byte[] rawData, int start, int length)
-        {
-            var chunks = new List<WitChunk>();
-            int index = start;
-            while (index < length)
-            {
-                int remainder = length - index;
-                var chunk = DecodeChunk(rawData, ref index, remainder);
-                if (chunk != null)
-                {
-                    chunks.Add(chunk);
-                }
-            }
-            return chunks.ToArray();
-        }
-
-        /// <summary>
-        /// Decodes an array of chunk data
-        /// </summary>
-        /// <param name="rawData">A chunk of bytes to be split into json data and binary data</param>
-        /// <param name="start">The chunk array start index used for decoding</param>
-        /// <param name="length">The total number of bytes to be used within chunkData</param>
-        private WitChunk DecodeChunk(byte[] rawData, ref int start, int length)
-        {
-            // Header still needs decode
-            if (_headerDecoded < HEADER_SIZE)
-            {
-                // Decode as much of header as possible
-                int decodeLength = Mathf.Min(length, HEADER_SIZE - _headerDecoded);
-                Array.Copy(rawData, start, _headerBytes, _headerDecoded, decodeLength);
-                start += decodeLength;
-                length -= decodeLength;
-                _headerDecoded += decodeLength;
-
-                // Needs more
-                if (_headerDecoded < HEADER_SIZE)
-                {
-                    return null;
-                }
-
-                // Decode all header data
-                DecodeHeader(_headerBytes, out var jsonLength, out var binaryLength, out var invalid);
-                _jsonLength = (int)jsonLength;
-                _binaryLength = (int)binaryLength;
-
-                // Invalid scenario, log a warning
-                if (invalid)
-                {
-                    start -= decodeLength;
-                    length += decodeLength;
-                    _jsonLength = 0;
-                    _binaryLength = length;
-                    VLog.W(GetType().Name, $"Chunk Header Decode Failed: Header is invalid - assuming all binary data\n{GetHeaderLog(_headerBytes, _jsonLength, _binaryLength, true)}\n");
-                }
-                // Uncomment for verbose per chunk debugging
-                //else VLog.I(GetType().Name, $"Chunk Header Decode Success\n{GetHeaderLog(_headerBytes, _jsonLength, _binaryLength, false)}\n");
-
-                // Generate json data array
-                if (_jsonLength > 0)
-                {
-                    _jsonData = new byte[_jsonLength];
-                }
-                // Generate binary data array
-                if (_binaryLength > 0)
-                {
-                    _binaryData = new byte[_binaryLength];
-                }
-            }
-
-            // Copy json chunk if into json byte[] if applicable
-            CopyRawChunk(rawData, ref start, ref length, _jsonData, ref _jsonLength);
-
-            // Copy binary chunk if into binary byte[] if applicable
-            CopyRawChunk(rawData, ref start, ref length, _binaryData, ref _binaryLength);
-
-            // If audio and text is complete, reset chunk
-            if (_jsonLength == 0 && _binaryLength == 0)
-            {
-                // Get data chunk
-                WitChunk chunkData = new WitChunk();
-                if (_jsonData != null)
-                {
-                    // Decode string
-                    chunkData.jsonString = DecodeString(_jsonData, 0, _jsonData.Length);
-                    // Deserialize string into a token
-                    chunkData.jsonData = JsonConvert.DeserializeToken(chunkData.jsonString);
-                }
-                // Apply binary data
-                chunkData.binaryData = _binaryData;
-                // Reset and return finalized chunk
-                ResetChunk();
-                return chunkData;
-            }
-
-            // Awaiting more data
-            return null;
-        }
-
         // Resets all stored chunk data
         private void ResetChunk()
         {
             _headerDecoded = 0;
-            _jsonLength = 0;
-            _binaryLength = 0;
-            _jsonData = null;
-            _binaryData = null;
+            _jsonDecoded = 0;
+            _jsonBuilder.Clear();
+            _binaryDecoded = 0;
+            _currentChunk.jsonString = null;
+            _currentChunk.jsonData = null;
+            _currentChunk.binaryData = null;
         }
 
         /// <summary>
-        /// Decodes header flags, json length, binary length and determines checks the following invalid scenarios
-        /// 1. Unhandled flags enabled
-        /// 2. Invalid json byte[] length
-        /// 3. Json length exists but hasJson flag is disabled
-        /// 4. Invalid binary byte[] length
-        /// 5. Binary length exists but hasBinary flag is disabled
+        /// Decodes a buffer of raw bytes and appends chunks
         /// </summary>
-        /// <param name="bytes">Bytes to be used for the header decode</param>
-        /// <param name="jsonLength">The returned json length in bytes</param>
-        /// <param name="binaryLength">The returned binary length in bytes</param>
-        /// <param name="invalid">Whether or not</param>
-        private static void DecodeHeader(byte[] bytes, out long jsonLength, out long binaryLength, out bool invalid)
+        /// <param name="buffer">A chunk of bytes to be split into json data and binary data</param>
+        /// <param name="bufferOffset">The chunk array start index used for decoding</param>
+        /// <param name="bufferLength">The total number of bytes to be used within chunkData</param>
+        /// <param name="decodedChunks">A list that newly decoded chunks will be added to</param>
+        /// <param name="customBinaryDecoder">If exists, binary data will be sent back here instead of the WitChunk</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<WitChunk> decodedChunks,
+            Action<byte[], int, int> customBinaryDecoder = null)
         {
-            // Get first byte
-            var flags = bytes[0];
-            // Valid if bit 0 = 1
-            bool hasBinary = (flags & 1) != 0;
-            // Valid if bit 1 = 1
-            bool hasJson = (SafeShift(flags, 1) & 1) != 0;
-            // Invalid if any bits 2-8 != 0
-            invalid = (SafeShift(flags, 2) & 0x3F) != 0;
-
-            // Get json length and determine if invalid
-            jsonLength = BitConverter.ToInt64(bytes, FLAG_SIZE);
-            invalid |= jsonLength < 0 || jsonLength >= int.MaxValue;
-            invalid |= jsonLength > 0 && !hasJson;
-
-            // Get binary length and determine if invalid
-            binaryLength = BitConverter.ToInt64(bytes, FLAG_SIZE + LONG_SIZE);
-            invalid |= binaryLength < 0 || binaryLength >= int.MaxValue;
-            invalid |= binaryLength > 0 && !hasBinary;
-        }
-
-        /// <summary>
-        /// Shifts flag bits a specified amount of indices towards the start of the byte.
-        /// </summary>
-        /// <param name="flags">The byte to be shifted</param>
-        /// <param name="index">Total indices to shift</param>
-        private static int SafeShift(byte flags, int index)
-            => BitConverter.IsLittleEndian ? flags >> index : flags << index;
-
-        /// <summary>
-        /// Returns a log string for a byte[] by returning the individual bytes for each section.
-        /// Determines specific settings before returning the log.
-        /// </summary>
-        public static string GetHeaderLog(byte[] bytes)
-        {
-            DecodeHeader(bytes, out var jsonLength, out var binaryLength, out var invalid);
-            return GetHeaderLog(bytes, jsonLength, binaryLength, invalid);
-        }
-
-        /// <summary>
-        /// Returns a log string for a byte[] by returning the individual bytes for each section.
-        /// </summary>
-        public static string GetHeaderLog(byte[] bytes, long jsonLength, long binaryLength, bool invalid)
-        {
-            string log = $"Flags: {bytes[0]} ({GetBitString(bytes, 0, FLAG_SIZE)})";
-            log += $"\nInvalid: {invalid}";
-            log += $"\nJson Length: {jsonLength} ({GetByteString(bytes, FLAG_SIZE, LONG_SIZE)})";
-            log += $"\nBinary Length: {binaryLength} ({GetByteString(bytes, FLAG_SIZE + LONG_SIZE, LONG_SIZE)})";
-            log += $"\nFull Header:\n{GetByteString(bytes, 0, HEADER_SIZE)}";
-            return log;
-        }
-
-        /// <summary>
-        /// Returns a string of all bytes within an array
-        /// </summary>
-        public static string GetByteString(byte[] bytes, int start, int length, bool reverse = false)
-        {
-            string results = BitConverter.ToString(bytes, start, length);
-            if (reverse)
+            while (bufferLength > 0)
             {
-                return new string(results.Reverse().ToArray());
+                // Decode a single chunk
+                var decodeLength = DecodeChunk(buffer, bufferOffset, bufferLength, decodedChunks, customBinaryDecoder);
+
+                // Increment counts
+                bufferOffset += decodeLength;
+                bufferLength -= decodeLength;
             }
-            return results;
         }
 
         /// <summary>
-        /// Returns a string of the individual bits within a byte array
+        /// Decodes an array of chunk data
         /// </summary>
-        public static string GetBitString(byte[] bytes, int start, int length, bool reverse = false)
+        private int DecodeChunk(byte[] buffer, int bufferOffset, int bufferLength, List<WitChunk> decodedChunks,
+            Action<byte[], int, int> customBinaryDecoder)
         {
-            StringBuilder sb = new StringBuilder();
-            for (int by = start; by < length; by++)
+            // Total decoded from the buffer
+            int decodeLength = 0;
+
+            // Header still needs decode
+            if (!IsHeaderDecoded)
             {
-                for (int bi = 0; bi < 8; bi++)
+                // Decode header if possible
+                decodeLength = DecodeHeader(buffer, bufferOffset, bufferLength);
+                if (!IsHeaderDecoded)
                 {
-                    sb.Append(SafeShift(bytes[by], bi) & 1);
+                    return decodeLength;
                 }
-                if (by != length - 1)
+                bufferOffset += decodeLength;
+                bufferLength -= decodeLength;
+
+                // Header decode failed
+                if (_currentChunk.header.invalid)
                 {
-                    sb.Append(" ");
+                    _log.Error("WitChunk Header Decode Failed: Header is invalid\nHeader: {0}",
+                        GetByteString(_headerBytes, 0, HEADER_SIZE));
+                    ResetChunk();
+                    return decodeLength;
+                }
+
+                // Generate binary data if not handled directly
+                if (customBinaryDecoder == null)
+                {
+                    var curLength = _currentChunk.binaryData?.Length ?? 0;
+                    var desLength = (int)_currentChunk.header.binaryLength;
+                    if (curLength != desLength)
+                    {
+                        _currentChunk.binaryData = new byte[desLength];
+                    }
                 }
             }
-            if (reverse)
+
+            // Decode json if possible
+            if (!IsJsonDecoded)
             {
-                return new string(sb.ToString().Reverse().ToArray());
+                var jsonLength = DecodeJson(buffer, bufferOffset, bufferLength);
+                decodeLength += jsonLength;
+                bufferOffset += jsonLength;
+                bufferLength -= jsonLength;
+
+                // If custom binary handler exists, return json asap
+                if (IsJsonDecoded && customBinaryDecoder != null)
+                {
+                    decodedChunks.Add(_currentChunk);
+                }
             }
-            return sb.ToString();
+
+            // Decode binary if possible
+            if (!IsBinaryDecoded)
+            {
+                var binaryLength = DecodeBinary(buffer, bufferOffset, bufferLength, customBinaryDecoder);
+                decodeLength += binaryLength;
+            }
+
+            // If audio and text is complete, add and reset chunk
+            if (IsJsonDecoded && IsBinaryDecoded)
+            {
+                // If no custom binary handler, return once complete
+                if (customBinaryDecoder == null)
+                {
+                    decodedChunks.Add(_currentChunk);
+                }
+                // Reset chunk
+                ResetChunk();
+            }
+
+            // Return decoded length
+            return decodeLength;
         }
 
         /// <summary>
-        /// Copies as much of a provided chunk as possible using the provided settings
+        /// Decodes as much of header as possible and generates header when complete
         /// </summary>
-        private void CopyRawChunk(byte[] rawData, ref int start, ref int length, byte[] chunk, ref int remainder)
+        private int DecodeHeader(byte[] buffer, int bufferOffset, int bufferLength)
         {
-            // Decode either the remainder of bytes or the full raw data length
-            int decodeLength = Mathf.Min(remainder, length);
+            // Decode as much of header as possible
+            var offset = _headerDecoded;
+            var remainder = HEADER_SIZE - _headerDecoded;
+            int decodeLength = Mathf.Min(bufferLength, remainder);
+            Array.Copy(buffer, bufferOffset, _headerBytes, offset, decodeLength);
+            _headerDecoded += decodeLength;
+
+            // If fully decoded, return the header
+            if (IsHeaderDecoded)
+            {
+                _currentChunk.header = GetHeader(_headerBytes, 0);
+            }
+
+            // Return decoded length
+            return decodeLength;
+        }
+
+        /// <summary>
+        /// Decodes as much of json as possible and decodes json when complete
+        /// </summary>
+        private int DecodeJson(byte[] buffer, int bufferOffset, int bufferLength)
+        {
+            // Nothing to decode
+            var offset = _jsonDecoded;
+            var remainder = _currentChunk.header.jsonLength - offset;
+            int decodeLength = Mathf.Min(bufferLength, remainder);
             if (decodeLength <= 0)
             {
-                return;
+                return 0;
             }
 
-            // Copy
-            Array.Copy(rawData, start, chunk, chunk.Length - remainder, decodeLength);
+            // Append decoded json
+            var decodedStringChunk = DecodeString(buffer, bufferOffset, decodeLength);
+            _jsonBuilder.Append(decodedStringChunk);
+            _jsonDecoded += decodeLength;
 
-            // Subtract decode length
-            start += decodeLength;
-            length -= decodeLength;
-            remainder -= decodeLength;
+            // Fully decoded
+            if (IsJsonDecoded)
+            {
+                var jsonString = _jsonBuilder.ToString();
+                _currentChunk.jsonString = jsonString;
+                _currentChunk.jsonData = JsonConvert.DeserializeToken(jsonString);
+            }
+
+            // Return decode length
+            return decodeLength;
+        }
+
+        /// <summary>
+        /// Decodes as much binary data as possible and decodes json when complete
+        /// </summary>
+        private int DecodeBinary(byte[] buffer, int bufferOffset, int bufferLength,
+            Action<byte[], int, int> customBinaryDecoder)
+        {
+            // Nothing to decode
+            var offset = _binaryDecoded;
+            var remainder = _currentChunk.header.binaryLength - offset;
+            int decodeLength = Mathf.Min(bufferLength, (int)remainder);
+            if (decodeLength <= 0)
+            {
+                return 0;
+            }
+
+            // If custom binary decoder exists perform directly
+            if (customBinaryDecoder != null)
+            {
+                customBinaryDecoder.Invoke(buffer, bufferOffset, decodeLength);
+            }
+            // Copy into generated array
+            else if (_currentChunk.binaryData != null)
+            {
+                Array.Copy(buffer, bufferOffset, _currentChunk.binaryData, (int)_binaryDecoded, decodeLength);
+            }
+
+            // Increment binary decode count
+            _binaryDecoded += (ulong)decodeLength;
+
+            // Return decode length
+            return decodeLength;
         }
 
         /// <summary>
@@ -389,5 +359,68 @@ namespace Meta.Voice.Net.Encoding.Wit
             offset += source.Length;
         }
         #endregion ENCODING
+
+        #region HEADER
+        /// <summary>
+        /// Decodes header flags, json length, binary length and determines checks the following invalid scenarios
+        /// 1. Unhandled flags enabled
+        /// 2. Invalid json byte[] length
+        /// 3. Json length exists but hasJson flag is disabled
+        /// 4. Invalid binary byte[] length
+        /// 5. Binary length exists but hasBinary flag is disabled
+        /// </summary>
+        /// <param name="bytes">Bytes to be used for the header decode</param>
+        /// <param name="offset">The offset of the bytes provided</param>
+        private static WitChunkHeader GetHeader(byte[] bytes, int offset)
+        {
+            // Generate header
+            WitChunkHeader header = new WitChunkHeader();
+
+            // Get first byte
+            var flags = bytes[offset];
+            // Valid if bit 0 = 1
+            bool hasBinary = (flags & 1) != 0;
+            // Valid if bit 1 = 1
+            bool hasJson = (SafeShift(flags, 1) & 1) != 0;
+            // Invalid if any bits 2-8 != 0
+            header.invalid = (SafeShift(flags, 2) & 0x3F) != 0;
+
+            // Get json length and determine if invalid
+            var jsonLength = BitConverter.ToInt64(bytes, offset + FLAG_SIZE);
+            header.jsonLength = (int)jsonLength; // Cast to int since json string cannot be long
+            header.invalid |= jsonLength < 0 && hasJson;
+            header.invalid |= jsonLength > 0 && !hasJson;
+
+            // Get binary length and determine if invalid
+            var binaryLength = BitConverter.ToInt64(bytes, offset + FLAG_SIZE + LONG_SIZE);
+            header.binaryLength = (ulong)binaryLength; // Cast to ulong binary data length cannot be negative
+            header.invalid |= binaryLength < 0 && hasBinary;
+            header.invalid |= binaryLength > 0 && !hasBinary;
+
+            // Return new header
+            return header;
+        }
+
+        /// <summary>
+        /// Shifts flag bits a specified amount of indices towards the start of the byte.
+        /// </summary>
+        /// <param name="flags">The byte to be shifted</param>
+        /// <param name="index">Total indices to shift</param>
+        private static int SafeShift(byte flags, int index)
+            => BitConverter.IsLittleEndian ? flags >> index : flags << index;
+
+        /// <summary>
+        /// Returns a string of all bytes within an array
+        /// </summary>
+        private static string GetByteString(byte[] bytes, int start, int length, bool reverse = false)
+        {
+            string results = BitConverter.ToString(bytes, start, length);
+            if (reverse)
+            {
+                return new string(results.Reverse().ToArray());
+            }
+            return results;
+        }
+        #endregion HEADER
     }
 }

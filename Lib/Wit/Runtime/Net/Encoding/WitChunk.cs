@@ -13,10 +13,15 @@ namespace Meta.Voice.Net.Encoding.Wit
     /// <summary>
     /// A class used to store json data & binary data
     /// </summary>
-    public class WitChunk
+    public struct WitChunk
     {
         /// <summary>
-        /// Encoded json string
+        /// The header to be used for the chunk
+        /// </summary>
+        public WitChunkHeader header;
+
+        /// <summary>
+        /// Json string from prior to json data decode
         /// </summary>
         public string jsonString;
 
@@ -29,13 +34,5 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// Binary data ready for ingestion
         /// </summary>
         public byte[] binaryData;
-
-        /// <summary>
-        /// ToString override for additional info on json data & binary data
-        /// </summary>
-        public override string ToString()
-        {
-            return $"{GetType().Name}\n\tJson Keys: {jsonData?.Count.ToString() ?? "Null"}\n\tBinary Data: {binaryData?.Length.ToString() ?? "Null"}";
-        }
     }
 }

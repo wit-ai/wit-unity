@@ -31,6 +31,7 @@ namespace Meta.Voice.Logging
         SpeechService,
         Network,
         Input,
-        Output
+        Output,
+        Encoding
     }
 }
