@@ -7,6 +7,7 @@
  */
 
 using System.Collections;
+using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using Meta.WitAi.Json;
 using Meta.WitAi.TTS.Data;
@@ -66,6 +67,13 @@ namespace Meta.WitAi.TTS.Interfaces
         IEnumerator SpeakAsync(string textToSpeak);
 
         /// <summary>
+        /// Load a tts clip using the specified text and then waits for the file to load & play.
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        Task SpeakTask(string textToSpeak);
+
+        /// <summary>
         /// Load a tts clip using the specified response node & playback events
         /// Cancels all previous clips when loaded & then plays.
         /// </summary>
@@ -86,9 +94,25 @@ namespace Meta.WitAi.TTS.Interfaces
         /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
         /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        Task SpeakQueuedTask(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
+        /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
         /// <param name="textsToSpeak">Multiple texts to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         IEnumerator SpeakQueuedAsync(string[] textsToSpeak, TTSSpeakerClipEvents playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases & playback events and then waits for the files to load &
+        /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="textsToSpeak">Multiple texts to be spoken</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        Task SpeakQueuedTask(string[] textsToSpeak, TTSSpeakerClipEvents playbackEvents);
 
         /// <summary>
         /// Stops loading & playback immediately

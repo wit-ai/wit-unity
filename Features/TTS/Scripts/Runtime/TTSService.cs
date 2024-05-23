@@ -123,6 +123,7 @@ namespace Meta.WitAi.TTS
         // Log if invalid
         protected virtual void OnEnable()
         {
+            _isActive = true;
             string validError = GetInvalidError();
             if (!string.IsNullOrEmpty(validError))
             {
@@ -132,6 +133,7 @@ namespace Meta.WitAi.TTS
         // Remove delegates
         protected virtual void OnDisable()
         {
+            _isActive = false;
             RemoveDelegates();
         }
         // Add delegates
@@ -232,6 +234,7 @@ namespace Meta.WitAi.TTS
         // Frequently used keys
         private const string CLIP_ID_DELIM = "|";
         private readonly SHA256 CLIP_HASH = SHA256.Create();
+        private bool _isActive;
 
         /// <summary>
         /// Gets the text to be spoken after applying all relevant voice settings.
@@ -428,7 +431,7 @@ namespace Meta.WitAi.TTS
                 onStreamReady?.Invoke(clipData, "No clip provided");
                 return null;
             }
-            if (!gameObject.activeSelf)
+            if (!_isActive)
             {
                 Log("Cannot load clip while inactive", null, VLoggerVerbosity.Error);
                 onStreamReady?.Invoke(clipData, "TTSService inactive");
@@ -449,11 +452,11 @@ namespace Meta.WitAi.TTS
                     // Call after return
                     else
                     {
-                        StartCoroutine(CallAfterAMoment(() =>
+                        ThreadUtility.CallOnMainThread(() =>
                         {
                             onStreamReady(clipData,
                                 clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
-                        }));
+                        });
                     }
                 }
 
@@ -477,8 +480,8 @@ namespace Meta.WitAi.TTS
                         // Call after return
                         else
                         {
-                            StartCoroutine(CallAfterAMoment(() => onStreamReady(clipData,
-                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error")));
+                            ThreadUtility.CallOnMainThread(() => onStreamReady(clipData,
+                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error"));
                         }
                     }
 
@@ -496,7 +499,7 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady += (error) => onStreamReady?.Invoke(clipData, error);
 
             // Wait a moment and load
-            StartCoroutine(CallAfterAMoment(() =>
+            ThreadUtility.CallOnMainThread(() =>
             {
                 // If should cache to disk, attempt to do so
                 if (ShouldCacheToDisk(clipData))
@@ -508,7 +511,7 @@ namespace Meta.WitAi.TTS
                 {
                     PerformStreamFromWeb(clipData);
                 }
-            }));
+            });
 
             // Return data
             return clipData;
@@ -573,19 +576,6 @@ namespace Meta.WitAi.TTS
 
             // Stream from Cache
             DiskCacheHandler?.StreamFromDiskCache(clipData, RaiseRequestProgressUpdated);
-        }
-        // Wait a moment
-        private IEnumerator CallAfterAMoment(Action call)
-        {
-            if (Application.isPlaying && !Application.isBatchMode)
-            {
-                yield return new WaitForEndOfFrame();
-            }
-            else
-            {
-                yield return null;
-            }
-            call();
         }
 
         // On progress update, apply to clip

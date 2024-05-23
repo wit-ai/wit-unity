@@ -65,37 +65,14 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Generates a runtime cache if one is not found
         /// </summary>
-        public override ITTSRuntimeCacheHandler RuntimeCacheHandler
-        {
-            get
-            {
-                if (_runtimeCache == null)
-                {
-                    _runtimeCache = gameObject.GetComponent<ITTSRuntimeCacheHandler>();
-                    if (_runtimeCache == null)
-                    {
-                        _runtimeCache = gameObject.AddComponent<TTSRuntimeLRUCache>();
-                    }
-                }
-                return _runtimeCache;
-            }
-        }
+        public override ITTSRuntimeCacheHandler RuntimeCacheHandler => _runtimeCache;
         private ITTSRuntimeCacheHandler _runtimeCache;
 
         /// <summary>
         /// Uses the local disk cache if found
         /// </summary>
-        public override ITTSDiskCacheHandler DiskCacheHandler
-        {
-            get
-            {
-                if (_diskCache == null)
-                {
-                    _diskCache = gameObject.GetComponent<ITTSDiskCacheHandler>();
-                }
-                return _diskCache;
-            }
-        }
+        public override ITTSDiskCacheHandler DiskCacheHandler => _diskCache;
+
         private ITTSDiskCacheHandler _diskCache;
 
         // Web request events
@@ -173,6 +150,15 @@ namespace Meta.WitAi.TTS.Integrations
         protected override void OnEnable()
         {
             base.OnEnable();
+            if (_runtimeCache == null)
+            {
+                _runtimeCache = gameObject.GetComponent<ITTSRuntimeCacheHandler>();
+                if (_runtimeCache == null)
+                {
+                    _runtimeCache = gameObject.AddComponent<TTSRuntimeLRUCache>();
+                }
+            }
+            if(null == _diskCache) _diskCache = gameObject.GetComponent<ITTSDiskCacheHandler>();
             RefreshWebSocketSettings();
         }
 
