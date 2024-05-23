@@ -9,6 +9,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
@@ -30,6 +31,7 @@ namespace Meta.Voice
         where TEvents : NLPRequestEvents<TUnityEvent, TResponseData>
         where TResults : INLPRequestResults<TResponseData>
     {
+        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
         /// <summary>
         /// Getter for request input type
         /// </summary>
@@ -44,8 +46,6 @@ namespace Meta.Voice
         private bool _initialized = false;
         // Ensure final is not called multiple times
         private bool _finalized = false;
-        // Decode thread
-        private Thread _decodeThread;
         // Async delay
         private const int DECODE_DELAY_MS = 5;
 
@@ -61,8 +61,7 @@ namespace Meta.Voice
             Options.InputType = inputType;
             _initialized = true;
             _finalized = false;
-            _decodeThread = new Thread(DecodeAsync);
-            _decodeThread.Start();
+            _ = ThreadUtility.BackgroundAsync(_log, DecodeAsync);
 
             // Finalize
             SetState(VoiceRequestState.Initialized);
@@ -191,7 +190,7 @@ namespace Meta.Voice
         /// <summary>
         /// Decodes asynchronously and then passes into appropriate locations
         /// </summary>
-        private void DecodeAsync()
+        private async Task DecodeAsync()
         {
             while (IsActive)
             {
@@ -220,11 +219,10 @@ namespace Meta.Voice
                 // Wait 10ms for another response
                 else
                 {
-                    Thread.Sleep(DECODE_DELAY_MS);
+                    await Task.Delay(DECODE_DELAY_MS);
                 }
             }
             _rawResponses.Clear();
-            _decodeThread = null;
         }
 
         /// <summary>
