@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
 using UnityEngine;
@@ -51,6 +52,7 @@ namespace Meta.WitAi.TTS.Integrations
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider, IWitConfigurationSetter
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
         #region TTSService
         /// <summary>
         /// The voice provider used for preset voice settings.  Uses TTSWit with TTSWitVoiceSettings
@@ -327,7 +329,7 @@ namespace Meta.WitAi.TTS.Integrations
             clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
 
             // Perform stream
-            request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents,
+            _ = ThreadUtility.BackgroundAsync(_log, () => request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents,
                 (success, error) =>
                 {
                     if (string.IsNullOrEmpty(error))
@@ -338,7 +340,7 @@ namespace Meta.WitAi.TTS.Integrations
                     {
                         RaiseWebStreamCompletionCallbacks(clipData, startTime, error);
                     }
-                });
+                }));
         }
 
         /// <summary>

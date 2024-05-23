@@ -135,7 +135,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
         /// <param name="onComplete">Called when the audio request has completed</param>
         /// <returns>An error string if applicable</returns>
-        public string RequestStream(AudioSampleDecodeDelegate onSamplesDecoded,
+        public async Task<string> RequestStream(AudioSampleDecodeDelegate onSamplesDecoded,
             AudioJsonDecodeDelegate onJsonDecoded,
             RequestCompleteDelegate<bool> onComplete)
         {
@@ -156,15 +156,20 @@ namespace Meta.WitAi.Requests
                 return errors;
             }
 
-            // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(bytes);
-
-            // Perform an audio stream request
-            if (!RequestAudioStream(unityRequest, WitConstants.GetUnityAudioType(FileType), UseEvents, onSamplesDecoded, onJsonDecoded, onComplete))
+            var result = await ThreadUtility.CallOnMainThread<string>(() =>
             {
-                return "Failed to start audio stream";
-            }
-            return string.Empty;
+                // Get tts unity request
+                UnityWebRequest unityRequest = GetUnityRequest(bytes);
+
+                // Perform an audio stream request
+                if (!RequestAudioStream(unityRequest, WitConstants.GetUnityAudioType(FileType), UseEvents, onSamplesDecoded, onJsonDecoded, onComplete))
+                {
+                    return "Failed to start audio stream";
+                }
+
+                return string.Empty;
+            });
+            return result;
         }
 
         /// <summary>

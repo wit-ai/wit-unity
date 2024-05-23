@@ -76,6 +76,36 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Safely calls an action on the main thread using a scheduler.
+        /// </summary>
+        /// <param name="callback">The action to be performed on the main thread</param>
+        public static Task<T> CallOnMainThread<T>(Func<T> callback)
+        {
+#if THREADING_ENABLED
+
+            // Get task for callback
+            Task<T> task = new Task<T>(callback);
+
+            // Start on the main scheduler
+            if (_mainThreadScheduler != null)
+            {
+                task.Start(_mainThreadScheduler);
+                return task;
+            }
+
+            // Start here
+            task.Start();
+
+#else
+
+            // Call immediately
+            callback?.Invoke();
+
+#endif
+            return task;
+        }
+
+        /// <summary>
         /// Safely backgrounds an async task if threading is enabled in this build.
         /// </summary>
         /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
