@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Meta.Voice.Logging
 {
@@ -36,6 +37,36 @@ namespace Meta.Voice.Logging
         public void Verbose(CorrelationID correlationId, string message, params object[] parameters)
         {
             Value.Verbose(correlationId, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Verbose(string message,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            Value.Verbose(message, memberName, sourceFilePath, sourceLineNumber);
+        }
+
+        /// <inheritdoc/>
+        public void Verbose(string message,
+            object p1,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            Value.Verbose(message, p1, memberName, sourceFilePath, sourceLineNumber);
+        }
+
+        /// <inheritdoc/>
+        public void Verbose(string message,
+            object p1,
+            object p2,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            Value.Verbose(message, p1, p2, memberName, sourceFilePath, sourceLineNumber);
         }
 
         /// <inheritdoc/>

@@ -25,9 +25,9 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity Verbosity { get; }
         public Exception Exception { get; }
         public ErrorCode? ErrorCode { get; }
-        public StackTrace StackTrace { get; }
+        public LoggingContext Context { get; }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, StackTrace stackTrace, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, LoggingContext context, string prefix, string message, params object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
@@ -38,10 +38,10 @@ namespace Meta.Voice.Logging
             CorrelationID = correlationId;
             Exception = null;
             ErrorCode = (ErrorCode)null;
-            StackTrace = stackTrace;
+            Context = context;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, StackTrace stackTrace, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, Exception exception, LoggingContext context, string prefix, string message, params object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
@@ -52,10 +52,10 @@ namespace Meta.Voice.Logging
             CorrelationID = correlationId;
             Exception = exception;
             ErrorCode = errorCode;
-            StackTrace = stackTrace;
+            Context = context;
         }
 
-        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, StackTrace stackTrace, string prefix, string message, object [] parameters)
+        public LogEntry(string category, VLoggerVerbosity verbosity, CorrelationID correlationId, ErrorCode errorCode, LoggingContext context, string prefix, string message, params object [] parameters)
         {
             Category = category;
             TimeStamp = DateTime.UtcNow;
@@ -66,7 +66,7 @@ namespace Meta.Voice.Logging
             CorrelationID = correlationId;
             Exception = null;
             ErrorCode = errorCode;
-            StackTrace = stackTrace;
+            Context = context;
         }
 
         public override string ToString()

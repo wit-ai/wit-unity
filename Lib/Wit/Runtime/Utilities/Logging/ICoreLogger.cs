@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Meta.Voice.Logging
 {
@@ -37,6 +38,48 @@ namespace Meta.Voice.Logging
         /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
         /// <param name="parameters">The parameters.</param>
         void Verbose(CorrelationID correlationId, string message, params object [] parameters);
+
+        /// <summary>
+        /// Logs a verbose message with edit time callsite information.
+        /// </summary>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="memberName">The caller site name.</param>
+        /// <param name="sourceFilePath">The caller source file path.</param>
+        /// <param name="sourceLineNumber">The caller source line number.</param>
+        public void Verbose(string message,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0);
+
+        /// <summary>
+        /// Logs a verbose message with edit time callsite information.
+        /// </summary>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="p1">Parameter 1.</param>
+        /// <param name="memberName">The caller site name.</param>
+        /// <param name="sourceFilePath">The caller source file path.</param>
+        /// <param name="sourceLineNumber">The caller source line number.</param>
+        public void Verbose(string message,
+            object p1,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0);
+
+        /// <summary>
+        /// Logs a verbose message with edit time callsite information.
+        /// </summary>
+        /// <param name="message">The message as a format string (e.g "My value is: {0}).</param>
+        /// <param name="p1">Parameter 1.</param>
+        /// <param name="p2">Parameter 2.</param>
+        /// <param name="memberName">The caller site name.</param>
+        /// <param name="sourceFilePath">The caller source file path.</param>
+        /// <param name="sourceLineNumber">The caller source line number.</param>
+        public void Verbose(string message,
+            object p1,
+            object p2,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0);
 
         /// <summary>
         /// Logs an info message.

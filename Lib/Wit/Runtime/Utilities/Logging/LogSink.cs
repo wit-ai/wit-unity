@@ -145,10 +145,10 @@ namespace Meta.Voice.Logging
                 }
             }
 
-            if (logEntry.Verbosity >= Options.StackTraceLevel && logEntry.StackTrace != null)
+            if (logEntry.Verbosity >= Options.StackTraceLevel && logEntry.Context != null)
             {
                 sb.Append("\n");
-                AppendStackTrace(sb, logEntry);
+                logEntry.Context.AppendRelevantContext(sb, Options.ColorLogs);
             }
 
             var message = sb.ToString();
@@ -230,43 +230,6 @@ namespace Meta.Voice.Logging
 #endif
         }
 
-        private void AppendStackTrace(StringBuilder sb, LogEntry logEntry)
-        {
-            sb.Append("=== STACK TRACE ===\n");
-            foreach (var frame in logEntry.StackTrace.GetFrames())
-            {
-                var method = frame.GetMethod();
-                var declaringType = method.DeclaringType;
-                if (declaringType == null || IsLoggingClass(method.DeclaringType) || IsSystemClass(method.DeclaringType))
-                {
-                    continue;
-                }
-
-
-                var filePath = frame.GetFileName();
-                var lineNumber = frame.GetFileLineNumber();
-                var parameters = string.Join(", ", method.GetParameters().Select(p => $"{p.ParameterType.Name}"));
-
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    var fileName = Path.GetFileName(filePath);
-                    var relativeFilePath = filePath.Replace(_workingDirectory, "");
-
-#if UNITY_EDITOR
-                    sb.Append($"<a href=\"{relativeFilePath}\" line=\"{lineNumber}\">[{fileName}:{lineNumber}] </a>");
-#else
-                    sb.Append($"[{fileName}:{lineNumber}] ");
-#endif
-                }
-
-                var methodName = $"{method.Name}";
-                sb.Append(declaringType?.Name);
-                sb.Append('.');
-                sb.Append(Options.ColorLogs ? $"<color=#39CC8F>{method.Name}</color>" : $"{methodName}");
-                sb.Append($"({parameters})\n");
-            }
-        }
-
         private string FormatStackTrace(string stackTrace)
         {
             if (stackTrace == null)
@@ -322,24 +285,37 @@ namespace Meta.Voice.Logging
               return;
             }
 #endif
-            var (callSiteFileName, callSiteLineNumber) = GetCallSite(logEntry.StackTrace);
+            var (callSiteFileName, callSiteLineNumber) = logEntry.Context.GetCallSite();
             var fileName = Path.GetFileNameWithoutExtension(callSiteFileName);
             if (fileName == logEntry.Category)
             {
+                if (callSiteLineNumber != 0)
+                {
 #if UNITY_EDITOR
-                sb.Append($"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+                    sb.Append(
+                        $"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+
 #else
                 sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
 #endif
+                }
             }
             else
             {
 #if UNITY_EDITOR
                 sb.Append($"[<b>{logEntry.Category}</b>] ");
-                sb.Append($"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+
+                if (callSiteLineNumber != 0)
+                {
+                    sb.Append(
+                        $"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
+                }
 #else
                 sb.Append($"[{logEntry.Category}] ");
+                if (callSiteLineNumber != 0)
+                {
                 sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
+                }
 #endif
             }
         }

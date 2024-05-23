@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Meta.WitAi;
 
@@ -17,6 +18,7 @@ namespace Meta.Voice.Logging
 {
     internal class VLogger : IVLogger
     {
+        private LoggingContext _emptyContext = new LoggingContext(null);
         /// <summary>
         /// The sequence ID of the next scope to open.
         /// </summary>
@@ -129,17 +131,53 @@ namespace Meta.Voice.Logging
             }
         }
 
+        public void Verbose(string message,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message));
+        }
+
+        public void Verbose(string message,
+            object p1,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message,
+                p1));
+        }
+
+        public void Verbose(string message,
+            object p1,
+            object p2,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message,
+                p1, p2));
+        }
+
         /// <inheritdoc/>
         public void Verbose(string message, params object [] parameters)
         {
-            Log(CorrelationID, VLoggerVerbosity.Verbose, message, parameters);
+            var context = _emptyContext;
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message,
+                parameters));
         }
 
         /// <inheritdoc/>
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
+            var context = _emptyContext;
             CorrelateIds(correlationId);
-            Log(correlationId, VLoggerVerbosity.Verbose, message, parameters);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, correlationId, context, string.Empty, message,
+                parameters));
         }
 
         /// <inheritdoc/>
@@ -254,7 +292,8 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             var stackTrace = new StackTrace(true);
-            LogEntry(new LogEntry(_category, verbosity, correlationId, stackTrace, String.Empty, message, parameters));
+            var context = new LoggingContext(stackTrace);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, context, String.Empty, message, parameters));
         }
 
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
@@ -262,7 +301,8 @@ namespace Meta.Voice.Logging
             string message, params object[] parameters)
         {
             var stackTrace = new StackTrace(true);
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, stackTrace, string.Empty, message,
+            var context = new LoggingContext(stackTrace);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, exception, context, string.Empty, message,
                 parameters));
         }
 
@@ -270,7 +310,8 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             var stackTrace = new StackTrace(true);
-            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, stackTrace, string.Empty, message, parameters));
+            var context = new LoggingContext(stackTrace);
+            LogEntry(new LogEntry(_category, verbosity, correlationId, errorCode, context, string.Empty, message, parameters));
         }
 
         private void LogEntry(LogEntry logEntry)
@@ -327,14 +368,15 @@ namespace Meta.Voice.Logging
             return false;
         }
 
+
         /// <inheritdoc/>
-        public LogScope Scope(VLoggerVerbosity verbosity, string message, params object[] parameters)
+        public ILogScope Scope(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, CorrelationID, message, parameters);
         }
 
         /// <inheritdoc/>
-        public LogScope Scope(VLoggerVerbosity verbosity, CorrelationID correlationId, string message, params object[] parameters)
+        public ILogScope Scope(CorrelationID correlationId, VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             return new LogScope(this, verbosity, correlationId, message, parameters);
         }
@@ -345,7 +387,8 @@ namespace Meta.Voice.Logging
         {
             CorrelateIds(correlationId);
             var stackTrace = new StackTrace(true);
-            var logEntry = new LogEntry(_category, verbosity, correlationId, stackTrace, "Started: ", message, parameters);
+            var context = new LoggingContext(stackTrace);
+            var logEntry = new LogEntry(_category, verbosity, correlationId, context, "Started: ", message, parameters);
             LogBuffer.Add(correlationId, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
@@ -361,7 +404,8 @@ namespace Meta.Voice.Logging
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
             var stackTrace = new StackTrace(true);
-            var logEntry = new LogEntry(_category, verbosity, CorrelationID, stackTrace, "Started: ", message, parameters);
+            var context = new LoggingContext(stackTrace);
+            var logEntry = new LogEntry(_category, verbosity, CorrelationID, context, "Started: ", message, parameters);
             LogBuffer.Add(CorrelationID, logEntry);
             _scopeEntries.Add(_nextSequenceId, logEntry);
 
