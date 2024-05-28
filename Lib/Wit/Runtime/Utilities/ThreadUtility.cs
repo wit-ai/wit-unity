@@ -11,10 +11,12 @@
 #endif
 
 using System;
+using System.Threading;
 using Meta.Voice.Logging;
 #if THREADING_ENABLED
 using UnityEngine;
 using System.Threading.Tasks;
+using UnityEditor;
 #endif
 
 namespace Meta.WitAi
@@ -29,18 +31,54 @@ namespace Meta.WitAi
         /// The task scheduler that runs on the main thread
         /// </summary>
         private static TaskScheduler _mainThreadScheduler;
+        private static Thread _mainThread;
+
+        private class Initializer
+        {
+            private Task _task;
+
+            public Initializer(Task task)
+            {
+                _task = task;
+            }
+
+            public void ExecuteInit()
+            {
+                #if UNITY_EDITOR
+                EditorApplication.update -= ExecuteInit;
+                #endif
+                ThreadUtility.ExecuteInit();
+                _task.Start(_mainThreadScheduler);
+            }
+        }
 
         /// <summary>
         /// Called from main thread in constructor of any scripts that need to
         /// call code on the main thread.
         /// </summary>
         [RuntimeInitializeOnLoadMethod]
-        private static void Init()
+        private static void Init(Initializer initializer = null)
         {
+            #if UNITY_EDITOR
+            // Ensure the init happens on the main thread if we are in the editor
+            if (null != initializer) EditorApplication.update += initializer.ExecuteInit;
+            else EditorApplication.update += ExecuteInit;
+            #else
+            ExecuteInit();
+            #endif
+        }
+
+        private static void ExecuteInit()
+        {
+            #if UNITY_EDITOR
+            EditorApplication.update -= ExecuteInit;
+            #endif
             if (_mainThreadScheduler != null)
             {
                 return;
             }
+
+            _mainThread = Thread.CurrentThread;
             _mainThreadScheduler = TaskScheduler.FromCurrentSynchronizationContext();
         }
         #endif
@@ -51,6 +89,12 @@ namespace Meta.WitAi
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task CallOnMainThread(Action callback)
         {
+            if (Thread.CurrentThread == _mainThread)
+            {
+                callback?.Invoke();
+                return Task.FromResult(true);
+            }
+
             #if THREADING_ENABLED
 
             // Get task for callback
@@ -62,9 +106,16 @@ namespace Meta.WitAi
                 task.Start(_mainThreadScheduler);
                 return task;
             }
-
+            #if UNITY_EDITOR
+            else
+            {
+                Init(new Initializer(task));
+                return task;
+            }
+            #else
             // Start here
             task.Start();
+            #endif
 
             #else
 
@@ -81,6 +132,11 @@ namespace Meta.WitAi
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task<T> CallOnMainThread<T>(Func<T> callback)
         {
+            if (Thread.CurrentThread == _mainThread)
+            {
+                return Task.FromResult(callback.Invoke());
+            }
+
 #if THREADING_ENABLED
 
             // Get task for callback
