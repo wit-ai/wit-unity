@@ -163,6 +163,7 @@ namespace Meta.WitAi
                 catch (Exception e)
                 {
                     logger.Error(e);
+                    throw;
                 }
             });
 #else
@@ -187,7 +188,7 @@ namespace Meta.WitAi
                 catch (Exception e)
                 {
                     logger.Error(e);
-                    throw e;
+                    throw;
                 }
             });
 #else
@@ -200,23 +201,28 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
         /// <param name="callback">The callback to execute</param>
-        public static void Background(IVLogger logger, Action callback)
+        public static Task Background(IVLogger logger, Action callback)
         {
 #if THREADING_ENABLED
+            var task = new TaskCompletionSource<bool>();
             Task.Run(() =>
             {
                 try
                 {
                     callback();
+                    task.SetResult(true);
                 }
                 catch (Exception e)
                 {
                     logger.Error(e);
+                    task.SetResult(false);
+                    throw;
                 }
             });
 #else
             callback();
 #endif
+            return task.Task;
         }
     }
 }
