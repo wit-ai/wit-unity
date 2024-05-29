@@ -215,24 +215,25 @@ namespace Meta.WitAi
         #endregion AUDIO REQUESTS
 
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
-        protected override void OnRequestPartialResponse(VoiceServiceRequest request)
+        protected override void OnRequestPartialResponse(VoiceServiceRequest request, WitResponseNode responseNode)
         {
-            base.OnRequestPartialResponse(request);
-            OnValidateEarly(request);
+            base.OnRequestPartialResponse(request, responseNode);
+            OnValidateEarly(request, responseNode);
         }
 
         // Attempts to validate early if possible
-        protected virtual void OnValidateEarly(VoiceServiceRequest request)
+        protected virtual void OnValidateEarly(VoiceServiceRequest request, WitResponseNode responseNode)
         {
             // Ignore unless can be validated
-            if (request == null || request.State != VoiceRequestState.Transmitting
+            if (request == null
+                || request.State != VoiceRequestState.Transmitting
+                || responseNode == null
                 || VoiceEvents.OnValidatePartialResponse == null)
             {
                 return;
             }
 
             // Create short response data
-            WitResponseNode responseNode = request?.ResponseData;
             VoiceSession validationData = GetVoiceSession(responseNode);
 
             // Call short response

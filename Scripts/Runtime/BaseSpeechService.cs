@@ -221,7 +221,7 @@ namespace Meta.WitAi
             if (request.State == VoiceRequestState.Successful)
             {
                 RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.RequestId, TerminationReason.Successful);
-                OnRequestPartialResponse(request);
+                OnRequestPartialResponse(request, request?.ResponseData);
                 OnRequestSuccess(request);
                 OnRequestComplete(request);
                 return true;
@@ -312,27 +312,27 @@ namespace Meta.WitAi
         }
 
         // Called when VoiceServiceRequest OnPartialTranscription is returned with early ASR
-        protected virtual void OnRequestPartialTranscription(VoiceServiceRequest request)
+        protected virtual void OnRequestPartialTranscription(VoiceServiceRequest request, string transcription)
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.PartialTranscriptionReceived);
-            GetSpeechEvents()?.OnPartialTranscription?.Invoke(request?.Transcription);
+            GetSpeechEvents()?.OnPartialTranscription?.Invoke(transcription);
         }
 
         // Called when VoiceServiceRequest OnFullTranscription is returned from request with final ASR
-        protected virtual void OnRequestFullTranscription(VoiceServiceRequest request)
+        protected virtual void OnRequestFullTranscription(VoiceServiceRequest request, string transcription)
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.FullTranscriptionReceived);
-            Log(request, $"Request Full Transcription\nText: {request?.Transcription}");
-            GetSpeechEvents()?.OnFullTranscription?.Invoke(request?.Transcription);
+            Log(request, $"Request Full Transcription\nText: {transcription}");
+            GetSpeechEvents()?.OnFullTranscription?.Invoke(transcription);
         }
 
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
-        protected virtual void OnRequestPartialResponse(VoiceServiceRequest request)
+        protected virtual void OnRequestPartialResponse(VoiceServiceRequest request, WitResponseNode responseData)
         {
-            var responseData = request?.ResponseData;
             if (responseData != null)
             {
-                RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.PartialResponseReceived);
+                var requestId = request?.Options.RequestId;
+                RuntimeTelemetry.Instance.LogPoint((OperationID)requestId, RuntimeTelemetryPoint.PartialResponseReceived);
                 GetSpeechEvents()?.OnPartialResponse?.Invoke(responseData);
             }
         }
