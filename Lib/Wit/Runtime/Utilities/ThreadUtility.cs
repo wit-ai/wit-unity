@@ -95,35 +95,9 @@ namespace Meta.WitAi
                 return Task.FromResult(true);
             }
 
-            #if THREADING_ENABLED
-
             // Get task for callback
             Task task = new Task(callback);
-
-            // Start on the main scheduler
-            if (_mainThreadScheduler != null)
-            {
-                task.Start(_mainThreadScheduler);
-                return task;
-            }
-            #if UNITY_EDITOR
-            else
-            {
-                Init(new Initializer(task));
-                return task;
-            }
-            #else
-            // Start here
-            task.Start();
-            #endif
-
-            #else
-
-            // Call immediately
-            callback?.Invoke();
-
-            #endif
-            return task;
+            return StartTask(task);
         }
 
         /// <summary>
@@ -136,11 +110,14 @@ namespace Meta.WitAi
             {
                 return Task.FromResult(callback.Invoke());
             }
-
-#if THREADING_ENABLED
-
             // Get task for callback
             Task<T> task = new Task<T>(callback);
+            return (Task<T>) StartTask(task);
+        }
+
+        private static Task StartTask(Task task)
+        {
+#if THREADING_ENABLED
 
             // Start on the main scheduler
             if (_mainThreadScheduler != null)
@@ -149,16 +126,24 @@ namespace Meta.WitAi
                 return task;
             }
 
-            // Start here
-            task.Start();
-
-#else
-
-            // Call immediately
-            callback?.Invoke();
-
-#endif
+#if UNITY_EDITOR
+            // This is the unity editor, we need to make sure the Unity Editor foregrounder
+            // has been initialized.
+            Init(new Initializer(task));
             return task;
+#else       // If we're in a build and we made it this far we don't have a scheduler. We will
+            // attempt to execute this anyway with a hope we're already on the main thread, but
+            // it may trigger a runtime exception. That exception should flag that something is
+            // wrong here and may need investigating.
+            task.Start();
+            return task;
+#endif
+
+#else       // Threading is not enabled, we'll call the method immediately since we're already
+            // on the main thread
+            task.Start();
+            return task;
+#endif
         }
 
         /// <summary>
@@ -193,7 +178,7 @@ namespace Meta.WitAi
         public static async Task<T> BackgroundAsync<T>(IVLogger logger, Func<Task<T>> callback)
         {
 #if THREADING_ENABLED
-            return await Task.Run<T>(async () =>
+            return await Task.Run(async () =>
             {
                 try
                 {
