@@ -143,6 +143,11 @@ namespace Meta.Voice.Logging
         /// <inheritdoc/>
         public IVLogger GetLogger(string category, ILogSink logSink)
         {
+            return new LazyLogger(() => GetCoreLogger(category, logSink));
+        }
+
+        public IVLogger GetCoreLogger(string category, ILogSink logSink)
+        {
             logSink ??= LogSink;
             logSink.Options = Options;
 
@@ -180,18 +185,18 @@ namespace Meta.Voice.Logging
 
             if (callerType == null)
             {
-                return GetLogger(category, logSink);
+                return GetCoreLogger(category, logSink);
             }
 
             var attribute = callerType.GetCustomAttribute<LogCategoryAttribute>();
             if (attribute == null)
             {
-                return VLoggerFactory.GetLogger(category, logSink);
+                return GetCoreLogger(category, logSink);
             }
 
             category = attribute.CategoryName;
 
-            return GetLogger(category, logSink);
+            return GetCoreLogger(category, logSink);
         }
 
         private bool IsNonLoggingFrame(StackFrame frame)
