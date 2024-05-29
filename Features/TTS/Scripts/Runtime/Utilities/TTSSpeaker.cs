@@ -1797,14 +1797,36 @@ namespace Meta.WitAi.TTS.Utilities
         #endregion
 
         #region QUEUE EVENTS
-        // Log comment with request
-        protected virtual void Log(string comment)
+        private void Log(string format, params object[] parameters)
+            => _log.Info(format, parameters);
+        private void Error(string format, params object[] parameters)
+            => _log.Error(format, parameters);
+
+        protected virtual void LogRequest(string comment, TTSSpeakerRequestData requestData, string error = null)
         {
-            StringBuilder log = new StringBuilder();
-            log.AppendLine(comment);
-            log.AppendLine($"Voice: {VoiceSettings?.SettingsId}");
-            _log.Info(log.ToString());
+            if (!verboseLogging && string.IsNullOrEmpty(error))
+            {
+                return;
+            }
+            const string format = "{0}\n{1}\nAudio Player Type: {2}\nElapsed: {3} ms";
+            if (!string.IsNullOrEmpty(error))
+            {
+                Error(format,
+                    $"{comment}\nError: {error}",
+                    requestData.ClipData,
+                    _audioPlayer?.GetType().Name ?? "Null",
+                    (DateTime.UtcNow - requestData.StartTime).TotalMilliseconds);
+            }
+            else
+            {
+                Log(format,
+                    comment,
+                    requestData.ClipData,
+                    _audioPlayer?.GetType().Name ?? "Null",
+                    (DateTime.UtcNow - requestData.StartTime).TotalMilliseconds);
+            }
         }
+
         // Perform start of playback queue
         protected virtual void OnPlaybackQueueBegin()
         {
@@ -1820,22 +1842,6 @@ namespace Meta.WitAi.TTS.Utilities
         #endregion
 
         #region PLAYBACK EVENTS
-        // Log comment with request
-        protected virtual void LogRequestData(string comment, TTSSpeakerRequestData requestData, bool warning = false)
-        {
-            if (warning)
-            {
-                _log.Warning("{0}\nAudio Player Type: {1}\n{2}\nElapsed: {3}ms",
-                    comment,
-                    requestData.ClipData,
-                    _audioPlayer == null ? (object) "NULL" : _audioPlayer.GetType(),
-                    (DateTime.UtcNow - requestData.StartTime).TotalMilliseconds);
-            }
-            else if (verboseLogging)
-            {
-                _log.Verbose(LogCategory, comment);
-            }
-        }
         // Initial callback as soon as the audio clip speak request is generated
         protected virtual void OnInit(TTSSpeakerRequestData requestData)
         {
@@ -1845,7 +1851,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform load begin events
         protected virtual void OnLoadBegin(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Load Begin", requestData);
+            LogRequest("Load Begin", requestData);
 
             // Deprecated speaker events
 #pragma warning disable CS0618
@@ -1862,7 +1868,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform load begin abort events
         protected virtual void OnLoadAborted(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Load Aborted", requestData);
+            LogRequest("Load Aborted", requestData);
 
             // Deprecated speaker events
 #pragma warning disable CS0618
@@ -1880,7 +1886,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform load failed events
         protected virtual void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
         {
-            LogRequestData($"Load Failed\nError: {error}", requestData, true);
+            LogRequest($"Load Failed", requestData, error);
 
             // Deprecated speaker events
 #pragma warning disable CS0618
@@ -1898,7 +1904,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform load success events
         protected virtual void OnLoadSuccess(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Load Success", requestData);
+            LogRequest("Load Success", requestData);
 
             // Deprecated speaker events
 #pragma warning disable CS0618
@@ -1913,7 +1919,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform events for playback being ready
         protected virtual void OnPlaybackReady(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Playback Ready", requestData);
+            LogRequest("Playback Ready", requestData);
 
             // Speaker playback events
             Events?.OnAudioClipPlaybackReady?.Invoke(requestData.ClipData?.clip);
@@ -1931,7 +1937,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform events for playback start
         protected virtual void OnPlaybackStart(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Playback Begin", requestData);
+            LogRequest("Playback Begin", requestData);
 
             // Speaker playback events
             Events?.OnTextPlaybackStart?.Invoke(requestData.ClipData?.textToSpeak);
@@ -1953,7 +1959,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform events for playback cancelation
         protected virtual void OnPlaybackCancelled(TTSSpeakerRequestData requestData, string reason)
         {
-            LogRequestData($"Playback Cancelled\nReason: {reason}", requestData);
+            LogRequest($"Playback Cancelled\nReason: {reason}", requestData);
 
             // Speaker playback events
             Events?.OnTextPlaybackCancelled?.Invoke(requestData.ClipData?.textToSpeak);
@@ -1978,7 +1984,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform audio clip update during streaming playback
         protected virtual void OnPlaybackClipUpdated(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Playback Clip Updated", requestData);
+            LogRequest("Playback Clip Updated", requestData);
 
             // Speaker clip events
             Events?.OnPlaybackClipUpdated?.Invoke(this, requestData.ClipData);
@@ -1987,7 +1993,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Perform events for playback completion
         protected virtual void OnPlaybackComplete(TTSSpeakerRequestData requestData)
         {
-            LogRequestData("Playback Complete", requestData);
+            LogRequest("Playback Complete", requestData);
 
             // Speaker playback events
             Events?.OnTextPlaybackFinished?.Invoke(requestData.ClipData?.textToSpeak);
