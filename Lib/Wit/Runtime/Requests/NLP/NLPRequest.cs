@@ -8,7 +8,6 @@
 
 using System.Collections.Concurrent;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
@@ -305,7 +304,7 @@ namespace Meta.Voice
             bool hasPartial = ResponseDecoder != null && ResponseDecoder.GetResponseHasPartial(responseData);
             if (hasChanged && hasPartial)
             {
-                OnPartialResponse();
+                OnPartialResponse(responseData);
             }
 
             // Final was called, handle success
@@ -314,7 +313,7 @@ namespace Meta.Voice
                 // Call partial response if not previously called
                 if (!hasPartial)
                 {
-                    OnPartialResponse();
+                    OnPartialResponse(responseData);
                 }
 
                 // Additional event validation on final
@@ -327,7 +326,7 @@ namespace Meta.Voice
                 }
 
                 // Call final response
-                OnFullResponse();
+                OnFullResponse(responseData);
                 // Handle success
                 HandleSuccess();
             }
@@ -336,18 +335,18 @@ namespace Meta.Voice
         /// <summary>
         /// Called when response data has been updated
         /// </summary>
-        protected virtual void OnPartialResponse()
+        protected virtual void OnPartialResponse(TResponseData responseData)
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)Options.RequestId, RuntimeTelemetryPoint.PartialResponseReceived);
             ThreadUtility.CallOnMainThread(() =>
-            Events?.OnPartialResponse?.Invoke(ResponseData));
+            Events?.OnPartialResponse?.Invoke(responseData));
         }
 
         /// <summary>
         /// Called when full response has completed
         /// </summary>
-        protected virtual void OnFullResponse() => ThreadUtility.CallOnMainThread(() =>
-            Events?.OnFullResponse?.Invoke(ResponseData));
+        protected virtual void OnFullResponse(TResponseData responseData) => ThreadUtility.CallOnMainThread(() =>
+            Events?.OnFullResponse?.Invoke(responseData));
 
         /// <summary>
         /// Cancels the current request but handles success immediately if possible

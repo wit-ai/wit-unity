@@ -830,9 +830,9 @@ namespace Meta.WitAi
             onFullTranscription?.Invoke(Transcription);
         }
         // On response data change callback
-        protected override void OnPartialResponse()
+        protected override void OnPartialResponse(WitResponseNode responseNode)
         {
-            base.OnPartialResponse();
+            base.OnPartialResponse(responseNode);
             onPartialResponse?.Invoke(this);
         }
         // Check if data has been written to post stream while still receiving data
