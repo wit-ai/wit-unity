@@ -993,31 +993,65 @@ namespace Meta.WitAi.Requests
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
         {
-            #pragma warning disable CS4014
-            WaitRequestJsonAsync(unityRequest, onComplete, onPartial);
-            #pragma warning restore CS4014
-            return true;
+            // Set request header for json
+            unityRequest.SetRequestHeader("Content-Type", "application/json");
+
+            // Perform a text request
+            return RequestText(unityRequest,
+                (json, error) => EnqueueJsonResponse(json, error, onComplete),
+                (json) => EnqueueJsonResponse(json, null, onPartial));
         }
 
-        private async Task WaitRequestJsonAsync<TData>(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial)
+        private Task _lastDecode;
+        private void EnqueueJsonResponse<TData>(string json, string error, RequestCompleteDelegate<TData> callback)
         {
-            var method = unityRequest.method;
-            var result = await RequestJsonAsync(unityRequest, onPartial);
-            try
+            var blockingTask = _lastDecode;
+            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
             {
-                if (!string.IsNullOrEmpty(result.Error))
+                if (null != blockingTask) await blockingTask;
+                DecodeJsonResponse<TData>(json, error, callback);
+            });
+        }
+
+        private void DecodeJsonResponse<TData>(string json, string error, RequestCompleteDelegate<TData> callback)
+        {
+            // Get default
+            bool decoded = false;
+            object result = default(TData);
+
+            // If string, return immediately
+            if (typeof(TData) == typeof(string))
+            {
+                result = json;
+            }
+            // If no error, attempt a decode
+            else if (string.IsNullOrEmpty(error))
+            {
+                decoded = true;
+                var decodedResult = JsonConvert.DeserializeObject<TData>(json);
+                if (decodedResult == null)
                 {
-                    _log.Debug($"Failed request: [{method}] {uri}. {(string.IsNullOrEmpty(payload)?string.Empty:$"Payload: {payload}.")} Error: {result.Error}");
+                    error = $"Failed to decode json\n{json}\n";
+                }
+                else
+                {
+                    result = decodedResult;
                 }
             }
-            catch
-            {
-                _log.Debug("Failed to log request details");
-            }
 
-            onComplete?.Invoke(result.Value, result.Error);
+            if (callback != null)
+            {
+                // Return on main thread if decoded locally
+                if (decoded)
+                {
+                    ThreadUtility.CallOnMainThread(() => callback.Invoke((TData)result, error));
+                }
+                // Otherwise continue on background thread
+                else
+                {
+                    callback.Invoke((TData)result, error);
+                }
+            }
         }
 
         /// <summary>
