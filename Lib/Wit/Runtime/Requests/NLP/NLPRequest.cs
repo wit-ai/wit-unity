@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -61,7 +62,6 @@ namespace Meta.Voice
             Options.InputType = inputType;
             _initialized = true;
             _finalized = false;
-            _ = ThreadUtility.BackgroundAsync(_log, DecodeAsync);
 
             // Finalize
             SetState(VoiceRequestState.Initialized);
@@ -127,17 +127,13 @@ namespace Meta.Voice
         /// <summary>
         /// Whether currently decoding a raw response
         /// </summary>
-        public virtual bool IsDecoding => _rawResponses.Count > 0 || _rawDecoding || _rawDecoded > _rawApplied;
+        public virtual bool IsDecoding => _rawQueued > _rawDecoded;
 
         // Last raw response received
         private string _rawResponseLast;
-        // Total raw response decodes began
-        private ConcurrentQueue<string> _rawResponses = new ConcurrentQueue<string>();
-        // Total raw response decodes complete
-        private bool _rawDecoding;
         // Apply
+        private int _rawQueued = 0;
         private int _rawDecoded = 0;
-        private int _rawApplied = 0;
         // Whether the currently decoding raw response should be considered final
         private bool _rawResponseFinal;
 
@@ -165,20 +161,21 @@ namespace Meta.Voice
             // Ignore same partials, finalize if should decode final
             if (string.Equals(_rawResponseLast, rawResponse))
             {
-                if (final && DecodeRawResponses)
-                {
-                    MakeLastResponseFinal();
-                }
                 return;
             }
 
             // Apply last raw response
             _rawResponseFinal |= final;
             _rawResponseLast = rawResponse;
-            _rawResponses.Enqueue(_rawResponseLast);
 
             // Perform callback
             OnRawResponse(rawResponse);
+
+            // Enqueue decode
+            if (DecodeRawResponses && ResponseDecoder != null)
+            {
+                EnqueueDecode(rawResponse, final);
+            }
         }
 
         /// <summary>
@@ -187,51 +184,22 @@ namespace Meta.Voice
         protected virtual void OnRawResponse(string rawResponse) => ThreadUtility.CallOnMainThread(() =>
             Events?.OnRawResponse?.Invoke(rawResponse));
 
-        /// <summary>
-        /// Decodes asynchronously and then passes into appropriate locations
-        /// </summary>
-        private async Task DecodeAsync()
+        private Task _lastDecode;
+        private void EnqueueDecode(string rawResponse, bool final)
         {
-            while (IsActive)
+            _rawQueued++;
+            var blockingTask = _lastDecode;
+            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
             {
-                // Dequeue while possible
-                if (_rawResponses.TryDequeue(out var rawResponse))
-                {
-                    // Ignore
-                    if (!DecodeRawResponses || ResponseDecoder == null)
-                    {
-                        continue;
-                    }
-
-                    // Begin decode
-                    _rawDecoding = true;
-
-                    // Decode data
-                    TResponseData responseData = ResponseDecoder.Decode(rawResponse);
-
-                    // Enqueue decoded data
-                    _rawDecoded++;
-                    ApplyDecodedResponseData(responseData);
-
-                    // Decode complete
-                    _rawDecoding = false;
-                }
-                // Wait 10ms for another response
-                else
-                {
-                    await Task.Delay(DECODE_DELAY_MS);
-                }
-            }
-            _rawResponses.Clear();
+                if (null != blockingTask) await blockingTask;
+                DecodeRawResponse(rawResponse, final);
+            });
         }
-
-        /// <summary>
-        /// Applies decoded responses as they arrive from the background thread
-        /// </summary>
-        protected virtual void ApplyDecodedResponseData(TResponseData responseData)
+        private void DecodeRawResponse(string rawResponse, bool final)
         {
-            // Applied
-            _rawApplied++;
+            // Decode data
+            TResponseData responseData = ResponseDecoder.Decode(rawResponse);
+            _rawDecoded++;
 
             // Ignore if no longer active
             if (!IsActive)
@@ -239,8 +207,8 @@ namespace Meta.Voice
                 return;
             }
 
-            // Apply if possible
-            bool final = !IsDecoding && _rawResponseFinal;
+            // If passed as final or set to final while decoding and the last decoding chunk
+            final |= _rawResponseFinal && !IsDecoding;
             ApplyResponseData(responseData, final);
         }
         #endregion DECODING

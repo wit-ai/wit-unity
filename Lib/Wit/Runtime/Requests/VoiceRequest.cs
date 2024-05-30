@@ -271,14 +271,8 @@ namespace Meta.Voice
             }
             if (!OnSimulateResponse())
             {
-                try
-                {
-                    HandleSend();
-                }
-                catch (Exception e)
-                {
-                    LogE("HandleSend Exception Caught", e);
-                }
+                // TODO: Replace this with async call when we have fully replaced the VRequest put/post with asyncs.
+                ThreadUtility.CallOnMainThread(() => HandleSend());
             }
         }
 

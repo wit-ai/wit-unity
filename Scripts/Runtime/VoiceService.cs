@@ -148,7 +148,7 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
-        public void Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
+        public VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
         /// <summary>
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
