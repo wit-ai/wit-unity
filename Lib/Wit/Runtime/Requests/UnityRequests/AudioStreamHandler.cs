@@ -64,9 +64,10 @@ namespace Meta.WitAi.Requests
         // Ring buffer and counters for decoding bytes
         private readonly byte[] _inRingBuffer = new byte[WitConstants.ENDPOINT_TTS_BUFFER_LENGTH];
         private int _inRingOffset = 0;
+        private ulong _expectedBytes = 0;
         private ulong _receivedBytes = 0;
         private ulong _decodedBytes = 0;
-        private ulong _expectedBytes = 0;
+        private readonly List<float> _outSampleBuffer = new List<float>();
 
         // If true the request is no longer being performed
         private bool _requestComplete = false;
@@ -88,13 +89,9 @@ namespace Meta.WitAi.Requests
             AudioSampleDecodeDelegate onSamplesDecoded,
             AudioDecodeCompleteDelegate onComplete)
         {
-            // Store decoder and callbacks
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
             OnComplete = onComplete;
-
-            // Begin decoding async
-            _ = ThreadUtility.BackgroundAsync(_log, DecodeAsync);
         }
 
         /// <summary>
@@ -157,59 +154,54 @@ namespace Meta.WitAi.Requests
                 // Push chunk
                 Array.Copy(chunk, offset, _inRingBuffer, _inRingOffset, pushLength);
 
+                // Enqueue decode task
+                EnqueueChunk(_inRingOffset, pushLength);
+
                 // Attempt to iterate through the pushed data chunk
                 offset += pushLength;
                 length -= pushLength;
                 // Loop offset as needed
                 _inRingOffset = (_inRingOffset + pushLength) % maxLength;
-                // Keep track of full received content length
+                // Increment
                 _receivedBytes += (ulong)pushLength;
             }
         }
 
-        // Decode ring buffer on background thread
-        private async Task DecodeAsync()
+        private Task _lastDecode;
+        private void EnqueueChunk(int offset, int length)
         {
-            // Decoded variables
-            int decodedOffset = 0;
-            List<float> decodedSamples = new List<float>();
-            int maxLength = _inRingBuffer.Length;
-
-            // Decode while not complete
-            while (!_requestComplete || !_decodeComplete)
+            var blockingTask = _lastDecode;
+            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
             {
-                // Ignore if nothing to decode
-                if (_decodedBytes == _receivedBytes)
-                {
-                    await Task.Yield();
-                    continue;
-                }
-                // If believed to be an error, consider decoded
-                if (IsError)
-                {
-                    _decodedBytes = _receivedBytes;
-                    continue;
-                }
+                if (null != blockingTask) await blockingTask;
+                DecodeChunk(offset, length);
+            });
+        }
+        private void DecodeChunk(int offset, int length)
+        {
+            // If believed to be an error, consider decoded
+            if (IsError)
+            {
+                _decodedBytes = _receivedBytes;
+                return;
+            }
 
-                // Get largest possible amount to decode
-                var unDecoded = (int)(_receivedBytes - _decodedBytes);
-                var decodeLength = Mathf.Min(unDecoded, maxLength - decodedOffset);
+            // Decode chunk
+            DecodeChunk(offset, length, _outSampleBuffer);
+            _decodedBytes += (ulong)length;
 
-                // Decode chunk
-                DecodeChunk(decodedOffset, decodeLength, decodedSamples);
-                decodedOffset = (decodedOffset + decodeLength) % maxLength;
-                _decodedBytes += (ulong)decodeLength;
-
-                // Callback delegate
-                if (decodedSamples.Count > 0)
-                {
-                    OnSamplesDecoded?.Invoke(decodedSamples);
-                    decodedSamples.Clear();
-                }
+            // Callback delegate
+            if (_outSampleBuffer.Count > 0)
+            {
+                OnSamplesDecoded?.Invoke(_outSampleBuffer);
+                _outSampleBuffer.Clear();
             }
 
             // Try to finalize on main thread
-            _ = ThreadUtility.CallOnMainThread(TryToFinalize);
+            if (_decodeComplete)
+            {
+                _ = ThreadUtility.CallOnMainThread(TryToFinalize);
+            }
         }
 
         // Decode a specific chunk of received bytes
