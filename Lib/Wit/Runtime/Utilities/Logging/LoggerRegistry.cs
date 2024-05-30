@@ -24,8 +24,7 @@ namespace Meta.Voice.Logging
         private const string EDITOR_LOG_SUPPRESSION_LEVEL_KEY = "VSDK_EDITOR_LOG_SUPPRESSION_LEVEL";
         private const string EDITOR_LOG_STACKTRACE_LEVEL_KEY = "VSDK_EDITOR_LOG_STACKTRACE_LEVEL";
 
-        public LoggerOptions Options { get; } =
-            new LoggerOptions(VLoggerVerbosity.Warning, VLoggerVerbosity.Verbose, VLoggerVerbosity.Error);
+        public LoggerOptions Options { get; }
 
         private readonly Dictionary<string, IVLogger> _loggers = new Dictionary<string, IVLogger>();
 
@@ -107,8 +106,9 @@ namespace Meta.Voice.Logging
         /// </summary>
         internal LoggerRegistry()
         {
+            Options = new LoggerOptions(VLoggerVerbosity.Warning, VLoggerVerbosity.Verbose, VLoggerVerbosity.Error);
             ILogWriter defaultLogWriter = new UnityLogWriter();
-            LogSink = new LogSink(defaultLogWriter, new LoggerOptions(EditorLogFilteringLevel, LogSuppressionLevel, LogStackTraceLevel));
+            LogSink = new LogSink(defaultLogWriter, Options);
         }
 
 #if UNITY_EDITOR
@@ -124,7 +124,7 @@ namespace Meta.Voice.Logging
 
             var suppressionLogLevelString = EditorPrefs.GetString(EDITOR_LOG_SUPPRESSION_LEVEL_KEY, Instance.Options.SuppressionLevel.ToString());
             Enum.TryParse(suppressionLogLevelString, out VLoggerVerbosity suppressionLevel);
-            Instance.EditorLogFilteringLevel = suppressionLevel;
+            Instance.LogSuppressionLevel = suppressionLevel;
 
             var stacktraceLogLevelString = EditorPrefs.GetString(EDITOR_LOG_STACKTRACE_LEVEL_KEY, Instance.Options.StackTraceLevel.ToString());
             Enum.TryParse(stacktraceLogLevelString, out VLoggerVerbosity stacktraceLogLevel);
