@@ -80,7 +80,7 @@ namespace Meta.Voice
             switch (AudioInputState)
             {
                 case VoiceAudioInputState.Activating:
-                    CoroutineUtility.StartCoroutine(WaitForHold(OnCanActivate));
+                    WaitForHold(OnCanActivate);
                     break;
                 case VoiceAudioInputState.On:
                     OnStartListening();

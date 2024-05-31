@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Text;
+using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
@@ -52,7 +53,7 @@ namespace Meta.Voice
         /// <summary>
         /// Whether transmission should hold prior to send
         /// </summary>
-        public bool OnHold = false;
+        public Task HoldTask = null;
 
         /// <summary>
         /// Download progress of the current request transmission
@@ -179,7 +180,7 @@ namespace Meta.Voice
                     }
                     break;
                 case VoiceRequestState.Transmitting:
-                    CoroutineUtility.StartCoroutine(WaitForHold(OnCanSend));
+                    WaitForHold(OnCanSend);
                     break;
                 case VoiceRequestState.Canceled:
                     try
@@ -245,13 +246,16 @@ namespace Meta.Voice
             RaiseEvent(Events?.OnStateChange);
 
         // Wait for hold to complete and then perform an action
-        protected virtual IEnumerator WaitForHold(Action onReady)
+        protected void WaitForHold(Action onReady)
         {
-            while (OnHold)
+            _ = ThreadUtility.BackgroundAsync(_log, async () =>
             {
-                yield return null;
-            }
-            onReady?.Invoke();
+                if (HoldTask != null)
+                {
+                    await HoldTask;
+                }
+                onReady?.Invoke();
+            });
         }
 
         // Once hold is complete, begin send process
