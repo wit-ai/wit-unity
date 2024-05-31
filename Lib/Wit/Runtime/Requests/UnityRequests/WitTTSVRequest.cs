@@ -116,13 +116,6 @@ namespace Meta.WitAi.Requests
             {
                 return WitConstants.ERROR_NO_CONFIG_TOKEN;
             }
-            #if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-            // Mobile network reachability check
-            if (Application.internetReachability == NetworkReachability.NotReachable)
-            {
-                return WitConstants.ERROR_REACHABILITY;
-            }
-            #endif
             // Should be good
             return string.Empty;
         }
