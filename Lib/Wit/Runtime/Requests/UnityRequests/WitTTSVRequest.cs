@@ -156,20 +156,18 @@ namespace Meta.WitAi.Requests
                 return errors;
             }
 
-            var result = await ThreadUtility.CallOnMainThread<string>(() =>
+            // Get tts unity request
+            UnityWebRequest unityRequest = await ThreadUtility.CallOnMainThread(() => GetUnityRequest(bytes));
+
+            // Perform an audio stream request
+            var result = await RequestAudioStream(unityRequest, WitConstants.GetUnityAudioType(FileType), UseEvents,
+                onSamplesDecoded, onJsonDecoded, onComplete);
+            if (!result)
             {
-                // Get tts unity request
-                UnityWebRequest unityRequest = GetUnityRequest(bytes);
+                return "Failed to start audio stream";
+            }
 
-                // Perform an audio stream request
-                if (!RequestAudioStream(unityRequest, WitConstants.GetUnityAudioType(FileType), UseEvents, onSamplesDecoded, onJsonDecoded, onComplete))
-                {
-                    return "Failed to start audio stream";
-                }
-
-                return string.Empty;
-            });
-            return result;
+            return string.Empty;
         }
 
         /// <summary>
@@ -180,7 +178,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback when the clip is
         /// either completely downloaded or failed to download</param>
         /// <returns>An error string if applicable</returns>
-        public string RequestDownload(string downloadPath,
+        public async Task<string> RequestDownload(string downloadPath,
             RequestCompleteDelegate<bool> onComplete)
         {
             // Error check
@@ -204,7 +202,8 @@ namespace Meta.WitAi.Requests
             UnityWebRequest unityRequest = GetUnityRequest(bytes);
 
             // Perform an audio download request
-            if (!RequestFileDownload(downloadPath, unityRequest, onComplete))
+            var result = await RequestFileDownload(downloadPath, unityRequest, onComplete);
+            if (!result)
             {
                 return "Failed to start audio stream";
             }

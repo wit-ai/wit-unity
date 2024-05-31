@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Threading.Tasks;
 using Meta.WitAi.Data.Info;
 
 namespace Meta.WitAi.Requests
@@ -18,7 +19,7 @@ namespace Meta.WitAi.Requests
         /// <param name="intentInfo">The intent data to be submitted</param>
         /// <param name="onComplete">On completion that returns an intent with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddIntent(WitIntentInfo intentInfo, VRequest.RequestCompleteDelegate<WitIntentInfo> onComplete);
+        Task<bool> RequestAddIntent(WitIntentInfo intentInfo, VRequest.RequestCompleteDelegate<WitIntentInfo> onComplete);
 
         /// <summary>
         /// Submits an entity to be added to the current wit app
@@ -26,7 +27,7 @@ namespace Meta.WitAi.Requests
         /// <param name="entityInfo">The entity info to be submitted</param>
         /// <param name="onComplete">On completion that returns an entity with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddEntity(WitEntityInfo entityInfo, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
+        Task<bool> RequestAddEntity(WitEntityInfo entityInfo, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
 
         /// <summary>
         /// Submits a keyword to be added to an entity on the current wit app
@@ -35,7 +36,7 @@ namespace Meta.WitAi.Requests
         /// <param name="keywordInfo">The keyword and synonyms submitted</param>
         /// <param name="onComplete">On completion that returns updated entity if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddEntityKeyword(string entityId,
+        Task<bool> RequestAddEntityKeyword(string entityId,
             WitEntityKeywordInfo keywordInfo, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace Meta.WitAi.Requests
         /// <param name="synonym">The synonym we're adding</param>
         /// <param name="onComplete">On completion that returns updated entity if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddSynonym(string entityId, string keyword, string synonym,
+        Task<bool> RequestAddSynonym(string entityId, string keyword, string synonym,
             VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace Meta.WitAi.Requests
         /// <param name="traitInfo">The trait data to be submitted</param>
         /// <param name="onComplete">On completion that returns a trait with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddTrait(WitTraitInfo traitInfo, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
+        Task<bool> RequestAddTrait(WitTraitInfo traitInfo, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
 
         /// <summary>
         /// Submits a trait value to be added to the current wit app
@@ -64,7 +65,7 @@ namespace Meta.WitAi.Requests
         /// <param name="traitValue">The trait value to be submitted</param>
         /// <param name="onComplete">On completion callback that returns updated trait if successful</param>
         /// <returns>False if fails to make request</returns>
-        bool RequestAddTraitValue(string traitId,
+        Task<bool> RequestAddTraitValue(string traitId,
             string traitValue, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
     }
 }

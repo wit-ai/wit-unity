@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Meta.WitAi.Requests
 {
@@ -38,7 +39,7 @@ namespace Meta.WitAi.Requests
         /// <param name="queryParams">Parameters to be sent to the endpoint</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool MessageRequest(string text,
+        public Task<bool> MessageRequest(string text,
             Dictionary<string, string> queryParams,
             RequestCompleteDelegate<string> onComplete,
             RequestCompleteDelegate<string> onPartial = null) =>
@@ -53,7 +54,7 @@ namespace Meta.WitAi.Requests
         /// <param name="queryParams">Parameters to be sent to the endpoint</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool MessageRequest(string endpoint, bool post, string text,
+        public Task<bool> MessageRequest(string endpoint, bool post, string text,
             Dictionary<string, string> queryParams,
             RequestCompleteDelegate<string> onComplete,
             RequestCompleteDelegate<string> onPartial = null)

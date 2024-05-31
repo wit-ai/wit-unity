@@ -86,14 +86,14 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The request to be managed</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        public override bool Request(UnityWebRequest unityRequest,
+        public override Task<bool> Request(UnityWebRequest unityRequest,
             RequestCompleteDelegate<UnityWebRequest> onComplete)
         {
             // Ensure configuration is set
             if (Configuration == null)
             {
                 onComplete?.Invoke(unityRequest, "Cannot perform a request without a Wit configuration");
-                return false;
+                return Task.FromResult(false);
             }
 
             // Perform base
@@ -125,7 +125,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uriParams">Endpoint url parameters</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestWitGet<TData>(string uriEndpoint,
+        public Task<bool> RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
@@ -158,7 +158,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <param name="onPartial">The callback delegate when a partial response is received</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestWitPost<TData>(string uriEndpoint,
+        public Task<bool> RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
@@ -194,7 +194,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onPartial">The callback delegate when a partial response is received</param>
         /// <param name="onProgress">The upload progress</param>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestWitPut<TData>(string uriEndpoint,
+        public Task<bool> RequestWitPut<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)

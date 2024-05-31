@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Json;
 
@@ -32,7 +33,7 @@ namespace Meta.WitAi.Requests
         /// <param name="intentInfo">The intent data to be submitted</param>
         /// <param name="onComplete">On completion that returns an intent with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddIntent(WitIntentInfo intentInfo,
+        public Task<bool> RequestAddIntent(WitIntentInfo intentInfo,
             RequestCompleteDelegate<WitIntentInfo> onComplete)
         {
             string json = JsonConvert.SerializeObject(intentInfo);
@@ -45,7 +46,7 @@ namespace Meta.WitAi.Requests
         /// <param name="entityInfo">The entity info to be submitted</param>
         /// <param name="onComplete">On completion that returns an entity with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddEntity(WitEntityInfo entityInfo,
+        public Task<bool> RequestAddEntity(WitEntityInfo entityInfo,
             RequestCompleteDelegate<WitEntityInfo> onComplete)
         {
             string json = JsonConvert.SerializeObject(entityInfo);
@@ -59,7 +60,7 @@ namespace Meta.WitAi.Requests
         /// <param name="keywordInfo">The keyword and synonyms submitted</param>
         /// <param name="onComplete">On completion that returns updated entity if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddEntityKeyword(string entityId,
+        public Task<bool> RequestAddEntityKeyword(string entityId,
             WitEntityKeywordInfo keywordInfo,
             RequestCompleteDelegate<WitEntityInfo> onComplete)
         {
@@ -76,7 +77,7 @@ namespace Meta.WitAi.Requests
         /// <param name="synonym">The synonym we're adding</param>
         /// <param name="onComplete">On completion that returns updated entity if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddSynonym(string entityId, string keyword, string synonym, RequestCompleteDelegate<WitEntityInfo> onComplete)
+        public Task<bool> RequestAddSynonym(string entityId, string keyword, string synonym, RequestCompleteDelegate<WitEntityInfo> onComplete)
         {
             string json = $"{{\"synonym\": \"{synonym}\"}}";
             return RequestWitPost(
@@ -90,7 +91,7 @@ namespace Meta.WitAi.Requests
         /// <param name="traitInfo">The trait data to be submitted</param>
         /// <param name="onComplete">On completion that returns a trait with unique id if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddTrait(WitTraitInfo traitInfo,
+        public Task<bool> RequestAddTrait(WitTraitInfo traitInfo,
             RequestCompleteDelegate<WitTraitInfo> onComplete)
         {
             List<JsonConverter> converters = new List<JsonConverter>(JsonConvert.DefaultConverters);
@@ -118,7 +119,7 @@ namespace Meta.WitAi.Requests
         /// <param name="traitValue">The trait value to be submitted</param>
         /// <param name="onComplete">On completion callback that returns updated trait if successful</param>
         /// <returns>False if fails to make request</returns>
-        public bool RequestAddTraitValue(string traitId,
+        public Task<bool> RequestAddTraitValue(string traitId,
             string traitValue,
             RequestCompleteDelegate<WitTraitInfo> onComplete)
         {
@@ -138,7 +139,7 @@ namespace Meta.WitAi.Requests
         /// <param name="appName">The name of the app as it is defined in wit.ai</param>
         /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public bool RequestImportData(string manifestData,
+        public Task<bool> RequestImportData(string manifestData,
             RequestCompleteDelegate<WitResponseData> onComplete)
         {
             var jsonNode = new WitResponseClass()

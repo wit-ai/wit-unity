@@ -438,7 +438,7 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The unity request to be performed</param>
         /// <param name="onComplete">The callback on completion, returns the request & error string</param>
         /// <returns>False if the request cannot be performed</returns>
-        public virtual bool Request(UnityWebRequest unityRequest,
+        public async virtual Task<bool> Request(UnityWebRequest unityRequest,
             RequestCompleteDelegate<UnityWebRequest> onComplete)
         {
             // Already setup
@@ -450,10 +450,13 @@ namespace Meta.WitAi.Requests
 
             // Set on complete delegate & setup
             _onComplete = onComplete;
-            Setup(unityRequest);
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                Setup(unityRequest);
 
-            // Begin coroutine
-            _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
+                // Begin coroutine
+                _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
+            });
 
             // Success
             return true;
@@ -501,7 +504,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Setup
-            Setup(unityRequest);
+            await ThreadUtility.CallOnMainThread(() => Setup(unityRequest));
 
             // Continue while request exists & is not complete
             while (!IsRequestComplete())
@@ -557,7 +560,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">The uri to perform the request on</param>
         /// <param name="onComplete">A completion callback that includes the headers</param>
         /// <returns></returns>
-        public bool RequestFileHeaders(Uri uri,
+        public Task<bool> RequestFileHeaders(Uri uri,
             RequestCompleteDelegate<Dictionary<string, string>> onComplete)
         {
             // Header unity request
@@ -606,7 +609,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">Uri to get a file</param>
         /// <param name="onComplete">Called once file data has been loaded</param>
         /// <returns>False if cannot begin request</returns>
-        public bool RequestFile(Uri uri,
+        public Task<bool> RequestFile(Uri uri,
             RequestCompleteDelegate<byte[]> onComplete)
         {
             // Get unity request
@@ -717,13 +720,13 @@ namespace Meta.WitAi.Requests
         /// Uses async method to check if file exists & return via the oncomplete method
         /// </summary>
         /// <param name="checkPath">The local file path to be checked</param>
-        public bool RequestFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
+        public Task<bool> RequestFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
         {
             // Request async but don't wait
             #pragma warning disable CS4014
             WaitFileExists(checkPath, onComplete);
             #pragma warning restore CS4014
-            return true;
+            return Task.FromResult(true);
         }
         private async void WaitFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
         {
@@ -759,7 +762,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request to add a download handler to</param>
         /// <param name="onComplete">Called once download has completed</param>
-        public bool RequestFileDownload(string downloadPath, UnityWebRequest unityRequest,
+        public Task<bool> RequestFileDownload(string downloadPath, UnityWebRequest unityRequest,
             RequestCompleteDelegate<bool> onComplete)
         {
             // Get temporary path for download
@@ -770,7 +773,7 @@ namespace Meta.WitAi.Requests
             if (!string.IsNullOrEmpty(errors))
             {
                 onComplete?.Invoke(false, errors);
-                return false;
+                return Task.FromResult(false);
             }
 
             // Perform request
@@ -908,7 +911,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="unityRequest">The unity request performing the post or get</param>
         /// <param name="onComplete">The delegate upon completion</param>
-        public bool RequestText(UnityWebRequest unityRequest,
+        public Task<bool> RequestText(UnityWebRequest unityRequest,
             RequestCompleteDelegate<string> onComplete,
             TextStreamHandler.TextStreamResponseDelegate onPartial = null)
         {
@@ -989,7 +992,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJson<TData>(UnityWebRequest unityRequest,
+        public Task<bool> RequestJson<TData>(UnityWebRequest unityRequest,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
         {
@@ -1140,7 +1143,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJsonGet<TData>(Uri uri,
+        public Task<bool> RequestJsonGet<TData>(Uri uri,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
         {
@@ -1165,7 +1168,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJsonPost<TData>(Uri uri, byte[] postData,
+        public Task<bool> RequestJsonPost<TData>(Uri uri, byte[] postData,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
         {
@@ -1197,7 +1200,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJsonPost<TData>(Uri uri, string postText,
+        public Task<bool> RequestJsonPost<TData>(Uri uri, string postText,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null) =>
             RequestJsonPost(uri, EncodeText(postText), onComplete, onPartial);
@@ -1225,7 +1228,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJsonPut<TData>(Uri uri, byte[] putData,
+        public Task<bool> RequestJsonPut<TData>(Uri uri, byte[] putData,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null)
         {
@@ -1257,7 +1260,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The delegate upon completion</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        public bool RequestJsonPut<TData>(Uri uri, string putText,
+        public Task<bool> RequestJsonPut<TData>(Uri uri, string putText,
             RequestCompleteDelegate<TData> onComplete,
             RequestCompleteDelegate<TData> onPartial = null) =>
             RequestJsonPut(uri, EncodeText(putText), onComplete, onPartial);
@@ -1394,7 +1397,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
         /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
         /// <param name="onComplete">Called when the audio request has completed</param>
-        public bool RequestAudioStream(Uri uri, AudioType audioType, bool includesJson,
+        public Task<bool> RequestAudioStream(Uri uri, AudioType audioType, bool includesJson,
             AudioSampleDecodeDelegate onSamplesDecoded,
             AudioJsonDecodeDelegate onJsonDecoded,
             RequestCompleteDelegate<bool> onComplete) =>
@@ -1410,7 +1413,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
         /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
         /// <param name="onComplete">Called when the audio request has completed</param>
-        public bool RequestAudioStream(UnityWebRequest unityRequest, AudioType audioType, bool includesJson,
+        public async Task<bool> RequestAudioStream(UnityWebRequest unityRequest, AudioType audioType, bool includesJson,
             AudioSampleDecodeDelegate onSamplesDecoded,
             AudioJsonDecodeDelegate onJsonDecoded,
             RequestCompleteDelegate<bool> onComplete)
@@ -1428,12 +1431,12 @@ namespace Meta.WitAi.Requests
                 // Generate decoder
                 var decoder = GetAudioDecoder(audioType, includesJson, onJsonDecoded);
                 // Set audio stream handler
-                unityRequest.downloadHandler = new AudioStreamHandler(decoder, onSamplesDecoded,
-                    (error) => onComplete?.Invoke(string.IsNullOrEmpty(error), error));
+                await ThreadUtility.CallOnMainThread(() => unityRequest.downloadHandler = new AudioStreamHandler(decoder, onSamplesDecoded,
+                    (error) => onComplete?.Invoke(string.IsNullOrEmpty(error), error)));
             }
 
             // Perform default request operation & call stream complete once finished
-            return Request(unityRequest, (response, error) =>
+            return await Request(unityRequest, (response, error) =>
             {
                 if (!string.IsNullOrEmpty(error))
                 {

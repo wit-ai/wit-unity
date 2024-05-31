@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
@@ -35,7 +36,7 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The unity request</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool Request(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<UnityWebRequest> onComplete);
+        Task<bool> Request(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<UnityWebRequest> onComplete);
 
         /// <summary>
         /// Clean the url prior to use
@@ -50,7 +51,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uri"></param>
         /// <param name="onComplete">Called once header lookup has completed</param>
         /// <returns></returns>
-        bool RequestFileHeaders(Uri uri, VRequest.RequestCompleteDelegate<Dictionary<string, string>> onComplete);
+        Task<bool> RequestFileHeaders(Uri uri, VRequest.RequestCompleteDelegate<Dictionary<string, string>> onComplete);
 
         /// <summary>
         /// Performs a simple http header request
@@ -58,7 +59,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uri">Uri to get a file</param>
         /// <param name="onComplete">Called once file data has been loaded</param>
         /// <returns>False if cannot begin request</returns>
-        bool RequestFile(Uri uri, VRequest.RequestCompleteDelegate<byte[]> onComplete);
+        Task<bool> RequestFile(Uri uri, VRequest.RequestCompleteDelegate<byte[]> onComplete);
 
         /// <summary>
         /// Download a file using a unityrequest
@@ -66,7 +67,7 @@ namespace Meta.WitAi.Requests
         /// <param name="unityRequest">The unity request to add a download handler to</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestFileDownload(string downloadPath, UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<bool> onComplete);
+        Task<bool> RequestFileDownload(string downloadPath, UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<bool> onComplete);
 
         /// <summary>
         /// Checks if a file exists at a specified location
@@ -74,7 +75,7 @@ namespace Meta.WitAi.Requests
         /// <param name="checkPath">The local file path to be checked</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestFileExists(string checkPath, VRequest.RequestCompleteDelegate<bool> onComplete);
+        Task<bool> RequestFileExists(string checkPath, VRequest.RequestCompleteDelegate<bool> onComplete);
 
         /// <summary>
         /// Performs a text request & handles the resultant text
@@ -83,7 +84,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <param name="onPartial">The callback delegate for text as it arrives</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestText(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<string> onComplete,
+        Task<bool> RequestText(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<string> onComplete,
             TextStreamHandler.TextStreamResponseDelegate onPartial);
 
         /// <summary>
@@ -93,7 +94,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJson<TData>(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJson<TData>(UnityWebRequest unityRequest, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
@@ -103,7 +104,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonGet<TData>(Uri uri, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJsonGet<TData>(Uri uri, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
@@ -114,7 +115,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPost<TData>(Uri uri, byte[] postData, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJsonPost<TData>(Uri uri, byte[] postData, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
@@ -126,7 +127,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onProgress">The data upload progress</param>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestJsonPost<TData>(Uri uri, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJsonPost<TData>(Uri uri, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
@@ -137,7 +138,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPut<TData>(Uri uri, byte[] putData, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJsonPut<TData>(Uri uri, byte[] putData, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace Meta.WitAi.Requests
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
         /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        bool RequestJsonPut<TData>(Uri uri, string putText, VRequest.RequestCompleteDelegate<TData> onComplete,
+        Task<bool> RequestJsonPut<TData>(Uri uri, string putText, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
         Uri GetUri(string path, Dictionary<string, string> queryParams = null);
@@ -160,7 +161,7 @@ namespace Meta.WitAi.Requests
         /// <param name="uriParams">Endpoint url parameters</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestWitGet<TData>(string uriEndpoint,
+        Task<bool> RequestWitGet<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
@@ -172,7 +173,7 @@ namespace Meta.WitAi.Requests
         /// <param name="postText">Text to be sent to endpoint</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestWitPost<TData>(string uriEndpoint,
+        Task<bool> RequestWitPost<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string postText, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
 
@@ -184,7 +185,7 @@ namespace Meta.WitAi.Requests
         /// <param name="putText">Text to be sent to endpoint</param>
         /// <param name="onComplete">The callback delegate on request completion</param>
         /// <returns>False if the request cannot be performed</returns>
-        bool RequestWitPut<TData>(string uriEndpoint,
+        Task<bool> RequestWitPut<TData>(string uriEndpoint,
             Dictionary<string, string> uriParams, string putText, VRequest.RequestCompleteDelegate<TData> onComplete,
             VRequest.RequestCompleteDelegate<TData> onPartialCallback = null);
     }

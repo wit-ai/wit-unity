@@ -11,6 +11,7 @@
 #endif
 
 using System;
+using System.Collections;
 using System.Threading;
 using Meta.Voice.Logging;
 #if THREADING_ENABLED
@@ -223,6 +224,100 @@ namespace Meta.WitAi
             callback();
 #endif
             return task.Task;
+        }
+
+        /// <summary>
+        /// Allows yielding on a coroutine to await for a result from an async task
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="result"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static IEnumerator CoroutineAwait(Func<Task> func)
+        {
+            var task = func.Invoke();
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Allows yielding on a coroutine to await for a result from an async task
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="result"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static IEnumerator CoroutineAwait<T>(Func<Task<T>> func, Action<T> result)
+        {
+            var task = func.Invoke();
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            result(task.Result);
+        }
+
+        /// <summary>
+        /// Allows yielding on a coroutine to await for a result from an async task
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="data"></param>
+        /// <param name="result"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <returns></returns>
+        public static IEnumerator CoroutineAwait<T, T1>(Func<T1, Task<T>> func, T1 data, Action<T> result)
+        {
+            var task = func.Invoke(data);
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            result(task.Result);
+        }
+
+        /// <summary>
+        /// Allows yielding on a coroutine to await for a result from an async task
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="data"></param>
+        /// <param name="result"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <returns></returns>
+        public static IEnumerator CoroutineAwait<T, T1, T2>(Func<T1, T2, Task<T>> func, T1 data1, T2 data2, Action<T> result)
+        {
+            var task = func.Invoke(data1, data2);
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            result(task.Result);
+        }
+
+        /// <summary>
+        /// Allows yielding on a coroutine to await for a result from an async task
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="data"></param>
+        /// <param name="result"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <returns></returns>
+        public static IEnumerator CoroutineAwait<T, T1, T2, T3>(Func<T1, T2, T3, Task<T>> func, T1 data1, T2 data2, T3 data3, Action<T> result)
+        {
+            var task = func.Invoke(data1, data2, data3);
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            result(task.Result);
         }
     }
 }

@@ -33,7 +33,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="onComplete">Returns string with the specified app id if possible.</param>
         /// <returns>Returns false if request cannot be made</returns>
-        public bool RequestAppId(RequestCompleteDelegate<string> onComplete)
+        public Task<bool> RequestAppId(RequestCompleteDelegate<string> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
             uriParameters[WitEditorConstants.ENDPOINT_APPS_LIMIT] = 10000.ToString();
@@ -100,7 +100,7 @@ namespace Meta.WitAi.Requests
         /// <param name="offset">The index offset for apps to be returned</param>
         /// <param name="onComplete">Callback on completion</param>
         /// <returns>Returns false if request cannot be made</returns>
-        public bool RequestApps(int limit, int offset,
+        public Task<bool> RequestApps(int limit, int offset,
             RequestCompleteDelegate<WitAppInfo[]> onComplete)
         {
             Dictionary<string, string> uriParameters = new Dictionary<string, string>();
@@ -129,7 +129,7 @@ namespace Meta.WitAi.Requests
         /// <param name="applicationId">The application's unique identifier</param>
         /// <param name="onComplete">Callback on completion that returns app info if possible</param>
         /// <returns>Returns false if request cannot be made</returns>
-        public bool RequestAppInfo(string applicationId,
+        public Task<bool> RequestAppInfo(string applicationId,
             RequestCompleteDelegate<WitAppInfo> onComplete) =>
             RequestWitGet<WitAppInfo>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}",
                 null, onComplete);
@@ -147,7 +147,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="applicationId">The application's unique identifier</param>
         /// <returns>Returns false if request cannot be made</returns>
-        public bool RequestAppExportInfo(RequestCompleteDelegate<WitExportInfo> onComplete) =>
+        public Task<bool> RequestAppExportInfo(RequestCompleteDelegate<WitExportInfo> onComplete) =>
             RequestWitGet(WitEditorConstants.ENDPOINT_EXPORT, null, onComplete);
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitExportInfo>(WitEditorConstants.ENDPOINT_EXPORT);
 
         //
-        public bool RequestAppVersionTags(string applicationId,
+        public Task<bool> RequestAppVersionTags(string applicationId,
             RequestCompleteDelegate<WitVersionTagInfo[][]> onComplete)
         {
             return RequestWitGet<WitVersionTagInfo[][]>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_TAGS}", null, onComplete);
@@ -174,7 +174,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitVersionTagInfo[][]>($"{WitEditorConstants.ENDPOINT_APPS}/{applicationId}/{WitEditorConstants.ENDPOINT_TAGS}");
 
         // Obtain client app token
-        public bool RequestClientAppToken(string applicationId,
+        public Task<bool> RequestClientAppToken(string applicationId,
             RequestCompleteDelegate<string> onComplete)
         {
             var jsonNode = new WitResponseClass()
@@ -234,7 +234,7 @@ namespace Meta.WitAi.Requests
         }
 
         // Obtain wit app intents
-        public bool RequestIntentList(RequestCompleteDelegate<WitIntentInfo[]> onComplete)
+        public Task<bool> RequestIntentList(RequestCompleteDelegate<WitIntentInfo[]> onComplete)
         {
             return RequestWitGet<WitIntentInfo[]>(WitEditorConstants.ENDPOINT_INTENTS, null, onComplete);
         }
@@ -247,7 +247,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitIntentInfo[]>(WitEditorConstants.ENDPOINT_INTENTS);
 
         // Get specific intent info
-        public bool RequestIntentInfo(string intentId, RequestCompleteDelegate<WitIntentInfo> onComplete)
+        public Task<bool> RequestIntentInfo(string intentId, RequestCompleteDelegate<WitIntentInfo> onComplete)
         {
             return RequestWitGet<WitIntentInfo>($"{WitEditorConstants.ENDPOINT_INTENTS}/{intentId}",
                 null, onComplete);
@@ -261,7 +261,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitIntentInfo>($"{WitEditorConstants.ENDPOINT_INTENTS}/{intentId}");
 
         // Obtain wit app entities
-        public bool RequestEntityList(RequestCompleteDelegate<WitEntityInfo[]> onComplete)
+        public Task<bool> RequestEntityList(RequestCompleteDelegate<WitEntityInfo[]> onComplete)
         {
             return RequestWitGet<WitEntityInfo[]>(WitEditorConstants.ENDPOINT_ENTITIES,
                 null, onComplete);
@@ -275,7 +275,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitEntityInfo[]>(WitEditorConstants.ENDPOINT_ENTITIES);
 
         // Get specific entity info
-        public bool RequestEntityInfo(string entityId,
+        public Task<bool> RequestEntityInfo(string entityId,
             RequestCompleteDelegate<WitEntityInfo> onComplete)
         {
             return RequestWitGet<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}",
@@ -290,7 +290,7 @@ namespace Meta.WitAi.Requests
             => await RequestWitGetAsync<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}");
 
         // Obtain wit app traits
-        public bool RequestTraitList(RequestCompleteDelegate<WitTraitInfo[]> onComplete)
+        public Task<bool> RequestTraitList(RequestCompleteDelegate<WitTraitInfo[]> onComplete)
         {
             return RequestWitGet<WitTraitInfo[]>(WitEditorConstants.ENDPOINT_TRAITS,
                 null, onComplete);
@@ -304,7 +304,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitTraitInfo[]>(WitEditorConstants.ENDPOINT_TRAITS);
 
         // Get specific trait info
-        public bool RequestTraitInfo(string traitId,
+        public Task<bool> RequestTraitInfo(string traitId,
             RequestCompleteDelegate<WitTraitInfo> onComplete)
         {
             return RequestWitGet<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}",
@@ -319,7 +319,7 @@ namespace Meta.WitAi.Requests
             await RequestWitGetAsync<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_TRAITS}/{traitId}");
 
         // Obtain wit app voices in a dictionary format
-        public bool RequestVoiceList(RequestCompleteDelegate<Dictionary<string, WitVoiceInfo[]>> onComplete)
+        public Task<bool> RequestVoiceList(RequestCompleteDelegate<Dictionary<string, WitVoiceInfo[]>> onComplete)
         {
             return RequestWitGet<Dictionary<string, WitVoiceInfo[]>>(WitEditorConstants.ENDPOINT_TTS_VOICES, null, onComplete);
         }
