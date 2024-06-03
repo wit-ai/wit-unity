@@ -131,6 +131,8 @@ namespace Meta.Voice.Logging
             }
         }
 
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Verbose(string message,
             [CallerMemberName] string memberName = "",
             [CallerFilePath] string sourceFilePath = "",
@@ -140,6 +142,7 @@ namespace Meta.Voice.Logging
             LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message));
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Verbose(string message,
             object p1,
             [CallerMemberName] string memberName = "",
@@ -151,6 +154,7 @@ namespace Meta.Voice.Logging
                 p1));
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Verbose(string message,
             object p1,
             object p2,
@@ -164,6 +168,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Verbose(string message, params object [] parameters)
         {
             var context = _emptyContext;
@@ -172,6 +177,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Verbose(CorrelationID correlationId, string message, params object [] parameters)
         {
             var context = _emptyContext;
@@ -181,12 +187,14 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Info(string message, params object [] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Info, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Info(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
@@ -194,12 +202,14 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Debug(string message, params object [] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Debug, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Debug(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
@@ -207,12 +217,14 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Warning(string message, params object [] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Warning, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(CorrelationID correlationId, ErrorCode errorCode, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
@@ -220,12 +232,14 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(ErrorCode errorCode, string message, params object [] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Error, errorCode, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(CorrelationID correlationId, Exception exception, ErrorCode errorCode, string message,
             params object[] parameters)
         {
@@ -234,6 +248,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(CorrelationID correlationId, string message, params object[] parameters)
         {
             CorrelateIds(correlationId);
@@ -241,12 +256,14 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(string message, params object[] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Error, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(CorrelationID correlationId, Exception exception, string message, params object[] parameters)
         {
             CorrelateIds(correlationId);
@@ -254,18 +271,21 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(Exception exception, ErrorCode errorCode, string message, params object[] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Error, errorCode, exception, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Error(Exception exception, string message = "", params object[] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Error, exception, (ErrorCode)KnownErrorCode.Unknown, message, parameters);
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Warning(CorrelationID correlationId, string message, params object [] parameters)
         {
             CorrelateIds(correlationId);
@@ -273,6 +293,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Correlate(CorrelationID newCorrelationId, CorrelationID rootCorrelationId)
         {
             var correlated = _correlations.Add(newCorrelationId, rootCorrelationId, true);
@@ -288,6 +309,7 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, string message,
             params object[] parameters)
         {
@@ -296,6 +318,7 @@ namespace Meta.Voice.Logging
             LogEntry(new LogEntry(_category, verbosity, correlationId, context, String.Empty, message, parameters));
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity,
             Exception exception, ErrorCode errorCode,
             string message, params object[] parameters)
@@ -306,6 +329,7 @@ namespace Meta.Voice.Logging
                 parameters));
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Log(CorrelationID correlationId, VLoggerVerbosity verbosity, ErrorCode errorCode, string message,
             params object[] parameters)
         {

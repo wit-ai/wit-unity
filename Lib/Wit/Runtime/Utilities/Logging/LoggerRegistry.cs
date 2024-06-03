@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 
 namespace Meta.Voice.Logging
@@ -146,6 +147,7 @@ namespace Meta.Voice.Logging
             return new LazyLogger(() => GetCoreLogger(category, logSink));
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public IVLogger GetCoreLogger(string category, ILogSink logSink)
         {
             logSink ??= LogSink;
@@ -173,6 +175,7 @@ namespace Meta.Voice.Logging
         /// <param name="frameDepth">The number of frames to skip to find the real caller.
         /// This should be higher than 1 when called internally from the logger code.</param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private IVLogger GetCoreLogger(ILogSink logSink = null, int frameDepth = 1)
         {
             logSink ??= LogSink;
