@@ -9,6 +9,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
@@ -27,6 +29,8 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     private int clipIndex = 0;
 
     private List<float[]> clipData = new List<float[]>();
+
+    private IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
     private void Start()
     {
@@ -64,8 +68,8 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             _isRecording = true;
             VLog.D($"Playing {_audioClips[clipIndex].name}");
             _audioSource.PlayOneShot(_audioClips[clipIndex]);
-            StartCoroutine(ProcessClip(_audioClips[clipIndex], clipData[clipIndex]));
             OnStartRecording?.Invoke();
+            _ = TransmitAudio(clipData[clipIndex]);
         }
         else
         {
@@ -73,25 +77,31 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         }
     }
 
-    private IEnumerator ProcessClip(AudioClip clip, float[] clipData)
+    /// <summary>
+    /// Transmit audio clip data as playback occurs to simulate microphone recording
+    /// </summary>
+    private float[] _buffer;
+    private const float _samplesPerFrame = 1f / 100f;
+    private async Task TransmitAudio(float[] samples)
     {
-        int chunkSize = 0;
-        for (int index = 0; index < clipData.Length; index += chunkSize)
+        // Generate a single buffer
+        int index = 0;
+        if (_buffer == null)
         {
-            chunkSize = (int) (AudioEncoding.samplerate * Time.deltaTime);
-            int len = Math.Min(chunkSize, clipData.Length - index);
-            var data = new float[chunkSize];
-            Array.Copy(clipData, index, data, 0, len);
-
-            var max = float.MinValue;
-            foreach (var f in data)
-            {
-                max = Mathf.Max(f, max);
-            }
-
-            VLog.D($"Sending {index}/{clipData.Length} [{data.Length}] samples with a max volume of {max}");
-            OnSampleReady?.Invoke(data.Length, data, max);
-            yield return null;
+            int bufferSize = Mathf.CeilToInt(AudioEncoding.samplerate * _samplesPerFrame);
+            _buffer = new float[bufferSize];
+        }
+        while (index < samples.Length)
+        {
+            // Clamp
+            int len = Math.Min(_buffer.Length, samples.Length - index);
+            // Copy and return
+            Array.Copy(samples, index, _buffer, 0, len);
+            OnSampleReady?.Invoke(len, _buffer, float.MinValue);
+            index += len;
+            VLog.D($"Sending {index}/{samples.Length} [{len}] samples");
+            // Wait a frame
+            await Task.Yield();
         }
 
         if (_loopRequests)
@@ -114,7 +124,12 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
     public bool IsRecording => _isRecording;
 
-    public AudioEncoding AudioEncoding => new AudioEncoding();
+    /// <summary>
+    /// The audio encoding of the clips being transmitted
+    /// </summary>
+    public AudioEncoding AudioEncoding => _audioEncoding;
+    [SerializeField] private AudioEncoding _audioEncoding = new AudioEncoding();
+
     public bool IsInputAvailable => true;
     public void CheckForInput()
     {
@@ -148,11 +163,36 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         AddClipData(clip);
         VLog.D($"Clip added {clip.name}");
     }
-
     private void AddClipData(AudioClip clip)
     {
-        var samples = new float[clip.samples];
-        clip.GetData(samples, 0);
-        clipData.Add(samples);
+        var clipSamples = new float[clip.samples];
+        clip.GetData(clipSamples, 0);
+        var transmitSamples = QuickResample(clipSamples,
+            clip.channels, clip.frequency,
+            AudioEncoding.numChannels, AudioEncoding.samplerate);
+        clipData.Add(transmitSamples);
+    }
+
+    /// <summary>
+    /// Resamples the audio clip to match the current AudioEncoding since AudioBuffer resamples based on the AudioEncoding.
+    /// This allows for transmission of clips with different sample rates and channel counts.
+    /// </summary>
+    public static float[] QuickResample(float[] oldSamples, int oldChannels, int oldSampleRate, int newChannels, int newSampleRate)
+    {
+        if (oldSampleRate == newSampleRate
+            && oldChannels == newChannels)
+        {
+            return oldSamples;
+        }
+        float resizeFactor = (float)oldSampleRate / newSampleRate;
+        resizeFactor *= (float)oldChannels / newChannels;
+        int totalSamples = (int)(oldSamples.Length / resizeFactor);
+        float[] newSamples = new float[totalSamples];
+        for (int i = 0; i < totalSamples; i++)
+        {
+            var index = (int)(i * resizeFactor);
+            newSamples[i] = oldSamples[index];
+        }
+        return newSamples;
     }
 }
