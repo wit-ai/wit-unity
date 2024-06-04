@@ -620,9 +620,16 @@ namespace Meta.WitAi.Data
                 var data = (long)(encodingMin + sample * encodingDif);
                 for (int b = 0; b < bytesPerSample; b++)
                 {
-                    _outputBuffer.Push((byte)(data >> (b * 8)));
+                    var outByte = (byte)(data >> (b * 8));
+                    _outputBuffer.Push(outByte);
+#if DEBUG_MIC
+                    // Editor only
+                    DebugWrite(outByte);
+#endif
                 }
             }
+
+
 
             // Scale based on min/max audio levels
             float min = MicMinAudioLevel;
@@ -746,13 +753,13 @@ namespace Meta.WitAi.Data
         }
 
         // Write to file
-        private void DebugWrite(byte[] bytes)
+        private void DebugWrite(byte outByte)
         {
             if (_fileStream == null)
             {
                 return;
             }
-            _fileStream.Write(bytes, 0, bytes.Length);
+            _fileStream.WriteByte(outByte);
         }
 
         // Stop mic debug
