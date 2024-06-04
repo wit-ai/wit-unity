@@ -78,7 +78,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
         int chunkSize = 0;
         for (int index = 0; index < clipData.Length; index += chunkSize)
         {
-            chunkSize = (int) (16000 * Time.deltaTime);
+            chunkSize = (int) (AudioEncoding.samplerate * Time.deltaTime);
             int len = Math.Min(chunkSize, clipData.Length - index);
             var data = new float[chunkSize];
             Array.Copy(clipData, index, data, 0, len);
