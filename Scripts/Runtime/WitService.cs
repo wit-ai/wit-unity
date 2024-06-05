@@ -10,7 +10,9 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
@@ -26,8 +28,10 @@ using UnityEngine.SceneManagement;
 
 namespace Meta.WitAi
 {
+    [LogCategory(LogCategory.Requests)]
     public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
         private float _lastMinVolumeLevelTime;
 
         /// <summary>
@@ -408,7 +412,7 @@ namespace Meta.WitAi
             // Not valid
             if (!IsConfigurationValid())
             {
-                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                _log.Error($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return null;
             }
             // Already recording
@@ -574,31 +578,34 @@ namespace Meta.WitAi
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
         public void Activate(string text) => Activate(text, new WitRequestOptions());
-        public void Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
-        public VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
+        public void Activate(string text, WitRequestOptions requestOptions) => _ = Activate(text, requestOptions, new VoiceServiceRequestEvents());
+        public Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
             // Not valid
             if (!IsConfigurationValid())
             {
-                VLog.E($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
+                _log.Error($"Your AppVoiceExperience \"{gameObject.name}\" does not have a wit config assigned. Understanding Viewer activations will not trigger in game events..");
                 return null;
             }
 
-            // Handle option setup
-            if (requestOptions == null)
+            return ThreadUtility.BackgroundAsync(_log, () =>
             {
-                requestOptions = new WitRequestOptions();
-            }
-            // Set request option text
-            requestOptions.Text = text;
+                // Handle option setup
+                if (requestOptions == null)
+                {
+                    requestOptions = new WitRequestOptions();
+                }
+                // Set request option text
+                requestOptions.Text = text;
 
-            // Generate request
-            var request = GetTextRequest(requestOptions, requestEvents);
-            SetupRequest(request);
+                // Generate request
+                var request = GetTextRequest(requestOptions, requestEvents);
+                SetupRequest(request);
 
-            // Send & return
-            request.Send();
-            return request;
+                // Send & return
+                request.Send();
+                return Task.FromResult(request);
+            });
         }
         #endregion TEXT REQUESTS
 
@@ -704,7 +711,7 @@ namespace Meta.WitAi
                     if (elapsed >
                         RuntimeConfiguration.minTranscriptionKeepAliveTimeInSeconds)
                     {
-                        VLog.D($"Deactivated due to inactivity. No new words detected in {elapsed:0.00} seconds.");
+                        _log.Verbose($"Deactivated due to inactivity. No new words detected in {elapsed:0.00} seconds.");
                         DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
                     }
                 }
@@ -714,7 +721,7 @@ namespace Meta.WitAi
                     if (elapsed >
                         RuntimeConfiguration.minKeepAliveTimeInSeconds)
                     {
-                        VLog.D($"Deactivated due to inactivity. No sound detected in {elapsed:0.00} seconds.");
+                        _log.Verbose($"Deactivated due to inactivity. No sound detected in {elapsed:0.00} seconds.");
                         DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToInactivity);
                     }
                 }
@@ -837,7 +844,7 @@ namespace Meta.WitAi
             yield return new WaitForSeconds(RuntimeConfiguration.maxRecordingTime);
             if (IsRequestActive)
             {
-                VLog.D($"Deactivated input due to timeout.\nMax Record Time: {RuntimeConfiguration.maxRecordingTime}");
+                _log.Verbose($"Deactivated input due to timeout.\nMax Record Time: {RuntimeConfiguration.maxRecordingTime}");
                 DeactivateRequest(VoiceEvents?.OnStoppedListeningDueToTimeout, false);
             }
         }

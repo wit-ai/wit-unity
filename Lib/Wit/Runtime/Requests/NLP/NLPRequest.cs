@@ -185,6 +185,8 @@ namespace Meta.Voice
             Events?.OnRawResponse?.Invoke(rawResponse));
 
         private Task _lastDecode;
+        private TResponseData _lastResponse;
+
         private void EnqueueDecode(string rawResponse, bool final)
         {
             _rawQueued++;
@@ -209,6 +211,7 @@ namespace Meta.Voice
 
             // If passed as final or set to final while decoding and the last decoding chunk
             final |= _rawResponseFinal && !IsDecoding;
+            _lastResponse = responseData;
             ApplyResponseData(responseData, final);
         }
         #endregion DECODING
@@ -355,7 +358,7 @@ namespace Meta.Voice
                 return;
             }
             // Apply previous data as final
-            ApplyResponseData(ResponseData, true);
+            ApplyResponseData(_lastResponse, true);
         }
     }
 }

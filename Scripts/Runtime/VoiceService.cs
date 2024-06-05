@@ -142,19 +142,19 @@ namespace Meta.WitAi
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
-        public void Activate(string text) => Activate(text, new WitRequestOptions());
+        public void Activate(string text) => _ = ThreadUtility.BackgroundAsync(_log, async () => await Activate(text, new WitRequestOptions()));
         /// <summary>
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
-        public VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
+        public Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents());
         /// <summary>
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        public VoiceServiceRequest Activate(string text, VoiceServiceRequestEvents requestEvents) => Activate(text, new WitRequestOptions(), requestEvents);
+        public Task<VoiceServiceRequest> Activate(string text, VoiceServiceRequestEvents requestEvents) => Activate(text, new WitRequestOptions(), requestEvents);
 
         /// <summary>
         /// Send text data for NLU processing with custom request options.
@@ -162,7 +162,7 @@ namespace Meta.WitAi
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        public abstract VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions,
+        public abstract Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions,
             VoiceServiceRequestEvents requestEvents);
         #endregion TEXT REQUESTS
 
@@ -475,7 +475,7 @@ namespace Meta.WitAi
         /// <param name="text">Text to be used for NLU processing</param>
         /// <param name="requestOptions">Additional options such as dynamic entities</param>
         /// <param name="requestEvents">Events specific to the request's lifecycle</param>
-        VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions,
+        Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions,
             VoiceServiceRequestEvents requestEvents);
 
         /// <summary>

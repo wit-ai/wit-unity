@@ -7,6 +7,7 @@
  */
 
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Requests;
 using UnityEditor;
@@ -16,6 +17,8 @@ namespace Meta.WitAi.Inspectors
 {
     public class WitInspector : Editor
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         // Text invocation message
         private string _activationMessage;
 
@@ -92,7 +95,12 @@ namespace Meta.WitAi.Inspectors
                 _activationMessage = GUILayout.TextField(_activationMessage);
                 if (GUILayout.Button("Send", GUILayout.Width(50)))
                 {
-                    _request = _activationHandler.Activate(_activationMessage, GetRequestOptions(), GetRequestEvents());
+                    _ = ThreadUtility.BackgroundAsync(_log, async () =>
+                    {
+                        _request = await _activationHandler.Activate(_activationMessage, GetRequestOptions(),
+                            GetRequestEvents());
+                        return _request;
+                    });
                 }
                 GUILayout.EndHorizontal();
             }

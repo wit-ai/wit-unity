@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Threading.Tasks;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Interfaces;
@@ -63,7 +64,7 @@ namespace Meta.WitAi
             return base.GetActivateAudioError();
         }
 
-        public override VoiceServiceRequest Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
+        public override Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
             SetupRequestParameters(ref requestOptions, ref requestEvents);
             return witService.Activate(text, requestOptions, requestEvents);

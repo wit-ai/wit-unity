@@ -348,7 +348,7 @@ namespace Meta.WitAi.Windows
             GUILayout.EndVertical();
         }
 
-        private void SubmitUtterance()
+        private async void SubmitUtterance()
         {
             // Remove response
             _response = null;
@@ -359,7 +359,7 @@ namespace Meta.WitAi.Windows
                 {
                     _status = WitTexts.Texts.UnderstandingViewerListeningLabel;
                     _responseText = _status;
-                    _request = service.Activate(_utterance, new VoiceServiceRequestEvents());
+                    _request = await service.Activate(_utterance, new VoiceServiceRequestEvents());
                     // Hack to watch for loading to complete. Response does not
                     // come back on the main thread so Repaint in onResponse in
                     // the editor does nothing.
