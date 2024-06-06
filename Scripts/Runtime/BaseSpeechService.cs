@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,6 +44,11 @@ namespace Meta.WitAi
         /// All currently running requests
         /// </summary>
         public HashSet<VoiceServiceRequest> Requests { get; } = new HashSet<VoiceServiceRequest>();
+
+        /// <summary>
+        /// Dictionary that holds generated actions that pass a request along with additional event data
+        /// </summary>
+        private ConcurrentDictionary<int, object> _customRequestEvents = new ConcurrentDictionary<int, object>();
 
         /// <summary>
         /// Returns true if this voice service is currently active, listening with the mic or performing a networked request
@@ -393,105 +399,45 @@ namespace Meta.WitAi
             var events = request.Events;
 
             // Add/Remove 1 : 1 listeners
-            SetEventListener(events.OnStartListening, OnRequestStartListening, addListeners);
-            SetEventListener(events.OnStopListening, OnRequestStopListening, addListeners);
-            SetEventListener(events.OnSend, OnRequestSend, addListeners);
-            SetEventListener(events.OnSuccess, OnRequestSuccess, addListeners);
-            SetEventListener(events.OnFailed, OnRequestFailed, addListeners);
-            SetEventListener(events.OnCancel, OnRequestCancel, addListeners);
-            SetEventListener(events.OnComplete, OnRequestComplete, addListeners);
+            events.OnStartListening.SetListener(OnRequestStartListening, addListeners);
+            events.OnStopListening.SetListener(OnRequestStopListening, addListeners);
+            events.OnSend.SetListener(OnRequestSend, addListeners);
+            events.OnSuccess.SetListener(OnRequestSuccess, addListeners);
+            events.OnFailed.SetListener(OnRequestFailed, addListeners);
+            events.OnCancel.SetListener(OnRequestCancel, addListeners);
+            events.OnComplete.SetListener(OnRequestComplete, addListeners);
 
             // Add/Remove custom actions
-            SetEventListener(events.OnRawResponse, GetUnityAction<string>(request, OnRequestRawResponse), addListeners);
-            SetEventListener(events.OnPartialTranscription, GetUnityAction<string>(request, OnRequestPartialTranscription), addListeners);
-            SetEventListener(events.OnFullTranscription, GetUnityAction<string>(request, OnRequestFullTranscription), addListeners);
-            SetEventListener(events.OnPartialResponse, GetUnityAction<WitResponseNode>(request, OnRequestPartialResponse), addListeners);
+            SetRequestEventListener(events.OnRawResponse, request, OnRequestRawResponse, addListeners);
+            SetRequestEventListener(events.OnPartialTranscription, request, OnRequestPartialTranscription, addListeners);
+            SetRequestEventListener(events.OnFullTranscription, request, OnRequestFullTranscription, addListeners);
+            SetRequestEventListener(events.OnPartialResponse, request, OnRequestPartialResponse, addListeners);
         }
 
         /// <summary>
-        /// Adds or removes action for the specified unityEvent
+        /// Adds or removes listener to a base event and passes base event's parameter along with the request to the added action.
         /// </summary>
-        private void SetEventListener<T>(UnityEvent<T> unityEvent, UnityAction<T> action, bool add)
+        /// <param name="baseEvent">The base event to begin or stop listening to.</param>
+        /// <param name="request">The request to be passed to the callback along with the baseEvent parameter.</param>
+        /// <param name="callbackWithRequest">The callback action that should occur whenever the baseEvent is called.</param>
+        /// <param name="addListener">If true, adds listener to baseEvent.  If false, removes listener</param>
+        private void SetRequestEventListener<TParam>(UnityEvent<TParam> baseEvent,
+            VoiceServiceRequest request,
+            UnityAction<VoiceServiceRequest, TParam> callbackWithRequest,
+            bool addListener)
         {
-            if (add)
+            var id = baseEvent.GetHashCode();
+            if (addListener)
             {
-                unityEvent.AddListener(action);
+                UnityAction<TParam> intermediaryEvent = (param) => callbackWithRequest?.Invoke(request, param);
+                _customRequestEvents[id] = intermediaryEvent;
+                baseEvent.AddListener(intermediaryEvent);
             }
-            else
+            else if (_customRequestEvents.TryRemove(id, out var adapter)
+                     && adapter is UnityAction<TParam> intermediaryEvent)
             {
-                unityEvent.RemoveListener(action);
+                baseEvent.RemoveListener(intermediaryEvent);
             }
-        }
-
-        /// <summary>
-        /// Dictionary that holds generated action lamdas to ensure they are removed correctly
-        /// </summary>
-        private Dictionary<string, object> _actions = new Dictionary<string, object>();
-
-        /// <summary>
-        /// Simple getter for unique request + object combination
-        /// </summary>
-        private string GetUniqueId(VoiceServiceRequest request, System.Object obj) =>
-            $"{request.Options.RequestId}_{obj.GetHashCode()}";
-
-        /// <summary>
-        /// Get cached reference for the action
-        /// </summary>
-        private UnityAction<T> GetExistingAction<T>(string uniqueId)
-        {
-            if (_actions.ContainsKey(uniqueId))
-            {
-                var result = _actions[uniqueId];
-                if (result is UnityAction<T> actionResult)
-                {
-                    return actionResult;
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Get cached reference for the action
-        /// </summary>
-        private UnityAction<T> GetUnityAction<T>(VoiceServiceRequest request, UnityAction<VoiceServiceRequest> unityAction)
-        {
-            // Get unique id
-            string uniqueId = GetUniqueId(request, unityAction);
-
-            // Obtain existing if possible
-            UnityAction<T> newAction = GetExistingAction<T>(uniqueId);
-
-            // Set new delegate & apply to actions
-            if (newAction == null)
-            {
-                newAction = (param) => unityAction?.Invoke(request);
-                _actions[uniqueId] = newAction;
-            }
-
-            // Generate a new one
-            return newAction;
-        }
-
-        /// <summary>
-        /// Get cached reference for the action
-        /// </summary>
-        private UnityAction<T> GetUnityAction<T>(VoiceServiceRequest request, UnityAction<VoiceServiceRequest, T> unityAction)
-        {
-            // Get unique id
-            string uniqueId = GetUniqueId(request, unityAction);
-
-            // Obtain existing if possible
-            UnityAction<T> newAction = GetExistingAction<T>(uniqueId);
-
-            // Set new delegate & apply to actions
-            if (newAction == null)
-            {
-                newAction = (param) => unityAction?.Invoke(request, param);
-                _actions[uniqueId] = newAction;
-            }
-
-            // Generate a new one
-            return newAction;
         }
     }
 }
