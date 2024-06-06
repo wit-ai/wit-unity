@@ -8,6 +8,7 @@
 
 using UnityEngine;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -70,7 +71,7 @@ namespace Meta.WitAi
         private float _lastWordTime;
 
         // Parallel Requests
-        private HashSet<VoiceServiceRequest> _transmitRequests = new HashSet<VoiceServiceRequest>();
+        private ConcurrentDictionary<string, VoiceServiceRequest> _transmitRequests = new ConcurrentDictionary<string, VoiceServiceRequest>();
         private Coroutine _queueHandler;
 
         // Wit configuration provider
@@ -388,7 +389,7 @@ namespace Meta.WitAi
                 return true;
             }
             // True if any transmitting requests track this web socket request
-            return _transmitRequests.FirstOrDefault((tRequest) => IsWebSocketRequestWrapped(tRequest, webSocketRequest)) != null;
+            return _transmitRequests.ContainsKey(webSocketRequest.RequestId);
         }
         /// <summary>
         /// Returns true if the voice service request wraps the specified web socket request
@@ -543,7 +544,7 @@ namespace Meta.WitAi
             // Add to text request to transmit list
             else
             {
-                _transmitRequests.Add(newRequest);
+                _transmitRequests[newRequest.Options.RequestId] = newRequest;
             }
 
             // Add additional events
@@ -881,17 +882,19 @@ namespace Meta.WitAi
             // Abort transmitting requests
             if (abort)
             {
-                HashSet<VoiceServiceRequest> requests = _transmitRequests;
-                _transmitRequests = new HashSet<VoiceServiceRequest>();
-                foreach (var request in requests)
+                var keys = _transmitRequests.Keys.ToArray();
+                foreach (var key in keys)
                 {
-                    DeactivateWitRequest(request, true);
+                    if (_transmitRequests.TryRemove(key, out var request))
+                    {
+                        DeactivateWitRequest(request, true);
+                    }
                 }
             }
             // Transmit recording request
             else if (previousRequest != null && previousRequest.IsActive && _minKeepAliveWasHit)
             {
-                _transmitRequests.Add(previousRequest);
+                _transmitRequests[previousRequest.Options.RequestId] = previousRequest;
                 VoiceEvents?.OnMicDataSent?.Invoke();
             }
             // Disable below event
@@ -949,10 +952,7 @@ namespace Meta.WitAi
             request.Events.OnComplete.RemoveListener(HandleComplete);
 
             // Remove from transmit list, missing if aborted
-            if ( _transmitRequests.Contains(request))
-            {
-                _transmitRequests.Remove(request);
-            }
+            _transmitRequests.TryRemove(request.Options.RequestId, out var dump);
         }
         #endregion
     }
