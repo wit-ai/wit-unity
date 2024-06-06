@@ -9,6 +9,8 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Meta.Voice.Logging;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
@@ -18,6 +20,7 @@ using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.TTS.Integrations
 {
+    [LogCategory(LogCategory.TextToSpeech)]
     public class TTSDiskCache : MonoBehaviour, ITTSDiskCacheHandler
     {
         [Header("Disk Cache Settings")]
@@ -45,6 +48,8 @@ namespace Meta.WitAi.TTS.Integrations
 
         // All currently performing stream requests
         private Dictionary<string, VRequest> _streamRequests = new Dictionary<string, VRequest>();
+        // Log
+        private IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Cancel all requests
         protected virtual void OnDestroy()
@@ -124,6 +129,11 @@ namespace Meta.WitAi.TTS.Integrations
         /// <returns>True if file is on disk</returns>
         public void CheckCachedToDisk(TTSClipData clipData, Action<TTSClipData, bool> onCheckComplete)
         {
+            _ = ThreadUtility.BackgroundAsync(_log, async () => await CheckCachedToDiskAsync(clipData, onCheckComplete));
+        }
+
+        private async Task CheckCachedToDiskAsync(TTSClipData clipData, Action<TTSClipData, bool> onCheckComplete)
+        {
             // Get path
             string cachePath = GetDiskCachePath(clipData);
             if (string.IsNullOrEmpty(cachePath))
@@ -132,14 +142,21 @@ namespace Meta.WitAi.TTS.Integrations
                 return;
             }
 
-            // Check if file exists
-            new VRequest().RequestFileExists(cachePath, (success, error) => onCheckComplete(clipData, success));
+            var request = new VRequest();
+            var result = await request.RequestFileExists(cachePath);
+            onCheckComplete?.Invoke(clipData, result.Value);
         }
 
         /// <summary>
         /// Performs async load request
         /// </summary>
         public void StreamFromDiskCache(TTSClipData clipData, Action<TTSClipData, float> onProgress)
+        {
+            _ = ThreadUtility.BackgroundAsync(_log,
+                async () => await StreamFromDiskCacheAsync(clipData, onProgress));
+        }
+
+        private async Task StreamFromDiskCacheAsync(TTSClipData clipData, Action<TTSClipData, float> onProgress)
         {
             // Invoke begin
             DiskStreamEvents?.OnStreamBegin?.Invoke(clipData);
@@ -148,28 +165,25 @@ namespace Meta.WitAi.TTS.Integrations
             string filePath = GetDiskCachePath(clipData);
 
             // Generate request & store
-            VRequest request = new VRequest((progress) => onProgress?.Invoke(clipData, progress));
+            VRequest request = new VRequest();
+            request.Url = filePath;
+            request.OnDownloadProgress += (progress) => onProgress?.Invoke(clipData, progress);
             _streamRequests[clipData.clipID] = request;
 
             // Add handlers for ready
             clipData.clipStream.OnStreamReady = (clipStream) => OnStreamReady(clipData, null);
-            clipData.clipStream.OnStreamComplete = (clipStream) => OnStreamComplete(clipData, null);
 
             // Perform request
-            request.RequestAudioStream(new Uri(request.CleanUrl(filePath)),
-                clipData.audioType, clipData.useEvents,
-                clipData.clipStream.AddSamples, clipData.Events.AddEvents,
-                (clipStream, error) =>
-                {
-                    if (string.IsNullOrEmpty(error))
-                    {
-                        clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
-                    }
-                    else
-                    {
-                        OnStreamComplete(clipData, error);
-                    }
-                });
+            var result = await request.RequestAudio(clipData.audioType,
+                clipData.clipStream.AddSamples,
+                clipData.useEvents ? clipData.Events.AddEvents : null);
+
+            // Stream complete
+            if (string.IsNullOrEmpty(result.Error))
+            {
+                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+            }
+            OnStreamComplete(clipData, result.Error);
         }
         /// <summary>
         /// Cancels unity request

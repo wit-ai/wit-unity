@@ -6,14 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Concurrent;
 using System.Text;
 using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
-using Meta.WitAi.Json;
-using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice
@@ -25,6 +22,7 @@ namespace Meta.Voice
     /// <typeparam name="TOptions">The type containing all specific options to be passed to the end service.</typeparam>
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
+    [LogCategory(LogCategory.Network)]
     public abstract class NLPRequest<TUnityEvent, TOptions, TEvents, TResults, TResponseData>
         : TranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
@@ -32,7 +30,7 @@ namespace Meta.Voice
         where TEvents : NLPRequestEvents<TUnityEvent, TResponseData>
         where TResults : INLPRequestResults<TResponseData>
     {
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
         /// <summary>
         /// Getter for request input type
         /// </summary>

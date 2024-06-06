@@ -61,7 +61,7 @@ namespace Meta.WitAi
         // Perform id lookup
         private static async Task WaitForCheckServerToken(WitInfoVRequest request, Action<bool> onComplete)
         {
-            var result = await request.RequestAppIdAsync();
+            var result = await request.RequestAppId();
             bool success = string.IsNullOrEmpty(result.Error) && !string.IsNullOrEmpty(result.Value);
             onComplete?.Invoke(success);
         }
@@ -214,7 +214,7 @@ namespace Meta.WitAi
             new WitInfoVRequest(configuration, useServerToken);
 
         // Handles results
-        private static TValue HandleResults<TValue>(VRequest.RequestCompleteResponse<TValue> result, string errorInfo, StringBuilder warnings)
+        private static TValue HandleResults<TValue>(VRequestResponse<TValue> result, string errorInfo, StringBuilder warnings)
         {
             // Failure: Appends error & returns default value
             if (!string.IsNullOrEmpty(result.Error))
@@ -246,8 +246,8 @@ namespace Meta.WitAi
         // Handle array update
         private static async Task<TData[]> UpdateArray<TData>(IWitRequestConfiguration configuration, WitAppInfo appInfo, StringBuilder warnings,
             Func<TData, string> arrayItemIdGetter,
-            Func<WitInfoVRequest, Task<VRequest.RequestCompleteResponse<TData[]>>> arrayRequestHandler,
-            Func<WitInfoVRequest, TData, Task<VRequest.RequestCompleteResponse<TData>>> arrayItemRequestHandler)
+            Func<WitInfoVRequest, Task<VRequestResponse<TData[]>>> arrayRequestHandler,
+            Func<WitInfoVRequest, TData, Task<VRequestResponse<TData>>> arrayItemRequestHandler)
         {
             // Get request for all items in the array
             var request = GetRequest(configuration, false);
@@ -274,7 +274,7 @@ namespace Meta.WitAi
         // Handle array item update
         private static async Task<TData> UpdateArrayItem<TData>(IWitRequestConfiguration configuration, TData oldInfo, StringBuilder warnings,
             Func<TData, string> arrayItemIdGetter,
-            Func<WitInfoVRequest, TData, Task<VRequest.RequestCompleteResponse<TData>>> arrayItemRequestHandler)
+            Func<WitInfoVRequest, TData, Task<VRequestResponse<TData>>> arrayItemRequestHandler)
         {
             // Get request for additional info on a single item in the array
             var request = GetRequest(configuration, false);
@@ -314,7 +314,7 @@ namespace Meta.WitAi
             string oldAppId = configuration.GetApplicationId();
 
             // Perform app id request
-            var result = await GetRequest(configuration, true).RequestAppIdAsync();
+            var result = await GetRequest(configuration, true).RequestAppId();
 
             // Get new app id if possible
             string newAppId = HandleResults(result, "App id update failed", warnings);
@@ -341,7 +341,7 @@ namespace Meta.WitAi
             WitAppInfo oldInfo = configuration.GetApplicationInfo();
 
             // Perform request for app info
-            var result = await GetRequest(configuration, true).RequestAppInfoAsync(oldInfo.id);
+            var result = await GetRequest(configuration, true).RequestAppInfo(oldInfo.id);
 
             // Get results & add warning if needed
             WitAppInfo newInfo = HandleResults(result, "App info update failed", warnings);
@@ -371,7 +371,7 @@ namespace Meta.WitAi
             }
 
             // Perform a client token request
-            var result = await GetRequest(configuration, true).RequestClientTokenAsync(appId);
+            var result = await GetRequest(configuration, true).RequestClientToken(appId);
             string newClientToken = HandleResults(result, "Client token request failed", warnings);
             if (string.IsNullOrEmpty(newClientToken))
             {
@@ -391,7 +391,7 @@ namespace Meta.WitAi
         private static async Task UpdateVersionTags(IWitRequestConfiguration configuration, StringBuilder warnings)
         {
             // Perform request for version tags
-            var result = await GetRequest(configuration, true).RequestAppVersionTagsAsync(configuration.GetApplicationId());
+            var result = await GetRequest(configuration, true).RequestAppVersionTags(configuration.GetApplicationId());
 
             // Get results & add warning if needed
             WitVersionTagInfo[][] versionTagsBySnapshot = HandleResults(result, "Version tags update failed", warnings);
@@ -424,8 +424,8 @@ namespace Meta.WitAi
             appInfo.entities = await UpdateArray(configuration,
                 appInfo, warnings,
                 (info) => info.id,
-                (request) => request.RequestEntityListAsync(),
-                (request, info) => request.RequestEntityInfoAsync(info.id));
+                (request) => request.RequestEntityList(),
+                (request, info) => request.RequestEntityInfo(info.id));
             configuration.SetApplicationInfo(appInfo);
         }
 
@@ -436,8 +436,8 @@ namespace Meta.WitAi
             appInfo.intents = await UpdateArray(configuration,
                 appInfo, warnings,
                 (info) => info.id,
-                (request) => request.RequestIntentListAsync(),
-                (request, info) => request.RequestIntentInfoAsync(info.id));
+                (request) => request.RequestIntentList(),
+                (request, info) => request.RequestIntentInfo(info.id));
             configuration.SetApplicationInfo(appInfo);
         }
 
@@ -448,8 +448,8 @@ namespace Meta.WitAi
             appInfo.traits = await UpdateArray(configuration,
                 appInfo, warnings,
                 (info) => info.id,
-                (request) => request.RequestTraitListAsync(),
-                (request, info) => request.RequestTraitInfoAsync(info.id));
+                (request) => request.RequestTraitList(),
+                (request, info) => request.RequestTraitInfo(info.id));
             configuration.SetApplicationInfo(appInfo);
         }
 
@@ -457,7 +457,7 @@ namespace Meta.WitAi
         private static async Task UpdateVoices(IWitRequestConfiguration configuration, StringBuilder warnings)
         {
             // Perform request for app info
-            var result = await GetRequest(configuration, false).RequestVoiceListAsync();
+            var result = await GetRequest(configuration, false).RequestVoiceList();
 
             // Get results & add warning if needed
             Dictionary<string, WitVoiceInfo[]> voicesByLocale = HandleResults(result, "TTS Voices update failed", warnings);

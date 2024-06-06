@@ -7,7 +7,9 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using UnityEngine;
@@ -42,6 +44,8 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override bool DecodeRawResponses => true;
 
+        private IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// Apply configuration
         /// </summary>
@@ -56,7 +60,9 @@ namespace Meta.WitAi.Requests
             // Generate a message WitVRequest
             if (InputType == NLPRequestInputType.Text)
             {
-                _request = new WitMessageVRequest(Configuration, newOptions.RequestId, SetDownloadProgress);
+                _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
+                _request.Timeout = Mathf.CeilToInt(Configuration.RequestTimeoutMs / 1000f);
+                _request.OnDownloadProgress += SetDownloadProgress;
                 Endpoint = Configuration.GetEndpointInfo().Message;
                 ShouldPost = false;
             }
@@ -103,22 +109,26 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Performs a wit message request
         /// </summary>
-        /// <param name="onSendComplete">Callback that handles send completion</param>
         protected override void HandleSend()
         {
             // Send message request
             if (_request is WitMessageVRequest messageRequest)
             {
-                messageRequest.MessageRequest(Endpoint, ShouldPost,
-                    Options.Text, Options.QueryParams,
-                    HandleFinalResponse,
-                    HandlePartialResponse);
+                _ = ThreadUtility.BackgroundAsync(_log,
+                    async () => await SendMessageAsync(messageRequest));
             }
         }
 
+        private async Task SendMessageAsync(WitMessageVRequest messageRequest)
+        {
+            var results = await messageRequest.MessageRequest(Endpoint, ShouldPost,
+                Options.Text, Options.QueryParams, HandlePartialResponse);
+            HandleFinalResponse(results.Value, results.Error);
+        }
+
         // Set error and apply
-        private void HandlePartialResponse(string rawResponse, string error) =>
-            HandleResponse(rawResponse, error, false);
+        private void HandlePartialResponse(string rawResponse) =>
+            HandleResponse(rawResponse, null, false);
         private void HandleFinalResponse(string rawResponse, string error) =>
             HandleResponse(rawResponse, error, true);
         protected void HandleResponse(string rawResponse, string error, bool final)
@@ -154,6 +164,18 @@ namespace Meta.WitAi.Requests
         protected override void HandleCancel()
         {
             if (_request != null)
+            {
+                _request.Cancel();
+            }
+        }
+
+        /// <summary>
+        /// Cancel on complete if needed
+        /// </summary>
+        protected override void OnComplete()
+        {
+            base.OnComplete();
+            if (!_request.IsComplete)
             {
                 _request.Cancel();
             }

@@ -12,6 +12,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Conduit;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi.Json;
@@ -294,23 +295,14 @@ namespace Meta.WitAi.Data.Configuration
         /// <summary>
         /// Import supplied Manifest into WIT.ai.
         /// </summary>
-        internal static void ImportData(this WitConfiguration configuration, Manifest manifest, VRequest.RequestCompleteDelegate<bool> onComplete = null, bool suppressLogs = false)
+        internal static async Task<VRequestResponse<WitResponseNode>> ImportData(this WitConfiguration configuration, Manifest manifest, bool suppressLogs = false)
         {
             var manifestData = GetSanitizedManifestString(manifest);
             var request = new WitSyncVRequest(configuration);
             VLog.SuppressLogs = suppressLogs;
-            request.RequestImportData(manifestData, (error, responseData) =>
-            {
-                VLog.SuppressLogs = false;
-                if (!string.IsNullOrEmpty(error))
-                {
-                    onComplete?.Invoke(false, error);
-                }
-                else
-                {
-                    onComplete?.Invoke(true, string.Empty);
-                }
-            });
+            var results = await request.RequestImportData(manifestData);
+            VLog.SuppressLogs = false;
+            return results;
         }
 
         /// <summary>

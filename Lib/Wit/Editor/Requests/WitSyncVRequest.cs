@@ -20,37 +20,29 @@ namespace Meta.WitAi.Requests
         /// Constructor for wit based editor data sync VRequests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
-        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
-        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
-        public WitSyncVRequest(IWitRequestConfiguration configuration,
-            RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null)
-            : base(configuration, null, true, onDownloadProgress, onFirstResponse) {}
+        public WitSyncVRequest(IWitRequestConfiguration configuration)
+            : base(configuration, null, true) {}
 
         /// <summary>
         /// Submits an intent to be added to the current wit app
         /// </summary>
         /// <param name="intentInfo">The intent data to be submitted</param>
-        /// <param name="onComplete">On completion that returns an intent with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddIntent(WitIntentInfo intentInfo,
-            RequestCompleteDelegate<WitIntentInfo> onComplete)
+        /// <returns>Returns an intent with unique id if successful</returns>
+        public async Task<VRequestResponse<WitIntentInfo>> RequestAddIntent(WitIntentInfo intentInfo)
         {
             string json = JsonConvert.SerializeObject(intentInfo);
-            return RequestWitPost(WitEditorConstants.ENDPOINT_ADD_INTENT, null, json, onComplete);
+            return await RequestWitPost<WitIntentInfo>(WitEditorConstants.ENDPOINT_ADD_INTENT, null, json);
         }
 
         /// <summary>
         /// Submits an entity to be added to the current wit app
         /// </summary>
         /// <param name="entityInfo">The entity info to be submitted</param>
-        /// <param name="onComplete">On completion that returns an entity with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddEntity(WitEntityInfo entityInfo,
-            RequestCompleteDelegate<WitEntityInfo> onComplete)
+        /// <returns>Returns an entity with unique id if successful</returns>
+        public async Task<VRequestResponse<WitEntityInfo>> RequestAddEntity(WitEntityInfo entityInfo)
         {
             string json = JsonConvert.SerializeObject(entityInfo);
-            return RequestWitPost(WitEditorConstants.ENDPOINT_ADD_ENTITY, null, json, onComplete);
+            return await RequestWitPost<WitEntityInfo>(WitEditorConstants.ENDPOINT_ADD_ENTITY, null, json);
         }
 
         /// <summary>
@@ -58,15 +50,13 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="entityId">The entity this keyword should be added to</param>
         /// <param name="keywordInfo">The keyword and synonyms submitted</param>
-        /// <param name="onComplete">On completion that returns updated entity if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddEntityKeyword(string entityId,
-            WitEntityKeywordInfo keywordInfo,
-            RequestCompleteDelegate<WitEntityInfo> onComplete)
+        /// <returns>Returns updated entity if successful</returns>
+        public async Task<VRequestResponse<WitEntityInfo>> RequestAddEntityKeyword(string entityId,
+            WitEntityKeywordInfo keywordInfo)
         {
             string json = JsonConvert.SerializeObject(keywordInfo);
-            return RequestWitPost($"{WitEditorConstants.ENDPOINT_ADD_ENTITY}/{entityId}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD}",
-                null, json, onComplete);
+            return await RequestWitPost<WitEntityInfo>($"{WitEditorConstants.ENDPOINT_ADD_ENTITY}/{entityId}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD}",
+                null, json);
         }
 
         /// <summary>
@@ -75,29 +65,30 @@ namespace Meta.WitAi.Requests
         /// <param name="entityId">The entity that holds the keyword</param>
         /// <param name="keyword">The keyword we're adding the synonym to</param>
         /// <param name="synonym">The synonym we're adding</param>
-        /// <param name="onComplete">On completion that returns updated entity if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddSynonym(string entityId, string keyword, string synonym, RequestCompleteDelegate<WitEntityInfo> onComplete)
+        /// <returns>Returns updated entity if successful</returns>
+        public async Task<VRequestResponse<WitEntityInfo>> RequestAddEntitySynonym(string entityId, string keyword, string synonym)
         {
-            string json = $"{{\"synonym\": \"{synonym}\"}}";
-            return RequestWitPost(
+            var node = new WitResponseClass()
+            {
+                { "synonym", synonym }
+            };
+            string json = JsonConvert.SerializeObject(node);
+            return await RequestWitPost<WitEntityInfo>(
                 $"{WitEditorConstants.ENDPOINT_ENTITIES}/{entityId}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD}/{keyword}/{WitEditorConstants.ENDPOINT_ADD_ENTITY_KEYWORD_SYNONYMS}",
-                null, json, onComplete);
+                null, json);
         }
 
         /// <summary>
         /// Submits a trait to be added to the current wit app
         /// </summary>
         /// <param name="traitInfo">The trait data to be submitted</param>
-        /// <param name="onComplete">On completion that returns a trait with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddTrait(WitTraitInfo traitInfo,
-            RequestCompleteDelegate<WitTraitInfo> onComplete)
+        /// <returns>Returns a trait with unique id if successful</returns>
+        public async Task<VRequestResponse<WitTraitInfo>> RequestAddTrait(WitTraitInfo traitInfo)
         {
             List<JsonConverter> converters = new List<JsonConverter>(JsonConvert.DefaultConverters);
             converters.Add(new WitTraitValueInfoAddConverter());
             string json = JsonConvert.SerializeObject(traitInfo, converters.ToArray());
-            return RequestWitPost(WitEditorConstants.ENDPOINT_ADD_TRAIT, null, json, onComplete);
+            return await RequestWitPost<WitTraitInfo>(WitEditorConstants.ENDPOINT_ADD_TRAIT, null, json);
         }
         // Simple trait value converter since post requires string array
         private class WitTraitValueInfoAddConverter : JsonConverter
@@ -117,31 +108,30 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="traitId">The trait id to be submitted</param>
         /// <param name="traitValue">The trait value to be submitted</param>
-        /// <param name="onComplete">On completion callback that returns updated trait if successful</param>
-        /// <returns>False if fails to make request</returns>
-        public Task<bool> RequestAddTraitValue(string traitId,
-            string traitValue,
-            RequestCompleteDelegate<WitTraitInfo> onComplete)
+        /// <returns>Returns updated trait if successful</returns>
+        public async Task<VRequestResponse<WitTraitInfo>> RequestAddTraitValue(string traitId,
+            string traitValue)
         {
             WitTraitValueInfo traitValInfo = new WitTraitValueInfo()
             {
                 value = traitValue
             };
             string json = JsonConvert.SerializeObject(traitValInfo);
-            return RequestWitPost($"{WitEditorConstants.ENDPOINT_ADD_TRAIT}/{traitId}/{WitEditorConstants.ENDPOINT_ADD_TRAIT_VALUE}",
-                null, json, onComplete);
+            return await RequestWitPost<WitTraitInfo>($"{WitEditorConstants.ENDPOINT_ADD_TRAIT}/{traitId}/{WitEditorConstants.ENDPOINT_ADD_TRAIT_VALUE}",
+                null, json);
         }
 
         /// <summary>
         /// Import app data from generated manifest JSON
         /// </summary>
-        /// <param name="config"></param>
-        /// <param name="appName">The name of the app as it is defined in wit.ai</param>
         /// <param name="manifestData">The serialized manifest to import from</param>
         /// <returns>Built request object</returns>
-        public Task<bool> RequestImportData(string manifestData,
-            RequestCompleteDelegate<WitResponseData> onComplete)
+        public async Task<VRequestResponse<WitResponseNode>> RequestImportData(string manifestData)
         {
+            Dictionary<string, string> queryParams = new Dictionary<string, string>();
+            queryParams["name"] = Configuration.GetApplicationId();
+            queryParams["private"] = "true";
+            queryParams["action_graph"] = "true";
             var jsonNode = new WitResponseClass()
             {
                 { "text", manifestData ?? string.Empty },
@@ -149,11 +139,7 @@ namespace Meta.WitAi.Requests
                 { "config_value", "" }
             };
             string json = JsonConvert.SerializeObject(jsonNode);
-            Dictionary<string, string> queryParams = new Dictionary<string, string>();
-            queryParams["name"] = Configuration.GetApplicationId();
-            queryParams["private"] = "true";
-            queryParams["action_graph"] = "true";
-            return RequestWitPost(WitEditorConstants.ENDPOINT_IMPORT, queryParams, json, onComplete);
+            return await RequestWitPost<WitResponseNode>(WitEditorConstants.ENDPOINT_IMPORT, queryParams, json);
         }
     }
 }

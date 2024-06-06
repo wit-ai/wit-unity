@@ -16,7 +16,7 @@ namespace Meta.WitAi.Requests
     /// A download handler for UnityWebRequest that decodes text data
     /// as it is received and returns it via a partial response delegate.
     /// </summary>
-    public class TextStreamHandler : DownloadHandlerScript, IRequestDownloadHandler
+    public class TextStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder
     {
         /// <summary>
         /// The delegate for returning text from the text stream handler
@@ -63,6 +63,16 @@ namespace Meta.WitAi.Requests
         private int _finalLength;
 
         /// <summary>
+        /// Whether data has arrived
+        /// </summary>
+        public bool IsStarted { get; private set; }
+
+        /// <summary>
+        /// Current progress of the download
+        /// </summary>
+        public float Progress => GetProgress();
+
+        /// <summary>
         /// Whether or not complete
         /// </summary>
         public bool IsComplete { get; private set; } = false;
@@ -80,6 +90,8 @@ namespace Meta.WitAi.Requests
         [Preserve]
         protected override bool ReceiveData(byte[] receiveData, int dataLength)
         {
+            // Started
+            IsStarted = true;
             // Convert to text
             string newText = DecodeBytes(receiveData, 0, dataLength);
             // Split on delimiter

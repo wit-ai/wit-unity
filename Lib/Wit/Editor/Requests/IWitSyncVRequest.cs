@@ -8,64 +8,26 @@
 
 using System.Threading.Tasks;
 using Meta.WitAi.Data.Info;
+using Meta.WitAi.Json;
 
 namespace Meta.WitAi.Requests
 {
     internal interface IWitSyncVRequest : IWitVRequest
     {
-        /// <summary>
-        /// Submits an intent to be added to the current wit app
-        /// </summary>
-        /// <param name="intentInfo">The intent data to be submitted</param>
-        /// <param name="onComplete">On completion that returns an intent with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddIntent(WitIntentInfo intentInfo, VRequest.RequestCompleteDelegate<WitIntentInfo> onComplete);
+        Task<VRequestResponse<WitIntentInfo>> RequestAddIntent(WitIntentInfo intentInfo);
 
-        /// <summary>
-        /// Submits an entity to be added to the current wit app
-        /// </summary>
-        /// <param name="entityInfo">The entity info to be submitted</param>
-        /// <param name="onComplete">On completion that returns an entity with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddEntity(WitEntityInfo entityInfo, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
+        Task<VRequestResponse<WitEntityInfo>> RequestAddEntity(WitEntityInfo entityInfo);
 
-        /// <summary>
-        /// Submits a keyword to be added to an entity on the current wit app
-        /// </summary>
-        /// <param name="entityId">The entity this keyword should be added to</param>
-        /// <param name="keywordInfo">The keyword and synonyms submitted</param>
-        /// <param name="onComplete">On completion that returns updated entity if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddEntityKeyword(string entityId,
-            WitEntityKeywordInfo keywordInfo, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
+        Task<VRequestResponse<WitEntityInfo>> RequestAddEntityKeyword(string entityId,
+            WitEntityKeywordInfo keywordInfo);
 
-        /// <summary>
-        /// Submits a synonym to be added to a keyword on the specified entity on the current wit app
-        /// </summary>
-        /// <param name="entityId">The entity that holds the keyword</param>
-        /// <param name="keyword">The keyword we're adding the synonym to</param>
-        /// <param name="synonym">The synonym we're adding</param>
-        /// <param name="onComplete">On completion that returns updated entity if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddSynonym(string entityId, string keyword, string synonym,
-            VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
+        Task<VRequestResponse<WitEntityInfo>> RequestAddEntitySynonym(string entityId, string keyword, string synonym);
 
-        /// <summary>
-        /// Submits a trait to be added to the current wit app
-        /// </summary>
-        /// <param name="traitInfo">The trait data to be submitted</param>
-        /// <param name="onComplete">On completion that returns a trait with unique id if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddTrait(WitTraitInfo traitInfo, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
+        Task<VRequestResponse<WitTraitInfo>> RequestAddTrait(WitTraitInfo traitInfo);
 
-        /// <summary>
-        /// Submits a trait value to be added to the current wit app
-        /// </summary>
-        /// <param name="traitId">The trait id to be submitted</param>
-        /// <param name="traitValue">The trait value to be submitted</param>
-        /// <param name="onComplete">On completion callback that returns updated trait if successful</param>
-        /// <returns>False if fails to make request</returns>
-        Task<bool> RequestAddTraitValue(string traitId,
-            string traitValue, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
+        Task<VRequestResponse<WitTraitInfo>> RequestAddTraitValue(string traitId,
+            string traitValue);
+
+        Task<VRequestResponse<WitResponseNode>> RequestImportData(string manifestData);
     }
 }

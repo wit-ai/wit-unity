@@ -8,8 +8,9 @@
 
 using System;
 using System.IO;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -22,98 +23,213 @@ using Meta.Voice.Logging;
 namespace Meta.WitAi.Requests
 {
     /// <summary>
-    /// Simple interface for custom download handlers so VRequest can tell when they are done
+    /// Callback delegate for progress updates
     /// </summary>
-    public interface IRequestDownloadHandler
+    internal delegate void VRequestProgressDelegate(float progress);
+    /// <summary>
+    /// Callback delegate for first server response
+    /// </summary>
+    internal delegate void VRequestFirstResponseDelegate();
+    /// <summary>
+    /// Delegate that performs decode
+    /// </summary>
+    internal delegate Task<TValue> VRequestDecodeDelegate<TValue>(UnityWebRequest request);
+
+    /// <summary>
+    /// An interface used to ensure requests do not complete prior to request decode
+    /// </summary>
+    internal interface IVRequestDownloadDecoder
     {
-        /// <summary>
-        /// Method for determining if
-        /// </summary>
+        bool IsStarted { get; }
+        float Progress { get; }
         bool IsComplete { get; }
     }
 
     /// <summary>
-    /// Interface for custom download handler for streaming callbacks
+    /// Supported methods for VRequest
     /// </summary>
-    public interface IVRequestStreamable : IRequestDownloadHandler
+    internal enum VRequestMethod
     {
-        bool IsStreamReady { get; }
-        void CleanUp();
+        Unknown,
+        HttpGet,
+        HttpPost,
+        HttpPut,
+        HttpHead
     }
 
     /// <summary>
-    /// Class for performing web requests using UnityWebRequest
+    /// Server response struct that returns an error and a decoded value
     /// </summary>
-    [LogCategory(LogCategory.Requests)]
-    public class VRequest
+    internal struct VRequestResponse<TValue>
     {
         /// <summary>
-        /// Will only start new requests if there are less than this number
-        /// If <= 0, then all requests will run immediately
+        /// The type of the result data
+        /// </summary>
+        public readonly TValue Value;
+
+        /// <summary>
+        /// The error string, if errors occurred. Will be NullOrEmpty otherwise.
+        /// </summary>
+        public int Code;
+
+        /// <summary>
+        /// The error string, if errors occurred. Will be NullOrEmpty otherwise.
+        /// </summary>
+        public string Error;
+
+        /// <summary>
+        /// Constructor with only a value
+        /// </summary>
+        public VRequestResponse(TValue value) : this(value, (int)HttpStatusCode.OK, string.Empty) { }
+
+        /// <summary>
+        /// Constructor with only an error
+        /// </summary>
+        public VRequestResponse(int code, string error) : this(default(TValue), code, error) { }
+
+        /// <summary>
+        /// Constructor with value, code and error
+        /// </summary>
+        public VRequestResponse(TValue value, int code, string error)
+        {
+            Value = value;
+            Code = code;
+            Error = error;
+        }
+    }
+
+    /// <summary>
+    /// Helper class for performing http web requests using UnityWebRequest
+    /// </summary>
+    [LogCategory(LogCategory.Requests)]
+    internal class VRequest : IVRequest
+    {
+        #region STATIC
+        /// <summary>
+        /// Ensures only this many requests can run at one time
         /// </summary>
         public static int MaxConcurrentRequests = 3;
-        // Currently transmitting requests
-        private static int _requestCount = 0;
-
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
-        // Request progress delegate
-        public delegate void RequestProgressDelegate(float progress);
-        // Request first response
-        public delegate void RequestFirstResponseDelegate();
-        // Default request completion delegate
-        public delegate void RequestCompleteDelegate<TResult>(TResult result, string error);
+        /// <summary>
+        /// The currently running requests by request id
+        /// </summary>
+        private static ConcurrentDictionary<int, VRequest> _runningRequests = new ConcurrentDictionary<int, VRequest>();
+        /// <summary>
+        /// The currently queued requests in order requested
+        /// </summary>
+        private static ConcurrentQueue<VRequest> _queuedRequests = new ConcurrentQueue<VRequest>();
 
         /// <summary>
-        /// The URI of the current/last request.
+        /// Async wait method to ensure
         /// </summary>
-        protected Uri uri;
-
-        /// <summary>
-        /// The data for PUT and POST requests. This will usually be set by child classes that have unencoded payloads.
-        /// </summary>
-        protected string payload;
-
-        /// <summary>
-        /// A request result wrapper which can return a result and error string.
-        /// </summary>
-        /// <typeparam name="TResult">the type of the result data</typeparam>
-        public struct RequestCompleteResponse<TValue>
+        private static async Task WaitForTurn(VRequest request)
         {
-            /// <summary>
-            /// The type of the result data
-            /// </summary>
-            public TValue Value;
+            // Enqueue new request
+            _queuedRequests.Enqueue(request);
 
-            /// <summary>
-            /// The error string, if errors occurred. Will be NullOrEmpty otherwise.
-            /// </summary>
-            public string Error;
-
-            /// <summary>
-            /// Simple constructor with value and error
-            /// </summary>
-            /// <param name="value">The value of the response</param>
-            /// <param name="error">Any returned error from the request</param>
-            public RequestCompleteResponse(TValue value, string error)
+            // Wait while too many requests, not next in line or if failing to dequeue
+            while (_runningRequests.Count >= MaxConcurrentRequests
+                   || !IsNextRequest(request)
+                   || !_queuedRequests.TryDequeue(out var nextRequest))
             {
-                Value = value;
-                Error = error;
+                await Task.Yield();
             }
-            public RequestCompleteResponse(TValue value) : this(value, string.Empty) { }
-            public RequestCompleteResponse(string error) : this(default(TValue), string.Empty) { }
+
+            // Ignore if cancelled
+            if (request == null || request.IsComplete)
+            {
+                return;
+            }
+
+            // Now running
+            _runningRequests[request.GetHashCode()] = request;
         }
 
+        /// <summary>
+        /// Removes request from running list
+        /// </summary>
+        private static bool RemoveRequest(VRequest request)
+        {
+            return request != null && _runningRequests.TryRemove(request.GetHashCode(), out var removed);
+        }
+
+        /// <summary>
+        /// Determine if request is next in the queue
+        /// </summary>
+        private static bool IsNextRequest(VRequest newRequest)
+            => _queuedRequests.TryPeek(out var checkRequest)
+               && checkRequest == newRequest;
+        #endregion STATIC
+
         #region INSTANCE
+        /// <summary>
+        /// Url to be used for the vrequest
+        /// </summary>
+        public string Url { get; set; }
+
+        /// <summary>
+        /// Url parameters to be used for the vrequest
+        /// </summary>
+        public Dictionary<string, string> UrlParameters { get; set; }
+
+        /// <summary>
+        /// The content type to be used
+        /// </summary>
+        public string ContentType { get; set; }
+
+        /// <summary>
+        /// Method the request will be used
+        /// </summary>
+        public VRequestMethod Method { get; set; }
+
+        /// <summary>
+        /// Script used as download handler
+        /// </summary>
+        public DownloadHandler Downloader { get; set; }
+
+        /// <summary>
+        /// Script used as upload handler
+        /// </summary>
+        public UploadHandler Uploader { get; set; }
+
+        /// <summary>
+        /// Callback on request upload progress change
+        /// </summary>
+        public event VRequestProgressDelegate OnUploadProgress;
+
+        /// <summary>
+        /// Callback on request download progress change
+        /// </summary>
+        public event VRequestProgressDelegate OnDownloadProgress;
+
         /// <summary>
         /// Timeout in seconds
         /// </summary>
         public int Timeout { get; set; } = 5;
 
         /// <summary>
-        /// If request is currently being performed
+        /// Callback on request first response
         /// </summary>
-        public bool IsPerforming { get; private set; } = false;
+        public event VRequestFirstResponseDelegate OnFirstResponse;
+
+        /// <summary>
+        /// If request is currently queued to run
+        /// </summary>
+        public bool IsQueued { get; private set; } = false;
+
+        /// <summary>
+        /// If request is currently transmitting or receiving data
+        /// </summary>
+        public bool IsRunning { get; private set; } = false;
+
+        /// <summary>
+        /// If request is currently decoding following a response
+        /// </summary>
+        public bool IsDecoding { get; private set; } = false;
+
+        /// <summary>
+        /// If request is queued to run or running
+        /// </summary>
+        public bool IsPerforming => IsQueued || IsRunning || IsDecoding;
 
         /// <summary>
         /// If first response has been received
@@ -121,12 +237,7 @@ namespace Meta.WitAi.Requests
         public bool HasFirstResponse { get; private set; } = false;
 
         /// <summary>
-        /// If the download handler incorporates IVRequestStreamable & IsStreamReady
-        /// </summary>
-        public bool IsStreamReady { get; private set; } = false;
-
-        /// <summary>
-        /// Whether or not the completion delegate has been called
+        /// If request has completed queueing and running a request
         /// </summary>
         public bool IsComplete { get; private set; } = false;
 
@@ -134,7 +245,6 @@ namespace Meta.WitAi.Requests
         /// Response Code if applicable
         /// </summary>
         public int ResponseCode { get; set; } = 0;
-
         /// <summary>
         /// Response error
         /// </summary>
@@ -149,210 +259,391 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public float DownloadProgress { get; private set; } = 0f;
 
-        // Actual request
+        /// <summary>
+        /// Stored for cancellation scenarios
+        /// </summary>
         private UnityWebRequest _request;
-        // Callbacks for progress & completion
-        private RequestProgressDelegate _onDownloadProgress;
-        private RequestFirstResponseDelegate _onFirstResponse;
-        private RequestCompleteDelegate<UnityWebRequest> _onStreamReady;
-        private RequestCompleteDelegate<UnityWebRequest> _onComplete;
-
-        // Coroutine running the request
-        private CoroutineUtility.CoroutinePerformer _coroutine;
 
         /// <summary>
-        /// A constructor that takes in download progress delegate & first response delegate
+        /// Thread safe access to whether request has completed
         /// </summary>
-        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
-        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
-        public VRequest(RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null)
+        private bool _requestDone = false;
+
+        /// <summary>
+        /// The object used for handling logs
+        /// </summary>
+        protected readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
+        /// <summary>
+        /// Resets all data
+        /// </summary>
+        protected virtual void Reset()
         {
-            _onDownloadProgress = onDownloadProgress;
-            _onFirstResponse = onFirstResponse;
+            IsComplete = false;
+            IsQueued = false;
+            IsRunning = false;
+            IsDecoding = false;
+            HasFirstResponse = false;
+            _requestDone = false;
+            UploadProgress = 0f;
+            OnUploadProgress?.Invoke(0f);
+            DownloadProgress = 0f;
+            OnDownloadProgress?.Invoke(0f);
+            ResponseCode = (int)HttpStatusCode.OK;
+            ResponseError = string.Empty;
         }
 
-        // Setup request settings
-        protected virtual void Setup(UnityWebRequest unityRequest)
+        /// <summary>
+        /// Performs a request from the main thread or a background thread
+        /// </summary>
+        public virtual async Task<VRequestResponse<TValue>> Request<TValue>(VRequestDecodeDelegate<TValue> decoder)
         {
-            // Setup
-            _request = unityRequest;
-            IsPerforming = false;
-            HasFirstResponse = false;
-            IsStreamReady = false;
-            IsComplete = false;
-            UploadProgress = 0f;
-            DownloadProgress = 0f;
-            ResponseError = string.Empty;
+            if (IsPerforming)
+            {
+                return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, $"Cannot make another VRequest while in progress.\nQueued: {IsQueued}\nRunning: {IsRunning}\nDecoding: {IsDecoding}");
+            }
+            if (decoder == null)
+            {
+                return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, "Cannot make a VRequest without a decoder.");
+            }
+            if (string.IsNullOrEmpty(Url))
+            {
+                return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, "Cannot make a VRequest without a url.");
+            }
+            var method = GetMethod();
+            if (string.IsNullOrEmpty(method))
+            {
+                return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, "Cannot make a VRequest without a http method.");
+            }
 
-            // Add all headers
-            Dictionary<string, string> headers = GetHeaders();
+            // Reset data and begin performing
+            Reset();
+
+            // Obtain url and headers
+            var uri = GetUri();
+            var headers = GetHeaders();
+            if (!string.IsNullOrEmpty(ContentType))
+            {
+                headers[WitConstants.HEADER_POST_CONTENT] = ContentType;
+            }
+            else if (headers.TryGetValue(WitConstants.HEADER_POST_CONTENT, out var contentType))
+            {
+                ContentType = contentType;
+            }
+            _log.Verbose("Request {0}\nUrl: {1}\nMethod: {2}", typeof(TValue).Name, uri, method);
+
+            // Await queue
+            IsQueued = true;
+            await WaitForTurn(this);
+            IsQueued = false;
+
+            // Generate request on main thread and await completion
+            IsRunning = true;
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                _request = CreateRequest(uri, method, headers);
+                var asyncOperation = _request.SendWebRequest();
+                asyncOperation.completed += (op) =>
+                {
+                    _requestDone = true;
+                    if (_request != null)
+                    {
+                        ResponseCode = (int)_request.responseCode;
+                        ResponseError = _request.error;
+                    }
+                };
+            });
+
+            await WaitWhileRunning();
+            IsRunning = false;
+
+            // Decode errors and status code
+            IsDecoding = true;
+            var responseInfo = await GetError(_request);
+            ResponseCode = responseInfo.Item1;
+            ResponseError = responseInfo.Item2;
+            if (!string.IsNullOrEmpty(ResponseError))
+            {
+                IsDecoding = false;
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+            }
+
+            // Decode result
+            var decodedResult = await decoder.Invoke(_request);
+            IsDecoding = false;
+
+            // Aborted or error during decode
+            if (!string.IsNullOrEmpty(ResponseError))
+            {
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+            }
+
+            // Dispose
+            Dispose();
+
+            // Return decoded result
+            return new VRequestResponse<TValue>(decodedResult);
+        }
+
+        /// <summary>
+        /// Obtains uri from the url and url parameters
+        /// </summary>
+        protected virtual Uri GetUri()
+        {
+            string final = Url;
+            if (!HasUriSchema(final))
+            {
+                final = $"file://{final}";
+            }
+            if (UrlParameters != null)
+            {
+                const char start = '?';
+                bool skipAnd = false;
+                if (!final.Contains(start))
+                {
+                    final += start;
+                    skipAnd = true;
+                }
+                else if (final.EndsWith(start))
+                {
+                    skipAnd = true;
+                }
+                foreach (var key in UrlParameters.Keys)
+                {
+                    var val = UrlParameters[key];
+                    if (string.IsNullOrEmpty(key)
+                        || string.IsNullOrEmpty(val))
+                    {
+                        continue;
+                    }
+                    if (skipAnd) skipAnd = false;
+                    else final += '&';
+                    val = UnityWebRequest.EscapeURL(val).Replace("+", "%20");
+                    final += $"{key}={val}";
+                }
+            }
+            return new Uri(final);
+        }
+
+        /// <summary>
+        /// Obtain request method id
+        /// </summary>
+        protected virtual string GetMethod()
+        {
+            switch (Method)
+            {
+                case VRequestMethod.HttpGet:
+                    return UnityWebRequest.kHttpVerbGET;
+                case VRequestMethod.HttpPost:
+                    return UnityWebRequest.kHttpVerbPOST;
+                case VRequestMethod.HttpPut:
+                    return UnityWebRequest.kHttpVerbPUT;
+                case VRequestMethod.HttpHead:
+                    return UnityWebRequest.kHttpVerbHEAD;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Obtains request headers if applicable
+        /// </summary>
+        protected virtual Dictionary<string, string> GetHeaders() => null;
+
+        /// <summary>
+        /// Generates UnityWebRequest
+        /// </summary>
+        protected virtual UnityWebRequest CreateRequest(Uri uri,
+            string method,
+            Dictionary<string, string> headers)
+        {
+            // Generate request
+            var request = new UnityWebRequest(uri, method);
+            request.timeout = Timeout;
+
+            // Apply all headers
             if (headers != null)
             {
                 foreach (var key in headers.Keys)
                 {
-                    _request.SetRequestHeader(key, headers[key]);
+                    request.SetRequestHeader(key, headers[key]);
                 }
             }
 
-            // Use request's timeout value
-            _request.timeout = Timeout;
+            // Set upload handler
+            if (Uploader != null)
+            {
+                request.uploadHandler = Uploader;
+                request.disposeUploadHandlerOnDispose = true;
+            }
 
-            // Dispose handlers automatically
-            _request.disposeUploadHandlerOnDispose = true;
-            _request.disposeDownloadHandlerOnDispose = true;
+            // Set download handler
+            if (Downloader != null)
+            {
+                request.downloadHandler = Downloader;
+                request.disposeDownloadHandlerOnDispose = true;
+            }
 
-            _log.Verbose("Setup request with URL: {0}", _request.uri);
+            // Return request
+            return request;
         }
 
         /// <summary>
-        /// Adds 'file://' to url if no prefix is found
+        /// Wait while request is running
         /// </summary>
-        public virtual string CleanUrl(string url) => !HasUriSchema(url) ? $"file://{url}" : url;
-
-        // Override for custom headers
-        protected virtual Dictionary<string, string> GetHeaders() => null;
-
-        // Begin request
-        protected virtual void Begin()
+        protected virtual async Task WaitWhileRunning()
         {
-            IsPerforming = true;
-            UploadProgress = 0f;
-            DownloadProgress = 0f;
-            _onDownloadProgress?.Invoke(DownloadProgress);
-            _request?.SendWebRequest();
+            // While not done, update upload and download handlers
+            while (!IsDone())
+            {
+                // Handle callbacks
+                if (Downloader is IVRequestDownloadDecoder downloadDecoder)
+                {
+                    // Update download progress
+                    float newProgress = downloadDecoder.Progress;
+                    if (!DownloadProgress.Equals(newProgress))
+                    {
+                        DownloadProgress = newProgress;
+                        OnDownloadProgress?.Invoke(DownloadProgress);
+                    }
+                    // Update first response
+                    if (!HasFirstResponse && downloadDecoder.IsStarted)
+                    {
+                        HasFirstResponse = true;
+                        OnFirstResponse?.Invoke();
+                    }
+                }
+
+                // Wait a moment
+                await Task.Yield();
+            }
         }
 
-        // Check for whether request is complete
-        protected virtual bool IsRequestComplete()
+        /// <summary>
+        /// Check whether request is complete
+        /// </summary>
+        protected virtual bool IsDone()
         {
-            // No request
-            if (_request == null)
+            // No request or error exists
+            if (_request == null || !string.IsNullOrEmpty(ResponseError) || IsComplete)
             {
                 return true;
             }
             // Request still in progress
-            if (!_request.isDone)
+            if (!_requestDone)
             {
                 return false;
             }
-            // No error & download handler
-            if (string.IsNullOrEmpty(_request.error) && _request.downloadHandler != null)
+            // Ensure custom download decoding is not still occuring
+            if (Downloader is IVRequestDownloadDecoder downloadDecoder
+                && !downloadDecoder.IsComplete)
             {
-                // For custom download handler scripts (isDone always false)
-                if (_request.downloadHandler is DownloadHandlerScript)
-                {
-                    // If custom handler is not complete, don't stop
-                    if (_request.downloadHandler is IRequestDownloadHandler customHandler && !customHandler.IsComplete)
-                    {
-                        return false;
-                    }
-                }
-                // Download handler not complete
-                else if (!_request.downloadHandler.isDone)
-                {
-                    return false;
-                }
+                return false;
             }
             // Complete
             return true;
         }
 
-        // Performs an update & begins the stream if needed
-        protected virtual void Update()
+        /// <summary>
+        /// Attempts to obtain any errors
+        /// </summary>
+        protected virtual async Task<Tuple<int, string>> GetError(UnityWebRequest request)
         {
-            // Waiting to begin
-            if (!IsPerforming)
+            // Get the current response code and error
+            int code = ResponseCode;
+            string error = ResponseError;
+
+            // Null or not complete
+            if (request == null || !_requestDone)
             {
-                // Start performing request
-                if (MaxConcurrentRequests <= 0 || _requestCount < MaxConcurrentRequests)
-                {
-                    _requestCount++;
-                    Begin();
-                }
+                code = code != (int)HttpStatusCode.OK ? code : WitConstants.ERROR_CODE_GENERAL;
+                error = !string.IsNullOrEmpty(error) ? error : "Request disposed prior to completion";
+                return new Tuple<int, string>(code, error);
             }
-            // Update progresses
-            else if (_request != null)
+
+            // Return error if empty or no downloader
+            if (string.IsNullOrEmpty(error)
+                || Downloader == null)
             {
-                // Set upload progress
-                float newProgress = _request.uploadProgress;
-                if (!UploadProgress.Equals(newProgress))
-                {
-                    UploadProgress = newProgress;
-                }
-
-                // Set download progress
-                newProgress = _request.downloadProgress;
-                if (!DownloadProgress.Equals(newProgress))
-                {
-                    DownloadProgress = newProgress;
-                    _onDownloadProgress?.Invoke(DownloadProgress);
-                }
-
-                // First response received, call delegate
-                if (!HasFirstResponse && _request.downloadedBytes > 0)
-                {
-                    HasFirstResponse = true;
-                    _onFirstResponse?.Invoke();
-                }
-
-                // Stream is ready, call delegate
-                if (!IsStreamReady && _request?.downloadHandler is IVRequestStreamable streamHandler && streamHandler.IsStreamReady)
-                {
-                    IsStreamReady = true;
-                    _onStreamReady?.Invoke(_request, string.Empty);
-                }
+                return new Tuple<int, string>(code, error);
             }
+
+            // Try to append text from download handler
+            string text = string.Empty;
+            try
+            {
+                await ThreadUtility.CallOnMainThread(() =>
+                {
+                    var downloadHandler = request.downloadHandler;
+                    byte[] downloadedBytes = downloadHandler?.data;
+                    if (downloadedBytes != null)
+                    {
+                        text = Encoding.UTF8.GetString(downloadedBytes);
+                    }
+                    else
+                    {
+                        text = downloadHandler.text;
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                _log.Error(e, "VRequest failed to parse downloaded text");
+            }
+            if (string.IsNullOrEmpty(text))
+            {
+                return new Tuple<int, string>(code, error);
+            }
+
+            // Update error
+            error = $"{error}\nServer Response: {text}";
+
+            // Try to get error from download handler text json
+            WitResponseNode downloadedNode = WitResponseNode.Parse(text);
+            if (downloadedNode == null)
+            {
+                return new Tuple<int, string>(code, error);
+            }
+            WitResponseClass downloadedClass = downloadedNode.AsObject;
+            if (!downloadedClass.HasChild(WitConstants.ENDPOINT_ERROR_PARAM))
+            {
+                return new Tuple<int, string>(code, error);
+            }
+            var jsonError = downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value;
+            if (!string.IsNullOrEmpty(jsonError))
+            {
+                error = jsonError;
+            }
+            return new Tuple<int, string>(code, error);
         }
 
-        // Abort request
+        /// <summary>
+        /// Method to cancel a VRequest
+        /// </summary>
         public virtual void Cancel()
         {
-            // Cancel
-            if (_onComplete != null && _request != null)
-            {
-                DownloadProgress = 1f;
-                ResponseCode = WitConstants.ERROR_CODE_ABORTED;
-                ResponseError = WitConstants.CANCEL_ERROR;
-                _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, ResponseError);
-            }
-
-            // Unload
-            Unload();
-        }
-
-        // Request destroy
-        protected virtual void Unload()
-        {
-            // Cancel coroutine
-            if (_coroutine != null)
-            {
-                _coroutine.CoroutineCancel();
-                _coroutine = null;
-            }
-
-            // Complete
-            if (IsPerforming)
-            {
-                IsPerforming = false;
-                _requestCount--;
-            }
-
-            // Remove delegates
-            _onDownloadProgress = null;
-            _onFirstResponse = null;
-            _onStreamReady = null;
-            _onComplete = null;
-
-            // Dispose
+            // Abort request
             if (_request != null)
             {
-                // Additional cleanup
-                if (_request.downloadHandler is IVRequestStreamable audioStreamer)
-                {
-                    audioStreamer.CleanUp();
-                }
+                _request.Abort();
+                ResponseCode = WitConstants.ERROR_CODE_ABORTED;
+                ResponseError = WitConstants.CANCEL_ERROR;
+            }
+
+            // Dispose and ensure complete
+            Dispose();
+        }
+
+        /// <summary>
+        /// Handles dispose and removal of request from running queue
+        /// </summary>
+        protected virtual void Dispose()
+        {
+            // Remove request from playback list
+            RemoveRequest(this);
+
+            // Dispose request
+            if (_request != null)
+            {
                 // Dispose handlers
                 _request.uploadHandler?.Dispose();
                 _request.downloadHandler?.Dispose();
@@ -364,376 +655,168 @@ namespace Meta.WitAi.Requests
             // Officially complete
             IsComplete = true;
         }
-
-        // Returns more specific request error
-        public static string GetSpecificRequestError(UnityWebRequest request)
-        {
-            // Get error & return if empty
-            string error = request.error;
-            if (string.IsNullOrEmpty(error))
-            {
-                return error;
-            }
-
-            // Ignore without download handler
-            if (request.downloadHandler == null)
-            {
-                return error;
-            }
-
-            // Ignore without downloaded json
-            string downloadedJson = string.Empty;
-            try
-            {
-                var downloadHandler = request?.downloadHandler;
-                byte[] downloadedBytes = downloadHandler?.data;
-                if (downloadedBytes != null)
-                {
-                    downloadedJson = Encoding.UTF8.GetString(downloadedBytes);
-                }
-                else
-                {
-                    string downloadedText = downloadHandler?.text;
-                    if (!string.IsNullOrEmpty(downloadedText))
-                    {
-                        downloadedJson = downloadedText;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                VLog.W($"VRequest failed to parse downloaded text\n{e}");
-            }
-            if (string.IsNullOrEmpty(downloadedJson))
-            {
-                return error;
-            }
-
-            // Append json result
-            string result = $"{error}\nServer Response: {downloadedJson}";
-
-            // Decode
-            WitResponseNode downloadedNode = WitResponseNode.Parse(downloadedJson);
-            if (downloadedNode == null)
-            {
-                return result;
-            }
-
-            // Check for error
-            WitResponseClass downloadedClass = downloadedNode.AsObject;
-            if (!downloadedClass.HasChild(WitConstants.ENDPOINT_ERROR_PARAM))
-            {
-                return result;
-            }
-
-            // Get final result
-            return downloadedClass[WitConstants.ENDPOINT_ERROR_PARAM].Value;
-        }
-        #endregion
-
-        #region COROUTINE
-        /// <summary>
-        /// Initialize with a request and an on completion callback
-        /// </summary>
-        /// <param name="unityRequest">The unity request to be performed</param>
-        /// <param name="onComplete">The callback on completion, returns the request & error string</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public async virtual Task<bool> Request(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<UnityWebRequest> onComplete)
-        {
-            // Already setup
-            if (_request != null)
-            {
-                onComplete?.Invoke(unityRequest, "Request is already being performed");
-                return false;
-            }
-
-            // Set on complete delegate & setup
-            _onComplete = onComplete;
-            await ThreadUtility.CallOnMainThread(() =>
-            {
-                Setup(unityRequest);
-
-                // Begin coroutine
-                _coroutine = CoroutineUtility.StartCoroutine(PerformUpdate());
-            });
-
-            // Success
-            return true;
-        }
-        // Perform update
-        private IEnumerator PerformUpdate()
-        {
-            // Update until complete
-            while (!IsRequestComplete())
-            {
-                yield return null;
-                Update();
-            }
-
-            // Complete if still performing
-            if (IsPerforming)
-            {
-                DownloadProgress = 1f;
-                ResponseCode = (int)_request.responseCode;
-                ResponseError = GetSpecificRequestError(_request);
-                _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, ResponseError);
-                _onComplete = null;
-            }
-
-            // Unload
-            Unload();
-        }
-        #endregion
-
-        #region TASK
-        /// <summary>
-        /// Initialize with a request and an on completion callback
-        /// </summary>
-        /// <param name="unityRequest">The unity request to be performed</param>
-        /// <param name="onDecode">A function to be performed to async decode all request data</param>
-        /// <returns>Any errors encountered during the request</returns>
-        public virtual async Task<RequestCompleteResponse<TData>> RequestAsync<TData>(UnityWebRequest unityRequest,
-                Func<UnityWebRequest, TData> onDecode)
-        {
-            // Already setup
-            if (_request != null)
-            {
-                return new RequestCompleteResponse<TData>("Request is already being performed");
-            }
-
-            // Setup
-            await ThreadUtility.CallOnMainThread(() => Setup(unityRequest));
-
-            // Continue while request exists & is not complete
-            while (!IsRequestComplete())
-            {
-                await TaskUtility.Wait();
-                Update();
-            }
-
-            // Complete if still performing
-            TData results = default(TData);
-            if (IsPerforming && _request != null)
-            {
-                // Set code & error if applicable
-                DownloadProgress = 1f;
-                ResponseCode = (int)_request.responseCode;
-                ResponseError = GetSpecificRequestError(_request);
-
-                // Decode
-                if (onDecode != null && (string.IsNullOrEmpty(ResponseError) || typeof(TData) == typeof(string)))
-                {
-                    try
-                    {
-                        results = onDecode.Invoke(_request);
-                        if (results == null)
-                        {
-                            ResponseError = "Decode failed";
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        ResponseError = $"Decode failed\n{e}";
-                    }
-                }
-
-                // Perform callbacks
-                _onDownloadProgress?.Invoke(DownloadProgress);
-                _onComplete?.Invoke(_request, ResponseError);
-                _onComplete = null;
-            }
-
-            // Unload
-            Unload();
-
-            // Return results
-            return new RequestCompleteResponse<TData>(results, ResponseError);
-        }
         #endregion
 
         #region FILE
         /// <summary>
         /// Performs a header request on a uri
         /// </summary>
-        /// <param name="uri">The uri to perform the request on</param>
-        /// <param name="onComplete">A completion callback that includes the headers</param>
-        /// <returns></returns>
-        public Task<bool> RequestFileHeaders(Uri uri,
-            RequestCompleteDelegate<Dictionary<string, string>> onComplete)
+        public async Task<VRequestResponse<Dictionary<string, string>>> RequestFileHeaders(string url)
         {
-            // Header unity request
-            UnityWebRequest unityRequest = UnityWebRequest.Head(uri);
+            Url = url;
+            Method = VRequestMethod.HttpHead;
+            return await Request(DecodeFileHeaders);
+        }
 
-            // Perform request
-            return Request(unityRequest, (response, error) =>
+        /// <summary>
+        /// Method to obtain request headers from file
+        /// </summary>
+        private async Task<Dictionary<string, string>> DecodeFileHeaders(UnityWebRequest request)
+        {
+            Dictionary<string, string> results = null;
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                // Error
-                if (!string.IsNullOrEmpty(error))
-                {
-                    onComplete?.Invoke(null, error);
-                    return;
-                }
-
-                // Headers dictionary if possible
-                Dictionary<string, string> headers = response.GetResponseHeaders();
-                if (headers == null)
-                {
-                    onComplete?.Invoke(null, "No headers in response.");
-                    return;
-                }
-
-                // Success
-                onComplete?.Invoke(headers, string.Empty);
+                results = request.GetResponseHeaders();
             });
+            return results;
         }
 
         /// <summary>
-        /// Performs a header request on a uri asynchronously
+        /// Performs a get request on a file url
         /// </summary>
-        /// <param name="uri">The uri to perform the request on</param>
-        /// <returns>Returns the header</returns>
-        public async Task<RequestCompleteResponse<Dictionary<string, string>>> RequestFileHeadersAsync(Uri uri)
+        public async Task<VRequestResponse<byte[]>> RequestFile(string url)
         {
-            // Header unity request
-            UnityWebRequest unityRequest = UnityWebRequest.Head(uri);
-
-            // Perform request & return the results
-            return await RequestAsync(unityRequest, (request) => request.GetResponseHeaders());
+            Url = url;
+            if (Method == VRequestMethod.Unknown) Method = VRequestMethod.HttpGet;
+            return await Request(DecodeFile);
         }
 
         /// <summary>
-        /// Performs a simple http header request
+        /// Method to obtain request headers from file
         /// </summary>
-        /// <param name="uri">Uri to get a file</param>
-        /// <param name="onComplete">Called once file data has been loaded</param>
-        /// <returns>False if cannot begin request</returns>
-        public Task<bool> RequestFile(Uri uri,
-            RequestCompleteDelegate<byte[]> onComplete)
+        private async Task<byte[]> DecodeFile(UnityWebRequest request)
         {
-            // Get unity request
-            UnityWebRequest unityRequest = UnityWebRequest.Get(uri);
-            // Perform request
-            return Request(unityRequest, (response, error) =>
+            byte[] data = null;
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                // Error
-                if (!string.IsNullOrEmpty(error))
-                {
-                    onComplete?.Invoke(null, error);
-                    return;
-                }
-
-                // File data
-                byte[] fileData = response?.downloadHandler?.data;
-                if (fileData == null)
-                {
-                    onComplete?.Invoke(null, "No data in response");
-                    return;
-                }
-
-                // Success
-                onComplete?.Invoke(fileData, string.Empty);
+                data = request.downloadHandler?.data;
             });
+            return data;
         }
 
         /// <summary>
-        /// Performs a simple http header request
+        /// Performs a download from a specified location to a new location
         /// </summary>
-        /// <param name="uri">Uri to get a file</param>
-        /// <returns>False if cannot begin request</returns>
-        public async Task<RequestCompleteResponse<byte[]>> RequestFileAsync(Uri uri)
+        public async Task<VRequestResponse<bool>> RequestFileDownload(string url,
+            string downloadPath)
         {
-            // Get unity request
-            UnityWebRequest unityRequest = UnityWebRequest.Get(uri);
+            // Setup
+            Url = url;
+            if (Method == VRequestMethod.Unknown) Method = VRequestMethod.HttpGet;
 
-            // Perform request
-            return await RequestAsync(unityRequest, (request) =>  unityRequest.downloadHandler?.data);
+            // Get download manager
+            var downloadTempPath = GetTmpDownloadPath(downloadPath);
+            try
+            {
+                if (File.Exists(downloadTempPath))
+                {
+                    File.Delete(downloadTempPath);
+                }
+            }
+            catch (Exception e)
+            {
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
+                    $"Failed to setup download.\nPath: {downloadPath}\n{e}");
+            }
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                Downloader = new DownloadHandlerFile(downloadTempPath);
+            });
+
+            // Download
+            var results = await Request(DecodeSuccess);
+            if (!string.IsNullOrEmpty(results.Error))
+            {
+                return new VRequestResponse<bool>(results.Code, results.Error);
+            }
+            if (!File.Exists(downloadTempPath))
+            {
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
+                    $"File not found at download path\nPath: {downloadTempPath}");
+            }
+
+            try
+            {
+                // Move to final location
+                File.Copy(downloadTempPath, downloadPath, true);
+                return new VRequestResponse<bool>(true);
+            }
+            catch (Exception e)
+            {
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
+                    $"Failed to finalize download.\nPath: {downloadPath}\n{e}");
+            }
         }
+
+        /// <summary>
+        /// Returns true if no error
+        /// </summary>
+        private Task<bool> DecodeSuccess(UnityWebRequest request)
+        {
+            return Task.FromResult(true);
+        }
+
+        // The temporary file path used for download
+        public string GetTmpDownloadPath(string downloadPath) => $"{downloadPath}.tmp";
 
         /// <summary>
         /// Checks if a file exists at a specified location using async calls
         /// </summary>
-        /// <param name="checkPath">The local file path to be checked</param>
-        /// <returns>An error if found</returns>
-        public async Task<RequestCompleteResponse<bool>> RequestFileExistsAsync(string checkPath)
+        public async Task<VRequestResponse<bool>> RequestFileExists(string url)
         {
-            // Results
-            RequestCompleteResponse<bool> results = new RequestCompleteResponse<bool>();
-            results.Value = false;
-
             // WebGL & web files, perform a header lookup
-            if (IsWebUrl(checkPath))
+            if (IsWebUrl(url))
             {
-                var headerResponse = await RequestFileHeadersAsync(new Uri(CleanUrl(checkPath)));
-                results.Error = headerResponse.Error;
-                results.Value = string.IsNullOrEmpty(results.Error) && headerResponse.Value.Keys.Count > 0;
-                if (string.IsNullOrEmpty(results.Error) && !results.Value)
-                {
-                    results.Error = "No headers found";
-                }
-                return results;
+                var results = await RequestFileHeaders(url);
+                var success = string.IsNullOrEmpty(results.Error) && results.Value.Keys.Count > 0;
+                return new VRequestResponse<bool>(success, results.Code, results.Error);
             }
 
-            // Request required
-            if (IsJarPath(checkPath))
+
+            // Within a jar, perform a request
+            if (IsJarPath(url))
             {
                 // Request received data
-                _onFirstResponse = () =>
+                bool exists = false;
+                OnFirstResponse = () =>
                 {
-                    results.Value = true;
+                    exists = true;
                     Cancel();
                 };
 
-                // Request complete
-                _onComplete = (request, error) =>
-                {
-                    if (!string.Equals(error, WitConstants.CANCEL_ERROR))
-                    {
-                        results.Error = error;
-                        results.Value = string.IsNullOrEmpty(error);
-                    }
-                };
-
                 // Request async & cancels on first response
-                await RequestFileAsync(new Uri(CleanUrl(checkPath)));
+                var results = await RequestFile(url);
+                if (!exists && (results.Value?.Length ?? 0) > 0)
+                {
+                    exists = true;
+                }
 
                 // Return if found
-                return results;
+                return new VRequestResponse<bool>(exists);
             }
 
             // Check file directly
             try
             {
-                results.Value = File.Exists(checkPath);
+                Url = url;
+                bool exists = File.Exists(GetUri().ToString());
+                return new VRequestResponse<bool>(exists);
             }
             catch (Exception e)
             {
-                results.Error = $"File exists check failed\nPath: {checkPath}\n{e}";
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL, $"File exists check failed\nUrl: {url}\n{e}");
             }
-
-            // Success
-            return results;
         }
-
-        /// <summary>
-        /// Uses async method to check if file exists & return via the oncomplete method
-        /// </summary>
-        /// <param name="checkPath">The local file path to be checked</param>
-        public Task<bool> RequestFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
-        {
-            // Request async but don't wait
-            #pragma warning disable CS4014
-            WaitFileExists(checkPath, onComplete);
-            #pragma warning restore CS4014
-            return Task.FromResult(true);
-        }
-        private async void WaitFileExists(string checkPath, RequestCompleteDelegate<bool> onComplete)
-        {
-            RequestCompleteResponse<bool> results = await RequestFileExistsAsync(checkPath);
-            onComplete?.Invoke(results.Value, results.Error);
-        }
-
         // Determines if url is a web path or local path
         private static bool IsWebUrl(string url)
         {
@@ -754,233 +837,39 @@ namespace Meta.WitAi.Requests
         {
             return Regex.IsMatch(url, "(http:|https:|jar:|file:).*");
         }
-        #endregion
-
-        #region DOWNLOADING
-        /// <summary>
-        /// Download a file using a unityrequest
-        /// </summary>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
-        /// <param name="onComplete">Called once download has completed</param>
-        public Task<bool> RequestFileDownload(string downloadPath, UnityWebRequest unityRequest,
-            RequestCompleteDelegate<bool> onComplete)
-        {
-            // Get temporary path for download
-            string tempDownloadPath = GetTmpDownloadPath(downloadPath);
-
-            // Check for setup errors
-            string errors = SetupDownloadRequest(tempDownloadPath, unityRequest);
-            if (!string.IsNullOrEmpty(errors))
-            {
-                onComplete?.Invoke(false, errors);
-                return Task.FromResult(false);
-            }
-
-            // Perform request
-            return Request(unityRequest, (response, error) =>
-                CoroutineUtility.StartCoroutine(WaitThenCleanup(downloadPath, tempDownloadPath, onComplete, error)));
-        }
-
-        // Wait a moment until request is done unloading & then perform cleanup
-        private IEnumerator WaitThenCleanup(string downloadPath, string tempDownloadPath,
-            RequestCompleteDelegate<bool> onComplete, string error)
-        {
-            yield return null;
-            string errors = CleanupDownloadRequest(downloadPath, tempDownloadPath, error);
-            onComplete?.Invoke(string.IsNullOrEmpty(errors), errors);
-        }
-
-        /// <summary>
-        /// Download a file using a unityrequest
-        /// </summary>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
-        public async Task<string> RequestFileDownloadAsync(string downloadPath, UnityWebRequest unityRequest)
-        {
-            // Get temporary path for download
-            string tempDownloadPath = GetTmpDownloadPath(downloadPath);
-
-            // Perform setup
-            string errors = SetupDownloadRequest(tempDownloadPath, unityRequest);
-            // Return setup errors
-            if (!string.IsNullOrEmpty(errors))
-            {
-                return errors;
-            }
-
-            // Perform request
-            var response = await RequestAsync(unityRequest, (request) => string.IsNullOrEmpty(request.error));
-            errors = response.Error;
-
-            // Cleanup request on background thread due to file move
-            await Task.Run(() => errors = CleanupDownloadRequest(downloadPath, tempDownloadPath, errors));
-
-            // Return errors
-            return errors;
-        }
-
-        // The temporary file path used for download
-        private string GetTmpDownloadPath(string downloadPath) => $"{downloadPath}.tmp";
-
-        /// <summary>
-        /// Setup file download if possible
-        /// </summary>
-        /// <returns>Returns any errors encountered during setup</returns>
-        private string SetupDownloadRequest(string downloadPath, UnityWebRequest unityRequest)
-        {
-            // Invalid path
-            if (string.IsNullOrEmpty(downloadPath))
-            {
-                return "Null download path";
-            }
-            // Ensure valid directory
-            if (IsWebUrl(downloadPath) || IsJarPath(downloadPath))
-            {
-                return $"Cannot download to path:\n{downloadPath}";
-            }
-
-            try
-            {
-                // Check directory
-                FileInfo fileInfo = new FileInfo(downloadPath);
-                if (!Directory.Exists(fileInfo.DirectoryName))
-                {
-                    return $"Cannot download to directory\nDirectory: {fileInfo.DirectoryName}";
-                }
-
-                // Delete existing file if applicable
-                if (File.Exists(downloadPath))
-                {
-                    File.Delete(downloadPath);
-                }
-            }
-            catch (Exception e)
-            {
-                return $"{e.GetType()} thrown during download setup\n{e}";
-            }
-
-            // Add request handler
-            DownloadHandlerFile fileHandler = new DownloadHandlerFile(downloadPath, true);
-            unityRequest.downloadHandler = fileHandler;
-            unityRequest.disposeDownloadHandlerOnDispose = true;
-
-            // Success
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// Finalize file download if possible
-        /// </summary>
-        /// <returns>Returns any errors encountered during setup</returns>
-        private string CleanupDownloadRequest(string downloadPath, string tempDownloadPath, string error)
-        {
-            try
-            {
-                // Handle existing temp file
-                if (File.Exists(tempDownloadPath))
-                {
-                    // For error, remove temp
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        File.Delete(tempDownloadPath);
-                    }
-                    // For success, move to final path
-                    else
-                    {
-                        // File already at download path, delete it
-                        if (File.Exists(downloadPath))
-                        {
-                            File.Delete(downloadPath);
-                        }
-
-                        // Move to final path
-                        File.Move(tempDownloadPath, downloadPath);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                return $"{e.GetType()} thrown during download cleanup\n{e}";
-            }
-            return error;
-        }
-        #endregion
+        #endregion FILE
 
         #region TEXT
         /// <summary>
-        /// Performs a text request & handles the resultant text
+        /// Performs a text request with an option partial response callback
         /// </summary>
-        /// <param name="unityRequest">The unity request performing the post or get</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        public Task<bool> RequestText(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<string> onComplete,
-            TextStreamHandler.TextStreamResponseDelegate onPartial = null)
+        public async Task<VRequestResponse<string>> RequestText(Action<string> onPartial = null)
         {
-            // Partial text decode handler
-            if (onPartial != null)
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                if (unityRequest.downloadHandler != null)
+                if (onPartial == null)
                 {
-                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
+                    Downloader = new DownloadHandlerBuffer();
                 }
                 else
                 {
-                    unityRequest.downloadHandler = new TextStreamHandler(onPartial);
+                    Downloader = new TextStreamHandler(new TextStreamHandler.TextStreamResponseDelegate(onPartial));
                 }
-            }
-            // Default handler
-            else if (unityRequest.downloadHandler == null)
-            {
-                unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            }
-
-            // Perform request
-            return Request(unityRequest, (response, error) =>
-            {
-                // Request error
-                string text = response?.downloadHandler?.text;
-                if (!string.IsNullOrEmpty(error))
-                {
-                    onComplete?.Invoke(text, error);
-                    return;
-                }
-                // No text returned
-                if (string.IsNullOrEmpty(text))
-                {
-                    onComplete?.Invoke(string.Empty, "No response contents found");
-                    return;
-                }
-                // Success
-                onComplete?.Invoke(text, string.Empty);
             });
+            return await Request(DecodeText);
         }
 
         /// <summary>
-        /// Performs a text request async & returns the text along with any errors
+        /// Decodes text from the request itself
         /// </summary>
-        /// <param name="unityRequest">The unity request performing the post or get</param>
-        public async Task<RequestCompleteResponse<string>> RequestTextAsync(UnityWebRequest unityRequest,
-            TextStreamHandler.TextStreamResponseDelegate onPartial = null)
+        private async Task<string> DecodeText(UnityWebRequest request)
         {
-            // Partial text decode handler
-            if (onPartial != null)
+            string text = null;
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                if (unityRequest.downloadHandler != null)
-                {
-                    VLog.E("Cannot add partial response download handler if a download handler is already set.");
-                }
-                else
-                {
-                    unityRequest.downloadHandler = new TextStreamHandler(onPartial);
-                }
-            }
-            // Default handler
-            else if (unityRequest.downloadHandler == null)
-            {
-                unityRequest.downloadHandler = new DownloadHandlerBuffer();
-            }
-
-            // Perform the request until completion
-            return await RequestAsync(unityRequest, (request) => request?.downloadHandler?.text);
+                text = request.downloadHandler?.text;
+            });
+            return text;
         }
         #endregion
 
@@ -988,296 +877,137 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Performs a request for text & decodes it into json
         /// </summary>
-        /// <param name="unityRequest">The unity request performing the post or get</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJson<TData>(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
+        public async Task<VRequestResponse<TData>> RequestJson<TData>(Action<TData> onPartial = null)
         {
             // Set request header for json
-            unityRequest.SetRequestHeader("Content-Type", "application/json");
+            ContentType = "application/json";
+
+            // Last partial decoder
+            TData lastPartial = default(TData);
+            Action<string> decoder = null;
+            if (onPartial != null)
+            {
+                decoder = (partialText) =>
+                {
+                    var partial = DecodeJson<TData>(partialText);
+                    if (partial != null)
+                    {
+                        lastPartial = partial;
+                        onPartial?.Invoke(lastPartial);
+                    }
+                };
+            }
 
             // Perform a text request
-            return RequestText(unityRequest,
-                (json, error) => EnqueueJsonResponse(json, error, onComplete),
-                (json) => EnqueueJsonResponse(json, null, onPartial));
-        }
+            var result = await RequestText(decoder);
 
-        private Task _lastDecode;
-        private void EnqueueJsonResponse<TData>(string json, string error, RequestCompleteDelegate<TData> callback)
-        {
-            var blockingTask = _lastDecode;
-            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
+            // Return error
+            if (!string.IsNullOrEmpty(result.Error))
             {
-                if (null != blockingTask) await blockingTask;
-                DecodeJsonResponse<TData>(json, error, callback);
-            });
-        }
-
-        private void DecodeJsonResponse<TData>(string json, string error, RequestCompleteDelegate<TData> callback)
-        {
-            // Get default
-            bool decoded = false;
-            object result = default(TData);
-
-            // If string, return immediately
-            if (typeof(TData) == typeof(string))
-            {
-                result = json;
+                return new VRequestResponse<TData>(result.Code, result.Error);
             }
-            // If no error, attempt a decode
-            else if (string.IsNullOrEmpty(error))
+            // If empty, decode now
+            if (lastPartial == null)
             {
-                decoded = true;
-                var decodedResult = JsonConvert.DeserializeObject<TData>(json);
-                if (decodedResult == null)
-                {
-                    error = $"Failed to decode json\n{json}\n";
-                }
-                else
-                {
-                    result = decodedResult;
-                }
+                lastPartial = DecodeJson<TData>(result.Value);
+            }
+            // Decode failed
+            if (lastPartial == null)
+            {
+                return new VRequestResponse<TData>(WitConstants.ERROR_CODE_GENERAL,
+                    $"Failed to decode {typeof(TData).Name}\n{result.Value}");
             }
 
-            if (callback != null)
-            {
-                // Return on main thread if decoded locally
-                if (decoded)
-                {
-                    ThreadUtility.CallOnMainThread(() => callback.Invoke((TData)result, error));
-                }
-                // Otherwise continue on background thread
-                else
-                {
-                    callback.Invoke((TData)result, error);
-                }
-            }
+            // Return successful decode
+            return new VRequestResponse<TData>(lastPartial);
         }
 
         /// <summary>
-        /// Performs a request for text and decodes it into json asynchronously
+        /// Decodes json into a specified data type
         /// </summary>
-        /// <param name="unityRequest">The unity request performing the post or get</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonAsync<TData>(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<TData> onPartial = null)
+        private TData DecodeJson<TData>(string json)
         {
-            // Set request header for json
-            unityRequest.SetRequestHeader("Content-Type", "application/json");
-
-            // Partial data if possible
-            string partialJson = null;
-            bool partialDecoding = false;
-            RequestCompleteResponse<TData> partialResponse = new RequestCompleteResponse<TData>();
-
-            // Set partial download handler
-            TextStreamHandler.TextStreamResponseDelegate onPartialText = (jsonText) =>
-            {
-                // Decode async and then call partial
-                partialJson = jsonText;
-                partialDecoding = true;
-                #pragma warning disable CS4014
-                DecodePartialJsonAsync<TData>(partialJson, (response) =>
-                {
-                    partialResponse = response;
-                    onPartial?.Invoke(partialResponse.Value, partialResponse.Error);
-                    partialDecoding = false;
-                });
-                #pragma warning restore CS4014
-            };
-
-            // Perform text request
-            var textResponse = await RequestTextAsync(unityRequest, onPartialText);
-            if (!string.IsNullOrEmpty(textResponse.Error))
-            {
-                return new RequestCompleteResponse<TData>(default(TData), $"{textResponse.Error}. Details: {textResponse.Value ?? "null"}");
-            }
-
-            // Wait for partial decode to complete
-            await TaskUtility.WaitWhile(() => partialDecoding);
-
-            // Return previously decoded json
-            if (string.Equals(partialJson, textResponse.Value))
-            {
-                return partialResponse;
-            }
-
-            // Decode new text
-            return await DecodeJsonAsync<TData>(textResponse.Value);
-        }
-        // Decodes json & returns value
-        private async Task<RequestCompleteResponse<TData>> DecodeJsonAsync<TData>(string jsonText)
-        {
-            // If string is desired result
+            // Return json if string type
             if (typeof(TData) == typeof(string))
             {
-                object rawResult = jsonText;
-                return new RequestCompleteResponse<TData>((TData)rawResult, null);
+                object result = json;
+                return (TData)result;
             }
-
             // Decode
-            TData result = await JsonConvert.DeserializeObjectAsync<TData>(jsonText);
-            if (result == null)
+            return JsonConvert.DeserializeObject<TData>(json, null, true);
+        }
+
+        /// <summary>
+        /// Perform a json get request with the option for a partial response
+        /// </summary>
+        public async Task<VRequestResponse<TData>> RequestJsonGet<TData>(Action<TData> onPartial = null)
+        {
+            Method = VRequestMethod.HttpGet;
+            return await RequestJson(onPartial);
+        }
+
+        /// <summary>
+        /// Perform a json get request with the option for a partial response
+        /// </summary>
+        public async Task<VRequestResponse<TData>> RequestJsonPost<TData>(Action<TData> onPartial = null)
+        {
+            Method = VRequestMethod.HttpPost;
+            return await RequestJson(onPartial);
+        }
+
+        /// <summary>
+        /// Perform a json post request with raw data and the option for a partial response
+        /// </summary>
+        public async Task<VRequestResponse<TData>> RequestJsonPost<TData>(byte[] postData,
+            Action<TData> onPartial = null)
+        {
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                return new RequestCompleteResponse<TData>(default(TData), $"Failed to deserialize json into {typeof(TData)}\n{jsonText}");
-            }
-
-            // Return result
-            return new RequestCompleteResponse<TData>(result);
-        }
-        // Decodes json & performs partial callback
-        private async Task DecodePartialJsonAsync<TData>(string jsonText, Action<RequestCompleteResponse<TData>> onPartial)
-        {
-            var result = await DecodeJsonAsync<TData>(jsonText);
-            onPartial?.Invoke(result);
+                Uploader = new UploadHandlerRaw(postData);
+            });
+            return await RequestJsonPost(onPartial);
         }
 
         /// <summary>
-        /// Perform a json get request with a specified uri
+        /// Perform a json post request with string data and the option for a partial response
         /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJsonGet<TData>(Uri uri,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
+        public async Task<VRequestResponse<TData>> RequestJsonPost<TData>(string postText,
+            Action<TData> onPartial = null)
         {
-            return RequestJson(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onComplete, onPartial);
+            var postData = EncodeText(postText);
+            return await RequestJsonPost(postData, onPartial);
         }
 
         /// <summary>
-        /// Perform a json get request with a specified uri asynchronously
+        /// Perform a json put request with the option for a partial response
         /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonGetAsync<TData>(Uri uri,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            await RequestJsonAsync<TData>(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET), onPartial);
-
-        /// <summary>
-        /// Performs a json request by posting byte data
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="postData">The data to be uploaded</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJsonPost<TData>(Uri uri, byte[] postData,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
+        public async Task<VRequestResponse<TData>> RequestJsonPut<TData>(Action<TData> onPartial = null)
         {
-            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
-            unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            return RequestJson(unityRequest, onComplete, onPartial);
+            Method = VRequestMethod.HttpPut;
+            return await RequestJson(onPartial);
         }
 
         /// <summary>
-        /// Performs a json request by posting byte data asynchronously
+        /// Perform a json put request with raw data and the option for a partial response
         /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="postData">The data to be uploaded</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, byte[] postData,
-            RequestCompleteDelegate<TData> onPartial = null)
+        public async Task<VRequestResponse<TData>> RequestJsonPut<TData>(byte[] putData,
+            Action<TData> onPartial = null)
         {
-            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
-            unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-            return await RequestJsonAsync<TData>(unityRequest, onPartial);
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                Uploader = new UploadHandlerRaw(putData);
+            });
+            return await RequestJsonPut(onPartial);
         }
 
         /// <summary>
-        /// Performs a json request by posting a string
+        /// Perform a json put request with string data and the option for a partial response
         /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="postText">The string to be uploaded</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJsonPost<TData>(Uri uri, string postText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJsonPost(uri, EncodeText(postText), onComplete, onPartial);
-
-        /// <summary>
-        /// Performs a json request by posting a string asynchronously
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="postText">The string to be uploaded</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPostAsync<TData>(Uri uri, string postText,
-            RequestCompleteDelegate<TData> onPartial = null)
+        public async Task<VRequestResponse<TData>> RequestJsonPut<TData>(string putText,
+            Action<TData> onPartial = null)
         {
-            byte[] postData = null;
-            await Task.Run(() => postData = EncodeText(postText));
-            return await RequestJsonPostAsync<TData>(uri, postData, onPartial);
-        }
-
-        /// <summary>
-        /// Performs a json put request with byte data
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="putData">The data to be uploaded</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJsonPut<TData>(Uri uri, byte[] putData,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
-            unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            return RequestJson(unityRequest, onComplete, onPartial);
-        }
-
-        /// <summary>
-        /// Performs a json put request with byte data asynchronously
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="putData">The data to be uploaded</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, byte[] putData,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            var unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPUT);
-            unityRequest.uploadHandler = new UploadHandlerRaw(putData);
-            return await RequestJsonAsync<TData>(unityRequest, onPartial);
-        }
-
-        /// <summary>
-        /// Performs a json put request with text
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="putText">The text to be uploaded</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestJsonPut<TData>(Uri uri, string putText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null) =>
-            RequestJsonPut(uri, EncodeText(putText), onComplete, onPartial);
-
-        /// <summary>
-        /// Performs a json put request with text asynchronously
-        /// </summary>
-        /// <param name="uri">The uri to be requested</param>
-        /// <param name="putText">The text to be uploaded</param>
-        /// <typeparam name="TData">The struct or class to be deserialized to</typeparam>
-        /// <returns>RequestCompleteResponse with parsed data & error if applicable</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestJsonPutAsync<TData>(Uri uri, string putText,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            byte[] putData = null;
-            await Task.Run(() => putData = EncodeText(putText));
-            return await RequestJsonPutAsync<TData>(uri, putData, onPartial);
+            var postData = EncodeText(putText);
+            return await RequestJsonPut(postData, onPartial);
         }
 
         // Internal helper method for encoding text
@@ -1285,6 +1015,35 @@ namespace Meta.WitAi.Requests
         #endregion
 
         #region AUDIO
+        /// <summary>
+        /// Perform a json put request with string data and the option for a partial response
+        /// </summary>
+        public async Task<VRequestResponse<bool>> RequestAudio(AudioType audioType,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded = null)
+        {
+            // Use custom audio stream handler
+            if (Downloader == null)
+            {
+                // Cannot decode
+                if (!CanDecodeAudio(audioType))
+                {
+                    return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
+                        $"Unable to decode audio: {audioType}");
+                }
+                // Generate decoder
+                var decoder = GetAudioDecoder(audioType, onJsonDecoded != null, onJsonDecoded);
+                // Set audio stream handler
+                await ThreadUtility.CallOnMainThread(() =>
+                {
+                    Downloader = new AudioStreamHandler(decoder, onSamplesDecoded);
+                });
+            }
+
+            // Perform default request operation & call stream complete once finished
+            return await Request(DecodeSuccess);
+        }
+
         /// <summary>
         /// Get audio extension from audio type
         /// </summary>
@@ -1386,63 +1145,6 @@ namespace Meta.WitAi.Requests
                 return new AudioDecoderJson(audioDecoder, onJsonDecoded);
             }
             return audioDecoder;
-        }
-
-        /// <summary>
-        /// Request audio clip with uri, audio type, sample decoded delegate & completion delegate
-        /// </summary>
-        /// <param name="uri">The url to be called</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="includesJson">Whether or not json will be embedded within the audio stream.</param>
-        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
-        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
-        /// <param name="onComplete">Called when the audio request has completed</param>
-        public Task<bool> RequestAudioStream(Uri uri, AudioType audioType, bool includesJson,
-            AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioJsonDecodeDelegate onJsonDecoded,
-            RequestCompleteDelegate<bool> onComplete) =>
-            RequestAudioStream(new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET),
-                audioType, includesJson, onSamplesDecoded, onJsonDecoded, onComplete);
-
-        /// <summary>
-        /// Request audio clip with web request, audio type, whether audio includes json data, callback delegates & completion delegate
-        /// </summary>
-        /// <param name="unityRequest">The unity request to add a download handler to</param>
-        /// <param name="audioType">The audio type requested (Wav, MP3, etc.)</param>
-        /// <param name="includesJson">Whether or not json will be embedded within the audio stream.</param>
-        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
-        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
-        /// <param name="onComplete">Called when the audio request has completed</param>
-        public async Task<bool> RequestAudioStream(UnityWebRequest unityRequest, AudioType audioType, bool includesJson,
-            AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioJsonDecodeDelegate onJsonDecoded,
-            RequestCompleteDelegate<bool> onComplete)
-        {
-            // Use custom audio stream handler
-            if (unityRequest.downloadHandler == null)
-            {
-                // Cannot decode
-                if (!CanDecodeAudio(audioType))
-                {
-                    var error = $"Unable to decode audio: {audioType}";
-                    onComplete?.Invoke(false, error);
-                    return false;
-                }
-                // Generate decoder
-                var decoder = GetAudioDecoder(audioType, includesJson, onJsonDecoded);
-                // Set audio stream handler
-                await ThreadUtility.CallOnMainThread(() => unityRequest.downloadHandler = new AudioStreamHandler(decoder, onSamplesDecoded,
-                    (error) => onComplete?.Invoke(string.IsNullOrEmpty(error), error)));
-            }
-
-            // Perform default request operation & call stream complete once finished
-            return await Request(unityRequest, (response, error) =>
-            {
-                if (!string.IsNullOrEmpty(error))
-                {
-                    onComplete?.Invoke(string.IsNullOrEmpty(error), error);
-                }
-            });
         }
         #endregion
     }

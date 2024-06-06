@@ -14,26 +14,30 @@ namespace Meta.WitAi.Requests
 {
     internal interface IWitInfoVRequest : IWitVRequest
     {
-        Task<bool> RequestAppId(VRequest.RequestCompleteDelegate<string> onComplete);
+        Task<VRequestResponse<string>> RequestAppId();
 
-        Task<bool> RequestApps(int limit, int offset, VRequest.RequestCompleteDelegate<WitAppInfo[]> onComplete);
+        Task<VRequestResponse<WitAppInfo[]>> RequestApps(int limit, int offset);
 
-        Task<bool> RequestAppInfo(string applicationId, VRequest.RequestCompleteDelegate<WitAppInfo> onComplete);
+        Task<VRequestResponse<WitAppInfo>> RequestAppInfo(string applicationId);
 
-        Task<bool> RequestClientAppToken(string applicationId, VRequest.RequestCompleteDelegate<string> onComplete);
+        Task<VRequestResponse<WitExportInfo>> RequestAppExportInfo(string applicationId);
 
-        Task<bool> RequestIntentList(VRequest.RequestCompleteDelegate<WitIntentInfo[]> onComplete);
+        Task<VRequestResponse<WitVersionTagInfo[][]>> RequestAppVersionTags(string applicationId);
 
-        Task<bool> RequestIntentInfo(string intentId, VRequest.RequestCompleteDelegate<WitIntentInfo> onComplete);
+        Task<VRequestResponse<string>> RequestClientToken(string applicationId);
 
-        Task<bool> RequestEntityList(VRequest.RequestCompleteDelegate<WitEntityInfo[]> onComplete);
+        Task<VRequestResponse<WitIntentInfo[]>> RequestIntentList();
 
-        Task<bool> RequestEntityInfo(string entityId, VRequest.RequestCompleteDelegate<WitEntityInfo> onComplete);
+        Task<VRequestResponse<WitIntentInfo>> RequestIntentInfo(string intentId);
 
-        Task<bool> RequestTraitList(VRequest.RequestCompleteDelegate<WitTraitInfo[]> onComplete);
+        Task<VRequestResponse<WitEntityInfo[]>> RequestEntityList();
 
-        Task<bool> RequestTraitInfo(string traitId, VRequest.RequestCompleteDelegate<WitTraitInfo> onComplete);
+        Task<VRequestResponse<WitEntityInfo>> RequestEntityInfo(string entityId);
 
-        Task<bool> RequestVoiceList(VRequest.RequestCompleteDelegate<Dictionary<string, WitVoiceInfo[]>> onComplete);
+        Task<VRequestResponse<WitTraitInfo[]>> RequestTraitList();
+
+        Task<VRequestResponse<WitTraitInfo>> RequestTraitInfo(string traitId);
+
+        Task<VRequestResponse<Dictionary<string, WitVoiceInfo[]>>> RequestVoiceList();
     }
 }

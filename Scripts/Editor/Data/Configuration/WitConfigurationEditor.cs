@@ -9,12 +9,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.WitAi.Data.Configuration.Tabs;
 using Lib.Wit.Runtime.Requests;
 using Meta.Conduit.Editor;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
 using Meta.Conduit;
+using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using UnityEditor;
 using UnityEngine;
@@ -70,6 +72,8 @@ namespace Meta.WitAi.Windows
         public virtual string HeaderUrl => WitTexts.GetAppURL(Configuration.GetApplicationId(), WitTexts.WitAppEndpointType.Settings);
         protected virtual string DocsUrl => WitTexts.Texts.WitDocsUrl;
         protected virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
+
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <summary>
         /// Number of days in between automatic refreshes
@@ -504,23 +508,22 @@ namespace Meta.WitAi.Windows
             Configuration.UpdateDataAssets();
             if (Configuration.useConduit)
             {
-                CheckAutoTrainAvailabilityIfNeeded();
+                _ = ThreadUtility.BackgroundAsync(_log, async () => await CheckAutoTrainAvailabilityIfNeeded());
             }
         }
 
-        private void CheckAutoTrainAvailabilityIfNeeded()
+        private async Task CheckAutoTrainAvailabilityIfNeeded()
         {
             if (_didCheckAutoTrainAvailability || !WitConfigurationUtility.IsServerTokenValid(_serverToken)) {
                 return;
             }
 
             _didCheckAutoTrainAvailability = true;
-            CheckAutoTrainIsAvailable(Configuration, (isAvailable) => {
-                _isAutoTrainAvailable = isAvailable;
-                Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.CheckAutoTrain, new Dictionary<EditorTelemetry.AnnotationKey, string>
-                {
-                    { EditorTelemetry.AnnotationKey.IsAvailable, isAvailable.ToString() }
-                });
+            var isAvailable = await CheckAutoTrainIsAvailable(Configuration);
+            _isAutoTrainAvailable = isAvailable;
+            Telemetry.Editor.LogInstantEvent(EditorTelemetry.TelemetryEventId.CheckAutoTrain, new Dictionary<EditorTelemetry.AnnotationKey, string>
+            {
+                { EditorTelemetry.AnnotationKey.IsAvailable, isAvailable.ToString() }
             });
         }
 
@@ -598,7 +601,7 @@ namespace Meta.WitAi.Windows
                 }));
         }
 
-        private void AutoTrainOnWitAi(WitConfiguration configuration)
+        private async Task AutoTrainOnWitAi(WitConfiguration configuration)
         {
             var instanceKey = Telemetry.Editor.StartEvent(EditorTelemetry.TelemetryEventId.AutoTrain);
             var manifest = LoadManifest(configuration.ManifestLocalPath);
@@ -606,31 +609,30 @@ namespace Meta.WitAi.Windows
             var intents = _conduitManifestGenerationManager.ExtractManifestData();
             VLog.D($"Auto training on WIT.ai: {intents.Count} intents.");
 
-            configuration.ImportData(manifest, (isSuccess, error) =>
+            var results = await configuration.ImportData(manifest);
+            if (string.IsNullOrEmpty(results.Error))
             {
-                if (isSuccess)
-                {
-                    Telemetry.Editor.EndEvent(instanceKey, EditorTelemetry.ResultType.Success);
-                    EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.",
-                        "OK");
-                }
-                else
-                {
-                    var failureMessage =
-                        $"Failed to import generated manifest JSON into WIT.ai: {error}. Manifest:\n{manifest}";
-                    Telemetry.Editor.EndEventWithFailure(instanceKey, failureMessage);
-                    VLog.E(failureMessage);
-                    EditorUtility.DisplayDialog("Auto Train", "Failed to start auto train process on WIT.ai.", "OK");
-                }
-            });
+                Telemetry.Editor.EndEvent(instanceKey, EditorTelemetry.ResultType.Success);
+                EditorUtility.DisplayDialog("Auto Train", "Successfully started auto train process on WIT.ai.",
+                    "OK");
+            }
+            else
+            {
+                var failureMessage =
+                    $"Failed to import generated manifest JSON into WIT.ai: {results.Error}. Manifest:\n{manifest}";
+                Telemetry.Editor.EndEventWithFailure(instanceKey, failureMessage);
+                VLog.E(failureMessage);
+                EditorUtility.DisplayDialog("Auto Train", "Failed to start auto train process on WIT.ai.", "OK");
+            }
         }
 
-        private void CheckAutoTrainIsAvailable(WitConfiguration configuration, Action<bool> onComplete)
+        private async Task<bool> CheckAutoTrainIsAvailable(WitConfiguration configuration)
         {
             var appInfo = configuration.GetApplicationInfo();
             var manifestText = _conduitManifestGenerationManager.GenerateEmptyManifest(appInfo.name, appInfo.id);
             var manifest = ManifestLoader.LoadManifestFromJson(manifestText);
-            configuration.ImportData(manifest, (result, error) => onComplete(result), true);
+            var results = await configuration.ImportData(manifest, true);
+            return string.IsNullOrEmpty(results.Error);
         }
 
         private static Manifest LoadManifest(string manifestPath)

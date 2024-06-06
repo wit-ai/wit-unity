@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
@@ -118,11 +119,15 @@ namespace Meta.WitAi.TTS.Integrations
         // Get tts request prior to transmission
         private WitTTSVRequest GetHttpRequest(TTSClipData clipData)
         {
-            return new WitTTSVRequest(Configuration, clipData.queryRequestId,
-                clipData.textToSpeak, clipData.queryParameters,
-                RequestSettings.audioType, clipData.queryStream, clipData.useEvents,
-                (progress) => RaiseRequestProgressUpdated(clipData, progress),
-                () => RaiseRequestFirstResponse(clipData));
+            var request = new WitTTSVRequest(Configuration, clipData.queryRequestId);
+            request.TextToSpeak = clipData.textToSpeak;
+            request.TtsData = clipData.queryParameters;
+            request.FileType = RequestSettings.audioType;
+            request.Stream = clipData.queryStream;
+            request.UseEvents = clipData.useEvents;
+            request.OnDownloadProgress += (progress) => RaiseRequestProgressUpdated(clipData, progress);
+            request.OnFirstResponse += () => RaiseRequestFirstResponse(clipData);
+            return request;
         }
 
         // Generate tts web socket request and handle responses
@@ -319,6 +324,12 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         private void RequestStreamViaHttp(TTSClipData clipData)
         {
+            _ = ThreadUtility.BackgroundAsync(_log,
+                async () => await RequestStreamViaHttpAsync(clipData));
+        }
+
+        private async Task RequestStreamViaHttpAsync(TTSClipData clipData)
+        {
             // Generate request & store it
             var request = GetHttpRequest(clipData);
             _webStreams[clipData.clipID] = request;
@@ -326,21 +337,14 @@ namespace Meta.WitAi.TTS.Integrations
             // Add handlers for clip stream ready & complete
             DateTime startTime = DateTime.UtcNow;
             clipData.clipStream.OnStreamReady = (clipStream) => HandleWebStreamReady(clipData, startTime, null);
-            clipData.clipStream.OnStreamComplete = (clipStream) => RaiseWebStreamCompletionCallbacks(clipData, startTime, null);
 
             // Perform stream
-            _ = ThreadUtility.BackgroundAsync(_log, () => request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents,
-                (success, error) =>
-                {
-                    if (string.IsNullOrEmpty(error))
-                    {
-                        clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
-                    }
-                    else
-                    {
-                        RaiseWebStreamCompletionCallbacks(clipData, startTime, error);
-                    }
-                }));
+            var result = await request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents);
+            if (string.IsNullOrEmpty(result.Error))
+            {
+                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+            }
+            RaiseWebStreamCompletionCallbacks(clipData, startTime, result.Error);
         }
 
         /// <summary>
@@ -466,6 +470,11 @@ namespace Meta.WitAi.TTS.Integrations
         /// <param name="downloadPath">Path to save clip</param>
         public void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath)
         {
+            _ = ThreadUtility.BackgroundAsync(_log,
+                async () => await RequestDownloadFromWebAsync(clipData, downloadPath));
+        }
+        private async Task RequestDownloadFromWebAsync(TTSClipData clipData, string downloadPath)
+        {
             // Begin
             WebDownloadEvents?.OnDownloadBegin?.Invoke(clipData, downloadPath);
 
@@ -485,33 +494,34 @@ namespace Meta.WitAi.TTS.Integrations
             // Begin request
             WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
 
-            // Request tts
+            // Get request
             WitTTSVRequest request = GetHttpRequest(clipData);
-            request.RequestDownload(downloadPath,
-                (success, error) =>
-                {
-                    _webDownloads.Remove(clipData.clipID);
-                    if (!string.IsNullOrEmpty(error))
-                    {
-                        if (string.Equals(error, WitConstants.CANCEL_ERROR))
-                        {
-                            WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
-                            WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
-                        }
-                        else
-                        {
-                            WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
-                            WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
-                        }
-                    }
-                    else
-                    {
-                        WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
-                        WebRequestEvents?.OnRequestReady?.Invoke(clipData);
-                    }
-                    WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
-                });
             _webDownloads[clipData.clipID] = request;
+
+            // Request download
+            var result = await request.RequestDownload(downloadPath);
+            _webDownloads.Remove(clipData.clipID);
+
+            var error = result.Error;
+            if (!string.IsNullOrEmpty(error))
+            {
+                if (string.Equals(error, WitConstants.CANCEL_ERROR))
+                {
+                    WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
+                    WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
+                }
+                else
+                {
+                    WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
+                    WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
+                }
+            }
+            else
+            {
+                WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
+                WebRequestEvents?.OnRequestReady?.Invoke(clipData);
+            }
+            WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
         }
         /// <summary>
         /// Method for cancelling a running load request

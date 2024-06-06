@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Lib.Wit.Runtime.Requests;
+using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
 using UnityEditor;
@@ -31,6 +32,7 @@ namespace Meta.Conduit.Editor
         private readonly IFileIo _fileIo;
         private readonly IWitVRequestFactory _requestFactory;
         private float _progress = 0;
+        private static readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitVRequestFactory requestFactory)
         {
@@ -93,7 +95,8 @@ namespace Meta.Conduit.Editor
                     if (!success)
                     {
                         allEntitiesSynced = false;
-                        VLog.W($"Failed to sync entity {manifestEntity.Name}.\n{error}");
+                        _log.Warning("Failed to sync entity {0}.\n{1}",
+                            manifestEntity.Name, error);
                     }
                 });
             }
@@ -109,21 +112,16 @@ namespace Meta.Conduit.Editor
 
             yield return ThreadUtility.CoroutineAwait(async () =>
             {
-                if (!await request.RequestAddEntity(entity, (result, error) =>
-                    {
-                        requestComplete = true;
-                        if (string.IsNullOrEmpty(error))
-                        {
-                            completionCallback.Invoke(true, string.Empty);
-                        }
-                        else
-                        {
-                            completionCallback.Invoke(false, $"Request to add entity {entity.name} failed on Wit.ai. Error: {error}");
-                        }
-                    }))
+                var result = await request.RequestAddEntity(entity);
+                if (string.IsNullOrEmpty(result.Error))
                 {
-                    completionCallback.Invoke(false, $"Failed to send request to add entity {entity.name}.");
+                    completionCallback.Invoke(true, string.Empty);
                 }
+                else
+                {
+                    completionCallback.Invoke(false, $"Request to add entity {entity.name} failed on Wit.ai. Error: {result.Error}");
+                }
+                requestComplete = true;
             });
 
             yield return new WaitUntil(()=> requestComplete);
@@ -196,7 +194,7 @@ namespace Meta.Conduit.Editor
             // Wit entity not found
             if (!witIncomingEntity.HasValue)
             {
-                VLog.E($"Enum Synchronizer - Failed to find {entityName} entity on Wit.AI");
+                _log.Error("Enum Synchronizer - Failed to find {0} entity on Wit.AI", entityName);
                 yield break;
             }
 
@@ -258,7 +256,8 @@ namespace Meta.Conduit.Editor
 
             if (assemblies.Count() != 1)
             {
-                VLog.E($"Expected one assembly for type {qualifiedTypeName} but found {assemblies.Count()}");
+                _log.Error("Expected one assembly for type {0} but found {1}",
+                    qualifiedTypeName, assemblies.Count);
                 throw new InvalidOperationException();
             }
 
@@ -270,7 +269,8 @@ namespace Meta.Conduit.Editor
             }
             catch (Exception)
             {
-                VLog.E($"Failed to get wrapper for {qualifiedTypeName} resolved as type {enumType.FullName}");
+                _log.Error("Failed to get wrapper for {0} resolved as type {1}",
+                    qualifiedTypeName, enumType.FullName);
                 throw;
             }
         }
@@ -324,7 +324,8 @@ namespace Meta.Conduit.Editor
             {
                 if (witEntityKeywords.ContainsKey(keyword.keyword))
                 {
-                    VLog.W($"Duplicate keyword {keyword.keyword} was found in entity {incomingEntity.Value.name}. Verify entities on Wit.Ai");
+                    _log.Warning("Duplicate keyword {0} was found in entity {1}. Verify entities on Wit.Ai",
+                        keyword.keyword, incomingEntity.Value.name);
                     continue;
                 }
 
@@ -417,16 +418,9 @@ namespace Meta.Conduit.Editor
                 var failed = false;
                 yield return ThreadUtility.CoroutineAwait(async () =>
                 {
-                    if (!await request.RequestAddEntityKeyword(entityName, keyword.GetAsInfo(),
-                            (result, error) =>
-                            {
-                                requestError = error;
-                                requestComplete = true;
-                            }))
-                    {
-                        requestError = "Failed to send request";
-                    }
-
+                    var result = await request.RequestAddEntityKeyword(entityName, keyword.GetAsInfo());
+                    requestError = result.Error;
+                    requestComplete = true;
                     if (!string.IsNullOrEmpty(requestError))
                     {
                         allSuccessful = false;
@@ -450,16 +444,9 @@ namespace Meta.Conduit.Editor
 
                     yield return ThreadUtility.CoroutineAwait(async () =>
                     {
-                        if (!await request.RequestAddSynonym(entityName, changedKeyword.Keyword, synonym,
-                                (result, error) =>
-                                {
-                                    requestError = error;
-                                    requestComplete = true;
-                                }))
-                        {
-                            requestError = "Failed to send request";
-                        }
-
+                        var result = await request.RequestAddEntitySynonym(entityName, changedKeyword.Keyword, synonym);
+                        requestError = result.Error;
+                        requestComplete = true;
                         if (!string.IsNullOrEmpty(requestError))
                         {
                             allSuccessful = false;
@@ -483,24 +470,19 @@ namespace Meta.Conduit.Editor
 
             yield return ThreadUtility.CoroutineAwait(async () =>
             {
-                if (!await request.RequestEntityList((infos, error) =>
-                    {
-                        requestCompleted = true;
+                var result = await request.RequestEntityList();
 
-                        if (!string.IsNullOrEmpty(error))
-                        {
-                            VLog.E($"Failed to query Wit Entities\nError: {error}");
-                            callBack(null);
-                            return;
-                        }
-
-                        callBack(infos.Where(entity => !entity.name.Contains('$')).Select(entity => entity.name)
-                            .ToList());
-
-                    }))
+                requestCompleted = true;
+                if (!string.IsNullOrEmpty(result.Error))
                 {
-                    VLog.E($"Failed to request entities from Wit");
+                    _log.Error("Failed to query Wit Entities\nError: {0}",
+                        result.Error);
+                    callBack(null);
+                    return;
                 }
+
+                callBack(result.Value.Where(entity => !entity.name.Contains('$')).Select(entity => entity.name)
+                    .ToList());
             });
 
             yield return new WaitUntil(() => requestCompleted);
@@ -513,21 +495,16 @@ namespace Meta.Conduit.Editor
 
             yield return ThreadUtility.CoroutineAwait(async () =>
             {
-                if (!await request.RequestEntityInfo(manifestEntityName, (entity, error) =>
-                    {
-                        requestCompleted = true;
-                        if (!string.IsNullOrEmpty(error))
-                        {
-                            callBack(null);
-                            return;
-                        }
+                var result = await request.RequestEntityInfo(manifestEntityName);
 
-                        callBack(entity);
-                    }))
+                requestCompleted = true;
+                if (!string.IsNullOrEmpty(result.Error))
                 {
-                    VLog.E($"Failed to get entity {manifestEntityName}");
                     callBack(null);
+                    return;
                 }
+
+                callBack(result.Value);
             });
 
             yield return new WaitUntil(() => requestCompleted);

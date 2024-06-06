@@ -6,14 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Uncomment when added to Wit.ai
-//#define OGG_SUPPORT
-
-using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Meta.Voice.Audio;
 using Meta.Voice.Audio.Decoding;
 using Meta.WitAi.Json;
 using UnityEngine;
@@ -24,53 +19,107 @@ namespace Meta.WitAi.Requests
     /// <summary>
     /// A Wit VRequest subclass for handling TTS requests
     /// </summary>
-    public class WitTTSVRequest : WitVRequest
+    internal class WitTTSVRequest : WitVRequest
     {
         // The text to be requested
-        public string TextToSpeak { get; }
+        public string TextToSpeak { get; set; }
         // The text settings
-        public Dictionary<string, string> TtsData { get; }
+        public Dictionary<string, string> TtsData { get; set; }
 
         // The audio type to be used
-        public TTSWitAudioType FileType { get; }
+        public TTSWitAudioType FileType { get; set; }
         // Whether audio should stream or not
-        public bool Stream { get; private set; }
+        public bool Stream { get; set; }
         // Whether audio data should include events
-        public bool UseEvents { get; }
+        public bool UseEvents { get; set; }
 
         /// <summary>
         /// Constructor for wit based text-to-speech VRequests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="requestId">A unique identifier that can be used to track the request</param>
-        /// <param name="textToSpeak">The text to be spoken by the request</param>
-        /// <param name="ttsData">The text parameters used for the request</param>
-        /// <param name="audioFileType">The expected audio file type of the request</param>
-        /// <param name="audioStream">Whether the audio should be played while streaming or should wait until completion.</param>
-        /// <param name="useEvents">Whether or not events should be requested with this audio request</param>
-        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
-        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
-        public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string textToSpeak,
-            Dictionary<string, string> ttsData, TTSWitAudioType audioFileType, bool audioStream = false,
-            bool useEvents = false,
-            RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null)
-            : base(configuration, requestId, false, onDownloadProgress, onFirstResponse)
+        public WitTTSVRequest(IWitRequestConfiguration configuration,
+            string requestId) : base(configuration, requestId, false)
         {
-            TextToSpeak = textToSpeak;
-            TtsData = ttsData;
-            FileType = audioFileType;
-            Stream = audioStream;
-            UseEvents = useEvents;
         }
 
         // Add headers to all requests
         protected override Dictionary<string, string> GetHeaders()
         {
             Dictionary<string, string> headers = base.GetHeaders();
-            headers[WitConstants.HEADER_POST_CONTENT] = WitConstants.ENDPOINT_JSON_MIME;
             headers[WitConstants.HEADER_GET_CONTENT] = WitConstants.GetAudioMimeType(FileType);
             return headers;
+        }
+
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
+        /// provided audio clip stream.
+        /// </summary>
+        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
+        public async Task<VRequestResponse<bool>> RequestStream(AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded)
+        {
+            // Setup with errors
+            var errors = await SetupTts(false);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL, errors);
+            }
+
+            // Perform an audio stream request
+            return await RequestAudio(WitConstants.GetUnityAudioType(FileType),
+                onSamplesDecoded, onJsonDecoded);
+        }
+
+        /// <summary>
+        /// Performs a wit tts request that streams audio data into the
+        /// a specific path on disk.
+        /// </summary>
+        /// <param name="downloadPath">Path to download the audio clip to</param>
+        public async Task<VRequestResponse<bool>> RequestDownload(string downloadPath)
+        {
+            // Setup with errors
+            var errors = await SetupTts(false);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL, errors);
+            }
+
+            // Perform an audio stream request
+            return await RequestFileDownload(Url, downloadPath);
+        }
+
+        // Internal base method for tts request
+        private async Task<string> SetupTts(bool download)
+        {
+            // Error check
+            string errors = GetWebErrors(download);
+            if (!string.IsNullOrEmpty(errors))
+            {
+                return errors;
+            }
+
+            // Encode post data
+            byte[] postData = EncodePostData();
+            if (postData == null)
+            {
+                return WitConstants.ERROR_TTS_DECODE;
+            }
+
+            // Set url, method type and content type
+            Url = Configuration.GetEndpointInfo().Synthesize;
+            Method = VRequestMethod.HttpPost;
+            ContentType = WitConstants.ENDPOINT_JSON_MIME;
+
+            // Get post data and set to an uplooad handler
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                Uploader = new UploadHandlerRaw(postData);
+            });
+
+            // Success
+            return string.Empty;
         }
 
         // Performs web error check locally
@@ -120,116 +169,21 @@ namespace Meta.WitAi.Requests
             return string.Empty;
         }
 
-        /// <summary>
-        /// Performs a wit tts request that streams audio data into the
-        /// provided audio clip stream.
-        /// </summary>
-        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
-        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
-        /// <param name="onComplete">Called when the audio request has completed</param>
-        /// <returns>An error string if applicable</returns>
-        public async Task<string> RequestStream(AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioJsonDecodeDelegate onJsonDecoded,
-            RequestCompleteDelegate<bool> onComplete)
-        {
-            // Error check
-            string errors = GetWebErrors();
-            if (!string.IsNullOrEmpty(errors))
-            {
-                onComplete?.Invoke(false, errors);
-                return errors;
-            }
-
-            // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, UseEvents, TtsData);
-            if (bytes == null)
-            {
-                errors = WitConstants.ERROR_TTS_DECODE;
-                onComplete?.Invoke(false, errors);
-                return errors;
-            }
-
-            // Get tts unity request
-            UnityWebRequest unityRequest = await ThreadUtility.CallOnMainThread(() => GetUnityRequest(bytes));
-
-            // Perform an audio stream request
-            var result = await RequestAudioStream(unityRequest, WitConstants.GetUnityAudioType(FileType), UseEvents,
-                onSamplesDecoded, onJsonDecoded, onComplete);
-            if (!result)
-            {
-                return "Failed to start audio stream";
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// Performs a wit tts request that streams audio data into the
-        /// a specific path on disk.
-        /// </summary>
-        /// <param name="downloadPath">Path to download the audio clip to</param>
-        /// <param name="onComplete">The callback when the clip is
-        /// either completely downloaded or failed to download</param>
-        /// <returns>An error string if applicable</returns>
-        public async Task<string> RequestDownload(string downloadPath,
-            RequestCompleteDelegate<bool> onComplete)
-        {
-            // Error check
-            string errors = GetWebErrors(true);
-            if (!string.IsNullOrEmpty(errors))
-            {
-                onComplete?.Invoke(false, errors);
-                return errors;
-            }
-
-            // Encode post data
-            byte[] bytes = EncodePostData(TextToSpeak, UseEvents, TtsData);
-            if (bytes == null)
-            {
-                errors = WitConstants.ERROR_TTS_DECODE;
-                onComplete?.Invoke(false, errors);
-                return errors;
-            }
-
-            // Get tts unity request
-            UnityWebRequest unityRequest = GetUnityRequest(bytes);
-
-            // Perform an audio download request
-            var result = await RequestFileDownload(downloadPath, unityRequest, onComplete);
-            if (!result)
-            {
-                return "Failed to start audio stream";
-            }
-            return string.Empty;
-        }
-
         // Encode tts post bytes
-        private byte[] EncodePostData(string textToSpeak, bool useEvents, Dictionary<string, string> ttsData)
+        private byte[] EncodePostData()
         {
-            if (ttsData == null)
+            var ttsData = new Dictionary<string, string>();
+            ttsData[WitConstants.ENDPOINT_TTS_PARAM] = TextToSpeak;
+            ttsData[WitConstants.ENDPOINT_TTS_EVENTS] = UseEvents.ToString().ToLower();
+            if (TtsData != null)
             {
-                ttsData = new Dictionary<string, string>();
+                foreach (var item in TtsData)
+                {
+                    ttsData[item.Key] = item.Value;
+                }
             }
-            ttsData[WitConstants.ENDPOINT_TTS_PARAM] = textToSpeak;
-            ttsData[WitConstants.ENDPOINT_TTS_EVENTS] = useEvents.ToString().ToLower();
             string jsonString = JsonConvert.SerializeObject(ttsData);
             return Encoding.UTF8.GetBytes(jsonString);
-        }
-
-        // Internal base method for tts request
-        private UnityWebRequest GetUnityRequest(byte[] postData)
-        {
-            // Get uri
-            Uri uri = GetUri(Configuration.GetEndpointInfo().Synthesize);
-
-            // Generate request
-            UnityWebRequest unityRequest = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbPOST);
-
-            // Add upload handler
-            unityRequest.uploadHandler = new UploadHandlerRaw(postData);
-
-            // Perform json request
-            return unityRequest;
         }
     }
 }

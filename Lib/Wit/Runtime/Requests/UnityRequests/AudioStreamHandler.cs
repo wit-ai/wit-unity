@@ -34,8 +34,18 @@ namespace Meta.WitAi.Requests
     /// </summary>
     [Preserve]
     [LogCategory(LogCategory.Audio, LogCategory.Output)]
-    public class AudioStreamHandler : DownloadHandlerScript
+    internal class AudioStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder
     {
+        /// <summary>
+        /// Whether data has arrived
+        /// </summary>
+        public bool IsStarted { get; private set; }
+
+        /// <summary>
+        /// Current progress of the download
+        /// </summary>
+        public float Progress => GetProgress();
+
         /// <summary>
         /// Whether both the request is complete and decoding is complete
         /// </summary>
@@ -56,11 +66,6 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public AudioSampleDecodeDelegate OnSamplesDecoded { get; }
 
-        /// <summary>
-        /// Callback for decode completion
-        /// </summary>
-        public AudioDecodeCompleteDelegate OnComplete { get; }
-
         // Ring buffer and counters for decoding bytes
         private readonly byte[] _inRingBuffer = new byte[WitConstants.ENDPOINT_TTS_BUFFER_LENGTH];
         private int _inRingOffset = 0;
@@ -77,21 +82,18 @@ namespace Meta.WitAi.Requests
         private ulong Max(ulong var1, ulong var2) => var1 > var2 ? var1 : var2;
 
         // For logging
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <summary>
         /// The constructor that generates the decoder and handles routing callbacks
         /// </summary>
         /// <param name="audioDecoder">The audio type requested (Wav, MP3, etc.)</param>
         /// <param name="onSamplesDecoded">Called on background thread for every chunk of samples decoded.</param>
-        /// <param name="onComplete">Called when all audio samples have been successfully decoded.</param>
         public AudioStreamHandler(IAudioDecoder audioDecoder,
-            AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioDecodeCompleteDelegate onComplete)
+            AudioSampleDecodeDelegate onSamplesDecoded)
         {
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
-            OnComplete = onComplete;
         }
 
         /// <summary>
@@ -125,6 +127,9 @@ namespace Meta.WitAi.Requests
             {
                 return false;
             }
+
+            // Started
+            IsStarted = true;
 
             // Push all data to buffer
             PushChunk(bufferData, 0, length);
@@ -265,24 +270,9 @@ namespace Meta.WitAi.Requests
 
             // Stream complete
             IsComplete = true;
-            RaiseOnComplete();
 
             // Dispose
             Dispose();
-        }
-
-        // Return
-        private void RaiseOnComplete()
-        {
-            try
-            {
-                var error = GetText();
-                OnComplete?.Invoke(error);
-            }
-            catch (Exception e)
-            {
-                _log.Error("RaiseOnComplete Exception\n\n{0}\n", e);
-            }
         }
 
         /// <summary>

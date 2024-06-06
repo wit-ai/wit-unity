@@ -15,7 +15,7 @@ using UnityEngine.Networking;
 
 namespace Meta.WitAi.Requests
 {
-    public class WitVRequest : VRequest
+    internal class WitVRequest : VRequest, IWitVRequest
     {
         /// <summary>
         /// Uri customization delegate
@@ -55,11 +55,8 @@ namespace Meta.WitAi.Requests
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="requestId">A unique identifier that can be used to track the request</param>
         /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
-        /// <param name="onDownloadProgress">The callback for progress related to downloading</param>
-        /// <param name="onFirstResponse">The callback for the first response of data from a request</param>
-        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false,
-            RequestProgressDelegate onDownloadProgress = null,
-            RequestFirstResponseDelegate onFirstResponse = null) : base(onDownloadProgress, onFirstResponse)
+        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false)
+            : base()
         {
             Configuration = configuration;
             RequestId = requestId;
@@ -71,155 +68,76 @@ namespace Meta.WitAi.Requests
             _useServerToken = useServerToken;
         }
 
-        // Return uri
-        public Uri GetUri(string path, Dictionary<string, string> queryParams = null)
-            => WitRequestSettings.GetUri(Configuration, path, queryParams);
+        // Gets uri using the specified url and parameters
+        protected override Uri GetUri()
+            => WitRequestSettings.GetUri(Configuration, Url, UrlParameters);
 
         // Gets wit headers using static header generation
         protected override Dictionary<string, string> GetHeaders()
             => WitRequestSettings.GetHeaders(Configuration, RequestId, _useServerToken);
 
-        #region REQUESTS
         /// <summary>
-        /// Perform a unity request with coroutines
+        /// Override base class to ensure configuration is correct
         /// </summary>
-        /// <param name="unityRequest">The request to be managed</param>
-        /// <param name="onComplete">The callback delegate on request completion</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public override Task<bool> Request(UnityWebRequest unityRequest,
-            RequestCompleteDelegate<UnityWebRequest> onComplete)
+        public override async Task<VRequestResponse<TValue>> Request<TValue>(VRequestDecodeDelegate<TValue> decoder)
         {
-            // Ensure configuration is set
             if (Configuration == null)
             {
-                onComplete?.Invoke(unityRequest, "Cannot perform a request without a Wit configuration");
-                return Task.FromResult(false);
+                return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, "No wit configuration set");
             }
-
-            // Perform base
-            return base.Request(unityRequest, onComplete);
-        }
-
-        /// <summary>
-        /// Initialize with a request & return an error if applicable
-        /// </summary>
-        /// <param name="unityRequest">The unity request to be performed</param>
-        /// <returns>Any errors encountered during the request</returns>
-        public override async Task<RequestCompleteResponse<TData>> RequestAsync<TData>(UnityWebRequest unityRequest,
-            Func<UnityWebRequest, TData> onDecode)
-        {
-            // Ensure configuration is set
-            if (Configuration == null)
-            {
-                return new RequestCompleteResponse<TData>("Cannot perform a request without a Wit configuration");
-            }
-
-            // Perform base
-            return await base.RequestAsync(unityRequest, onDecode);
+            return await base.Request(decoder);
         }
 
         /// <summary>
         /// Get request to a wit endpoint
         /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="onComplete">The callback delegate on request completion</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestWitGet<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
+        /// <param name="endpoint">The wit endpoint for the request. Ex. 'synthesize'</param>
+        /// <param name="urlParameters">Any parameters to be added to the url prior to request.</param>
+        /// <param name="onPartial">If provided, this will call back for every incremental json chunk.</param>
+        /// <returns>An awaitable task thar contains the final decoded json results</returns>
+        public async Task<VRequestResponse<TValue>> RequestWitGet<TValue>(string endpoint,
+            Dictionary<string, string> urlParameters = null,
+            Action<TValue> onPartial = null)
         {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = string.Empty;
-            return RequestJsonGet(uri, onComplete, onPartial);
+            Url = endpoint;
+            UrlParameters = urlParameters;
+            return await RequestJsonGet(onPartial);
         }
 
         /// <summary>
-        /// Get request to a wit endpoint asynchronously
+        /// Post request to a wit endpoint
         /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <returns>Returns the request complete data including a parsed result if possible</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestWitGetAsync<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams = null,
-            RequestCompleteDelegate<TData> onPartial = null)
+        /// <param name="endpoint">The wit endpoint for the request. Ex. 'synthesize'</param>
+        /// <param name="urlParameters">Any parameters to be added to the url prior to request.</param>
+        /// <param name="payload">Text data that will be uploaded via post.</param>
+        /// <param name="onPartial">If provided, this will call back for every incremental json chunk.</param>
+        /// <returns>An awaitable task thar contains the final decoded json results</returns>
+        public async Task<VRequestResponse<TValue>> RequestWitPost<TValue>(string endpoint,
+            Dictionary<string, string> urlParameters,
+            string payload,
+            Action<TValue> onPartial = null)
         {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = string.Empty;
-            return await RequestJsonGetAsync<TData>(uri, onPartial);
+            Url = endpoint;
+            UrlParameters = urlParameters;
+            return await RequestJsonPost(payload, onPartial);
         }
 
         /// <summary>
-        /// Post text request to a wit endpoint
+        /// Put request to a wit endpoint
         /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="postText">Text to be sent to endpoint</param>
-        /// <param name="onComplete">The callback delegate on request completion</param>
-        /// <param name="onPartial">The callback delegate when a partial response is received</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestWitPost<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string postText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
+        /// <param name="endpoint">The wit endpoint for the request. Ex. 'synthesize'</param>
+        /// <param name="urlParameters">Any parameters to be added to the url prior to request.</param>
+        /// <param name="payload">Text data that will be uploaded via put.</param>
+        /// <param name="onPartial">If provided, this will call back for every incremental json chunk.</param>
+        /// <returns>An awaitable task thar contains the final decoded json results</returns>
+        public async Task<VRequestResponse<TValue>> RequestWitPut<TValue>(string endpoint,
+            Dictionary<string, string> urlParameters,
+            string payload,
+            Action<TValue> onPartial = null)
         {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = postText;
-            return RequestJsonPost(uri, postText, onComplete, onPartial);
+            Url = endpoint;
+            UrlParameters = urlParameters;
+            return await RequestJsonPut(payload, onPartial);
         }
-
-        /// <summary>
-        /// Post request to a wit endpoint asynchronously
-        /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="postText">Text to be sent to endpoint</param>
-        /// <returns>Returns the request complete data including a parsed result if possible</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestWitPostAsync<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string postText,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = postText;
-            return await RequestJsonPostAsync<TData>(uri, postText, onPartial);
-        }
-
-        /// <summary>
-        /// Put text request to a wit endpoint
-        /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="putText">Text to be sent to endpoint</param>
-        /// <param name="onComplete">The delegate upon completion</param>
-        /// <param name="onPartial">The callback delegate when a partial response is received</param>
-        /// <param name="onProgress">The upload progress</param>
-        /// <returns>False if the request cannot be performed</returns>
-        public Task<bool> RequestWitPut<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string putText,
-            RequestCompleteDelegate<TData> onComplete,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = putText;
-            return RequestJsonPut(uri, putText, onComplete, onPartial);
-        }
-
-        /// <summary>
-        /// Put text request to a wit endpoint asynchronously
-        /// </summary>
-        /// <param name="uriEndpoint">Endpoint name</param>
-        /// <param name="uriParams">Endpoint url parameters</param>
-        /// <param name="putText">Text to be sent to endpoint</param>
-        /// <returns>Returns the request complete data including a parsed result if possible</returns>
-        public async Task<RequestCompleteResponse<TData>> RequestWitPutAsync<TData>(string uriEndpoint,
-            Dictionary<string, string> uriParams, string putText,
-            RequestCompleteDelegate<TData> onPartial = null)
-        {
-            uri = GetUri(uriEndpoint, uriParams);
-            payload = putText;
-            return await RequestJsonPutAsync<TData>(uri, putText, onPartial);
-        }
-
-        #endregion
     }
 }
