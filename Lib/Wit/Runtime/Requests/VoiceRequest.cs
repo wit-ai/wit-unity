@@ -7,15 +7,14 @@
  */
 
 using System;
-using System.Collections;
 using System.Text;
 using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
 using Meta.WitAi.Data;
+using UnityEngine;
 using UnityEngine.Events;
-using Random = UnityEngine.Random;
 
 namespace Meta.Voice
 {
@@ -180,7 +179,15 @@ namespace Meta.Voice
                     }
                     break;
                 case VoiceRequestState.Transmitting:
-                    WaitForHold(OnCanSend);
+                    try
+                    {
+                        OnSend();
+                    }
+                    catch (Exception e)
+                    {
+                        LogE("OnSend Exception Caught", e);
+                    }
+                    WaitForHold(HoldSend);
                     break;
                 case VoiceRequestState.Canceled:
                     try
@@ -245,7 +252,7 @@ namespace Meta.Voice
         protected virtual void OnStateChange() =>
             RaiseEvent(Events?.OnStateChange);
 
-        // Wait for hold to complete and then perform an action
+        // Wait for hold to complete and then perform an action on the background thread
         protected void WaitForHold(Action onReady)
         {
             _ = ThreadUtility.BackgroundAsync(_log, async () =>
@@ -259,25 +266,14 @@ namespace Meta.Voice
         }
 
         // Once hold is complete, begin send process
-        protected virtual void OnCanSend()
+        protected virtual void HoldSend()
         {
-            if (State != VoiceRequestState.Transmitting)
+            if (State != VoiceRequestState.Transmitting
+                || OnSimulateResponse())
             {
                 return;
             }
-            try
-            {
-                OnSend();
-            }
-            catch (Exception e)
-            {
-                LogE("OnSend Exception Caught", e);
-            }
-            if (!OnSimulateResponse())
-            {
-                // TODO: Replace this with async call when we have fully replaced the VRequest put/post with asyncs.
-                ThreadUtility.CallOnMainThread(() => HandleSend());
-            }
+            HandleSend();
         }
 
         /// <summary>
@@ -325,7 +321,7 @@ namespace Meta.Voice
             // Append any request specific data
             AppendLogData(requestLog, logLevel);
             // Log
-            _log.Log(_log.CorrelationID, logLevel, log);
+            _log.Log(_log.CorrelationID, logLevel, "{0}", requestLog);
         }
         protected void LogW(string log) => Log(log, VLoggerVerbosity.Warning);
         protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLoggerVerbosity.Error);
@@ -406,13 +402,9 @@ namespace Meta.Voice
         protected abstract void HandleSend();
 
         /// <summary>
-        ///
+        /// Determines if response is being simulated
         /// </summary>
-        /// <returns>True if the response was simulated</returns>
-        protected virtual bool OnSimulateResponse()
-        {
-            return false;
-        }
+        protected virtual bool OnSimulateResponse() => false;
         #endregion TRANSMISSION
 
         #region RESULTS
