@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.WitAi;
 using UnityEngine;
 using UnityEngine.Scripting;
 
@@ -38,11 +39,14 @@ namespace Meta.Voice.Audio.Decoding
         // Total bytes per pcm sample
         private readonly int _byteCount;
         // Decode method from bytes to float
-        private readonly Func<byte[], int, float> _decoder;
+        private readonly PcmDecodeDelegate _decoder;
 
         // Storage of overflow bytes
         private int _overflowOffset = 0;
         private readonly byte[] _overflow;
+
+        // Samples
+        private readonly float[] _samples;
 
         /// <summary>
         /// Default constructor for PCM16
@@ -54,12 +58,14 @@ namespace Meta.Voice.Audio.Decoding
         /// Constructor that allows selection of pcm type
         /// </summary>
         [Preserve]
-        public AudioDecoderPcm(AudioDecoderPcmType pcmType)
+        public AudioDecoderPcm(AudioDecoderPcmType pcmType,
+            int sampleBufferLength = WitConstants.ENDPOINT_TTS_DEFAULT_SAMPLE_LENGTH)
         {
             PcmType = pcmType;
             _byteCount = GetByteCount(PcmType);
             _overflow = new byte[_byteCount];
-            _decoder =  GetDecodeMethod(PcmType);
+            _samples = new float[sampleBufferLength];
+            _decoder =  GetPcmDecoder(PcmType);
         }
 
 
@@ -69,8 +75,8 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">List to add all decoded samples to</param>
-        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
+        /// <param name="onSamplesDecoded">Callback following a sample decode</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
         {
             // Append previous overflow
             if (_overflowOffset > 0)
@@ -80,8 +86,8 @@ namespace Meta.Voice.Audio.Decoding
                 Array.Copy(buffer, bufferOffset, _overflow, _overflowOffset, overflowLength);
 
                 // Decode and add overflow sample
-                var sample = _decoder(_overflow, 0);
-                decodedSamples.Add(sample);
+                _samples[0] = _decoder(_overflow, 0);
+                onSamplesDecoded?.Invoke(_samples, 0, 1);
 
                 // Increment buffer offset/decrement length
                 bufferOffset += overflowLength;
@@ -92,10 +98,16 @@ namespace Meta.Voice.Audio.Decoding
             // Decode and append while there are enough for a sample
             while (bufferLength >= _byteCount)
             {
-                var sample = _decoder(buffer, bufferOffset);
-                bufferOffset += _byteCount;
-                bufferLength -= _byteCount;
-                decodedSamples.Add(sample);
+                var remaining = Mathf.FloorToInt((float)bufferLength / _byteCount);
+                var length = Mathf.Min(remaining, _samples.Length);
+                for (int i = 0; i < length; i++)
+                {
+                    _samples[i] = _decoder(buffer, bufferOffset + i * _byteCount);
+                }
+                onSamplesDecoded?.Invoke(_samples, 0, length);
+                length *= _byteCount;
+                bufferOffset += length;
+                bufferLength -= length;
             }
 
             // Store remaining buffer into overflow
@@ -142,7 +154,7 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="pcmType">The pcm decode type to be used</param>
         public static float[] DecodePcm(byte[] rawData, AudioDecoderPcmType pcmType = AudioDecoderPcmType.Int16)
         {
-            var decoder = GetDecodeMethod(pcmType);
+            var decoder = GetPcmDecoder(pcmType);
             int totalSamples = (int)GetTotalSamplesPcm(rawData.Length, pcmType);
             float[] samples = new float[totalSamples];
             for (int i = 0; i < samples.Length; i++)
@@ -153,9 +165,14 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
+        /// Decodes a specific buffer index
+        /// </summary>
+        internal delegate float PcmDecodeDelegate(byte[] buffer, int bufferOffset);
+
+        /// <summary>
         /// Returns a decode method depending on the pcm type
         /// </summary>
-        public static Func<byte[], int, float> GetDecodeMethod(AudioDecoderPcmType pcmType)
+        internal static PcmDecodeDelegate GetPcmDecoder(AudioDecoderPcmType pcmType)
         {
             switch (pcmType)
             {

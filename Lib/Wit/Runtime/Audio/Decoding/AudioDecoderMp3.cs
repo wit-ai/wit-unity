@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
 using UnityEngine.Scripting;
 
 namespace Meta.Voice.Audio.Decoding
@@ -28,14 +27,14 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">List to add all decoded samples to</param>
-        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
+        /// <param name="onSamplesDecoded">Callback following a sample decode</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
         {
             // Iterate until chunk is complete
             while (bufferLength > 0)
             {
                 // Decode a single frame and append samples
-                var decodeLength = _frame.Decode(buffer, bufferOffset, bufferLength, decodedSamples);
+                var decodeLength = _frame.Decode(buffer, bufferOffset, bufferLength, onSamplesDecoded);
 
                 // Increment buffer values
                 bufferOffset += decodeLength;

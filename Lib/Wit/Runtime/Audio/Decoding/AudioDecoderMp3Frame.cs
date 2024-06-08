@@ -84,8 +84,8 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">List to add all decoded samples to</param>
-        public int Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
+        /// <param name="onDecodedSample">Callback following a sample decode</param>
+        public int Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
         {
             // Total decoded from the buffer
             int decodedLength = 0;
@@ -145,10 +145,7 @@ namespace Meta.Voice.Audio.Decoding
             // Decode as many as possible that are provided and within the frame remainder
             const int sampleOffset = 0;
             var sampleLength = _decoder.DecodeFrame(this, _sampleBuffer, sampleOffset);
-            for (int i = 0; i < sampleLength; i++)
-            {
-                decodedSamples.Add(_sampleBuffer[sampleOffset + i]);
-            }
+            onSamplesDecoded?.Invoke(_sampleBuffer, sampleOffset, sampleLength);
 
             // Increment frame count & clear previous data
             _frameIndex++;

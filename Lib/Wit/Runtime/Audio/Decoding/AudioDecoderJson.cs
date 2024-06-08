@@ -36,7 +36,7 @@ namespace Meta.Voice.Audio.Decoding
         // Handles audio decoding
         private readonly IAudioDecoder _audioDecoder;
         // Used for DecodeAudio method
-        private List<float> _decodedAudio;
+        private AudioSampleDecodeDelegate _onSamplesDecoded;
 
         /// <summary>
         /// Constructor that takes in an audio decoder and decode callback delegate
@@ -55,13 +55,13 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">List to add all decoded samples to</param>
-        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples)
+        /// <param name="onSamplesDecoded">Callback following a sample decode</param>
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
         {
             // Decode audio and json
-            _decodedAudio = decodedSamples;
+            _onSamplesDecoded = onSamplesDecoded;
             _chunkDecoder.Decode(buffer, bufferOffset, bufferLength, _decodedChunks, DecodeAudio);
-            _decodedAudio = null;
+            _onSamplesDecoded = null;
 
             // If chunks exist, iterate
             if (_decodedChunks.Count == 0)
@@ -93,6 +93,6 @@ namespace Meta.Voice.Audio.Decoding
 
         // Performs the audio decode using the provided buffer offset and length
         private void DecodeAudio(byte[] buffer, int bufferOffset, int bufferLength)
-            => _audioDecoder.Decode(buffer, bufferOffset, bufferLength, _decodedAudio);
+            => _audioDecoder.Decode(buffer, bufferOffset, bufferLength, _onSamplesDecoded);
     }
 }

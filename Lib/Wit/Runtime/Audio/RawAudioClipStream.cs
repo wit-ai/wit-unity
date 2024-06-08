@@ -44,25 +44,23 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Adds a list of samples to the current stream in its entirety.
+        /// Adds a sample buffer to the current stream in its entirety.
         /// </summary>
-        /// <param name="decodedSamples">A buffer of decoded floats that were decoded</param>
-        public override void AddSamples(List<float> decodedSamples)
+        /// <param name="buffer">A buffer of decoded floats that were decoded</param>
+        /// <param name="bufferOffset">The offset of the buffer to be used</param>
+        /// <param name="bufferLength">The total samples to be used</param>
+        public override void AddSamples(float[] buffer, int bufferOffset, int bufferLength)
         {
-            // Get decoded sample data
-            const int offset = 0;
-            var length = decodedSamples.Count();
-
             // Ensure length added does not surpass buffer
             var sampleOffset = AddedSamples;
-            var sampleLength = Mathf.Min(length, SampleBuffer.Length - sampleOffset);
+            var sampleLength = Mathf.Min(bufferLength, SampleBuffer.Length - sampleOffset);
             if (sampleLength <= 0)
             {
                 return;
             }
 
             // Copy samples
-            decodedSamples.CopyTo(offset, SampleBuffer, sampleOffset, sampleLength);
+            Array.Copy(buffer, bufferOffset, SampleBuffer, sampleOffset, sampleLength);
 
             // Update count & callback
             AddedSamples += sampleLength;

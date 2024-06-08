@@ -6,10 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
-
 namespace Meta.Voice.Audio.Decoding
 {
+    /// <summary>
+    /// A delegate to be called when audio samples are decoded from a web stream
+    /// </summary>
+    public delegate void AudioSampleDecodeDelegate(float[] samples, int offset, int length);
+
     /// <summary>
     /// An interface for handling audio decoding
     /// </summary>
@@ -21,7 +24,7 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
-        /// <param name="decodedSamples">List to add all decoded samples to</param>
-        void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<float> decodedSamples);
+        /// <param name="onSamplesDecoded">Callback with sample buffer</param>
+        void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded);
     }
 }

@@ -9,7 +9,6 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
@@ -18,11 +17,6 @@ using Meta.Voice.Logging;
 
 namespace Meta.WitAi.Requests
 {
-    /// <summary>
-    /// A delegate to be called when audio samples are decoded from a web stream
-    /// </summary>
-    public delegate void AudioSampleDecodeDelegate(List<float> samples);
-
     /// <summary>
     /// A delegate to be called when all audio samples have been decoded
     /// </summary>
@@ -72,7 +66,6 @@ namespace Meta.WitAi.Requests
         private ulong _expectedBytes = 0;
         private ulong _receivedBytes = 0;
         private ulong _decodedBytes = 0;
-        private readonly List<float> _outSampleBuffer = new List<float>();
 
         // If true the request is no longer being performed
         private bool _requestComplete = false;
@@ -83,6 +76,9 @@ namespace Meta.WitAi.Requests
 
         // For logging
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
+        // Task performing decode
+        private Task _decoder;
 
         /// <summary>
         /// The constructor that generates the decoder and handles routing callbacks
@@ -159,9 +155,6 @@ namespace Meta.WitAi.Requests
                 // Push chunk
                 Array.Copy(chunk, offset, _inRingBuffer, _inRingOffset, pushLength);
 
-                // Enqueue decode task
-                EnqueueChunk(_inRingOffset, pushLength);
-
                 // Attempt to iterate through the pushed data chunk
                 offset += pushLength;
                 length -= pushLength;
@@ -170,37 +163,37 @@ namespace Meta.WitAi.Requests
                 // Increment
                 _receivedBytes += (ulong)pushLength;
             }
+
+            // Enqueue decode task
+            if (_decoder == null)
+            {
+                _decoder = ThreadUtility.Background(_log,  DecodeAsync);
+            }
         }
 
-        private Task _lastDecode;
-        private void EnqueueChunk(int offset, int length)
-        {
-            var blockingTask = _lastDecode;
-            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
-            {
-                if (null != blockingTask) await blockingTask;
-                DecodeChunk(offset, length);
-            });
-        }
-        private void DecodeChunk(int offset, int length)
+        /// <summary>
+        /// Background thread decode
+        /// </summary>
+        private void DecodeAsync()
         {
             // If believed to be an error, consider decoded
             if (IsError)
             {
                 _decodedBytes = _receivedBytes;
+                _ = ThreadUtility.CallOnMainThread(TryToFinalize);
                 return;
             }
 
             // Decode chunk
-            DecodeChunk(offset, length, _outSampleBuffer);
-            _decodedBytes += (ulong)length;
-
-            // Callback delegate
-            if (_outSampleBuffer.Count > 0)
+            while (_decodedBytes < _receivedBytes)
             {
-                OnSamplesDecoded?.Invoke(_outSampleBuffer);
-                _outSampleBuffer.Clear();
+                var max = _inRingBuffer.Length;
+                var offset = (int)(_decodedBytes % (ulong)max);
+                var remainder = (int)(_receivedBytes - _decodedBytes);
+                var length = Mathf.Min(remainder, _inRingBuffer.Length - offset);
+                DecodeChunk(_inRingBuffer, offset, length);
             }
+            _decoder = null;
 
             // Try to finalize on main thread
             if (_decodeComplete)
@@ -209,12 +202,13 @@ namespace Meta.WitAi.Requests
             }
         }
 
-        // Decode a specific chunk of received bytes
-        private void DecodeChunk(int offset, int length, List<float> decodedSamples)
+        // Decode chunk if possible
+        private void DecodeChunk(byte[] chunk, int offset, int length)
         {
             try
             {
-                AudioDecoder.Decode(_inRingBuffer, offset, length, decodedSamples);
+                AudioDecoder.Decode(chunk, offset, length, OnSamplesDecoded);
+                _decodedBytes += (ulong)length;
             }
             catch (Exception e)
             {

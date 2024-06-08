@@ -119,10 +119,12 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
-        /// Adds a list of samples to the current stream in its entirety.
+        /// Adds a sample buffer to the current stream in its entirety.
         /// </summary>
-        /// <param name="decodedSamples">A buffer of decoded floats that were decoded</param>
-        public abstract void AddSamples(List<float> decodedSamples);
+        /// <param name="samples">A buffer of decoded floats that were decoded</param>
+        /// <param name="offset">The offset of the buffer to be used</param>
+        /// <param name="length">The total samples to be used</param>
+        public abstract void AddSamples(float[] samples, int offset, int length);
 
         /// <summary>
         /// Calls on occassions where the total samples are known.  Either prior to a disk load or

@@ -66,7 +66,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
         private FileStream _fileStream;
 
         // Re-used list for decoding
-        private readonly List<float> _audioDecoded = new List<float>();
         private readonly List<WitResponseNode> _jsonDecoded = new List<WitResponseNode>();
 
         /// <summary>
@@ -170,12 +169,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 // Append binary audio data
                 if (binaryData != null && binaryData.Length > 0 && OnSamplesReceived != null && _audioDecoder != null)
                 {
-                    _audioDecoder.Decode(binaryData, 0, binaryData.Length, _audioDecoded);
-                    if (_audioDecoded.Count > 0)
-                    {
-                        OnSamplesReceived.Invoke(_audioDecoded);
-                        _audioDecoded.Clear();
-                    }
+                    _audioDecoder.Decode(binaryData, 0, binaryData.Length, OnSamplesReceived);
                 }
 
                 // If file stream exists
