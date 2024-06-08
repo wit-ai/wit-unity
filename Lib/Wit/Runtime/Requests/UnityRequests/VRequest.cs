@@ -40,9 +40,20 @@ namespace Meta.WitAi.Requests
     /// </summary>
     internal interface IVRequestDownloadDecoder
     {
-        bool IsStarted { get; }
-        float Progress { get; }
-        bool IsComplete { get; }
+        /// <summary>
+        /// Callback for first response
+        /// </summary>
+        event VRequestFirstResponseDelegate OnFirstResponse;
+
+        /// <summary>
+        /// Callback for download progress
+        /// </summary>
+        event VRequestProgressDelegate OnProgress;
+
+        /// <summary>
+        /// Completion source task
+        /// </summary>
+        TaskCompletionSource<bool> Completion { get; }
     }
 
     /// <summary>
@@ -112,7 +123,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// The currently running requests by request id
         /// </summary>
-        private static ConcurrentDictionary<int, VRequest> _runningRequests = new ConcurrentDictionary<int, VRequest>();
+        private static ConcurrentDictionary<int, Task> _runningRequests = new ConcurrentDictionary<int, Task>();
         /// <summary>
         /// The currently queued requests in order requested
         /// </summary>
@@ -126,12 +137,12 @@ namespace Meta.WitAi.Requests
             // Enqueue new request
             _queuedRequests.Enqueue(request);
 
-            // Wait while too many requests, not next in line or if failing to dequeue
+            // Wait for any of the running requests to complete
             while (_runningRequests.Count >= MaxConcurrentRequests
                    || !IsNextRequest(request)
                    || !_queuedRequests.TryDequeue(out var nextRequest))
             {
-                await Task.Yield();
+                await Task.WhenAny(_runningRequests.Values);
             }
 
             // Ignore if cancelled
@@ -141,7 +152,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Now running
-            _runningRequests[request.GetHashCode()] = request;
+            _runningRequests[request.GetHashCode()] = request.Completion.Task;
         }
 
         /// <summary>
@@ -240,6 +251,10 @@ namespace Meta.WitAi.Requests
         /// If request has completed queueing and running a request
         /// </summary>
         public bool IsComplete { get; private set; } = false;
+        /// <summary>
+        /// Completion source task
+        /// </summary>
+        public TaskCompletionSource<bool> Completion { get; private set; }
 
         /// <summary>
         /// Response Code if applicable
@@ -267,7 +282,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Thread safe access to whether request has completed
         /// </summary>
-        private bool _requestDone = false;
+        private TaskCompletionSource<bool> _unityRequestComplete;
 
         /// <summary>
         /// The object used for handling logs
@@ -277,14 +292,15 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Resets all data
         /// </summary>
-        protected virtual void Reset()
+        public virtual void Reset()
         {
             IsComplete = false;
             IsQueued = false;
             IsRunning = false;
             IsDecoding = false;
             HasFirstResponse = false;
-            _requestDone = false;
+            Completion = new TaskCompletionSource<bool>();
+            _unityRequestComplete = new TaskCompletionSource<bool>();
             UploadProgress = 0f;
             OnUploadProgress?.Invoke(0f);
             DownloadProgress = 0f;
@@ -315,6 +331,10 @@ namespace Meta.WitAi.Requests
             {
                 return new VRequestResponse<TValue>(WitConstants.ERROR_CODE_GENERAL, "Cannot make a VRequest without a http method.");
             }
+            if (IsComplete)
+            {
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+            }
 
             // Reset data and begin performing
             Reset();
@@ -336,53 +356,80 @@ namespace Meta.WitAi.Requests
             IsQueued = true;
             await WaitForTurn(this);
             IsQueued = false;
+            if (IsComplete)
+            {
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+            }
 
             // Generate request on main thread and await completion
             IsRunning = true;
             await ThreadUtility.CallOnMainThread(() =>
             {
+                if (IsComplete)
+                {
+                    return;
+                }
                 _request = CreateRequest(uri, method, headers);
                 var asyncOperation = _request.SendWebRequest();
                 asyncOperation.completed += (op) =>
                 {
-                    _requestDone = true;
-                    if (_request != null)
+                    _unityRequestComplete.TrySetResult(true);
+                    if (_request != null && !IsComplete)
                     {
                         ResponseCode = (int)_request.responseCode;
                         ResponseError = _request.error;
                     }
                 };
             });
-
-            await WaitWhileRunning();
-            IsRunning = false;
-
-            // Decode errors and status code
-            IsDecoding = true;
-            var responseInfo = await GetError(_request);
-            ResponseCode = responseInfo.Item1;
-            ResponseError = responseInfo.Item2;
-            if (!string.IsNullOrEmpty(ResponseError))
+            if (IsComplete)
             {
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+            }
+
+            try
+            {
+                await WaitWhileRunning();
+                IsRunning = false;
+                if (IsComplete)
+                {
+                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+                }
+
+                // Decode errors and status code
+                IsDecoding = true;
+                var responseInfo = await GetError(_request);
+                ResponseCode = responseInfo.Item1;
+                ResponseError = responseInfo.Item2;
+                if (!string.IsNullOrEmpty(ResponseError))
+                {
+                    IsDecoding = false;
+                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+                }
+
+                // Decode result
+                var decodedResult = await decoder.Invoke(_request);
                 IsDecoding = false;
-                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+
+                // Aborted or error during decode
+                if (IsComplete)
+                {
+                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+                }
+
+                // Dispose
+                await ThreadUtility.CallOnMainThread(Dispose);
+
+                // Return decoded result
+                return new VRequestResponse<TValue>(decodedResult);
             }
-
-            // Decode result
-            var decodedResult = await decoder.Invoke(_request);
-            IsDecoding = false;
-
-            // Aborted or error during decode
-            if (!string.IsNullOrEmpty(ResponseError))
+            catch (Exception e)
             {
-                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
+                // Return with exception
+                IsRunning = false;
+                IsDecoding = false;
+                ResponseCode = ResponseCode != (int)HttpStatusCode.OK ? ResponseCode : WitConstants.ERROR_CODE_GENERAL;
+                return new VRequestResponse<TValue>(ResponseCode, $"Exception during VRequest\n{e}");
             }
-
-            // Dispose
-            Dispose();
-
-            // Return decoded result
-            return new VRequestResponse<TValue>(decodedResult);
         }
 
         /// <summary>
@@ -481,6 +528,11 @@ namespace Meta.WitAi.Requests
             {
                 request.downloadHandler = Downloader;
                 request.disposeDownloadHandlerOnDispose = true;
+                if (Downloader is IVRequestDownloadDecoder downloadDecoder)
+                {
+                    downloadDecoder.OnFirstResponse += RaiseFirstResponse;
+                    downloadDecoder.OnProgress += UpdateDownloadProgress;
+                }
             }
 
             // Return request
@@ -492,55 +544,21 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected virtual async Task WaitWhileRunning()
         {
-            // While not done, update upload and download handlers
-            while (!IsDone())
-            {
-                // Handle callbacks
-                if (Downloader is IVRequestDownloadDecoder downloadDecoder)
-                {
-                    // Update download progress
-                    float newProgress = downloadDecoder.Progress;
-                    if (!DownloadProgress.Equals(newProgress))
-                    {
-                        DownloadProgress = newProgress;
-                        OnDownloadProgress?.Invoke(DownloadProgress);
-                    }
-                    // Update first response
-                    if (!HasFirstResponse && downloadDecoder.IsStarted)
-                    {
-                        HasFirstResponse = true;
-                        OnFirstResponse?.Invoke();
-                    }
-                }
+            // First await request completion
+            await _unityRequestComplete.Task;
 
-                // Wait a moment
-                await Task.Yield();
+            // Stop waiting if complete, no request or an error is found
+            if (IsComplete || _request == null || !string.IsNullOrEmpty(ResponseError))
+            {
+                return;
             }
-        }
 
-        /// <summary>
-        /// Check whether request is complete
-        /// </summary>
-        protected virtual bool IsDone()
-        {
-            // No request or error exists
-            if (_request == null || !string.IsNullOrEmpty(ResponseError) || IsComplete)
-            {
-                return true;
-            }
-            // Request still in progress
-            if (!_requestDone)
-            {
-                return false;
-            }
-            // Ensure custom download decoding is not still occuring
+            // If downloader decoder is found, await completion
             if (Downloader is IVRequestDownloadDecoder downloadDecoder
-                && !downloadDecoder.IsComplete)
+                && downloadDecoder.Completion != null)
             {
-                return false;
+                await downloadDecoder.Completion.Task;
             }
-            // Complete
-            return true;
         }
 
         /// <summary>
@@ -553,52 +571,33 @@ namespace Meta.WitAi.Requests
             string error = ResponseError;
 
             // Null or not complete
-            if (request == null || !_requestDone)
+            if (request == null || !_unityRequestComplete.Task.IsCompleted)
             {
                 code = code != (int)HttpStatusCode.OK ? code : WitConstants.ERROR_CODE_GENERAL;
                 error = !string.IsNullOrEmpty(error) ? error : "Request disposed prior to completion";
                 return new Tuple<int, string>(code, error);
             }
 
-            // Return error if empty or no downloader
+            // Only continue if error is found and download handler exists
+            // in order to attempt to get additional information.
             if (string.IsNullOrEmpty(error)
                 || Downloader == null)
             {
                 return new Tuple<int, string>(code, error);
             }
 
-            // Try to append text from download handler
-            string text = string.Empty;
-            try
-            {
-                await ThreadUtility.CallOnMainThread(() =>
-                {
-                    var downloadHandler = request.downloadHandler;
-                    byte[] downloadedBytes = downloadHandler?.data;
-                    if (downloadedBytes != null)
-                    {
-                        text = Encoding.UTF8.GetString(downloadedBytes);
-                    }
-                    else
-                    {
-                        text = downloadHandler.text;
-                    }
-                });
-            }
-            catch (Exception e)
-            {
-                _log.Error(e, "VRequest failed to parse downloaded text");
-            }
-            if (string.IsNullOrEmpty(text))
+            // Get downloaded text if possible
+            string downloadedText = await GetDownloadedText(request);
+            if (string.IsNullOrEmpty(downloadedText))
             {
                 return new Tuple<int, string>(code, error);
             }
 
-            // Update error
-            error = $"{error}\nServer Response: {text}";
+            // Append to error
+            error = $"{error}\nServer Response: {downloadedText}";
 
             // Try to get error from download handler text json
-            WitResponseNode downloadedNode = WitResponseNode.Parse(text);
+            WitResponseNode downloadedNode = JsonConvert.DeserializeToken(downloadedText);
             if (downloadedNode == null)
             {
                 return new Tuple<int, string>(code, error);
@@ -617,27 +616,71 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
+        /// Attempt to get text from download handler if possible
+        /// </summary>
+        private async Task<string> GetDownloadedText(UnityWebRequest request)
+        {
+            string text = null;
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                // Ignore if null
+                var downloadHandler = request?.downloadHandler;
+                if (downloadHandler == null)
+                {
+                    return;
+                }
+                try
+                {
+                    // Use raw bytes if audio handler
+                    if (downloadHandler is DownloadHandlerAudioClip)
+                    {
+                        var rawBytes = downloadHandler.data;
+                        if (rawBytes != null)
+                        {
+                            text = Encoding.UTF8.GetString(rawBytes);
+                            return;
+                        }
+                    }
+                    // Otherwise attempt to use text
+                    text = downloadHandler?.text;
+                }
+                catch (Exception e)
+                {
+                    _log.Error(e, "VRequest failed to parse downloaded text via {0}", downloadHandler.GetType().Name);
+                }
+            });
+            return text;
+        }
+
+        /// <summary>
         /// Method to cancel a VRequest
         /// </summary>
         public virtual void Cancel()
         {
-            // Abort request
-            if (_request != null)
+            // Set response
+            if (!IsComplete)
             {
-                _request.Abort();
                 ResponseCode = WitConstants.ERROR_CODE_ABORTED;
                 ResponseError = WitConstants.CANCEL_ERROR;
             }
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                // Abort
+                if (_request != null)
+                {
+                    _request.Abort();
+                }
 
-            // Dispose and ensure complete
-            Dispose();
+                // Dispose and ensure complete
+                Dispose();
+            });
         }
 
         /// <summary>
         /// Handles dispose and removal of request from running queue
         /// </summary>
         protected virtual void Dispose()
-        {
+    {
             // Remove request from playback list
             RemoveRequest(this);
 
@@ -654,6 +697,33 @@ namespace Meta.WitAi.Requests
 
             // Officially complete
             IsComplete = true;
+            Completion?.SetResult(true);
+        }
+
+        /// <summary>
+        /// Raise first response callback
+        /// </summary>
+        protected virtual void RaiseFirstResponse()
+        {
+            if (HasFirstResponse)
+            {
+                return;
+            }
+            HasFirstResponse = true;
+            OnFirstResponse?.Invoke();
+        }
+
+        /// <summary>
+        /// Update download progress
+        /// </summary>
+        protected virtual void UpdateDownloadProgress(float progress)
+        {
+            if (DownloadProgress.Equals(progress))
+            {
+                return;
+            }
+            DownloadProgress = progress;
+            OnDownloadProgress?.Invoke(DownloadProgress);
         }
         #endregion
 
@@ -1011,7 +1081,7 @@ namespace Meta.WitAi.Requests
         }
 
         // Internal helper method for encoding text
-        private byte[] EncodeText(string text) => Encoding.UTF8.GetBytes(text);
+        private static byte[] EncodeText(string text) => Encoding.UTF8.GetBytes(text);
         #endregion
 
         #region AUDIO

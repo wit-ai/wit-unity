@@ -7,6 +7,7 @@
  */
 
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
 
@@ -16,7 +17,7 @@ namespace Meta.WitAi.Requests
     /// A download handler for UnityWebRequest that decodes text data
     /// as it is received and returns it via a partial response delegate.
     /// </summary>
-    public class TextStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder
+    internal class TextStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder
     {
         /// <summary>
         /// The delegate for returning text from the text stream handler
@@ -61,21 +62,32 @@ namespace Meta.WitAi.Requests
 
         // Final length of text
         private int _finalLength;
-
         /// <summary>
         /// Whether data has arrived
         /// </summary>
         public bool IsStarted { get; private set; }
+        /// <summary>
+        /// Callback for first response
+        /// </summary>
+        public event VRequestFirstResponseDelegate OnFirstResponse;
 
         /// <summary>
         /// Current progress of the download
         /// </summary>
-        public float Progress => GetProgress();
+        public float Progress { get; private set; }
+        /// <summary>
+        /// Callback for download progress
+        /// </summary>
+        public event VRequestProgressDelegate OnProgress;
 
         /// <summary>
         /// Whether or not complete
         /// </summary>
         public bool IsComplete { get; private set; } = false;
+        /// <summary>
+        /// Completion source task
+        /// </summary>
+        public TaskCompletionSource<bool> Completion { get; } = new TaskCompletionSource<bool>();
 
         // Generate with a specified delimiter
         [Preserve]
@@ -91,7 +103,12 @@ namespace Meta.WitAi.Requests
         protected override bool ReceiveData(byte[] receiveData, int dataLength)
         {
             // Started
-            IsStarted = true;
+            if (!IsStarted)
+            {
+                IsStarted = true;
+                OnFirstResponse?.Invoke();
+            }
+            // TODO: Optimize severely
             // Convert to text
             string newText = DecodeBytes(receiveData, 0, dataLength);
             // Split on delimiter
@@ -117,6 +134,8 @@ namespace Meta.WitAi.Requests
                     _partialBuilder.Clear();
                 }
             }
+            // Refresh progress
+            RefreshProgress();
             // Return data
             return true;
         }
@@ -152,6 +171,23 @@ namespace Meta.WitAi.Requests
             _finalLength = GetDecodedLength(contentLength);
         }
 
+        /// <summary>
+        /// Refreshes progress if expected bytes has been set
+        /// </summary>
+        private void RefreshProgress()
+        {
+            if (_finalLength <= 0)
+            {
+                return;
+            }
+            var progress = GetProgress();
+            if (!Progress.Equals(progress))
+            {
+                Progress = progress;
+                OnProgress?.Invoke(progress);
+            }
+        }
+
         // Return progress if total samples has been determined
         [Preserve]
         protected override float GetProgress()
@@ -183,6 +219,7 @@ namespace Meta.WitAi.Requests
                 _partialBuilder.Clear();
             }
             IsComplete = true;
+            Completion.TrySetResult(true);
         }
 
         #region STATIC

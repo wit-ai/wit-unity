@@ -34,16 +34,28 @@ namespace Meta.WitAi.Requests
         /// Whether data has arrived
         /// </summary>
         public bool IsStarted { get; private set; }
+        /// <summary>
+        /// Callback for first response
+        /// </summary>
+        public event VRequestFirstResponseDelegate OnFirstResponse;
 
         /// <summary>
         /// Current progress of the download
         /// </summary>
-        public float Progress => GetProgress();
+        public float Progress { get; private set; }
+        /// <summary>
+        /// Callback for download progress
+        /// </summary>
+        public event VRequestProgressDelegate OnProgress;
 
         /// <summary>
-        /// Whether both the request is complete and decoding is complete
+        /// Whether or not complete
         /// </summary>
-        public bool IsComplete { get; private set; }
+        public bool IsComplete { get; private set; } = false;
+        /// <summary>
+        /// Completion source task
+        /// </summary>
+        public TaskCompletionSource<bool> Completion { get; } = new TaskCompletionSource<bool>();
 
         /// <summary>
         /// Whether the request was caused by an error
@@ -153,7 +165,11 @@ namespace Meta.WitAi.Requests
             }
 
             // Started
-            IsStarted = true;
+            if (!IsStarted)
+            {
+                IsStarted = true;
+                OnFirstResponse?.Invoke();
+            }
 
             // Enqueue and then decode async
             if (DecodeInBackground)
@@ -245,12 +261,13 @@ namespace Meta.WitAi.Requests
             try
             {
                 AudioDecoder.Decode(chunk, offset, length, OnSamplesDecoded);
-                _decodedBytes += (ulong)length;
             }
             catch (Exception e)
             {
                 _log.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
             }
+            _decodedBytes += (ulong)length;
+            RefreshProgress();
         }
 
         // Used for error handling
@@ -262,6 +279,23 @@ namespace Meta.WitAi.Requests
                 return Encoding.UTF8.GetString(_inRingBuffer, 0, _inRingOffset);
             }
             return null;
+        }
+
+        /// <summary>
+        /// Refreshes progress if expected bytes has been set
+        /// </summary>
+        private void RefreshProgress()
+        {
+            if (_expectedBytes <= 0)
+            {
+                return;
+            }
+            var progress = GetProgress();
+            if (!Progress.Equals(progress))
+            {
+                Progress = progress;
+                OnProgress?.Invoke(progress);
+            }
         }
 
         // Return progress if total samples has been determined
@@ -318,6 +352,7 @@ namespace Meta.WitAi.Requests
                 _pooled = true;
             }
             IsComplete = true;
+            Completion.TrySetResult(true);
         }
     }
 }

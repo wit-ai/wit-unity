@@ -69,7 +69,7 @@ namespace Meta.WitAi.Requests
 
             // Perform an audio stream request
             return await RequestAudio(WitConstants.GetUnityAudioType(FileType),
-                onSamplesDecoded, onJsonDecoded);
+                onSamplesDecoded, UseEvents ? onJsonDecoded : null);
         }
 
         /// <summary>
