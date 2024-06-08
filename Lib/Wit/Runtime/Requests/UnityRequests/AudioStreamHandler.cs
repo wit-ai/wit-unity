@@ -61,7 +61,8 @@ namespace Meta.WitAi.Requests
         public AudioSampleDecodeDelegate OnSamplesDecoded { get; }
 
         // Ring buffer and counters for decoding bytes
-        private readonly byte[] _inRingBuffer = new byte[WitConstants.ENDPOINT_TTS_BUFFER_LENGTH];
+        private static readonly ArrayPool<byte> _inRingBufferPool = new (WitConstants.ENDPOINT_TTS_BUFFER_LENGTH);
+        private readonly byte[] _inRingBuffer;
         private int _inRingOffset = 0;
         private ulong _expectedBytes = 0;
         private ulong _receivedBytes = 0;
@@ -79,6 +80,7 @@ namespace Meta.WitAi.Requests
 
         // Task performing decode
         private Task _decoder;
+        private bool _pooled = false;
 
         /// <summary>
         /// The constructor that generates the decoder and handles routing callbacks
@@ -90,6 +92,19 @@ namespace Meta.WitAi.Requests
         {
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
+            _inRingBuffer = _inRingBufferPool.Load();
+        }
+
+        /// <summary>
+        /// Ensure buffer is always pooled
+        /// </summary>
+        ~AudioStreamHandler()
+        {
+            if (!_pooled)
+            {
+                _inRingBufferPool.Unload(_inRingBuffer);
+                _pooled = true;
+            }
         }
 
         /// <summary>
@@ -265,25 +280,21 @@ namespace Meta.WitAi.Requests
             // Stream complete
             IsComplete = true;
 
-            // Dispose
+            // Dispose handler and pool buffer
             Dispose();
         }
 
         /// <summary>
-        /// Dispose and ensure OnComplete cannot be called if not yet done so
+        /// Dispose ring buffer
         /// </summary>
-        public void CleanUp()
+        public override void Dispose()
         {
-            // Already complete
-            if (IsComplete)
+            base.Dispose();
+            if (!_pooled)
             {
-                return;
+                _inRingBufferPool.Unload(_inRingBuffer);
+                _pooled = true;
             }
-
-            // Dispose handler
-            Dispose();
-
-            // Complete
             IsComplete = true;
         }
     }
