@@ -168,6 +168,7 @@ namespace Meta.WitAi.TTS.Utilities
             public DateTime StartTime;
             public bool StopQueueOnLoad;
             public TTSSpeakerClipEvents PlaybackEvents;
+            public TaskCompletionSource<bool> TaskCompletionSource;
         }
 
         // Check if queued
@@ -366,73 +367,16 @@ namespace Meta.WitAi.TTS.Utilities
             return _speakingRequest.Equals(requestData);
         }
 
-        private class ActiveRequestTracker
-        {
-            public int ActiveRequests { get; private set; } = 0;
-            public int Count { get; private set; } = 0;
-            private List<TTSSpeakerRequestData> _requestData;
-            private readonly TTSSpeaker _speaker;
-
-            private void OnComplete(TTSSpeaker speaker, TTSClipData clipData) => ActiveRequests--;
-
-            public ActiveRequestTracker(TTSSpeaker speaker, List<TTSSpeakerRequestData> requestData)
-            {
-                _requestData = requestData;
-                _speaker = speaker;
-            }
-
-            public void Track()
-            {
-                ActiveRequests = 0;
-                int count = _requestData?.Count ?? 0;
-                // All done
-                if (count == 0)
-                {
-                    return;
-                }
-
-                // Add event delegates
-                for (int r = 0; r < count; r++)
-                {
-                    TTSSpeakerRequestData request = _requestData[r];
-                    if (!_speaker.IsClipRequestActive(request))
-                    {
-                        continue;
-                    }
-                    ActiveRequests++;
-                    request.PlaybackEvents.OnComplete.AddListener(OnComplete);
-                }
-            }
-
-            public void Cleanup()
-            {
-                // Remove event delegates
-                for (int r = 0; r < Count; r++)
-                {
-                    TTSSpeakerRequestData request = _requestData[r];
-                    request.PlaybackEvents?.OnComplete.RemoveListener(OnComplete);
-                }
-            }
-        }
-
         /// <summary>
         /// Wait for all tasks to complete via async/await
         /// </summary>
         /// <param name="requestData">The individual requests we're waiting on</param>
-        protected async Task<bool> WaitForCompletionTask(List<TTSSpeakerRequestData> requestData)
+        protected async Task WaitForCompletionTask(List<TTSSpeakerRequestData> requestData)
         {
-            var tracker = new ActiveRequestTracker(this, requestData);
-            tracker.Track();
-
-            // Wait for active requests to complete
-            while (tracker.ActiveRequests > 0)
+            for (int i = 0; i < requestData.Count; i++)
             {
-                await Task.Yield();
+                await requestData[i].TaskCompletionSource.Task;
             }
-
-            tracker.Cleanup();
-
-            return true;
         }
 
         /// <summary>
@@ -441,16 +385,13 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="requestData">The individual requests we're waiting on</param>
         protected IEnumerator WaitForCompletion(List<TTSSpeakerRequestData> requestData)
         {
-            var tracker = new ActiveRequestTracker(this, requestData);
-            tracker.Track();
-
-            // Wait for active requests to complete
-            while (tracker.ActiveRequests > 0)
+            for (int i = 0; i < requestData.Count; i++)
             {
-                yield return new WaitForEndOfFrame();
+                while (IsClipRequestActive(requestData[i]))
+                {
+                    yield return new WaitForEndOfFrame();
+                }
             }
-
-            tracker.Cleanup();
         }
         #endregion
 
@@ -1380,6 +1321,7 @@ namespace Meta.WitAi.TTS.Utilities
             requestData.StartTime = DateTime.UtcNow;
             requestData.StopQueueOnLoad = !addToQueue;
             requestData.PlaybackEvents = playbackEvents ?? new TTSSpeakerClipEvents();
+            requestData.TaskCompletionSource = new TaskCompletionSource<bool>();
 
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
@@ -2018,6 +1960,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
         protected virtual void OnComplete(TTSSpeakerRequestData requestData)
         {
+            requestData.TaskCompletionSource.TrySetResult(true);
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
         }
