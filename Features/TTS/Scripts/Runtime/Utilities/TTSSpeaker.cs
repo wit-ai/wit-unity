@@ -966,7 +966,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Wit settings
             if (TTSWitVoiceSettings.CanDecode(responseNode))
             {
-                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode);
+                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode, null, true);
                 if (witVoice != null)
                 {
                     textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
@@ -1742,7 +1742,9 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region QUEUE EVENTS
         private void Log(string format, params object[] parameters)
-            => _log.Info(format, parameters);
+        {
+            if (verboseLogging) _log.Info(format, parameters);
+        }
         private void Error(string format, params object[] parameters)
             => _log.Error(format, parameters);
 

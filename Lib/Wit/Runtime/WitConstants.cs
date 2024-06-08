@@ -12,7 +12,7 @@ namespace Meta.WitAi
     {
         // Wit service version info
         public const string API_VERSION = "20240413";
-        public const string SDK_VERSION = "67.0.0";
+        public const string SDK_VERSION = "68.0.0";
         public const string CLIENT_NAME = "wit-unity";
 
         // Wit service endpoint info
@@ -68,7 +68,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS_NO_CLIP = "No tts clip provided";
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;
-        public const int ENDPOINT_TTS_SAMPLE_RATE = 24000;
+        public const int ENDPOINT_TTS_SAMPLE_RATE = 24_000;
         public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
         public const float ENDPOINT_TTS_DEFAULT_MAX_LENGTH = 15f;
         public const int ENDPOINT_TTS_DEFAULT_PRELOAD = 5;
@@ -215,6 +215,8 @@ namespace Meta.WitAi
                     ext = ".mp3";
                     break;
                 case TTSWitAudioType.PCM:
+                    ext = ".raw";
+                    break;
                 case TTSWitAudioType.WAV:
                 default:
                     ext = $".{witAudioType.ToString().ToLower()}";
