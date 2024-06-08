@@ -7,10 +7,10 @@
  */
 
 using System;
-using System.Collections;
 using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using Meta.Voice.Logging;
 using Meta.WitAi.Requests;
@@ -450,10 +450,10 @@ namespace Meta.WitAi.TTS
                     {
                         clipData.onPlaybackReady += (e) => onStreamReady(clipData, e);
                     }
-                    // Call after return
+                    // TODO: Fixed in D57798649
                     else
                     {
-                        ThreadUtility.CallOnMainThread(() =>
+                        _ = CallAfterReturned(() =>
                         {
                             onStreamReady(clipData,
                                 clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
@@ -478,11 +478,14 @@ namespace Meta.WitAi.TTS
                         {
                             clipData.onPlaybackReady += (e) => onStreamReady(clipData, e);
                         }
-                        // Call after return
+                        // TODO: Fixed in D57798649
                         else
                         {
-                            ThreadUtility.CallOnMainThread(() => onStreamReady(clipData,
-                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error"));
+                            _ = CallAfterReturned(() =>
+                            {
+                                onStreamReady(clipData,
+                                    clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
+                            });
                         }
                     }
 
@@ -500,7 +503,7 @@ namespace Meta.WitAi.TTS
             clipData.onPlaybackReady += (error) => onStreamReady?.Invoke(clipData, error);
 
             // Wait a moment and load
-            ThreadUtility.CallOnMainThread(() =>
+            _ = CallAfterReturned(() =>
             {
                 // If should cache to disk, attempt to do so
                 if (ShouldCacheToDisk(clipData))
@@ -516,6 +519,12 @@ namespace Meta.WitAi.TTS
 
             // Return data
             return clipData;
+        }
+        // TODO: Fixed in D57798649
+        private async Task CallAfterReturned(Action action)
+        {
+            await Task.Delay(1);
+            action?.Invoke();
         }
         // Perform download & stream following error checks
         private void PerformDownloadAndStream(TTSClipData clipDataParam)

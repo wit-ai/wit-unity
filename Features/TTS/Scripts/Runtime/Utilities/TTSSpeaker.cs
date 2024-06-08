@@ -1350,6 +1350,8 @@ namespace Meta.WitAi.TTS.Utilities
             // Not queued
             if (_queuedRequests != null && !_queuedRequests.Contains(requestData))
             {
+                _log.Warning("Unknown Request Load Complete\nText: {0}" ,
+                    requestData.ClipData?.textToSpeak ?? "Null");
                 return;
             }
 
