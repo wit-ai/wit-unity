@@ -200,8 +200,13 @@ namespace Meta.WitAi.TTS.LipSync
                 if (index >= 0 && index < VisemeBlendShapes.Length)
                 {
                     var visemeData = VisemeBlendShapes[index];
-                    var blendShapeWeight = visemeData.weights.FirstOrDefault((weight) => string.Equals(weight.blendShapeId, blendShapeName));
-                    return blendShapeWeight.weight;
+                    for (int i = 0; i < visemeData.weights.Length; i++)
+                    {
+                        if (string.Equals(visemeData.weights[i].blendShapeId, blendShapeName))
+                        {
+                            return visemeData.weights[i].weight;
+                        }
+                    }
                 }
             }
             return 0f;
