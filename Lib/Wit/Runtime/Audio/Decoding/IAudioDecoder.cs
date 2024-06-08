@@ -19,6 +19,12 @@ namespace Meta.Voice.Audio.Decoding
     public interface IAudioDecoder
     {
         /// <summary>
+        /// Whether or not this decoder should run all decoding on a background thread.
+        /// If false and decoding on the main thread, byte[] buffer is no longer required.
+        /// </summary>
+        bool DecodeInBackground { get; }
+
+        /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>

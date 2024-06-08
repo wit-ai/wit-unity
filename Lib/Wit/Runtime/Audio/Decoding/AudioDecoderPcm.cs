@@ -68,6 +68,10 @@ namespace Meta.Voice.Audio.Decoding
             _decoder =  GetPcmDecoder(PcmType);
         }
 
+        /// <summary>
+        /// Perform pcm decode on main thread due to speed
+        /// </summary>
+        public bool DecodeInBackground => true;
 
         /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each

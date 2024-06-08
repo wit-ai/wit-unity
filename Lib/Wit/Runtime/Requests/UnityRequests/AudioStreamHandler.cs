@@ -56,6 +56,11 @@ namespace Meta.WitAi.Requests
         public IAudioDecoder AudioDecoder { get; }
 
         /// <summary>
+        /// Whether or not this audio stream handler will decode on the main thread
+        /// </summary>
+        public bool DecodeInBackground { get; }
+
+        /// <summary>
         /// Callback for audio sample decode
         /// </summary>
         public AudioSampleDecodeDelegate OnSamplesDecoded { get; }
@@ -64,8 +69,12 @@ namespace Meta.WitAi.Requests
         private static readonly ArrayPool<byte> _inRingBufferPool = new (WitConstants.ENDPOINT_TTS_BUFFER_LENGTH);
         private readonly byte[] _inRingBuffer;
         private int _inRingOffset = 0;
+
+        // Total bytes expected to arrive
         private ulong _expectedBytes = 0;
+        // Total bytes arrived and undecoded
         private ulong _receivedBytes = 0;
+        // Total bytes decoded into samples
         private ulong _decodedBytes = 0;
 
         // If true the request is no longer being performed
@@ -92,7 +101,11 @@ namespace Meta.WitAi.Requests
         {
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
-            _inRingBuffer = _inRingBufferPool.Load();
+            DecodeInBackground = AudioDecoder.DecodeInBackground;
+            if (DecodeInBackground)
+            {
+                _inRingBuffer = _inRingBufferPool.Load();
+            }
         }
 
         /// <summary>
@@ -142,15 +155,24 @@ namespace Meta.WitAi.Requests
             // Started
             IsStarted = true;
 
-            // Push all data to buffer
-            PushChunk(bufferData, 0, length);
+            // Enqueue and then decode async
+            if (DecodeInBackground)
+            {
+                EnqueueAndDecodeChunkAsync(bufferData, 0, length);
+            }
+            // Decode immediately
+            else
+            {
+                _receivedBytes += (uint)length;
+                DecodeChunk(bufferData, 0, length);
+            }
 
             // Success
             return true;
         }
 
-        // Push to the ring buffer
-        private void PushChunk(byte[] chunk, int offset, int length)
+        // Push to the ring buffer then decode async
+        private void EnqueueAndDecodeChunkAsync(byte[] chunk, int offset, int length)
         {
             // Log error if looping prior to decoding
             var unDecoded = length + (int)(_receivedBytes - _decodedBytes);

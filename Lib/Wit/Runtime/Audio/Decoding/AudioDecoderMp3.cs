@@ -22,6 +22,11 @@ namespace Meta.Voice.Audio.Decoding
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
 
         /// <summary>
+        /// Decode mpegs on background thread due to slow speed
+        /// </summary>
+        public bool DecodeInBackground => true;
+
+        /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>

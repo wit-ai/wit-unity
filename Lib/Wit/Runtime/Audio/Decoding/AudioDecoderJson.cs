@@ -50,6 +50,11 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
+        /// Decode json on background thread due to decode speed
+        /// </summary>
+        public bool DecodeInBackground => true;
+
+        /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each sample
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
