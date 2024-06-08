@@ -9,6 +9,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.Voice;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Json;
@@ -35,6 +36,9 @@ namespace Meta.WitAi.Requests
         // Use a wit response decoder to obtain WitResponseNode from text
         protected override INLPRequestResponseDecoder<WitResponseNode> ResponseDecoder => _responseDecoder;
         private static WitResponseDecoder _responseDecoder = new WitResponseDecoder();
+
+        public TaskCompletionSource<bool> PreparationTask => new TaskCompletionSource<bool>();
+        public TaskCompletionSource<bool> RequestActiveTask => new TaskCompletionSource<bool>();
 
         /// <summary>
         /// Check for ignored error status codes & messages.
