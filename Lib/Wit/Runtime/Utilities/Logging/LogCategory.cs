@@ -32,6 +32,7 @@ namespace Meta.Voice.Logging
         Network,
         Input,
         Output,
-        Encoding
+        Encoding,
+        WebSockets
     }
 }

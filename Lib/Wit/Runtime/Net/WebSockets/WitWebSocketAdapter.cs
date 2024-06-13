@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
 using UnityEngine;
 using Meta.WitAi;
@@ -18,8 +19,11 @@ namespace Meta.Voice.Net.WebSockets
     /// <summary>
     /// A publish/subscribe MonoBehaviour adapter for WitWebSocketClients
     /// </summary>
+    [LogCategory(LogCategory.Network, LogCategory.WebSockets)]
     public class WitWebSocketAdapter : MonoBehaviour, IPubSubAdapter
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
         /// <summary>
         /// The script used to provide the WitWebSocketClient
         /// </summary>
@@ -207,6 +211,8 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SetTopicId(string newTopicId)
         {
+            _log.Verbose("Setting topic ID from {0} to {1}", TopicId, newTopicId);
+
             // Ignore if same topic
             if (string.Equals(TopicId, newTopicId, StringComparison.CurrentCultureIgnoreCase))
             {
@@ -228,9 +234,11 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Unsubscribe(string topicId)
         {
-            // Ignore if null or not subscribing
+            _log.Verbose("Subscribing to topic : {0}", topicId);
+            // Ignore if null or not connected
             if (string.IsNullOrEmpty(topicId) || !_connected)
             {
+                _log.Verbose("Topic {0} was null or was not connected", topicId);
                 return;
             }
 
@@ -247,9 +255,12 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Subscribe(string topicId)
         {
+            _log.Verbose("Unsubscribing to topic : {0}", topicId);
+
             // Ignore if null or not connected
             if (string.IsNullOrEmpty(topicId) || !_connected)
             {
+                _log.Verbose("Topic {0} was null or was not connected", topicId);
                 return;
             }
 

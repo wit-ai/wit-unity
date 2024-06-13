@@ -50,31 +50,12 @@ namespace Meta.Voice.Logging
             _logger.Log(correlationId, VLoggerVerbosity.Verbose, message, parameters);
         }
 
-        public void Verbose(string message,
+        public void Verbose(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null,
             [CallerMemberName] string memberName = "",
             [CallerFilePath] string sourceFilePath = "",
             [CallerLineNumber] int sourceLineNumber = 0)
         {
-            _logger.Verbose(message, memberName, sourceFilePath, sourceLineNumber);
-        }
-
-        public void Verbose(string message,
-            object p1,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            _logger.Verbose(message, memberName, sourceFilePath, sourceLineNumber, p1);
-        }
-
-        public void Verbose(string message,
-            object p1,
-            object p2,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            _logger.Verbose(message, memberName, sourceFilePath, sourceLineNumber, p1, p2);
+            _logger.Verbose(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
         }
 
         /// <inheritdoc/>
@@ -91,9 +72,23 @@ namespace Meta.Voice.Logging
         }
 
         /// <inheritdoc/>
+        public void Info(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+            _logger.Info(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
+        }
+
+        /// <inheritdoc/>
         public void Debug(string message, params object [] parameters)
         {
             _logger.Log(CorrelationID, VLoggerVerbosity.Debug, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        public void Debug(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+            _logger.Debug(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
         }
 
         /// <inheritdoc/>

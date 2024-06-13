@@ -196,7 +196,7 @@ namespace Meta.WitAi.Windows
                         {
                             if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitAutoTrainLabel) && _conduitManifestGenerationManager.ManifestAvailable )
                             {
-                                SyncEntities(() => { AutoTrainOnWitAi(Configuration); });
+                                SyncEntities(() => { AutoTrainOnWitAi(Configuration).Wait(); });
                             }
                         }
                     }

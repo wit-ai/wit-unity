@@ -131,40 +131,14 @@ namespace Meta.Voice.Logging
             }
         }
 
-
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Verbose(string message,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
+        public void Verbose(string message, object p1, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
         {
-            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
-            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message));
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Verbose(string message,
-            object p1,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
+            var context = new LoggingContext(memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
             LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message,
-                p1));
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Verbose(string message,
-            object p1,
-            object p2,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            var context = new LoggingContext(memberName, sourceFilePath, sourceLineNumber);
-            LogEntry(new LogEntry(_category, VLoggerVerbosity.Verbose, CorrelationID, context, string.Empty, message,
-                p1, p2));
+                p1, p2, p3, p4));
         }
 
         /// <inheritdoc/>
@@ -203,9 +177,29 @@ namespace Meta.Voice.Logging
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.Synchronized)]
+        public void Info(string message, object p1, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+            var context = new LoggingContext(memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Info, CorrelationID, context, string.Empty, message,
+                p1, p2, p3, p4));
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Debug(string message, params object [] parameters)
         {
             Log(CorrelationID, VLoggerVerbosity.Debug, message, parameters);
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void Debug(string message, object p1, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+            var context = new LoggingContext(memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
+            LogEntry(new LogEntry(_category, VLoggerVerbosity.Debug, CorrelationID, context, string.Empty, message,
+                p1, p2, p3, p4));
         }
 
         /// <inheritdoc/>

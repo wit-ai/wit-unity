@@ -39,34 +39,12 @@ namespace Meta.Voice.Logging
             Value.Verbose(correlationId, message, parameters);
         }
 
-        /// <inheritdoc/>
-        public void Verbose(string message,
+        public void Verbose(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null,
             [CallerMemberName] string memberName = "",
             [CallerFilePath] string sourceFilePath = "",
             [CallerLineNumber] int sourceLineNumber = 0)
         {
-            Value.Verbose(message, memberName, sourceFilePath, sourceLineNumber);
-        }
-
-        /// <inheritdoc/>
-        public void Verbose(string message,
-            object p1,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            Value.Verbose(message, p1, memberName, sourceFilePath, sourceLineNumber);
-        }
-
-        /// <inheritdoc/>
-        public void Verbose(string message,
-            object p1,
-            object p2,
-            [CallerMemberName] string memberName = "",
-            [CallerFilePath] string sourceFilePath = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
-        {
-            Value.Verbose(message, p1, p2, memberName, sourceFilePath, sourceLineNumber);
+            Value.Verbose(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
         }
 
         /// <inheritdoc/>
@@ -81,10 +59,23 @@ namespace Meta.Voice.Logging
             Value.Info(correlationId, message, parameters);
         }
 
+        public void Info(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+
+            Value.Info(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
+        }
+
         /// <inheritdoc/>
         public void Debug(string message, params object[] parameters)
         {
             Value.Debug(message, parameters);
+        }
+
+        public void Debug(string message, object p1 = null, object p2 = null, object p3 = null, object p4 = null, string memberName = "",
+            string sourceFilePath = "", int sourceLineNumber = 0)
+        {
+            Value.Debug(message, p1, p2, p3, p4, memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
         }
 
         /// <inheritdoc/>
