@@ -261,7 +261,7 @@ namespace Meta.Voice
                 {
                     await HoldTask;
                 }
-                onReady?.Invoke();
+                await ThreadUtility.CallOnMainThread(() => onReady?.Invoke());
             });
         }
 
