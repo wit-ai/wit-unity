@@ -16,6 +16,6 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// The web socket client to be used
         /// </summary>
-        public WitWebSocketClient WebSocketClient { get; }
+        public IWitWebSocketClient WebSocketClient { get; }
     }
 }

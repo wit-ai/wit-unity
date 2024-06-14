@@ -234,7 +234,7 @@ namespace Meta.WitAi.Data.Configuration
 
         #region Web Sockets
         // The web socket client to be used
-        public WitWebSocketClient WebSocketClient
+        public IWitWebSocketClient WebSocketClient
         {
             get
             {

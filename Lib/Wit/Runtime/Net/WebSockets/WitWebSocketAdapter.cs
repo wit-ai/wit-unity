@@ -10,7 +10,6 @@ using System;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
 using UnityEngine;
-using Meta.WitAi;
 using Meta.WitAi.Attributes;
 using UnityEngine.Events;
 
@@ -34,7 +33,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// The current web socket client
         /// </summary>
-        public WitWebSocketClient WebSocketClient { get; private set; }
+        public IWitWebSocketClient WebSocketClient { get; private set; }
 
         /// <summary>
         /// The topic to be used for publishing/subscribing to the current client provider
@@ -126,7 +125,7 @@ namespace Meta.Voice.Net.WebSockets
             // Log warning for non UnityEngine.Objects
             if (clientProvider != null && _webSocketProvider == null)
             {
-                VLog.W(GetType().Name, $"SetClientProvider failed\nReason: {clientProvider.GetType()} does not inherit from UnityEngine.Object");
+                _log.Warning("SetClientProvider failed\nReason: {0} does not inherit from UnityEngine.Object", clientProvider.GetType());
             }
 
             // Connect new web socket client if active

@@ -21,21 +21,21 @@ namespace Meta.Voice.Net.PubSub
         /// <summary>
         /// Callback when subscription state changes for a specific topic id
         /// </summary>
-        event PubSubTopicSubscriptionDelegate OnTopicSubscriptionStateChange;
+        public event PubSubTopicSubscriptionDelegate OnTopicSubscriptionStateChange;
 
         /// <summary>
         /// Obtains the current subscription state for a specific topic
         /// </summary>
-        PubSubSubscriptionState GetTopicSubscriptionState(string topicId);
+        public PubSubSubscriptionState GetTopicSubscriptionState(string topicId);
 
         /// <summary>
         /// Method to subscribe to a specific topic id
         /// </summary>
-        void Subscribe(string topicId);
+        public void Subscribe(string topicId);
 
         /// <summary>
         /// Method to unsubscribe from a specific topic id
         /// </summary>
-        void Unsubscribe(string topicId);
+        public void Unsubscribe(string topicId);
     }
 }

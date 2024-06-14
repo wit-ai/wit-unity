@@ -32,7 +32,7 @@ namespace Meta.Voice.Net.WebSockets
     /// used to find the appropriate IWitWebSocketSubscriber which then will generate a request to handle the response.
     /// </summary>
     [LogCategory(LogCategory.Network)]
-    public class WitWebSocketClient : IPubSubSubscriber
+    public sealed class WitWebSocketClient : IWitWebSocketClient
     {
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
@@ -800,7 +800,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Callback when request has completed tracking
         /// </summary>
-        protected virtual void CompleteRequestTracking(IWitWebSocketRequest request)
+        private void CompleteRequestTracking(IWitWebSocketRequest request)
         {
             // Stop tracking the request
             UntrackRequest(request);
