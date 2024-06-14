@@ -91,6 +91,19 @@ namespace Meta.WitAi.Data.Configuration
         [SerializeField] public bool isDemoOnly;
 
         /// <summary>
+        /// Controls when intent attributes are used.
+        ///
+        /// Intent attributes (ex: [MatchIntent('change-color')] void ChangeColor(string color) are useful for quickly
+        /// addressing voice commands in code, but they come at the cost of reflection. If you don't need these or don't
+        /// want to pay the reflection cost it is recommended you turn these off. These include conduit as the
+        /// resolution path of these intents.
+        /// </summary>
+        [Tooltip("Intent attributes (ex: [MatchIntent('change-color')] void ChangeColor(string color) are useful for " +
+                 "quickly addressing voice commands in code, but they come at the cost of reflection. If you don't " +
+                 " need these or don't want to pay the reflection cost it is recommended you turn these off.")]
+        [SerializeField] public bool useIntentAttributes = true;
+
+        /// <summary>
         /// When set to true, will use Conduit to dispatch voice commands.
         /// </summary>
         [Tooltip("Conduit enables manifest-based dispatching to invoke callbacks with native types directly without requiring manual parsing.")]

@@ -27,9 +27,14 @@ namespace Meta.WitAi
     public abstract class VoiceService : BaseSpeechService, IVoiceService, IInstanceResolver, IAudioEventProvider
     {
         /// <summary>
+        /// Enables/disables all attribute based intent handling
+        /// </summary>
+        private bool UseIntentAttributes => WitConfiguration && WitConfiguration.useIntentAttributes;
+
+        /// <summary>
         /// When set to true, Conduit will be used. Otherwise, the legacy dispatching will be used.
         /// </summary>
-        private bool UseConduit => WitConfiguration && WitConfiguration.useConduit;
+        private bool UseConduit => UseIntentAttributes && WitConfiguration.useConduit;
 
         /// <summary>
         /// When set to true, the service will use platform integration.
@@ -276,7 +281,7 @@ namespace Meta.WitAi
         {
             InitializeEventListeners();
 
-            if (!UseConduit)
+            if (UseIntentAttributes && !UseConduit)
             {
                 MatchIntentRegistry.Initialize();
             }
