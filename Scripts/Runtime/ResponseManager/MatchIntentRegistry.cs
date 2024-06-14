@@ -9,6 +9,7 @@
 using System;
 using System.Reflection;
 using System.Threading;
+using Meta.Voice.Logging;
 using Meta.WitAi.Utilities;
 
 namespace Meta.WitAi
@@ -20,8 +21,11 @@ namespace Meta.WitAi
         public MatchIntent matchIntent;
     }
 
+
+    [LogCategory("MatchIntent")]
     internal static class MatchIntentRegistry
     {
+        private static readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
         private static DictionaryList<string, RegisteredMatchIntent> registeredMethods;
 
         public static DictionaryList<string, RegisteredMatchIntent> RegisteredMethods
@@ -76,19 +80,19 @@ namespace Meta.WitAi
                                                 matchIntent = mi
                                             });
                                         } catch (Exception e) {
-                                            VLog.E(e);
+                                            _log.Debug(e.Message);
                                         }
                                     }
                                 } catch (Exception e) {
-                                    VLog.E(e);
+                                    _log.Debug(e.Message);
                                 }
                             }
                         } catch (Exception e) {
-                            VLog.E(e);
+                            _log.Debug(e.Message);
                         }
                     }
                 } catch (Exception e) {
-                    VLog.E(e);
+                    _log.Debug(e.Message);
                 }
             }
 
