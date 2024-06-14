@@ -228,21 +228,25 @@ namespace Meta.WitAi.TTS.Utilities
             AudioPlayer.Init();
 
             // Get text processors
-            RefreshProcessors();
+            _ = RefreshProcessors();
         }
         // Refresh processors
-        protected virtual void RefreshProcessors()
+        protected async virtual Task RefreshProcessors()
         {
-            // Get preprocessors
-            if (_textPreprocessors == null)
+            await ThreadUtility.CallOnMainThread(() =>
             {
-                _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
-            }
-            // Get postprocessors
-            if (_textPostprocessors == null)
-            {
-                _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
-            }
+                // Get preprocessors
+                if (_textPreprocessors == null)
+                {
+                    _textPreprocessors = GetComponents<ISpeakerTextPreprocessor>();
+                }
+                // Get postprocessors
+                if (_textPostprocessors == null)
+                {
+                    _textPostprocessors = GetComponents<ISpeakerTextPostprocessor>();
+                }
+            });
+
             // Fix prepend text to ensure it has a space
             if (!string.IsNullOrEmpty(PrependedText) && PrependedText.Length > 0 && !PrependedText.EndsWith(" "))
             {
@@ -401,10 +405,10 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         /// <param name="textToSpeak">The base text to be spoken</param>
         /// <returns>Returns an array of split texts to be spoken</returns>
-        public virtual List<string> GetFinalText(string textToSpeak)
+        public async virtual Task<List<string>> GetFinalText(string textToSpeak)
         {
             // Get processors
-            RefreshProcessors();
+            await RefreshProcessors();
 
             // Get results
             List<string> phrases = new List<string>();
@@ -447,9 +451,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="format">The format to be used</param>
         /// <param name="textsToSpeak">The array of strings to be inserted into the format</param>
         /// <returns>Returns a list of formatted texts</returns>
-        public virtual List<string> GetFinalTextFormatted(string format, params string[] textsToSpeak)
+        public async virtual Task<List<string>> GetFinalTextFormatted(string format, params string[] textsToSpeak)
         {
-            return GetFinalText(GetFormattedText(format, textsToSpeak));
+            return await GetFinalText(GetFormattedText(format, textsToSpeak));
         }
         /// <summary>
         /// Formats text using an initial format string parameter and additional text items to
@@ -525,9 +529,10 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak text
-            List<TTSSpeakerRequestData> requests = Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+            Task<List<TTSSpeakerRequestData>> requests = Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+            yield return new WaitUntil(() => requests.IsCompleted);
             // Wait while loading/speaking
-            yield return WaitForCompletion(requests);
+            yield return WaitForCompletion(requests.Result);
         }
 
         /// <summary>
@@ -574,7 +579,7 @@ namespace Meta.WitAi.TTS.Utilities
         public async Task SpeakTask(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak text
-            List<TTSSpeakerRequestData> requests = Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+            List<TTSSpeakerRequestData> requests = await Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
             // Wait while loading/speaking
             await WaitForCompletionTask(requests);
         }
@@ -621,7 +626,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public void SpeakQueued(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents) =>
-            Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+            _ = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
 
         /// <summary>
         /// Load a tts clip using the specified text and playback events.  Adds clip to playback queue and will
@@ -674,10 +679,11 @@ namespace Meta.WitAi.TTS.Utilities
             List<TTSSpeakerRequestData> requestList = new List<TTSSpeakerRequestData>();
             foreach (var textToSpeak in textsToSpeak)
             {
-                List<TTSSpeakerRequestData> newRequests = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
-                if (newRequests != null && newRequests.Count > 0)
+                Task<List<TTSSpeakerRequestData>> newRequests = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+                yield return new WaitUntil(() => newRequests.IsCompleted);
+                if (newRequests != null && newRequests.Result.Count > 0)
                 {
-                    requestList.AddRange(newRequests);
+                    requestList.AddRange(newRequests.Result);
                 }
             }
             // Wait while loading/speaking
@@ -732,7 +738,7 @@ namespace Meta.WitAi.TTS.Utilities
             List<TTSSpeakerRequestData> requestList = new List<TTSSpeakerRequestData>();
             foreach (var textToSpeak in textsToSpeak)
             {
-                List<TTSSpeakerRequestData> newRequests = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+                List<TTSSpeakerRequestData> newRequests = await Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
                 if (newRequests != null && newRequests.Count > 0)
                 {
                     requestList.AddRange(newRequests);
@@ -783,7 +789,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <param name="addToQueue">Whether or not this phrase should be enqueued into the playback queue</param>
         /// <returns>Speaker request data for request</returns>
-        private List<TTSSpeakerRequestData> Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents, bool addToQueue)
+        private async Task<List<TTSSpeakerRequestData>> Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents, bool addToQueue)
         {
             // Ensure voice settings exist
             TTSVoiceSettings voiceSettings = VoiceSettings;
@@ -794,7 +800,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Get final text phrases to be spoken
-            List<string> phrases = GetFinalText(textToSpeak);
+            List<string> phrases = await GetFinalText(textToSpeak);
             if (phrases == null || phrases.Count == 0)
             {
                 VLog.W($"All phrases removed\nSource Phrase: {textToSpeak}");

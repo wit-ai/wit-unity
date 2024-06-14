@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
@@ -459,7 +460,7 @@ namespace Meta.WitAi.TTS.Preload
         /// Find all ITTSPhraseProviders loaded in scenes & generate
         /// data file to import all phrases associated with the files.
         /// </summary>
-        public static bool ImportPhrases(TTSPreloadSettings preloadSettings)
+        public async static Task<bool> ImportPhrases(TTSPreloadSettings preloadSettings)
         {
             // Find phrase providers in all scenes
             List<ITTSPhraseProvider> phraseProviders = new List<ITTSPhraseProvider>();
@@ -496,7 +497,7 @@ namespace Meta.WitAi.TTS.Preload
                     }
 
                     // Ignore if phrases are null
-                    List<string> phrases = phraseProvider.GetVoicePhrases(voiceId);
+                    List<string> phrases = await phraseProvider.GetVoicePhrases(voiceId);
                     if (phrases == null || phrases.Count == 0)
                     {
                         continue;

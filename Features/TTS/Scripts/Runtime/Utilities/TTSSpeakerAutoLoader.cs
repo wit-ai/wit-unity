@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 
@@ -22,7 +23,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Get specific phrases per voice
         /// </summary>
-        List<string> GetVoicePhrases(string voiceId);
+        Task<List<string>> GetVoicePhrases(string voiceId);
     }
 
     [RequireComponent(typeof(TTSSpeaker))]
@@ -64,7 +65,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
         }
         // Load all phrase clips
-        public virtual void LoadClips()
+        public async virtual void LoadClips()
         {
             // Done
             if (_clips != null)
@@ -74,7 +75,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Set phrase list
-            _phrases = GetAllPhrases().ToArray();
+            _phrases = (await GetAllPhrases()).ToArray();
 
             // Load all clips
             List<TTSClipData> list = new List<TTSClipData>();
@@ -87,7 +88,7 @@ namespace Meta.WitAi.TTS.Utilities
             _clips = list.ToArray();
         }
         // Return all phrases
-        public virtual List<string> GetAllPhrases()
+        public async virtual Task<List<string>> GetAllPhrases()
         {
             // Ensure speaker exists
             SetupSpeaker();
@@ -104,7 +105,7 @@ namespace Meta.WitAi.TTS.Utilities
             for (int i = 0; i < unformattedPhrases.Count; i++)
             {
                 // Format phrases
-                List<string> newPhrases = Speaker.GetFinalText(unformattedPhrases[i]);
+                List<string> newPhrases = await Speaker.GetFinalText(unformattedPhrases[i]);
                 // Add to final list
                 if (newPhrases != null && newPhrases.Count > 0)
                 {
@@ -186,9 +187,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Returns the supported phrases per voice
         /// </summary>
-        public virtual List<string> GetVoicePhrases(string voiceId)
+        public async virtual Task<List<string>> GetVoicePhrases(string voiceId)
         {
-            return GetAllPhrases();
+            return await GetAllPhrases();
         }
         #endregion ITTSVoicePhraseProvider
     }
