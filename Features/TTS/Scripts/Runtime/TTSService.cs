@@ -417,7 +417,7 @@ namespace Meta.WitAi.TTS
         /// <param name="diskCacheSettings">Custom cache settings</param>
         /// <returns>Generated TTS clip data</returns>
         public virtual TTSClipData Load(string textToSpeak, string clipID, TTSVoiceSettings voiceSettings,
-            TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string> onStreamReady)
+            TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string> onStreamReady = null)
         {
             // Add delegates if needed
             AddDelegates();
@@ -437,16 +437,6 @@ namespace Meta.WitAi.TTS
                 return null;
             }
 
-            // Perform async load
-            var returned = new TaskCompletionSource<bool>();
-            _ = ThreadUtility.CallOnMainThread(() => LoadClip(clipData, returned, onStreamReady));
-
-            // Return data
-            returned.TrySetResult(true);
-            return clipData;
-        }
-        private async Task LoadClip(TTSClipData clipData, TaskCompletionSource<bool> returned, Action<TTSClipData, string> onStreamReady)
-        {
             // Keep track if recently loaded
             bool loading = clipData.loadState == TTSClipLoadState.Unloaded;
 
@@ -456,47 +446,40 @@ namespace Meta.WitAi.TTS
                 RuntimeCacheHandler.AddClip(clipData);
             }
             // Otherwise begin 'preparing'
-            else if (loading)
+            else
             {
                 OnLoadBegin(clipData);
             }
 
-            // TODO: Fixed in D57798649
-            await returned.Task;
-
             // Add on ready delegate
             clipData.onPlaybackReady += (error) => onStreamReady?.Invoke(clipData, error);
 
-            // Loaded elsewhere
-            if (!loading)
-            {
-                // Return now if done, otherwise wait for callback
-                if (clipData.loadState != TTSClipLoadState.Preparing)
-                {
-                    onStreamReady(clipData,
-                        clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
-                }
-                return;
-            }
             // Begin and complete
             if (string.IsNullOrEmpty(clipData.textToSpeak))
             {
                 OnWebStreamBegin(clipData);
                 OnWebStreamReady(clipData);
                 OnStreamComplete(clipData, null, false);
-                return;
+                return clipData;
             }
 
-            // If should cache to disk, attempt to do so
-            if (ShouldCacheToDisk(clipData))
+            // Load
+            if (loading)
             {
-                PerformDownloadAndStream(clipData);
+                // If should cache to disk, attempt to do so
+                if (ShouldCacheToDisk(clipData))
+                {
+                    PerformDownloadAndStream(clipData);
+                }
+                // Simply stream from the web
+                else
+                {
+                    PerformStreamFromWeb(clipData);
+                }
             }
-            // Simply stream from the web
-            else
-            {
-                PerformStreamFromWeb(clipData);
-            }
+
+            // Return data
+            return clipData;
         }
         // Perform download & stream following error checks
         private void PerformDownloadAndStream(TTSClipData clipDataParam)

@@ -1329,7 +1329,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
             requestData.ClipData = TTSService.Load(textToSpeak, clipId, voiceSettings, diskCacheSettings,
-                (clipData, error) => ThreadUtility.CallOnMainThread(() => HandleLoadComplete(requestData, error)));
+                null);
 
             // Ignore without clip
             if (requestData.ClipData == null)
@@ -1344,6 +1344,15 @@ namespace Meta.WitAi.TTS.Utilities
             OnInit(requestData);
             RefreshQueueEvents();
             OnLoadBegin(requestData);
+
+            if (requestData.ClipData.loadState == TTSClipLoadState.Preparing)
+            {
+                requestData.ClipData.onPlaybackReady += (error) => HandleLoadComplete(requestData, error);
+            }
+            else
+            {
+                HandleLoadComplete(requestData, string.Empty);
+            }
 
             // Return data
             return requestData;
@@ -1812,175 +1821,205 @@ namespace Meta.WitAi.TTS.Utilities
         // Initial callback as soon as the audio clip speak request is generated
         protected virtual void OnInit(TTSSpeakerRequestData requestData)
         {
-            Events?.OnInit?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnInit?.Invoke(this, requestData.ClipData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                Events?.OnInit?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnInit?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform load begin events
         protected virtual void OnLoadBegin(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Load Begin", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Load Begin", requestData);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataQueued?.Invoke(requestData.ClipData);
+                Events?.OnClipDataQueued?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnClipDataLoadBegin?.Invoke(requestData.ClipData);
+                Events?.OnClipDataLoadBegin?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnClipLoadBegin?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnClipLoadBegin?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            Events?.OnLoadBegin?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnLoadBegin?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                Events?.OnLoadBegin?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnLoadBegin?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform load begin abort events
         protected virtual void OnLoadAborted(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Load Aborted", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Load Aborted", requestData);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataLoadAbort?.Invoke(requestData.ClipData);
+                Events?.OnClipDataLoadAbort?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnClipLoadAbort?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnClipLoadAbort?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            Events?.OnLoadAbort?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnLoadAbort?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                Events?.OnLoadAbort?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnLoadAbort?.Invoke(this, requestData.ClipData);
 
-            // Complete
-            OnComplete(requestData);
+                // Complete
+                OnComplete(requestData);
+            });
         }
         // Perform load failed events
         protected virtual void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
         {
-            LogRequest($"Load Failed", requestData, error);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest($"Load Failed", requestData, error);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataLoadFailed?.Invoke(requestData.ClipData);
+                Events?.OnClipDataLoadFailed?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnClipLoadFailed?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnClipLoadFailed?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            Events?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
-            requestData.PlaybackEvents?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
+                // Speaker clip events
+                Events?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
+                requestData.PlaybackEvents?.OnLoadFailed?.Invoke(this, requestData.ClipData, error);
 
-            // Complete
-            OnComplete(requestData);
+                // Complete
+                OnComplete(requestData);
+            });
         }
         // Perform load success events
         protected virtual void OnLoadSuccess(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Load Success", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Load Success", requestData);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataLoadSuccess?.Invoke(requestData.ClipData);
+                Events?.OnClipDataLoadSuccess?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnClipLoadSuccess?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnClipLoadSuccess?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            Events?.OnLoadSuccess?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnLoadSuccess?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                Events?.OnLoadSuccess?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnLoadSuccess?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform events for playback being ready
         protected virtual void OnPlaybackReady(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Playback Ready", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Playback Ready", requestData);
 
-            // Speaker playback events
-            Events?.OnAudioClipPlaybackReady?.Invoke(requestData.ClipData?.clip);
-            requestData.PlaybackEvents?.OnAudioClipPlaybackReady?.Invoke(requestData.ClipData?.clip);
+                // Speaker playback events
+                Events?.OnAudioClipPlaybackReady?.Invoke(requestData.ClipData?.clip);
+                requestData.PlaybackEvents?.OnAudioClipPlaybackReady?.Invoke(requestData.ClipData?.clip);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataPlaybackReady?.Invoke(requestData.ClipData);
+                Events?.OnClipDataPlaybackReady?.Invoke(requestData.ClipData);
 
-            // Speaker clip events
-            requestData.ClipData?.onPlaybackQueued?.Invoke(requestData.ClipData);
-            Events?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                requestData.ClipData?.onPlaybackQueued?.Invoke(requestData.ClipData);
+                Events?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnPlaybackReady?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform events for playback start
         protected virtual void OnPlaybackStart(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Playback Begin", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Playback Begin", requestData);
 
-            // Speaker playback events
-            Events?.OnTextPlaybackStart?.Invoke(requestData.ClipData?.textToSpeak);
-            requestData.PlaybackEvents?.OnTextPlaybackStart?.Invoke(requestData.ClipData?.textToSpeak);
-            Events?.OnAudioClipPlaybackStart?.Invoke(requestData.ClipData?.clip);
-            requestData.PlaybackEvents?.OnAudioClipPlaybackStart?.Invoke(requestData.ClipData?.clip);
+                // Speaker playback events
+                Events?.OnTextPlaybackStart?.Invoke(requestData.ClipData?.textToSpeak);
+                requestData.PlaybackEvents?.OnTextPlaybackStart?.Invoke(requestData.ClipData?.textToSpeak);
+                Events?.OnAudioClipPlaybackStart?.Invoke(requestData.ClipData?.clip);
+                requestData.PlaybackEvents?.OnAudioClipPlaybackStart?.Invoke(requestData.ClipData?.clip);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataPlaybackStart?.Invoke(requestData.ClipData);
+                Events?.OnClipDataPlaybackStart?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnStartSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnStartSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            requestData.ClipData?.onPlaybackBegin?.Invoke(requestData.ClipData);
-            Events?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                requestData.ClipData?.onPlaybackBegin?.Invoke(requestData.ClipData);
+                Events?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnPlaybackStart?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform events for playback cancelation
         protected virtual void OnPlaybackCancelled(TTSSpeakerRequestData requestData, string reason)
         {
-            LogRequest($"Playback Cancelled\nReason: {reason}", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest($"Playback Cancelled\nReason: {reason}", requestData);
 
-            // Speaker playback events
-            Events?.OnTextPlaybackCancelled?.Invoke(requestData.ClipData?.textToSpeak);
-            requestData.PlaybackEvents?.OnTextPlaybackCancelled?.Invoke(requestData.ClipData?.textToSpeak);
-            Events?.OnAudioClipPlaybackCancelled?.Invoke(requestData.ClipData?.clip);
-            requestData.PlaybackEvents?.OnAudioClipPlaybackCancelled?.Invoke(requestData.ClipData?.clip);
+                // Speaker playback events
+                Events?.OnTextPlaybackCancelled?.Invoke(requestData.ClipData?.textToSpeak);
+                requestData.PlaybackEvents?.OnTextPlaybackCancelled?.Invoke(requestData.ClipData?.textToSpeak);
+                Events?.OnAudioClipPlaybackCancelled?.Invoke(requestData.ClipData?.clip);
+                requestData.PlaybackEvents?.OnAudioClipPlaybackCancelled?.Invoke(requestData.ClipData?.clip);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataPlaybackCancelled?.Invoke(requestData.ClipData);
+                Events?.OnClipDataPlaybackCancelled?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnCancelledSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnCancelledSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
-            Events?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
-            requestData.PlaybackEvents?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
+                // Speaker clip events
+                requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
+                Events?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
+                requestData.PlaybackEvents?.OnPlaybackCancelled?.Invoke(this, requestData.ClipData, reason);
 
-            // Complete
-            OnComplete(requestData);
+                // Complete
+                OnComplete(requestData);
+            });
         }
         // Perform audio clip update during streaming playback
         protected virtual void OnPlaybackClipUpdated(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Playback Clip Updated", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Playback Clip Updated", requestData);
 
-            // Speaker clip events
-            Events?.OnPlaybackClipUpdated?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnPlaybackClipUpdated?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                Events?.OnPlaybackClipUpdated?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnPlaybackClipUpdated?.Invoke(this, requestData.ClipData);
+            });
         }
         // Perform events for playback completion
         protected virtual void OnPlaybackComplete(TTSSpeakerRequestData requestData)
         {
-            LogRequest("Playback Complete", requestData);
+            ThreadUtility.CallOnMainThread(() =>
+            {
+                LogRequest("Playback Complete", requestData);
 
-            // Speaker playback events
-            Events?.OnTextPlaybackFinished?.Invoke(requestData.ClipData?.textToSpeak);
-            requestData.PlaybackEvents?.OnTextPlaybackFinished?.Invoke(requestData.ClipData?.textToSpeak);
-            Events?.OnAudioClipPlaybackFinished?.Invoke(requestData.ClipData?.clip);
-            requestData.PlaybackEvents?.OnAudioClipPlaybackFinished?.Invoke(requestData.ClipData?.clip);
+                // Speaker playback events
+                Events?.OnTextPlaybackFinished?.Invoke(requestData.ClipData?.textToSpeak);
+                requestData.PlaybackEvents?.OnTextPlaybackFinished?.Invoke(requestData.ClipData?.textToSpeak);
+                Events?.OnAudioClipPlaybackFinished?.Invoke(requestData.ClipData?.clip);
+                requestData.PlaybackEvents?.OnAudioClipPlaybackFinished?.Invoke(requestData.ClipData?.clip);
 
-            // Deprecated speaker events
+                // Deprecated speaker events
 #pragma warning disable CS0618
-            Events?.OnClipDataPlaybackFinished?.Invoke(requestData.ClipData);
+                Events?.OnClipDataPlaybackFinished?.Invoke(requestData.ClipData);
 #pragma warning disable CS0618
-            Events?.OnFinishedSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
+                Events?.OnFinishedSpeaking?.Invoke(this, requestData.ClipData?.textToSpeak);
 
-            // Speaker clip events
-            requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
-            Events?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackEvents?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
+                // Speaker clip events
+                requestData.ClipData?.onPlaybackComplete?.Invoke(requestData.ClipData);
+                Events?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
+                requestData.PlaybackEvents?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
 
-            // Complete
-            OnComplete(requestData);
+                // Complete
+                OnComplete(requestData);
+            });
         }
         // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
         protected virtual void OnComplete(TTSSpeakerRequestData requestData)
