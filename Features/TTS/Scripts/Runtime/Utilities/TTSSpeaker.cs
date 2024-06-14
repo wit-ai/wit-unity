@@ -113,7 +113,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// The data for the currently playing clip
         /// </summary>
-        public TTSClipData SpeakingClip => _speakingRequest.ClipData;
+        public TTSClipData SpeakingClip => _speakingRequest?.ClipData;
 
         /// <summary>
         /// Whether there are any clips in the loading queue
@@ -159,14 +159,14 @@ namespace Meta.WitAi.TTS.Utilities
         private float _elapsedPlayTime;
 
         // Current clip to be played
-        protected TTSSpeakerRequestData _speakingRequest;
+        private TTSSpeakerRequestData _speakingRequest;
         // Full clip data list
         private ConcurrentQueue<TTSSpeakerRequestData> _queuedRequests = new ConcurrentQueue<TTSSpeakerRequestData>();
-        protected struct TTSSpeakerRequestData
+        private class TTSSpeakerRequestData
         {
             public TTSClipData ClipData;
             public DateTime StartTime;
-            public bool StopQueueOnLoad;
+            public bool StopPlaybackOnLoad;
             public TTSSpeakerClipEvents PlaybackEvents;
             public TaskCompletionSource<bool> TaskCompletionSource;
         }
@@ -262,8 +262,8 @@ namespace Meta.WitAi.TTS.Utilities
         protected virtual void OnDestroy()
         {
             Stop();
-            _queuedRequests = null;
-            _speakingRequest = new TTSSpeakerRequestData();
+            _speakingRequest = null;
+            _queuedRequests.Clear();
         }
         // Add listener for clip unload
         protected virtual void OnEnable()
@@ -330,13 +330,13 @@ namespace Meta.WitAi.TTS.Utilities
                     }
                 }
             }
-            return new TTSSpeakerRequestData();
+            return null;
         }
         // Check queue
         private bool QueueContainsClip(TTSClipData clipData)
         {
             TTSSpeakerRequestData requestData = GetQueuedRequest(clipData);
-            return requestData.ClipData != null;
+            return requestData?.ClipData != null;
         }
         // Refresh queue
         private void RefreshQueueEvents()
@@ -356,17 +356,17 @@ namespace Meta.WitAi.TTS.Utilities
             }
         }
         // Check if clip request is active
-        protected bool IsClipRequestActive(TTSSpeakerRequestData requestData)
+        private bool IsClipRequestActive(TTSSpeakerRequestData requestData)
         {
             return IsClipRequestLoading(requestData) || IsClipRequestSpeaking(requestData);
         }
         // Check if clip request is active
-        protected bool IsClipRequestLoading(TTSSpeakerRequestData requestData)
+        private bool IsClipRequestLoading(TTSSpeakerRequestData requestData)
         {
             return _queuedRequests.Contains(requestData);
         }
         // Check if clip request is active
-        protected bool IsClipRequestSpeaking(TTSSpeakerRequestData requestData)
+        private bool IsClipRequestSpeaking(TTSSpeakerRequestData requestData)
         {
             return _speakingRequest.Equals(requestData);
         }
@@ -375,7 +375,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// Wait for all tasks to complete via async/await
         /// </summary>
         /// <param name="requestData">The individual requests we're waiting on</param>
-        protected async Task WaitForCompletionTask(List<TTSSpeakerRequestData> requestData)
+        private async Task WaitForCompletionTask(List<TTSSpeakerRequestData> requestData)
         {
             for (int i = 0; i < requestData.Count; i++)
             {
@@ -387,7 +387,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// Wait for all tasks to complete via Coroutine
         /// </summary>
         /// <param name="requestData">The individual requests we're waiting on</param>
-        protected IEnumerator WaitForCompletion(List<TTSSpeakerRequestData> requestData)
+        private IEnumerator WaitForCompletion(List<TTSSpeakerRequestData> requestData)
         {
             for (int i = 0; i < requestData.Count; i++)
             {
@@ -483,7 +483,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents) =>
-            Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+          _ = PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, true);
 
         /// <summary>
         /// Load a tts clip using the specified text and playback events.  Cancels all previous clips
@@ -529,7 +529,7 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak text
-            Task<List<TTSSpeakerRequestData>> requests = Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+            Task<List<TTSSpeakerRequestData>> requests = PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, true);
             yield return new WaitUntil(() => requests.IsCompleted);
             // Wait while loading/speaking
             yield return WaitForCompletion(requests.Result);
@@ -579,7 +579,7 @@ namespace Meta.WitAi.TTS.Utilities
         public async Task SpeakTask(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Speak text
-            List<TTSSpeakerRequestData> requests = await Speak(textToSpeak, diskCacheSettings, playbackEvents, false);
+            List<TTSSpeakerRequestData> requests = await PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, true);
             // Wait while loading/speaking
             await WaitForCompletionTask(requests);
         }
@@ -626,7 +626,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public void SpeakQueued(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents) =>
-            _ = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+            _ = PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, false);
 
         /// <summary>
         /// Load a tts clip using the specified text and playback events.  Adds clip to playback queue and will
@@ -679,7 +679,7 @@ namespace Meta.WitAi.TTS.Utilities
             List<TTSSpeakerRequestData> requestList = new List<TTSSpeakerRequestData>();
             foreach (var textToSpeak in textsToSpeak)
             {
-                Task<List<TTSSpeakerRequestData>> newRequests = Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+                Task<List<TTSSpeakerRequestData>> newRequests = PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, false);
                 yield return new WaitUntil(() => newRequests.IsCompleted);
                 if (newRequests != null && newRequests.Result.Count > 0)
                 {
@@ -738,7 +738,7 @@ namespace Meta.WitAi.TTS.Utilities
             List<TTSSpeakerRequestData> requestList = new List<TTSSpeakerRequestData>();
             foreach (var textToSpeak in textsToSpeak)
             {
-                List<TTSSpeakerRequestData> newRequests = await Speak(textToSpeak, diskCacheSettings, playbackEvents, true);
+                List<TTSSpeakerRequestData> newRequests = await PerformSpeak(textToSpeak, diskCacheSettings, playbackEvents, false);
                 if (newRequests != null && newRequests.Count > 0)
                 {
                     requestList.AddRange(newRequests);
@@ -787,9 +787,12 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
-        /// <param name="addToQueue">Whether or not this phrase should be enqueued into the playback queue</param>
+        /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Speaker request data for request</returns>
-        private async Task<List<TTSSpeakerRequestData>> Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents, bool addToQueue)
+        private async Task<List<TTSSpeakerRequestData>> PerformSpeak(string textToSpeak,
+            TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents,
+            bool clearQueue)
         {
             // Ensure voice settings exist
             TTSVoiceSettings voiceSettings = VoiceSettings;
@@ -808,7 +811,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Cancel previous loading queue
-            if (!addToQueue)
+            if (clearQueue)
             {
                 _willHaveQueue = true;
                 StopLoading();
@@ -819,14 +822,9 @@ namespace Meta.WitAi.TTS.Utilities
             List<TTSSpeakerRequestData> results = new List<TTSSpeakerRequestData>();
             foreach (var phrase in phrases)
             {
-                TTSSpeakerRequestData requestData = HandleLoad(phrase, voiceSettings, diskCacheSettings, playbackEvents, addToQueue);
+                TTSSpeakerRequestData requestData = HandleLoad(phrase, voiceSettings, diskCacheSettings, playbackEvents, clearQueue);
                 results.Add(requestData);
-
-                // Add additional to queue
-                if (!addToQueue)
-                {
-                    addToQueue = true;
-                }
+                clearQueue = false;
             }
             return results;
         }
@@ -1323,14 +1321,15 @@ namespace Meta.WitAi.TTS.Utilities
         // Handles speaking depending on the state of the specified audio
         private TTSSpeakerRequestData HandleLoad(string textToSpeak, TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents,
-            bool addToQueue)
+            bool clearQueue)
         {
             // Generate request data
             TTSSpeakerRequestData requestData = new TTSSpeakerRequestData();
             requestData.StartTime = DateTime.UtcNow;
-            requestData.StopQueueOnLoad = !addToQueue;
+            requestData.StopPlaybackOnLoad = clearQueue;
             requestData.PlaybackEvents = playbackEvents ?? new TTSSpeakerClipEvents();
             requestData.TaskCompletionSource = new TaskCompletionSource<bool>();
+            _queuedRequests.Enqueue(requestData);
 
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
@@ -1340,11 +1339,9 @@ namespace Meta.WitAi.TTS.Utilities
             // Ignore without clip
             if (requestData.ClipData == null)
             {
+                HandleLoadComplete(requestData, "Failed to load");
                 return requestData;
             }
-
-            // Enqueue
-            _queuedRequests.Enqueue(requestData);
 
             // Initialized, possibly started queue and load began
             OnInit(requestData);
@@ -1412,7 +1409,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Stop previously spoken clip and play next
-            if (requestData.StopQueueOnLoad && IsSpeaking)
+            if (requestData.StopPlaybackOnLoad && IsSpeaking)
             {
                 StopSpeaking();
             }
@@ -1469,7 +1466,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Resume prior to playback
-            if (requestData.StopQueueOnLoad && IsPaused)
+            if (requestData.StopPlaybackOnLoad && IsPaused)
             {
                 Resume();
             }
@@ -1482,6 +1479,7 @@ namespace Meta.WitAi.TTS.Utilities
                 _speakingRequest = requestData;
                 OnPlaybackStart(_speakingRequest);
                 HandlePlaybackComplete(false);
+                return;
             }
 
             // Somehow clip unloaded
@@ -1591,7 +1589,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Keep last request data
             TTSSpeakerRequestData lastRequestData = _speakingRequest;
             // Clear speaking request
-            _speakingRequest = new TTSSpeakerRequestData();
+            _speakingRequest = null;
 
             // Stop audio source playback
             AudioPlayer.Stop();
@@ -1784,7 +1782,7 @@ namespace Meta.WitAi.TTS.Utilities
         private void Error(string format, params object[] parameters)
             => _log.Error(format, parameters);
 
-        protected virtual void LogRequest(string comment, TTSSpeakerRequestData requestData, string error = null)
+        private void LogRequest(string comment, TTSSpeakerRequestData requestData, string error = null)
         {
             if (!verboseLogging && string.IsNullOrEmpty(error))
             {
@@ -1825,7 +1823,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         #region PLAYBACK EVENTS
         // Initial callback as soon as the audio clip speak request is generated
-        protected virtual void OnInit(TTSSpeakerRequestData requestData)
+        private void OnInit(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1834,7 +1832,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform load begin events
-        protected virtual void OnLoadBegin(TTSSpeakerRequestData requestData)
+        private void OnLoadBegin(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1854,7 +1852,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform load begin abort events
-        protected virtual void OnLoadAborted(TTSSpeakerRequestData requestData)
+        private void OnLoadAborted(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1875,7 +1873,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform load failed events
-        protected virtual void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
+        private void OnLoadFailed(TTSSpeakerRequestData requestData, string error)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1896,7 +1894,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform load success events
-        protected virtual void OnLoadSuccess(TTSSpeakerRequestData requestData)
+        private void OnLoadSuccess(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1914,7 +1912,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform events for playback being ready
-        protected virtual void OnPlaybackReady(TTSSpeakerRequestData requestData)
+        private void OnPlaybackReady(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1935,7 +1933,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform events for playback start
-        protected virtual void OnPlaybackStart(TTSSpeakerRequestData requestData)
+        private void OnPlaybackStart(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1960,7 +1958,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform events for playback cancelation
-        protected virtual void OnPlaybackCancelled(TTSSpeakerRequestData requestData, string reason)
+        private void OnPlaybackCancelled(TTSSpeakerRequestData requestData, string reason)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -1988,7 +1986,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform audio clip update during streaming playback
-        protected virtual void OnPlaybackClipUpdated(TTSSpeakerRequestData requestData)
+        private void OnPlaybackClipUpdated(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -2000,7 +1998,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Perform events for playback completion
-        protected virtual void OnPlaybackComplete(TTSSpeakerRequestData requestData)
+        private void OnPlaybackComplete(TTSSpeakerRequestData requestData)
         {
             ThreadUtility.CallOnMainThread(() =>
             {
@@ -2028,7 +2026,7 @@ namespace Meta.WitAi.TTS.Utilities
             });
         }
         // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
-        protected virtual void OnComplete(TTSSpeakerRequestData requestData)
+        private void OnComplete(TTSSpeakerRequestData requestData)
         {
             requestData.TaskCompletionSource?.TrySetResult(true);
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
