@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -21,20 +22,21 @@ namespace Meta.WitAi.TTS.Integrations
     public class BaseTTSRuntimeCache : MonoBehaviour, ITTSRuntimeCacheHandler
     {
         /// <summary>
-        /// On clip added callback
+        /// Callback for clips being added to the runtime cache
         /// </summary>
-        public TTSClipEvent OnClipAdded { get; set; } = new TTSClipEvent();
+        public event TTSClipCallback OnClipAdded;
+
         /// <summary>
-        /// On clip removed callback
+        /// Callback for clips being removed from the runtime cache
         /// </summary>
-        public TTSClipEvent OnClipRemoved { get; set; } = new TTSClipEvent();
+        public event TTSClipCallback OnClipRemoved;
 
         /// <summary>
         /// Simple getter for all clips
         /// </summary>
         public TTSClipData[] GetClips() => _clips.Values.ToArray();
         // Clips contained in the class by unique id
-        protected Dictionary<string, TTSClipData> _clips = new Dictionary<string, TTSClipData>();
+        protected ConcurrentDictionary<string, TTSClipData> _clips = new ConcurrentDictionary<string, TTSClipData>();
 
         // Remove all clips on destroy
         protected virtual void OnDestroy()
@@ -58,12 +60,14 @@ namespace Meta.WitAi.TTS.Integrations
         public virtual bool AddClip(TTSClipData clipData)
         {
             // Do not add null
-            if (clipData == null)
+            if (clipData == null || string.IsNullOrEmpty(clipData.clipID))
             {
                 return false;
             }
             // If clip is already set, return success
-            if (_clips.ContainsKey(clipData.clipID) && _clips[clipData.clipID] == clipData)
+            if (_clips.TryGetValue(clipData.clipID, out var checkClipData)
+                && checkClipData != null
+                && checkClipData.Equals(clipData))
             {
                 return true;
             }
@@ -88,8 +92,14 @@ namespace Meta.WitAi.TTS.Integrations
         /// <param name="clipID"></param>
         public virtual void RemoveClip(string clipID)
         {
+            // Keep empty clips
+            if (_clips.TryGetValue(clipID, out var clipData)
+                && string.IsNullOrEmpty(clipData.textToSpeak))
+            {
+                return;
+            }
             // Ignore if not found
-            if (!_clips.Remove(clipID, out var clipData))
+            if (!_clips.TryRemove(clipID, out clipData))
             {
                 return;
             }
@@ -104,6 +114,7 @@ namespace Meta.WitAi.TTS.Integrations
         protected virtual void BreakdownClip(TTSClipData clipData)
         {
             // Unloads clip stream
+            clipData.clipStream?.Unload();
             clipData.clipStream = null;
             // Remove delegate callback
             OnClipRemoved?.Invoke(clipData);

@@ -8,8 +8,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using Meta.WitAi.Json;
 using Meta.WitAi.Speech;
@@ -20,7 +21,6 @@ using Meta.Voice.Logging;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
-using UnityEngine.Events;
 
 namespace Meta.WitAi.TTS.Utilities
 {
@@ -161,7 +161,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Current clip to be played
         protected TTSSpeakerRequestData _speakingRequest;
         // Full clip data list
-        private Queue<TTSSpeakerRequestData> _queuedRequests = new Queue<TTSSpeakerRequestData>();
+        private ConcurrentQueue<TTSSpeakerRequestData> _queuedRequests = new ConcurrentQueue<TTSSpeakerRequestData>();
         protected struct TTSSpeakerRequestData
         {
             public TTSClipData ClipData;
@@ -902,7 +902,10 @@ namespace Meta.WitAi.TTS.Utilities
             // Cancel each clip from loading
             while (_queuedRequests.Count > 0)
             {
-                OnLoadAborted(_queuedRequests.Dequeue());
+                if (_queuedRequests.TryDequeue(out var request))
+                {
+                    OnLoadAborted(request);
+                }
             }
 
             // Refresh in queue check
@@ -1325,7 +1328,8 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Perform load request (Always waits a frame to ensure callbacks occur first)
             string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
-            requestData.ClipData = TTSService.Load(textToSpeak, clipId, voiceSettings, diskCacheSettings, (clipData, error) => HandleLoadComplete(requestData, error));
+            requestData.ClipData = TTSService.Load(textToSpeak, clipId, voiceSettings, diskCacheSettings,
+                (clipData, error) => ThreadUtility.CallOnMainThread(() => HandleLoadComplete(requestData, error)));
 
             // Ignore without clip
             if (requestData.ClipData == null)
@@ -1348,7 +1352,7 @@ namespace Meta.WitAi.TTS.Utilities
         private void HandleLoadComplete(TTSSpeakerRequestData requestData, string error)
         {
             // Not queued
-            if (_queuedRequests != null && !_queuedRequests.Contains(requestData))
+            if (_queuedRequests == null || !_queuedRequests.Contains(requestData))
             {
                 _log.Warning("Unknown Request Load Complete\nText: {0}" ,
                     requestData.ClipData?.textToSpeak ?? "Null");
@@ -1420,8 +1424,12 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 return;
             }
+            // Peek if possible
+            if (!_queuedRequests.TryPeek(out var requestData))
+            {
+                return;
+            }
             // Peek next request
-            TTSSpeakerRequestData requestData = _queuedRequests.Peek();
             if (requestData.ClipData == null)
             {
                 HandleLoadComplete(requestData, "TTSClipData no longer exists");
@@ -1451,40 +1459,40 @@ namespace Meta.WitAi.TTS.Utilities
                 Resume();
             }
 
-            if (!string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
+            // If we're sending an empty string we're really just potentially queuing an event so we can trigger it
+            // between audio clips. Trigger start/stop events.
+            if (string.IsNullOrEmpty(requestData.ClipData.textToSpeak))
             {
-                // Somehow clip unloaded
-                if (requestData.ClipData.clipStream == null)
-                {
-                    HandleLoadComplete(requestData, "AudioClipStream no longer exists");
-                    return;
-                }
-
-                // Dequeue and apply
-                _speakingRequest = _queuedRequests.Dequeue();
-
-                // Started speaking
-                AudioPlayer.Play(_speakingRequest.ClipData.clipStream, 0);
-
-                // Call playback start events
-                OnPlaybackStart(_speakingRequest);
-
-                // Wait for completion
-                if (_waitForCompletion != null)
-                {
-                    StopCoroutine(_waitForCompletion);
-                    _waitForCompletion = null;
-                }
-                _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
-            }
-            else
-            {
-                // If we're sending an empty string we're really just potentially queuing an event so we can trigger it
-                // between audio clips. Trigger start/stop events.
-                _speakingRequest = _queuedRequests.Dequeue();
+                _queuedRequests.TryDequeue(out requestData);
+                _speakingRequest = requestData;
                 OnPlaybackStart(_speakingRequest);
                 HandlePlaybackComplete(false);
             }
+
+            // Somehow clip unloaded
+            if (requestData.ClipData.clipStream == null)
+            {
+                HandleLoadComplete(requestData, "AudioClipStream no longer exists");
+                return;
+            }
+
+            // Apply and dequeue
+            _queuedRequests.TryDequeue(out requestData);
+            _speakingRequest = requestData;
+
+            // Started speaking
+            AudioPlayer.Play(_speakingRequest.ClipData.clipStream, 0);
+
+            // Call playback start events
+            OnPlaybackStart(_speakingRequest);
+
+            // Wait for completion
+            if (_waitForCompletion != null)
+            {
+                StopCoroutine(_waitForCompletion);
+                _waitForCompletion = null;
+            }
+            _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
         }
         // Wait for clip completion
         private IEnumerator WaitForPlaybackComplete()
@@ -1688,6 +1696,17 @@ namespace Meta.WitAi.TTS.Utilities
         // Handles unload of specific request
         private void HandleUnload(TTSSpeakerRequestData requestData, string error)
         {
+            if (!_queuedRequests.Contains(requestData))
+            {
+                return;
+            }
+            if (_queuedRequests.TryPeek(out var discard)
+                && requestData.Equals(discard))
+            {
+                _queuedRequests.TryDequeue(out discard);
+                RefreshQueueEvents();
+                return;
+            }
             HandleUnload((checkRequest) => !checkRequest.Equals(requestData), error);
         }
         // Handles unload of requests with specified should keep lookup
@@ -1700,15 +1719,17 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Otherwise create discard queue
-            Queue<TTSSpeakerRequestData> discard = _queuedRequests;
-            _queuedRequests = new Queue<TTSSpeakerRequestData>();
+            ConcurrentQueue<TTSSpeakerRequestData> discard = _queuedRequests;
+            _queuedRequests = new ConcurrentQueue<TTSSpeakerRequestData>();
 
             // Iterate all items
             while (discard.Count > 0)
             {
                 // Dequeue from discard
-                TTSSpeakerRequestData check = discard.Dequeue();
-
+                if (!discard.TryDequeue(out var check))
+                {
+                    continue;
+                }
                 // Clip data missing
                 if (check.ClipData == null)
                 {
@@ -1964,7 +1985,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
         protected virtual void OnComplete(TTSSpeakerRequestData requestData)
         {
-            requestData.TaskCompletionSource.TrySetResult(true);
+            requestData.TaskCompletionSource?.TrySetResult(true);
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
         }

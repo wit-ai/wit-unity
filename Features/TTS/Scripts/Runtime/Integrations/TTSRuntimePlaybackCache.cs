@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Meta.WitAi.TTS.Data;
 using UnityEngine;
@@ -20,7 +21,7 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// The total number of playbacks requested per clip
         /// </summary>
-        private Dictionary<string, int> _playbacks = new Dictionary<string, int>();
+        private ConcurrentDictionary<string, int> _playbacks = new ConcurrentDictionary<string, int>();
 
         /// <summary>
         /// On setup, add delegates for playback
@@ -70,7 +71,7 @@ namespace Meta.WitAi.TTS.Integrations
         {
             clipData.onPlaybackQueued -= OnPlaybackBegin;
             clipData.onPlaybackComplete -= OnPlaybackComplete;
-            _playbacks.Remove(clipData.clipID);
+            _playbacks.TryRemove(clipData.clipID, out var discard);
             base.BreakdownClip(clipData);
         }
     }

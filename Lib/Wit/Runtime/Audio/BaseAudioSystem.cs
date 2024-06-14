@@ -6,7 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Meta.WitAi;
 using UnityEngine.Serialization;
@@ -43,8 +45,8 @@ namespace Meta.Voice.Audio
         public int clipPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD;
 
         // Clip containers
-        private Queue<TAudioClipStream> _unusedClips = new Queue<TAudioClipStream>();
-        private HashSet<TAudioClipStream> _usedClips = new HashSet<TAudioClipStream>();
+        private ConcurrentQueue<TAudioClipStream> _unusedClips = new ConcurrentQueue<TAudioClipStream>();
+        private ConcurrentDictionary<int, TAudioClipStream> _usedClips = new ConcurrentDictionary<int, TAudioClipStream>();
 
         /// <summary>
         /// Preload clips into audio clip cache
@@ -100,10 +102,10 @@ namespace Meta.Voice.Audio
         public void DestroyClipCache()
         {
             var usedClips = _usedClips;
-            _usedClips = new HashSet<TAudioClipStream>();
+            _usedClips = new ConcurrentDictionary<int, TAudioClipStream>();
             var unusedClips = _unusedClips;
-            _unusedClips = new Queue<TAudioClipStream>();
-            foreach (var clip in usedClips)
+            _unusedClips = new ConcurrentQueue<TAudioClipStream>();
+            foreach (var clip in usedClips.Values)
             {
                 clip.Unload();
             }
@@ -119,13 +121,13 @@ namespace Meta.Voice.Audio
         private TAudioClipStream DequeueClip()
         {
             // Attempt to dequeue an existing clip
-            if (!_unusedClips.TryDequeue(out TAudioClipStream clip))
+            if (!_unusedClips.TryDequeue(out TAudioClipStream clip) || clip == null)
             {
                 // Generate if no unused clip is found
                 clip = GenerateClip();
             }
             // Add to used set and return
-            _usedClips.Add(clip);
+            _usedClips[clip.GetHashCode()] = clip;
             // Enqueues clip following stream completion
             clip.OnStreamUnloaded += UnloadClip;
             return clip;
@@ -155,9 +157,10 @@ namespace Meta.Voice.Audio
             // Remove callback
             audioClipStream.OnStreamUnloaded -= UnloadClip;
             // Remove from used clips
-            if (_usedClips.Contains(audioClipStream))
+            int hashcode = audioClipStream.GetHashCode();
+            if (_usedClips.ContainsKey(hashcode))
             {
-                _usedClips.Remove(audioClipStream);
+                _usedClips.TryRemove(hashcode, out var discard);
             }
             // Add to unused queue
             if (!_unusedClips.Contains(audioClipStream))

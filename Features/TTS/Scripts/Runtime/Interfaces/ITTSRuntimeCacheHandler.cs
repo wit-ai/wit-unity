@@ -11,16 +11,22 @@ using Meta.WitAi.TTS.Events;
 
 namespace Meta.WitAi.TTS.Interfaces
 {
+    /// <summary>
+    /// Callback delegate
+    /// </summary>
+    public delegate void TTSClipCallback(TTSClipData clipData);
+
     public interface ITTSRuntimeCacheHandler
     {
         /// <summary>
         /// Callback for clips being added to the runtime cache
         /// </summary>
-        TTSClipEvent OnClipAdded { get; set; }
+        event TTSClipCallback OnClipAdded;
+
         /// <summary>
         /// Callback for clips being removed from the runtime cache
         /// </summary>
-        TTSClipEvent OnClipRemoved { get; set; }
+        event TTSClipCallback OnClipRemoved;
 
         /// <summary>
         /// Method for obtaining all cached clips

@@ -142,7 +142,11 @@ namespace Meta.WitAi.Requests
                    || !IsNextRequest(request)
                    || !_queuedRequests.TryDequeue(out var nextRequest))
             {
-                await Task.WhenAny(_runningRequests.Values);
+                var vals = _runningRequests.Values;
+                if (vals.Count > 0)
+                {
+                    await Task.WhenAny(vals);
+                }
             }
 
             // Ignore if cancelled

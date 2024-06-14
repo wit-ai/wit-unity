@@ -150,8 +150,8 @@ namespace Meta.WitAi.TTS
 
             if (RuntimeCacheHandler != null)
             {
-                RuntimeCacheHandler.OnClipAdded.AddListener(OnRuntimeClipAdded);
-                RuntimeCacheHandler.OnClipRemoved.AddListener(OnRuntimeClipRemoved);
+                RuntimeCacheHandler.OnClipAdded += OnRuntimeClipAdded;
+                RuntimeCacheHandler.OnClipRemoved += OnRuntimeClipRemoved;
             }
             if (DiskCacheHandler != null)
             {
@@ -184,8 +184,8 @@ namespace Meta.WitAi.TTS
 
             if (RuntimeCacheHandler != null)
             {
-                RuntimeCacheHandler.OnClipAdded.RemoveListener(OnRuntimeClipAdded);
-                RuntimeCacheHandler.OnClipRemoved.RemoveListener(OnRuntimeClipRemoved);
+                RuntimeCacheHandler.OnClipAdded -= OnRuntimeClipAdded;
+                RuntimeCacheHandler.OnClipRemoved -= OnRuntimeClipRemoved;
             }
             if (DiskCacheHandler != null)
             {
@@ -268,6 +268,10 @@ namespace Meta.WitAi.TTS
         /// </summary>
         public virtual string GetClipID(string textToSpeak, TTSVoiceSettings voiceSettings)
         {
+            if (string.IsNullOrEmpty(textToSpeak))
+            {
+                return "EMPTY";
+            }
             // Get a text string for a unique id
             StringBuilder uniqueId = new StringBuilder();
             // Add all data items
@@ -339,7 +343,7 @@ namespace Meta.WitAi.TTS
 
             // Get clip from runtime cache if applicable
             TTSClipData clipData = GetRuntimeCachedClip(clipID);
-            if (clipData != null)
+            if (clipData != null && string.Equals(clipData.clipID, clipID))
             {
                 return clipData;
             }
@@ -361,12 +365,6 @@ namespace Meta.WitAi.TTS
                 clipStream = CreateClipStream(),
                 useEvents = ShouldUseEvents(audioType)
             };
-
-            // Null text is assumed loaded
-            if (string.IsNullOrEmpty(clipData.textToSpeak))
-            {
-                clipData.loadState = TTSClipLoadState.Loaded;
-            }
 
             // Return generated clip
             return clipData;
@@ -439,92 +437,66 @@ namespace Meta.WitAi.TTS
                 return null;
             }
 
-            // From Runtime Cache
-            if (clipData.loadState != TTSClipLoadState.Unloaded)
-            {
-                // Add callback
-                if (onStreamReady != null)
-                {
-                    // Call once ready
-                    if (clipData.loadState == TTSClipLoadState.Preparing)
-                    {
-                        clipData.onPlaybackReady += (e) => onStreamReady(clipData, e);
-                    }
-                    // TODO: Fixed in D57798649
-                    else
-                    {
-                        _ = CallAfterReturned(() =>
-                        {
-                            onStreamReady(clipData,
-                                clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
-                        });
-                    }
-                }
+            // Perform async load
+            var returned = new TaskCompletionSource<bool>();
+            _ = ThreadUtility.CallOnMainThread(() => LoadClip(clipData, returned, onStreamReady));
 
-                // Return clip
-                return clipData;
-            }
+            // Return data
+            returned.TrySetResult(true);
+            return clipData;
+        }
+        private async Task LoadClip(TTSClipData clipData, TaskCompletionSource<bool> returned, Action<TTSClipData, string> onStreamReady)
+        {
+            // Keep track if recently loaded
+            bool loading = clipData.loadState == TTSClipLoadState.Unloaded;
 
-            // Add to runtime cache if possible
+            // Attempt to add to runtime cache
             if (RuntimeCacheHandler != null)
             {
-                if (!RuntimeCacheHandler.AddClip(clipData))
-                {
-                    // Add callback
-                    if (onStreamReady != null)
-                    {
-                        // Call once ready
-                        if (clipData.loadState == TTSClipLoadState.Preparing)
-                        {
-                            clipData.onPlaybackReady += (e) => onStreamReady(clipData, e);
-                        }
-                        // TODO: Fixed in D57798649
-                        else
-                        {
-                            _ = CallAfterReturned(() =>
-                            {
-                                onStreamReady(clipData,
-                                    clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
-                            });
-                        }
-                    }
-
-                    // Return clip
-                    return clipData;
-                }
+                RuntimeCacheHandler.AddClip(clipData);
             }
-            // Load begin
-            else
+            // Otherwise begin 'preparing'
+            else if (loading)
             {
                 OnLoadBegin(clipData);
             }
 
+            // TODO: Fixed in D57798649
+            await returned.Task;
+
             // Add on ready delegate
             clipData.onPlaybackReady += (error) => onStreamReady?.Invoke(clipData, error);
 
-            // Wait a moment and load
-            _ = CallAfterReturned(() =>
+            // Loaded elsewhere
+            if (!loading)
             {
-                // If should cache to disk, attempt to do so
-                if (ShouldCacheToDisk(clipData))
+                // Return now if done, otherwise wait for callback
+                if (clipData.loadState != TTSClipLoadState.Preparing)
                 {
-                    PerformDownloadAndStream(clipData);
+                    onStreamReady(clipData,
+                        clipData.loadState == TTSClipLoadState.Loaded ? string.Empty : "Error");
                 }
-                // Simply stream from the web
-                else
-                {
-                    PerformStreamFromWeb(clipData);
-                }
-            });
+                return;
+            }
+            // Begin and complete
+            if (string.IsNullOrEmpty(clipData.textToSpeak))
+            {
+                OnWebStreamBegin(clipData);
+                OnWebStreamReady(clipData);
+                OnStreamComplete(clipData, null, false);
+                return;
+            }
 
-            // Return data
-            return clipData;
-        }
-        // TODO: Fixed in D57798649
-        private async Task CallAfterReturned(Action action)
-        {
-            await Task.Delay(1);
-            action?.Invoke();
+            // If should cache to disk, attempt to do so
+            if (ShouldCacheToDisk(clipData))
+            {
+                PerformDownloadAndStream(clipData);
+            }
+            // Simply stream from the web
+            else
+            {
+                PerformStreamFromWeb(clipData);
+            }
         }
         // Perform download & stream following error checks
         private void PerformDownloadAndStream(TTSClipData clipDataParam)
@@ -620,7 +592,6 @@ namespace Meta.WitAi.TTS
             }
 
             // Callback delegate
-
             LogState(fromDisk, "Clip Stream Begin");
             Events?.Stream?.OnStreamBegin?.Invoke(clipData);
         }
@@ -691,9 +662,9 @@ namespace Meta.WitAi.TTS
             if (RuntimeCacheHandler != null)
             {
                 // Stop forcing an unload if runtime cache update fails
-                RuntimeCacheHandler.OnClipRemoved.RemoveListener(OnRuntimeClipRemoved);
+                RuntimeCacheHandler.OnClipRemoved -= OnRuntimeClipRemoved;
                 bool failed = !RuntimeCacheHandler.AddClip(clipData);
-                RuntimeCacheHandler.OnClipRemoved.AddListener(OnRuntimeClipRemoved);
+                RuntimeCacheHandler.OnClipRemoved += OnRuntimeClipRemoved;
 
                 // Handle fail directly
                 if (failed)
