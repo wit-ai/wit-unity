@@ -555,7 +555,7 @@ namespace Meta.WitAi
 
             // Consider initialized
             RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.RequestId, RuntimeTelemetryEventType.VoiceServiceRequest);
-            VoiceEvents.OnRequestInitialized?.Invoke(newRequest);
+            _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
         }
         /// <summary>
         /// Execute a wit request immediately

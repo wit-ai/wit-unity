@@ -1019,8 +1019,10 @@ namespace Meta.WitAi.Json
         private string ToFilteredString(bool ignoreEmptyFields = false)
         {
             string result = "{";
-            foreach (KeyValuePair<string, WitResponseNode> N in m_Dict)
+            var vals = m_Dict.ToArray();
+            for (int i = 0; i < vals.Length; i++)
             {
+                var N = vals[i];
                 if(ignoreEmptyFields && String.IsNullOrEmpty(N.Value)) continue;
 
                 if (result.Length > 2)
