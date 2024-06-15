@@ -26,10 +26,10 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <summary>
         /// Class used to encode/decode text
         /// </summary>
-        private static UTF8Encoding _textEncoding = new UTF8Encoding();
+        private static readonly UTF8Encoding TextEncoding = new UTF8Encoding();
 
         // For logging
-        private readonly LazyLogger _log = new(() => LoggerRegistry.Instance.GetLogger());
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         #region DECODING
         // The current chunk being decoded
@@ -257,7 +257,7 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <summary>
         /// Method for decoding raw data into a string
         /// </summary>
-        public static string DecodeString(byte[] rawData, int offset, int length) => _textEncoding.GetString(rawData, offset, length);
+        public static string DecodeString(byte[] rawData, int offset, int length) => TextEncoding.GetString(rawData, offset, length);
         #endregion DECODING
 
         #region ENCODING
@@ -319,7 +319,7 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// Method for encoding a string into raw data
         /// </summary>
         public static byte[] EncodeString(string stringData)
-            => string.IsNullOrEmpty(stringData) ? null : _textEncoding.GetBytes(stringData);
+            => string.IsNullOrEmpty(stringData) ? null : TextEncoding.GetBytes(stringData);
 
         /// <summary>
         /// Determine flag based on data provided

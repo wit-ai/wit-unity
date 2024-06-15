@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
+using System.Linq;
 using Meta.WitAi.Json;
 
 namespace Meta.Voice.Net.Encoding.Wit
@@ -34,5 +36,25 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// Binary data ready for ingestion
         /// </summary>
         public byte[] binaryData;
+
+        public override bool Equals(object other)
+        {
+            if (other is WitChunk otherChunk)
+            {
+                return Equals(otherChunk);
+            }
+
+            return false;
+        }
+
+        private bool Equals(WitChunk other)
+        {
+            return header.Equals(other.header) && jsonString == other.jsonString && Equals(jsonData, other.jsonData) && binaryData.SequenceEqual(other.binaryData);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(header, jsonString, jsonData, binaryData);
+        }
     }
 }
