@@ -377,12 +377,12 @@ namespace Meta.WitAi.Requests
                 var asyncOperation = _request.SendWebRequest();
                 asyncOperation.completed += (op) =>
                 {
-                    _unityRequestComplete.TrySetResult(true);
                     if (_request != null && !IsComplete)
                     {
                         ResponseCode = (int)_request.responseCode;
                         ResponseError = _request.error;
                     }
+                    _unityRequestComplete.TrySetResult(true);
                 };
             });
             if (IsComplete)
