@@ -13,68 +13,74 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using Meta.Voice.Logging;
+using Meta.WitAi.Attributes;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
+using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
+using Meta.WitAi.Utilities;
 
 namespace Meta.WitAi.TTS
 {
+    /// <summary>
+    /// Abstract script for loading and returning text-to-speech clip streams.
+    /// </summary>
     [LogCategory(LogCategory.TextToSpeech)]
     public abstract class TTSService : MonoBehaviour
     {
-        [SerializeField] private bool verboseLogging;
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
         #region SETUP
-        // Accessor
+        /// <summary>
+        /// Static singleton to be used when interacting with a single TTSService
+        /// </summary>
         public static TTSService Instance
         {
             get
             {
-                if (_instance == null)
-                {
-                    // Get all services
-                    TTSService[] services = Resources.FindObjectsOfTypeAll<TTSService>();
-                    if (services != null)
-                    {
-                        // Set as first instance that isn't a prefab
-                        _instance = Array.Find(services, (o) => o.gameObject.scene.rootCount != 0);
-                    }
-                }
+                _instance ??= GameObjectSearchUtility.FindSceneObject<TTSService>();
                 return _instance;
             }
         }
         private static TTSService _instance;
 
         /// <summary>
-        /// Audio system to be used for streaming & playback
+        /// Audio system to be used for obtaining audio clip streams
         /// </summary>
         public IAudioSystem AudioSystem
         {
-            get
-            {
-                if (_audioSystem == null && Application.isPlaying)
-                {
-                    // Search on TTS Service
-                    _audioSystem = gameObject.GetComponent<IAudioSystem>();
-                    if (_audioSystem == null)
-                    {
-                        // Add default unity audio system if not found
-                        _audioSystem = gameObject.AddComponent<UnityAudioSystem>();
-                    }
-                }
-                return _audioSystem;
-            }
-            set => _audioSystem = value;
+            get => _audioSystem as IAudioSystem;
+            set => _audioSystem = SetInterface(value);
         }
-        private IAudioSystem _audioSystem;
+        [Header("TTS Modules")]
+        [Tooltip("Audio system to be used for obtaining audio clip streams.")]
+        [SerializeField] [ObjectType(typeof(IAudioSystem))]
+        private UnityEngine.Object _audioSystem;
 
-        // Handles TTS runtime cache
-        public abstract ITTSRuntimeCacheHandler RuntimeCacheHandler { get; }
-        // Handles TTS cache requests
-        public abstract ITTSDiskCacheHandler DiskCacheHandler { get; }
+        /// <summary>
+        /// Runtime cache that assists with the temporary storage of audio clips
+        /// </summary>
+        public ITTSRuntimeCacheHandler RuntimeCacheHandler
+        {
+            get => _runtimeCacheHandler as ITTSRuntimeCacheHandler;
+            set => _runtimeCacheHandler = SetInterface(value);
+        }
+        [Tooltip("Runtime cache that assists with the temporary storage of audio clips.")]
+        [SerializeField] [ObjectType(typeof(ITTSRuntimeCacheHandler))]
+        private UnityEngine.Object _runtimeCacheHandler;
+
+        /// <summary>
+        /// Disk cache that assists with the backup and retrieval of audio clips saved to disk.
+        /// </summary>
+        public ITTSDiskCacheHandler DiskCacheHandler
+        {
+            get => _diskCacheHandler as ITTSDiskCacheHandler;
+            set => _diskCacheHandler = SetInterface(value);
+        }
+        [Tooltip("Disk cache that assists with the backup and retrieval of audio clips saved to disk.")]
+        [SerializeField] [ObjectType(typeof(ITTSDiskCacheHandler))]
+        private UnityEngine.Object _diskCacheHandler;
+
         // Handles TTS web requests
         public abstract ITTSWebHandler WebHandler { get; }
         // Handles TTS voice presets
@@ -88,6 +94,20 @@ namespace Meta.WitAi.TTS
         /// Static event called whenever any TTSService.OnDestroy is called
         /// </summary>
         public static event Action<TTSService> OnServiceDestroy;
+
+        // Logging
+        [SerializeField] private bool verboseLogging;
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+
+        // Handles TTS events
+        public TTSServiceEvents Events => _events;
+        [Header("Event Settings")]
+        [SerializeField] private TTSServiceEvents _events = new TTSServiceEvents();
+
+        // Current thread safe active state
+        private bool _isActive;
+        // Thread safe listener state
+        private bool _hasListeners;
 
         /// <summary>
         /// Returns error if invalid
@@ -105,16 +125,10 @@ namespace Meta.WitAi.TTS
             return string.Empty;
         }
 
-        // Handles TTS events
-        public TTSServiceEvents Events => _events;
-        [Header("Event Settings")]
-        [SerializeField] private TTSServiceEvents _events = new TTSServiceEvents();
-
         // Set instance
         protected virtual void Awake()
         {
             _instance = this;
-            _delegates = false;
         }
         // Call event
         protected virtual void Start()
@@ -125,6 +139,7 @@ namespace Meta.WitAi.TTS
         protected virtual void OnEnable()
         {
             _isActive = true;
+            SetListeners(true);
             string validError = GetInvalidError();
             if (!string.IsNullOrEmpty(validError))
             {
@@ -135,77 +150,107 @@ namespace Meta.WitAi.TTS
         protected virtual void OnDisable()
         {
             _isActive = false;
-            RemoveDelegates();
+            SetListeners(false);
         }
-        // Add delegates
-        private bool _delegates = false;
-        protected virtual void AddDelegates()
+
+        /// <summary>
+        /// Sets listeners to add or remove
+        /// </summary>
+        protected virtual void SetListeners(bool add)
         {
-            // Ignore if already added
-            if (_delegates)
+            // Ignore if already set
+            if (_hasListeners == add)
             {
                 return;
             }
-            _delegates = true;
+            _hasListeners = add;
+
+            // Setup all modules
+            if (add)
+            {
+                AudioSystem = GetOrCreateInterface<IAudioSystem, UnityAudioSystem>(AudioSystem);
+                RuntimeCacheHandler = GetOrCreateInterface<ITTSRuntimeCacheHandler, TTSRuntimeLRUCache>(RuntimeCacheHandler);
+                DiskCacheHandler = GetInterface(DiskCacheHandler);
+            }
 
             if (RuntimeCacheHandler != null)
             {
-                RuntimeCacheHandler.OnClipAdded += OnRuntimeClipAdded;
-                RuntimeCacheHandler.OnClipRemoved += OnRuntimeClipRemoved;
+                if (add)
+                {
+                    RuntimeCacheHandler.OnClipAdded += OnRuntimeClipAdded;
+                    RuntimeCacheHandler.OnClipRemoved += OnRuntimeClipRemoved;
+                }
+                else
+                {
+                    RuntimeCacheHandler.OnClipAdded -= OnRuntimeClipAdded;
+                    RuntimeCacheHandler.OnClipRemoved -= OnRuntimeClipRemoved;
+                }
             }
+
             if (DiskCacheHandler != null)
             {
-                DiskCacheHandler.DiskStreamEvents.OnStreamBegin.AddListener(OnDiskStreamBegin);
-                DiskCacheHandler.DiskStreamEvents.OnStreamCancel.AddListener(OnDiskStreamCancel);
-                DiskCacheHandler.DiskStreamEvents.OnStreamReady.AddListener(OnDiskStreamReady);
-                DiskCacheHandler.DiskStreamEvents.OnStreamError.AddListener(OnDiskStreamError);
+                DiskCacheHandler.DiskStreamEvents.OnStreamBegin.SetListener(OnDiskStreamBegin, add);
+                DiskCacheHandler.DiskStreamEvents.OnStreamCancel.SetListener(OnDiskStreamCancel, add);
+                DiskCacheHandler.DiskStreamEvents.OnStreamReady.SetListener(OnDiskStreamReady, add);
+                DiskCacheHandler.DiskStreamEvents.OnStreamError.SetListener(OnDiskStreamError, add);
             }
+
             if (WebHandler != null)
             {
-                WebHandler.WebStreamEvents.OnStreamBegin.AddListener(OnWebStreamBegin);
-                WebHandler.WebStreamEvents.OnStreamCancel.AddListener(OnWebStreamCancel);
-                WebHandler.WebStreamEvents.OnStreamReady.AddListener(OnWebStreamReady);
-                WebHandler.WebStreamEvents.OnStreamError.AddListener(OnWebStreamError);
-                WebHandler.WebDownloadEvents.OnDownloadBegin.AddListener(OnWebDownloadBegin);
-                WebHandler.WebDownloadEvents.OnDownloadCancel.AddListener(OnWebDownloadCancel);
-                WebHandler.WebDownloadEvents.OnDownloadSuccess.AddListener(OnWebDownloadSuccess);
-                WebHandler.WebDownloadEvents.OnDownloadError.AddListener(OnWebDownloadError);
+                WebHandler.WebStreamEvents.OnStreamBegin.SetListener(OnWebStreamBegin, add);
+                WebHandler.WebStreamEvents.OnStreamCancel.SetListener(OnWebStreamCancel, add);
+                WebHandler.WebStreamEvents.OnStreamReady.SetListener(OnWebStreamReady, add);
+                WebHandler.WebStreamEvents.OnStreamError.SetListener(OnWebStreamError, add);
+                WebHandler.WebDownloadEvents.OnDownloadBegin.SetListener(OnWebDownloadBegin, add);
+                WebHandler.WebDownloadEvents.OnDownloadCancel.SetListener(OnWebDownloadCancel, add);
+                WebHandler.WebDownloadEvents.OnDownloadSuccess.SetListener(OnWebDownloadSuccess, add);
+                WebHandler.WebDownloadEvents.OnDownloadError.SetListener(OnWebDownloadError, add);
             }
         }
-        // Remove delegates
-        protected virtual void RemoveDelegates()
+
+        /// <summary>
+        /// Obtains a script implementing a specific interface on this game object
+        /// </summary>
+        protected TInterface GetInterface<TInterface>(TInterface current)
         {
-            // Ignore if not yet added
-            if (!_delegates)
+            // Already set
+            if (current is UnityEngine.Object obj && obj)
             {
-                return;
+                return current;
             }
-            _delegates = false;
-
-            if (RuntimeCacheHandler != null)
-            {
-                RuntimeCacheHandler.OnClipAdded -= OnRuntimeClipAdded;
-                RuntimeCacheHandler.OnClipRemoved -= OnRuntimeClipRemoved;
-            }
-            if (DiskCacheHandler != null)
-            {
-                DiskCacheHandler.DiskStreamEvents.OnStreamBegin.RemoveListener(OnDiskStreamBegin);
-                DiskCacheHandler.DiskStreamEvents.OnStreamCancel.RemoveListener(OnDiskStreamCancel);
-                DiskCacheHandler.DiskStreamEvents.OnStreamReady.RemoveListener(OnDiskStreamReady);
-                DiskCacheHandler.DiskStreamEvents.OnStreamError.RemoveListener(OnDiskStreamError);
-            }
-            if (WebHandler != null)
-            {
-                WebHandler.WebStreamEvents.OnStreamBegin.RemoveListener(OnWebStreamBegin);
-                WebHandler.WebStreamEvents.OnStreamCancel.RemoveListener(OnWebStreamCancel);
-                WebHandler.WebStreamEvents.OnStreamReady.RemoveListener(OnWebStreamReady);
-                WebHandler.WebStreamEvents.OnStreamError.RemoveListener(OnWebStreamError);
-                WebHandler.WebDownloadEvents.OnDownloadBegin.RemoveListener(OnWebDownloadBegin);
-                WebHandler.WebDownloadEvents.OnDownloadCancel.RemoveListener(OnWebDownloadCancel);
-                WebHandler.WebDownloadEvents.OnDownloadSuccess.RemoveListener(OnWebDownloadSuccess);
-                WebHandler.WebDownloadEvents.OnDownloadError.RemoveListener(OnWebDownloadError);
-            }
+            // Get interface and cast if possible
+            return gameObject.GetComponent<TInterface>();
         }
+
+        /// <summary>
+        /// Obtains a script implementing an interface or generates one if not found.
+        /// </summary>
+        protected TInterface GetOrCreateInterface<TInterface, TDefault>(TInterface current)
+            where TDefault : MonoBehaviour, TInterface
+        {
+            // Get module and return if successful
+            var result = GetInterface(current);
+            if (result is UnityEngine.Object obj && obj)
+            {
+                return result;
+            }
+            // Adds a component of the default type
+            return gameObject.AddComponent<TDefault>();
+        }
+
+        /// <summary>
+        /// Safely sets an interface to a unity object
+        /// </summary>
+        private UnityEngine.Object SetInterface<TInterface>(TInterface newValue)
+        {
+            if (newValue is UnityEngine.Object cacheObject)
+            {
+                return cacheObject;
+            }
+            _log.Error("Set {0} Failed: Cannot set non UnityEngine.Object to {0}", nameof(TInterface));
+            return null;
+        }
+
         // Remove instance
         protected virtual void OnDestroy()
         {
@@ -235,7 +280,6 @@ namespace Meta.WitAi.TTS
         // Frequently used keys
         private const string CLIP_ID_DELIM = "|";
         private readonly SHA256 CLIP_HASH = SHA256.Create();
-        private bool _isActive;
 
         /// <summary>
         /// Gets the text to be spoken after applying all relevant voice settings.
@@ -420,7 +464,7 @@ namespace Meta.WitAi.TTS
             TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string> onStreamReady = null)
         {
             // Add delegates if needed
-            AddDelegates();
+            SetListeners(true);
 
             // Get clip data
             TTSClipData clipData = CreateClipData(textToSpeak, clipID, voiceSettings, diskCacheSettings);
@@ -848,7 +892,7 @@ namespace Meta.WitAi.TTS
             TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string, string> onDownloadComplete = null)
         {
             // Add delegates if needed
-            AddDelegates();
+            SetListeners(true);
 
             // Generate clip & perform load callback
             TTSClipData clipData = CreateClipData(textToSpeak, clipID, voiceSettings, diskCacheSettings);

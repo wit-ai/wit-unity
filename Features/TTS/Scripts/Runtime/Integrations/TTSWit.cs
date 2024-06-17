@@ -54,7 +54,6 @@ namespace Meta.WitAi.TTS.Integrations
 
     public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider, IWitConfigurationSetter
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
         #region TTSService
         /// <summary>
         /// The voice provider used for preset voice settings.  Uses TTSWit with TTSWitVoiceSettings
@@ -65,19 +64,6 @@ namespace Meta.WitAi.TTS.Integrations
         /// This script provides web request handling
         /// </summary>
         public override ITTSWebHandler WebHandler => this;
-
-        /// <summary>
-        /// Generates a runtime cache if one is not found
-        /// </summary>
-        public override ITTSRuntimeCacheHandler RuntimeCacheHandler => _runtimeCache;
-        private ITTSRuntimeCacheHandler _runtimeCache;
-
-        /// <summary>
-        /// Uses the local disk cache if found
-        /// </summary>
-        public override ITTSDiskCacheHandler DiskCacheHandler => _diskCache;
-
-        private ITTSDiskCacheHandler _diskCache;
 
         // Web request events
         public TTSWebRequestEvents WebRequestEvents => Events.WebRequest;
@@ -104,6 +90,11 @@ namespace Meta.WitAi.TTS.Integrations
         /// The current web socket adapter used to perform web socket requests
         /// </summary>
         private WitWebSocketAdapter _webSocketAdapter;
+
+        /// <summary>
+        /// For logging
+        /// </summary>
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Returns current audio type setting for initial TTSClipData setup
         protected override AudioType GetAudioType() =>
@@ -158,15 +149,6 @@ namespace Meta.WitAi.TTS.Integrations
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (_runtimeCache == null)
-            {
-                _runtimeCache = gameObject.GetComponent<ITTSRuntimeCacheHandler>();
-                if (_runtimeCache == null)
-                {
-                    _runtimeCache = gameObject.AddComponent<TTSRuntimeLRUCache>();
-                }
-            }
-            if(null == _diskCache) _diskCache = gameObject.GetComponent<ITTSDiskCacheHandler>();
             RefreshWebSocketSettings();
         }
 
@@ -175,10 +157,7 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         protected virtual void RefreshWebSocketSettings()
         {
-            if (!_webSocketAdapter)
-            {
-                _webSocketAdapter = GetComponent<WitWebSocketAdapter>() ?? gameObject.AddComponent<WitWebSocketAdapter>();
-            }
+            _webSocketAdapter = GetOrCreateInterface<WitWebSocketAdapter, WitWebSocketAdapter>(_webSocketAdapter);
             var config = Configuration;
             _webSocketAdapter.SetClientProvider(config != null && config.RequestType == WitRequestType.WebSocket ? config : null);
         }
