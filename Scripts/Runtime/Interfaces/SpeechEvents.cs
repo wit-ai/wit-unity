@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
+using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.Events
 {
@@ -34,6 +35,8 @@ namespace Meta.WitAi.Events
         [FormerlySerializedAs("OnRequestInitialized")] [SerializeField]
         private VoiceServiceRequestEvent _onRequestInitialized = new VoiceServiceRequestEvent();
         public VoiceServiceRequestEvent OnRequestInitialized => _onRequestInitialized;
+
+        public Action<VoiceServiceRequest> OnRequestFinalize;
 
         [EventCategory(EVENT_CATEGORY_ACTIVATION_SETUP)]
         [Tooltip("Called when a request is sent. This occurs immediately once data is being transmitted to the endpoint.")]

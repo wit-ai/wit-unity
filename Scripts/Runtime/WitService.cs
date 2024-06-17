@@ -9,7 +9,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Meta.Voice;
@@ -555,6 +554,11 @@ namespace Meta.WitAi
 
             // Consider initialized
             RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.RequestId, RuntimeTelemetryEventType.VoiceServiceRequest);
+
+            // Perform additional setup
+            VoiceEvents?.OnRequestFinalize?.Invoke(newRequest);
+
+            // Init callback
             _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
         }
         /// <summary>
@@ -589,24 +593,21 @@ namespace Meta.WitAi
                 return null;
             }
 
-            return ThreadUtility.BackgroundAsync(_log, () =>
+            // Handle option setup
+            if (requestOptions == null)
             {
-                // Handle option setup
-                if (requestOptions == null)
-                {
-                    requestOptions = new WitRequestOptions();
-                }
-                // Set request option text
-                requestOptions.Text = text;
+                requestOptions = new WitRequestOptions();
+            }
+            // Set request option text
+            requestOptions.Text = text;
 
-                // Generate request
-                var request = GetTextRequest(requestOptions, requestEvents);
-                SetupRequest(request);
+            // Generate request
+            var request = GetTextRequest(requestOptions, requestEvents);
+            SetupRequest(request);
 
-                // Send & return
-                request.Send();
-                return Task.FromResult(request);
-            });
+            // Send & return
+            request.Send();
+            return Task.FromResult(request);
         }
         #endregion TEXT REQUESTS
 

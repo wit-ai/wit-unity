@@ -38,7 +38,6 @@ namespace Meta.WitAi.Requests
         private static WitResponseDecoder _responseDecoder = new WitResponseDecoder();
 
         public TaskCompletionSource<bool> PreparationTask => new TaskCompletionSource<bool>();
-        public TaskCompletionSource<bool> RequestActiveTask => new TaskCompletionSource<bool>();
 
         /// <summary>
         /// Check for ignored error status codes & messages.

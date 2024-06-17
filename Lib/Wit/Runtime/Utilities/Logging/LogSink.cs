@@ -104,11 +104,19 @@ namespace Meta.Voice.Logging
 
             Annotate(sb, logEntry);
 
-            var formattedCoreMessage =
-                (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
-                 logEntry.Parameters.Length != 0)
-                    ? string.Format(logEntry.Message, logEntry.Parameters)
-                    : logEntry.Message;
+            string formattedCoreMessage;
+            try
+            {
+                formattedCoreMessage =
+                    (!string.IsNullOrEmpty(logEntry.Message) && logEntry.Parameters != null &&
+                     logEntry.Parameters.Length != 0)
+                        ? string.Format(logEntry.Message, logEntry.Parameters)
+                        : logEntry.Message;
+            }
+            catch
+            {
+                formattedCoreMessage = logEntry.Message;
+            }
 
             sb.Append(formattedCoreMessage);
 

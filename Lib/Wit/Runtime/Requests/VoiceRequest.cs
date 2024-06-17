@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Meta.Voice.Logging;
@@ -52,7 +53,7 @@ namespace Meta.Voice
         /// <summary>
         /// Whether transmission should hold prior to send
         /// </summary>
-        public Task HoldTask = null;
+        public Task<bool>[] HoldTasks = null;
 
         /// <summary>
         /// Download progress of the current request transmission
@@ -257,11 +258,14 @@ namespace Meta.Voice
         {
             _ = ThreadUtility.BackgroundAsync(_log, async () =>
             {
-                if (HoldTask != null)
+                if (HoldTasks != null)
                 {
-                    await HoldTask;
+                    await Task.WhenAll(HoldTasks);
                 }
-                await ThreadUtility.CallOnMainThread(() => onReady?.Invoke());
+                await ThreadUtility.CallOnMainThread(() =>
+                {
+                    onReady?.Invoke();
+                });
             });
         }
 
@@ -530,6 +534,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnComplete()
         {
+            RaiseEvent(Events?.OnComplete);
             switch (State)
             {
                 case VoiceRequestState.Canceled:
@@ -545,8 +550,6 @@ namespace Meta.Voice
                     RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.RequestId, TerminationReason.Undetermined);
                     break;
             }
-
-            RaiseEvent(Events?.OnComplete);
         }
         #endregion RESULTS
 
