@@ -210,9 +210,8 @@ namespace Meta.WitAi.TTS.Integrations
                 TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode, null, true);
                 if (witVoice != null)
                 {
-                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
                     voiceSettings = witVoice;
-                    voiceSettings.SettingsId = "OVERRIDE";
+                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
                     return true;
                 }
             }

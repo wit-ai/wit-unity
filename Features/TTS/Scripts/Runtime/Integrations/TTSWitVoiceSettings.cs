@@ -123,17 +123,36 @@ namespace Meta.WitAi.TTS.Integrations
         }
 
         /// <summary>
+        /// Serialize all data using the encoded values
+        /// </summary>
+        public override bool SerializeObject(WitResponseClass jsonObject)
+        {
+            RefreshEncodedValues();
+            var encoded = EncodedValues;
+            if (encoded == null)
+            {
+                return false;
+            }
+            foreach (var keyVal in encoded)
+            {
+                jsonObject[keyVal.Key] = new WitResponseData(keyVal.Value);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Decodes all setting parameters from a provided json node
         /// </summary>
-        public override void Decode(WitResponseNode responseNode)
+        public override bool DeserializeObject(WitResponseClass jsonObject)
         {
-            var responseClass = responseNode.AsObject;
-            voice = DecodeString(responseClass, WitConstants.TTS_VOICE, WitConstants.TTS_VOICE_DEFAULT);
-            style = DecodeString(responseClass, WitConstants.TTS_STYLE, WitConstants.TTS_STYLE_DEFAULT);
-            speed = DecodeInt(responseClass, WitConstants.TTS_SPEED, WitConstants.TTS_SPEED_DEFAULT, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
-            pitch = DecodeInt(responseClass, WitConstants.TTS_PITCH, WitConstants.TTS_PITCH_DEFAULT, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+            voice = DecodeString(jsonObject, WitConstants.TTS_VOICE, WitConstants.TTS_VOICE_DEFAULT);
+            style = DecodeString(jsonObject, WitConstants.TTS_STYLE, WitConstants.TTS_STYLE_DEFAULT);
+            speed = DecodeInt(jsonObject, WitConstants.TTS_SPEED, WitConstants.TTS_SPEED_DEFAULT, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
+            pitch = DecodeInt(jsonObject, WitConstants.TTS_PITCH, WitConstants.TTS_PITCH_DEFAULT, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
             RefreshUniqueId();
             RefreshEncodedValues();
+            SettingsId = UniqueId;
+            return !string.IsNullOrEmpty(voice);
         }
 
         // Decodes a string if possible

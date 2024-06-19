@@ -13,7 +13,7 @@ using UnityEngine.Serialization;
 
 namespace Meta.WitAi.TTS.Data
 {
-    public abstract class TTSVoiceSettings
+    public abstract class TTSVoiceSettings : IJsonDeserializer, IJsonSerializer
     {
         [Tooltip("A unique id used for linking these voice settings to a TTS Speaker")]
         [FormerlySerializedAs("settingsID")]
@@ -40,6 +40,11 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// Decodes all setting parameters from a provided json node
         /// </summary>
-        public abstract void Decode(WitResponseNode responseNode);
+        public abstract bool DeserializeObject(WitResponseClass jsonObject);
+
+        /// <summary>
+        /// Adds all data into an existing json object
+        /// </summary>
+        public abstract bool SerializeObject(WitResponseClass jsonObject);
     }
 }
