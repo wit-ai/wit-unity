@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
+using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
@@ -458,6 +459,18 @@ namespace Meta.WitAi.TTS
         #endregion
 
         #region LOAD
+        /// <summary>
+        /// Decode a response node into text to be spoken or a specific voice setting
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
+        /// <param name="textToSpeak">The text to be spoken output</param>
+        /// <param name="voiceSettings">The output for voice settings</param>
+        /// <returns>True if decode was successful</returns>
+        public bool DecodeTts(WitResponseNode responseNode,
+            out string textToSpeak,
+            out TTSVoiceSettings voiceSettings)
+            => WebHandler.DecodeTtsFromJson(responseNode, out textToSpeak, out voiceSettings);
+
         /// <summary>
         /// Loads a text-to-speech clip using a preset voice id, specified settings and return methods
         /// </summary>

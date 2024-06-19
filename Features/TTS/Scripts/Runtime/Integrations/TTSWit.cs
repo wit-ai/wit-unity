@@ -16,6 +16,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Data.Configuration;
+using Meta.WitAi.Json;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Requests;
@@ -188,6 +189,36 @@ namespace Meta.WitAi.TTS.Integrations
             request.OnEventsReceived = clipData.Events.AddEvents;
             _webSocketRequests[clipData.clipID] = request;
             return request;
+        }
+
+        /// <summary>
+        /// Decode a response node into text to be spoken or a specific voice setting
+        /// Example Data:
+        /// {
+        ///    "q": "Text to be spoken"
+        ///    "voice": "Charlie
+        /// }
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
+        /// <param name="textToSpeak">The text to be spoken output</param>
+        /// <param name="voiceSettings">The output for voice settings</param>
+        /// <returns>True if decode was successful</returns>
+        public bool DecodeTtsFromJson(WitResponseNode responseNode, out string textToSpeak, out TTSVoiceSettings voiceSettings)
+        {
+            if (TTSWitVoiceSettings.CanDecode(responseNode))
+            {
+                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode, null, true);
+                if (witVoice != null)
+                {
+                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
+                    voiceSettings = witVoice;
+                    voiceSettings.SettingsId = "OVERRIDE";
+                    return true;
+                }
+            }
+            textToSpeak = null;
+            voiceSettings = null;
+            return false;
         }
 
         /// <summary>

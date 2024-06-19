@@ -957,39 +957,6 @@ namespace Meta.WitAi.TTS.Utilities
         public void ClearVoiceOverride() => SetVoiceOverride(null);
 
         /// <summary>
-        /// Decode a response node into text to be spoken or a specific voice setting
-        /// Example Data:
-        /// {
-        ///    "q": "Text to be spoken"
-        ///    "voice": "Charlie
-        /// }
-        /// </summary>
-        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
-        /// <param name="textToSpeak">The text to be spoken output</param>
-        /// <param name="voiceSettings">The output for voice settings</param>
-        /// <returns>True if decode was successful</returns>
-        private bool DecodeResponse(WitResponseNode responseNode, out string textToSpeak, out TTSVoiceSettings voiceSettings)
-        {
-            // Wit settings
-            if (TTSWitVoiceSettings.CanDecode(responseNode))
-            {
-                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode, null, true);
-                if (witVoice != null)
-                {
-                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
-                    voiceSettings = witVoice;
-                    voiceSettings.SettingsId = "OVERRIDE";
-                    return true;
-                }
-            }
-
-            // Default application
-            textToSpeak = null;
-            voiceSettings = null;
-            return false;
-        }
-
-        /// <summary>
         /// Load a tts clip using the specified response node, disk cache settings and playback events.
         /// Cancels all previous clips when loaded and then plays.
         /// </summary>
@@ -1019,7 +986,7 @@ namespace Meta.WitAi.TTS.Utilities
             TTSSpeakerClipEvents playbackEvents)
         {
             // Decode text to speak and voice settings
-            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            if (!TTSService.DecodeTts(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 return false;
             }
@@ -1083,7 +1050,7 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Decode text to speak and voice settings
-            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            if (!TTSService.DecodeTts(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 yield break;
             }
@@ -1144,7 +1111,7 @@ namespace Meta.WitAi.TTS.Utilities
             TTSSpeakerClipEvents playbackEvents)
         {
             // Decode text to speak and voice settings
-            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            if (!TTSService.DecodeTts(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 return false;
             }
@@ -1225,7 +1192,7 @@ namespace Meta.WitAi.TTS.Utilities
         public IEnumerator SpeakQueuedAsync(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Decode text to speak and voice settings
-            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            if (!TTSService.DecodeTts(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 yield break;
             }
@@ -1244,7 +1211,7 @@ namespace Meta.WitAi.TTS.Utilities
         public async Task SpeakQueuedTask(WitResponseNode responseNode, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
             // Decode text to speak and voice settings
-            if (!DecodeResponse(responseNode, out var textToSpeak, out var voiceSettings))
+            if (!TTSService.DecodeTts(responseNode, out var textToSpeak, out var voiceSettings))
             {
                 return;
             }

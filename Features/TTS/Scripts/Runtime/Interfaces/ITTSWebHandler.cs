@@ -8,6 +8,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Meta.WitAi.Json;
 using Meta.WitAi.TTS.Data;
 
 namespace Meta.WitAi.TTS.Interfaces
@@ -21,6 +22,17 @@ namespace Meta.WitAi.TTS.Interfaces
         /// <param name="clipData">The clip data to be used for the request</param>
         /// <returns>Invalid error(s).  It will be empty if there are none</returns>
         string GetWebErrors(TTSClipData clipData);
+
+        /// <summary>
+        /// Decode a response node into text to be spoken or a specific voice setting
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
+        /// <param name="textToSpeak">The text to be spoken output</param>
+        /// <param name="voiceSettings">The output for voice settings</param>
+        /// <returns>True if decode was successful</returns>
+        public bool DecodeTtsFromJson(WitResponseNode responseNode,
+            out string textToSpeak,
+            out TTSVoiceSettings voiceSettings);
 
         /// <summary>
         /// Streams audio from a web service and returns an error if applicable.
