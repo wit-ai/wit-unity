@@ -44,16 +44,16 @@ namespace Meta.WitAi.TTS.Interfaces
         IAudioPlayer AudioPlayer { get; }
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
-        /// speak once queue has completed all playback.
+        /// Load a tts clip using the specified text & playback events.
+        /// Cancels all previous clips when loaded & then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         void Speak(string textToSpeak, TTSSpeakerClipEvents playbackEvents);
 
         /// <summary>
-        /// Load a tts clip using the specified text & playback events.  Adds clip to playback queue and will
-        /// speak once queue has completed all playback.
+        /// Load a tts clip using the specified text & playback events.
+        /// Cancels all previous clips when loaded & then plays.
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
@@ -72,6 +72,22 @@ namespace Meta.WitAi.TTS.Interfaces
         /// </summary>
         /// <param name="textToSpeak">The text to be spoken</param>
         Task SpeakTask(string textToSpeak);
+
+        /// <summary>
+        /// Load a tts clip using the specified text & playback events and waits for the file to load and play
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="textToSpeak">The text to be spoken</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        Task SpeakTask(string textToSpeak, TTSSpeakerClipEvents playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified response node & playback events
+        /// Cancels all previous clips when loaded & then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken & voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        Task SpeakTask(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents);
 
         /// <summary>
         /// Load a tts clip using the specified response node & playback events

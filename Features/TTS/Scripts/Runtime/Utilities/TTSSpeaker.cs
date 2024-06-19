@@ -534,6 +534,17 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="textToSpeak">The text to be spoken</param>
         public Task SpeakTask(string textToSpeak)
             => SpeakTask(textToSpeak, null, null);
+
+        /// <summary>
+        /// Load a tts clip using the specified response node and then waits for the file to load and play.
+        /// Cancels all previous clips when loaded and then plays.
+        /// </summary>
+        /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        /// <returns>True if responseNode is decoded successfully</returns>
+        public Task SpeakTask(WitResponseNode responseNode,
+            TTSSpeakerClipEvents playbackEvents)
+            => Load(responseNode, null, playbackEvents, true);
         #endregion
 
         #region Speak Queued Sync
