@@ -1332,9 +1332,7 @@ namespace Meta.WitAi.TTS.Utilities
             _queuedRequests.Enqueue(requestData);
 
             // Perform load request (Always waits a frame to ensure callbacks occur first)
-            string clipId = TTSService.GetClipID(textToSpeak, voiceSettings);
-            requestData.ClipData = TTSService.Load(textToSpeak, clipId, voiceSettings, diskCacheSettings,
-                null);
+            requestData.ClipData = TTSService.Load(textToSpeak, voiceSettings, diskCacheSettings);
 
             // Ignore without clip
             if (requestData.ClipData == null)
@@ -1348,9 +1346,10 @@ namespace Meta.WitAi.TTS.Utilities
             RefreshQueueEvents();
             OnLoadBegin(requestData);
 
+            //
             if (requestData.ClipData.loadState == TTSClipLoadState.Preparing)
             {
-                requestData.ClipData.onPlaybackReady += (error) => HandleLoadComplete(requestData, error);
+                requestData.ClipData.onPlaybackReady += (clip) => HandleLoadComplete(requestData, string.Empty);
             }
             else
             {

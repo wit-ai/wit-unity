@@ -115,7 +115,7 @@ namespace Meta.WitAi.TTS.UX
             status.AppendLine($"\tStatus: {clipData.loadState}");
             if (clipData.loadState == TTSClipLoadState.Loaded)
             {
-                status.AppendLine($"\tLoad Time: {clipData.loadDuration:0.000} seconds");
+                status.AppendLine($"\tLoad Time: {clipData.readyDuration:0.000} seconds");
             }
             status.Append("\n");
         }

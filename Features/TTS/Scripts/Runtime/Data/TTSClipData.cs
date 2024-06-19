@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using UnityEngine;
 
@@ -85,7 +86,7 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// Amount of time from request begin to ready callback in seconds
         /// </summary>
-        [NonSerialized] public float loadDuration;
+        [NonSerialized] public float readyDuration;
         /// <summary>
         /// Amount of time from request begin to complete callback in seconds
         /// </summary>
@@ -105,10 +106,23 @@ namespace Meta.WitAi.TTS.Data
         public TTSEventContainer Events { get; } = new TTSEventContainer();
 
         /// <summary>
+        /// Any error that occurs during the load process
+        /// </summary>
+        public string LoadError { get; set; }
+        /// <summary>
+        /// Task that returns when ready for playback
+        /// </summary>
+        public TaskCompletionSource<bool> LoadReady { get; } = new TaskCompletionSource<bool>();
+        /// <summary>
+        /// Task that returns when complete
+        /// </summary>
+        public TaskCompletionSource<bool> LoadCompletion { get; } = new TaskCompletionSource<bool>();
+
+        /// <summary>
         /// A callback when clip stream is ready
         /// Returns an error if there was an issue
         /// </summary>
-        public Action<string> onPlaybackReady;
+        public Action<TTSClipData> onPlaybackReady;
         /// <summary>
         /// A callback when clip has downloaded successfully
         /// Returns an error if there was an issue
@@ -156,7 +170,6 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// Get hash code
         /// </summary>
-        /// <returns></returns>
         public override int GetHashCode()
         {
             var hash = 17;
@@ -164,21 +177,20 @@ namespace Meta.WitAi.TTS.Data
             return hash;
         }
 
+        /// <summary>
+        /// Obtains all clip data via formatting
+        /// </summary>
         public override string ToString()
         {
-            StringBuilder result = new StringBuilder();
-            result.AppendLine($"Voice: {(voiceSettings == null ? "Default" : voiceSettings.SettingsId)}");
-            result.AppendLine($"Text: {textToSpeak}");
-            result.AppendLine($"ID: {clipID}");
-            result.AppendLine($"Audio Type: {audioType}");
-            result.AppendLine($"Stream: {queryStream}");
-            result.AppendLine($"Cache: {diskCacheSettings?.DiskCacheLocation}");
-            result.AppendLine($"Events: {Events?.ToString()}");
-            if (clipStream != null)
-            {
-                result.AppendLine($"Length: {clipStream.Length:0.00} seconds");
-            }
-            return result.ToString();
+            return string.Format("Text: {0}\nVoice: {1}\nClip Id: {2}\nType: {3}\nStream: {4}\nEvents: {5}\nAudio Length: {6:0.00} seconds",
+                textToSpeak,
+                voiceSettings?.SettingsId ?? "Null",
+                clipID,
+                audioType,
+                queryStream,
+                Events?.Events?.Count ?? 0,
+                clipStream?.Length ?? 0
+            );
         }
     }
 }

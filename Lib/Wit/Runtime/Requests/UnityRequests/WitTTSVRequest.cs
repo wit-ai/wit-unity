@@ -24,7 +24,7 @@ namespace Meta.WitAi.Requests
         // The text to be requested
         public string TextToSpeak { get; set; }
         // The text settings
-        public Dictionary<string, string> TtsData { get; set; }
+        public Dictionary<string, string> TtsParameters { get; set; }
 
         // The audio type to be used
         public TTSWitAudioType FileType { get; set; }
@@ -175,9 +175,9 @@ namespace Meta.WitAi.Requests
             var ttsData = new Dictionary<string, string>();
             ttsData[WitConstants.ENDPOINT_TTS_PARAM] = TextToSpeak;
             ttsData[WitConstants.ENDPOINT_TTS_EVENTS] = UseEvents.ToString().ToLower();
-            if (TtsData != null)
+            if (TtsParameters != null)
             {
-                foreach (var item in TtsData)
+                foreach (var item in TtsParameters)
                 {
                     ttsData[item.Key] = item.Value;
                 }

@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.WebSockets;
@@ -18,7 +17,6 @@ using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.TTS.Data;
-using Meta.WitAi.TTS.Events;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Requests;
 
@@ -36,9 +34,6 @@ namespace Meta.WitAi.TTS.Integrations
         /// This script provides web request handling
         /// </summary>
         public override ITTSWebHandler WebHandler => this;
-
-        // Web request events
-        public TTSWebRequestEvents WebRequestEvents => Events.WebRequest;
 
         /// <summary>
         /// The configuration to be updated
@@ -67,53 +62,6 @@ namespace Meta.WitAi.TTS.Integrations
         /// For logging
         /// </summary>
         private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
-        // Returns current audio type setting for initial TTSClipData setup
-        protected override AudioType GetAudioType() =>
-            WitConstants.GetUnityAudioType(RequestSettings.audioType);
-
-        // Returns current audio stream setting for initial TTSClipData setup
-        protected override bool GetShouldAudioStream(AudioType audioType) =>
-            RequestSettings.audioStream && base.GetShouldAudioStream(audioType);
-
-        // Returns true provided audio type can be decoded
-        protected override bool ShouldUseEvents(AudioType audioType) =>
-            RequestSettings.useEvents && base.ShouldUseEvents(audioType);
-
-        // Get tts request prior to transmission
-        private WitTTSVRequest GetHttpRequest(TTSClipData clipData)
-        {
-            var request = new WitTTSVRequest(Configuration, clipData.queryRequestId);
-            request.TextToSpeak = clipData.textToSpeak;
-            request.TtsData = clipData.queryParameters;
-            request.FileType = RequestSettings.audioType;
-            request.Stream = clipData.queryStream;
-            request.UseEvents = clipData.useEvents;
-            request.OnDownloadProgress += (progress) => RaiseRequestProgressUpdated(clipData, progress);
-            request.OnFirstResponse += () => RaiseRequestFirstResponse(clipData);
-            return request;
-        }
-
-        // Generate tts web socket request and handle responses
-        private WitWebSocketTtsRequest GetWebSocketRequest(TTSClipData clipData, string downloadPath = null)
-        {
-            var request = new WitWebSocketTtsRequest(clipData.textToSpeak, clipData.queryParameters,
-                RequestSettings.audioType, clipData.useEvents, downloadPath);
-            request.OnSamplesReceived = clipData.clipStream.AddSamples;
-            request.OnEventsReceived = clipData.Events.AddEvents;
-            request.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
-            _webSocketRequests[clipData.clipID] = request;
-            return request;
-        }
-
-        // Performs OnRequestFirstResponse callback
-        private void RaiseRequestFirstResponse(TTSClipData clipData)
-        {
-            if (clipData != null)
-            {
-                WebRequestEvents?.OnRequestFirstResponse?.Invoke(clipData);
-            }
-        }
 
         /// <summary>
         /// Attempt to instantiate web socket adapter
@@ -147,23 +95,20 @@ namespace Meta.WitAi.TTS.Integrations
         }
         #endregion
 
-        #region ITTSWebHandler Streams
+        #region ITTSWebHandler
         // Request settings
         [Header("Web Request Settings")]
         [FormerlySerializedAs("_settings")]
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
-            audioType = TTSWitAudioType.MPEG,
+            audioType = TTSWitAudioType.PCM,
             audioStream = true,
             useEvents = true
         };
 
-        // Use settings web stream events
-        public TTSStreamEvents WebStreamEvents { get; set; } = new TTSStreamEvents();
-
-        // Requests bly clip id
-        private ConcurrentDictionary<string, VRequest> _webStreams = new ConcurrentDictionary<string, VRequest>();
-        // Web socket requests
+        // Http requests by unique clip id key
+        private ConcurrentDictionary<string, VRequest> _httpRequests = new ConcurrentDictionary<string, VRequest>();
+        // Web socket requests by unique clip id key
         private ConcurrentDictionary<string, WitWebSocketTtsRequest> _webSocketRequests = new ConcurrentDictionary<string, WitWebSocketTtsRequest>();
 
         // Whether TTSService is valid
@@ -191,124 +136,306 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         /// <param name="clipData">The clip data to be used for the request</param>
         /// <returns>Invalid error(s).  It will be empty if there are none</returns>
-        public string GetWebErrors(TTSClipData clipData) =>
-            WitTTSVRequest.GetWebErrors(clipData?.textToSpeak, Configuration);
+        public string GetWebErrors(TTSClipData clipData)
+        {
+            var invalidErrors = GetInvalidError();
+            if (!string.IsNullOrEmpty(invalidErrors))
+            {
+                return invalidErrors;
+            }
+            var webErrors = WitTTSVRequest.GetWebErrors(clipData?.textToSpeak, Configuration);
+            if (!string.IsNullOrEmpty(webErrors))
+            {
+                return webErrors;
+            }
+            return string.Empty;
+        }
+
+        // Returns current audio type setting for initial TTSClipData setup
+        protected override AudioType GetAudioType() =>
+            WitConstants.GetUnityAudioType(RequestSettings.audioType);
+
+        // Returns current audio stream setting for initial TTSClipData setup
+        protected override bool GetShouldAudioStream(AudioType audioType) =>
+            RequestSettings.audioStream && base.GetShouldAudioStream(audioType);
+
+        // Returns true provided audio type can be decoded
+        protected override bool ShouldUseEvents(AudioType audioType) =>
+            RequestSettings.useEvents && base.ShouldUseEvents(audioType);
+
+        // Get tts request prior to transmission
+        private WitTTSVRequest CreateHttpRequest(TTSClipData clipData)
+        {
+            var request = new WitTTSVRequest(Configuration, clipData.queryRequestId);
+            request.TextToSpeak = clipData.textToSpeak;
+            request.TtsParameters = clipData.queryParameters;
+            request.FileType = RequestSettings.audioType;
+            request.Stream = clipData.queryStream;
+            request.UseEvents = clipData.useEvents;
+            _httpRequests[clipData.clipID] = request;
+            return request;
+        }
+
+        // Generate tts web socket request and handle responses
+        private WitWebSocketTtsRequest CreateWebSocketRequest(TTSClipData clipData, string downloadPath)
+        {
+            var request = new WitWebSocketTtsRequest(clipData.textToSpeak,
+                clipData.queryParameters,
+                RequestSettings.audioType,
+                clipData.useEvents,
+                downloadPath);
+            request.OnSamplesReceived = clipData.clipStream.AddSamples;
+            request.OnEventsReceived = clipData.Events.AddEvents;
+            _webSocketRequests[clipData.clipID] = request;
+            return request;
+        }
 
         /// <summary>
-        /// Method for performing a web load request
+        /// Method for streaming audio from a back-end service.
         /// </summary>
-        /// <param name="clipData">Clip request data</param>
-        public void RequestStreamFromWeb(TTSClipData clipData)
+        /// <param name="clipData">Information about the clip being requested.</param>
+        /// <param name="onReady">Callback on request is ready for playback.</param>
+        public async Task<string> RequestStreamFromWeb(TTSClipData clipData,
+            Action<TTSClipData> onReady)
         {
-            // Stream begin
-            WebStreamEvents?.OnStreamBegin?.Invoke(clipData);
-
-            // Check if valid
-            string validError = IsRequestValid(clipData, Configuration);
-            if (!string.IsNullOrEmpty(validError))
-            {
-                WebStreamEvents?.OnStreamError?.Invoke(clipData, validError);
-                return;
-            }
             // Cancel previous if already requested
-            if (_webStreams.ContainsKey(clipData.clipID))
+            CancelRequests(clipData);
+
+            // Clip stream must exist
+            if (clipData.clipStream == null)
             {
-                CancelWebStream(clipData);
-            }
-            if (_webSocketRequests.ContainsKey(clipData.clipID))
-            {
-                CancelWebStream(clipData);
+                return "Cannot load without a clip stream";
             }
 
-            // Begin request
-            WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
+            // Set on ready callback
+            DateTime startTime = DateTime.UtcNow;
+            clipData.clipStream.OnStreamReady += (stream) =>
+            {
+                clipData.readyDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
+                onReady?.Invoke(clipData);
+            };
 
-            // Request tts via web socket
+            // Request web socket request
+            string error;
             if (Configuration != null
                 && Configuration.RequestType == WitRequestType.WebSocket
                 && _webSocketAdapter)
             {
-                RequestStreamFromWebSocket(clipData);
-                return;
+                error = await RequestStreamFromWebSocket(clipData);
+            }
+            // Perform http request
+            else
+            {
+                error = await RequestStreamViaHttp(clipData);
             }
 
-            // Perform http request
-            RequestStreamViaHttp(clipData);
+            // Set complete duration
+            clipData.completeDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
+            // No samples added
+            if (string.IsNullOrEmpty(error) &&
+                (clipData?.clipStream == null || clipData.clipStream.AddedSamples == 0))
+            {
+                error = "No audio samples added during stream";
+            }
+            // Set expected samples
+            if (string.IsNullOrEmpty(error))
+            {
+                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+            }
+
+            // Return errors
+            return error;
         }
 
         /// <summary>
         /// Generates an web socket client request using specified tts clip data
         /// </summary>
-        private void RequestStreamFromWebSocket(TTSClipData clipData)
+        private async Task<string> RequestStreamFromWebSocket(TTSClipData clipData)
         {
             // Generate tts request and store it in request
-            var wsRequest = GetWebSocketRequest(clipData);
-            _webSocketRequests[clipData.clipID] = wsRequest;
-
-            // Add handlers for clip stream ready & complete
-            DateTime startTime = DateTime.UtcNow;
-            clipData.clipStream.OnStreamReady = (clipStream) => HandleWebStreamReady(clipData, startTime, null);
+            var wsRequest = CreateWebSocketRequest(clipData, null);
 
             // Set all web socket request callbacks
-            wsRequest.OnSamplesReceived = clipData.clipStream.AddSamples;
-            wsRequest.OnEventsReceived = clipData.Events.AddEvents;
-            wsRequest.OnFirstResponse = (r) => RaiseRequestFirstResponse(clipData);
+            // TODO: T192757334 Update to async once added in WebSockets
+            var completion = new TaskCompletionSource<bool>();
             wsRequest.OnComplete = (r) =>
             {
-                if (string.IsNullOrEmpty(r.Error))
-                {
-                    clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
-                }
-                RaiseWebStreamCompletionCallbacks(clipData, startTime, r.Error);
+                completion.SetResult(true);
             };
 
-            // Get client and send request asap
+            // Send request and await completion
             RefreshWebSocketSettings();
             _webSocketAdapter.SendRequest(wsRequest);
+            await completion.Task;
+
+            // Return any error
+            return wsRequest.Error;
         }
 
         /// <summary>
         /// Generates an http request using specified tts clip data
         /// </summary>
-        private void RequestStreamViaHttp(TTSClipData clipData)
+        private Task<string> RequestStreamViaHttp(TTSClipData clipData)
         {
-            // Generate request & store it
             var clipId = clipData.clipID;
-            DateTime startTime = DateTime.UtcNow;
-            var request = GetHttpRequest(clipData);
-            _webStreams[clipId] = request;
-
-            // Add handlers for clip stream ready & complete
-            clipData.clipStream.OnStreamReady = (clipStream) => HandleWebStreamReady(clipData, startTime, null);
-
-            // Request async
-            _ = ThreadUtility.BackgroundAsync(_log,
-                async () => await RequestStreamViaHttpAsync(request, clipData, startTime));
-        }
-
-        private async Task RequestStreamViaHttpAsync(WitTTSVRequest request, TTSClipData clipData, DateTime startTime)
-        {
-            if (request == null || request.IsComplete || clipData?.clipStream == null || clipData.Events == null)
+            var request = CreateHttpRequest(clipData);
+            _httpRequests[clipId] = request;
+            return ThreadUtility.BackgroundAsync(_log, async () =>
             {
-                await ThreadUtility.CallOnMainThread(() => RaiseWebStreamCompletionCallbacks(clipData, startTime, WitConstants.CANCEL_ERROR));
-                return;
-            }
-            var results = await request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents);
-            if (results.Value && clipData?.clipStream != null)
-            {
-                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
-            }
-            await ThreadUtility.CallOnMainThread(() => RaiseWebStreamCompletionCallbacks(clipData, startTime, results.Error));
+                var results = await request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents);
+                _httpRequests.TryRemove(clipId, out var discard);
+                return results.Error;
+            });
         }
 
         /// <summary>
-        /// Cancel web stream
+        /// Method for performing a web download request
         /// </summary>
-        /// <param name="clipID">Unique clip id</param>
-        public bool CancelWebStream(TTSClipData clipData)
+        /// <param name="clipData">Clip request data</param>
+        /// <param name="diskPath">The specific disk path the file should be downloaded to</param>
+        public Task<string> RequestDownloadFromWeb(TTSClipData clipData,
+            string diskPath)
+        {
+            // Cancel previous if already requested
+            CancelRequests(clipData);
+
+            // Request web socket request
+            if (Configuration != null
+                && Configuration.RequestType == WitRequestType.WebSocket
+                && _webSocketAdapter)
+            {
+                return RequestDownloadFromWebSocket(clipData, diskPath);
+            }
+
+            // Perform http request
+            return RequestDownloadViaHttp(clipData, diskPath);
+        }
+
+        /// <summary>
+        /// Generates an web socket client request using specified tts clip data
+        /// </summary>
+        private async Task<string> RequestDownloadFromWebSocket(TTSClipData clipData,
+            string diskPath)
+        {
+            // Generate tts request and store it in request
+            var wsRequest = CreateWebSocketRequest(clipData, diskPath);
+
+            // Set all web socket request callbacks
+            var completion = new TaskCompletionSource<bool>();
+            wsRequest.OnComplete = (r) =>
+            {
+                completion.SetResult(true);
+            };
+
+            // Send request and await completion
+            RefreshWebSocketSettings();
+            _webSocketAdapter.SendRequest(wsRequest);
+            await completion.Task;
+
+            // Return any error
+            return wsRequest.Error;
+        }
+
+        /// <summary>
+        /// Generates an http request using specified tts clip data
+        /// </summary>
+        private Task<string> RequestDownloadViaHttp(TTSClipData clipData,
+            string diskPath)
+        {
+            var clipId = clipData.clipID;
+            var request = CreateHttpRequest(clipData);
+            _httpRequests[clipId] = request;
+            return ThreadUtility.BackgroundAsync(_log, async () =>
+            {
+                var results = await request.RequestDownload(diskPath);
+                _httpRequests.TryRemove(clipId, out var discard);
+                return results.Error;
+            });
+        }
+
+        /// <summary>
+        /// Checks if file exists on disk
+        /// </summary>
+        public Task<string> IsDownloadedToDisk(string diskPath)
+        {
+            return ThreadUtility.BackgroundAsync(_log, async () =>
+            {
+                var request = new VRequest();
+                var results = await request.RequestFileExists(diskPath);
+                return results.Error;
+            });
+        }
+
+        /// <summary>
+        /// Streams from disk
+        /// </summary>
+        public async Task<string> RequestStreamFromDisk(TTSClipData clipData, string diskPath, Action<TTSClipData> onReady)
+        {
+            // Cancel previous if already requested
+            CancelRequests(clipData);
+
+            // Clip stream must exist
+            if (clipData.clipStream == null)
+            {
+                return "Cannot load without a clip stream";
+            }
+
+            // Set on ready callback
+            DateTime startTime = DateTime.UtcNow;
+            clipData.clipStream.OnStreamReady += (stream) =>
+            {
+                clipData.readyDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
+                onReady?.Invoke(clipData);
+            };
+
+            // Perform unity web request
+            var error = await RequestStreamFromDiskViaVRequest(clipData, diskPath);
+
+            // Set complete duration
+            clipData.completeDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
+            // No samples added
+            if (string.IsNullOrEmpty(error) &&
+                (clipData?.clipStream == null || clipData.clipStream.AddedSamples == 0))
+            {
+                error = "No audio samples added during stream";
+            }
+            // Set expected samples
+            if (string.IsNullOrEmpty(error))
+            {
+                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
+            }
+
+            // Return errors
+            return error;
+        }
+
+        /// <summary>
+        /// Generates a VRequest using specified tts clip data
+        /// </summary>
+        private Task<string> RequestStreamFromDiskViaVRequest(TTSClipData clipData,
+            string diskPath)
+        {
+            var clipId = clipData.clipID;
+            var request = new VRequest();
+            request.Url = "file://" + diskPath;
+            _httpRequests[clipId] = request;
+            return ThreadUtility.BackgroundAsync(_log, async () =>
+            {
+                var results = await request.RequestAudio(clipData.audioType,
+                    clipData.clipStream.AddSamples,
+                    clipData.useEvents ? clipData.Events.AddEvents : null);
+                _httpRequests.TryRemove(clipId, out var discard);
+                return results.Error;
+            });
+        }
+
+        /// <summary>
+        /// Cancels any running requests
+        /// </summary>
+        public bool CancelRequests(TTSClipData clipData)
         {
             // Cancel http v request if found
-            if (_webStreams.TryGetValue(clipData.clipID, out var vRequest))
+            if (_httpRequests.TryGetValue(clipData.clipID, out var vRequest))
             {
                 vRequest?.Cancel();
                 return true;
@@ -322,203 +449,7 @@ namespace Meta.WitAi.TTS.Integrations
             // None found
             return false;
         }
-
-        /// <summary>
-        /// Handles stream clip is ready for playback
-        /// </summary>
-        private void HandleWebStreamReady(TTSClipData clipData, DateTime start, string error)
-        {
-            // Set ready duration
-            clipData.loadDuration = (float)(DateTime.UtcNow - start).TotalSeconds;
-
-            // Assume complete if errors are present
-            if (!string.IsNullOrEmpty(error) || clipData.loadState == TTSClipLoadState.Unloaded)
-            {
-                RaiseWebStreamCompletionCallbacks(clipData, start, error);
-                return;
-            }
-
-            // Perform on ready callbacks
-            WebStreamEvents?.OnStreamReady?.Invoke(clipData);
-            WebRequestEvents?.OnRequestReady?.Invoke(clipData);
-        }
-
-        /// <summary>
-        /// Handle web stream completion with desired callbacks
-        /// </summary>
-        private void RaiseWebStreamCompletionCallbacks(TTSClipData clipData, DateTime start, string error)
-        {
-            // Remove web stream request and if none found, ignore
-            if (!RemoveWebStreamRequest(clipData))
-            {
-                return;
-            }
-
-            // Completion
-            clipData.completeDuration = (float)(DateTime.UtcNow - start).TotalSeconds;
-
-            // Unload clip stream
-            if (clipData.loadState == TTSClipLoadState.Unloaded)
-            {
-                error = WitConstants.CANCEL_ERROR;
-                clipData.clipStream?.Unload();
-            }
-
-            // Cancelled
-            if (string.Equals(error, WitConstants.CANCEL_ERROR, StringComparison.CurrentCultureIgnoreCase))
-            {
-                WebStreamEvents?.OnStreamCancel?.Invoke(clipData);
-                WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
-                return;
-            }
-
-            // Error
-            if (!string.IsNullOrEmpty(error))
-            {
-                WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
-                WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
-                return;
-            }
-
-            // No samples added
-            if (clipData?.clipStream == null || clipData.clipStream.AddedSamples == 0)
-            {
-                error = "No audio samples added during stream";
-                WebStreamEvents?.OnStreamError?.Invoke(clipData, error);
-                WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
-                return;
-            }
-
-            // If expected samples was never set, assign now
-            if (clipData.clipStream.ExpectedSamples == 0)
-            {
-                clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
-            }
-
-            // Set complete
-            WebStreamEvents?.OnStreamComplete?.Invoke(clipData);
-            WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
-        }
-
-        // Remove web stream request if possible and return true if success
-        private bool RemoveWebStreamRequest(TTSClipData clipData)
-        {
-            // Remove from web stream dictionary
-            if (_webStreams.TryRemove(clipData.clipID, out var ignoreHttp))
-            {
-                return true;
-            }
-            // Remove from web socket dictionary
-            if (_webSocketRequests.TryRemove(clipData.clipID, out var ignoreWebSocket))
-            {
-                return true;
-            }
-            return false;
-        }
-        #endregion
-
-        #region ITTSWebHandler Downloads
-        // Use settings web download events
-        public TTSDownloadEvents WebDownloadEvents { get; set; } = new TTSDownloadEvents();
-
-        // Requests by clip id
-        private Dictionary<string, WitVRequest> _webDownloads = new Dictionary<string, WitVRequest>();
-
-        /// <summary>
-        /// Method for performing a web load request
-        /// </summary>
-        /// <param name="clipData">Clip request data</param>
-        /// <param name="downloadPath">Path to save clip</param>
-        public void RequestDownloadFromWeb(TTSClipData clipData, string downloadPath)
-        {
-            // Begin
-            WebDownloadEvents?.OnDownloadBegin?.Invoke(clipData, downloadPath);
-
-            // Ensure valid
-            string validError = IsRequestValid(clipData, Configuration);
-            if (!string.IsNullOrEmpty(validError))
-            {
-                WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, validError);
-                return;
-            }
-            // Abort if already performing
-            if (_webDownloads.ContainsKey(clipData.clipID))
-            {
-                CancelWebDownload(clipData, downloadPath);
-            }
-
-            // Begin request
-            WebRequestEvents?.OnRequestBegin?.Invoke(clipData);
-
-            // Get request
-            var request = GetHttpRequest(clipData);
-            _webDownloads[clipData.clipID] = request;
-
-            // Run on background thread
-            _ = ThreadUtility.BackgroundAsync(_log,
-                async () => await RequestDownloadFromWebAsync(request, clipData, downloadPath));
-        }
-        private async Task RequestDownloadFromWebAsync(WitTTSVRequest request, TTSClipData clipData, string downloadPath)
-        {
-            // Request cancelled
-            if (request == null || request.IsComplete)
-            {
-                OnRequestComplete(clipData, downloadPath, WitConstants.CANCEL_ERROR);
-                return;
-            }
-
-            // Request download
-            var result = await request.RequestDownload(downloadPath);
-            await ThreadUtility.CallOnMainThread(() => OnRequestComplete(clipData, downloadPath, result.Error));
-        }
-
-        private void OnRequestComplete(TTSClipData clipData, string downloadPath, string error)
-        {
-            _webDownloads.Remove(clipData.clipID);
-            if (!string.IsNullOrEmpty(error))
-            {
-                if (string.Equals(error, WitConstants.CANCEL_ERROR))
-                {
-                    WebDownloadEvents?.OnDownloadCancel?.Invoke(clipData, downloadPath);
-                    WebRequestEvents?.OnRequestCancel?.Invoke(clipData);
-                }
-                else
-                {
-                    WebDownloadEvents?.OnDownloadError?.Invoke(clipData, downloadPath, error);
-                    WebRequestEvents?.OnRequestError?.Invoke(clipData, error);
-                }
-            }
-            else
-            {
-                WebDownloadEvents?.OnDownloadSuccess?.Invoke(clipData, downloadPath);
-                WebRequestEvents?.OnRequestReady?.Invoke(clipData);
-            }
-            WebRequestEvents?.OnRequestComplete?.Invoke(clipData);
-        }
-        /// <summary>
-        /// Method for cancelling a running load request
-        /// </summary>
-        /// <param name="clipData">Clip request data</param>
-        public bool CancelWebDownload(TTSClipData clipData, string downloadPath)
-        {
-            // Ignore if not performing
-            if (!_webDownloads.ContainsKey(clipData.clipID))
-            {
-                return false;
-            }
-
-            // Get request
-            WitVRequest request = _webDownloads[clipData.clipID];
-            _webDownloads.Remove(clipData.clipID);
-
-            // Destroy immediately
-            request?.Cancel();
-            request = null;
-
-            // Success
-            return true;
-        }
-        #endregion
+        #endregion ITTSWebHandler
 
         #region ITTSVoiceProvider
         // Preset voice settings
