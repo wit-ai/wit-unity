@@ -23,7 +23,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Get specific phrases per voice
         /// </summary>
-        Task<List<string>> GetVoicePhrases(string voiceId);
+        List<string> GetVoicePhrases(string voiceId);
     }
 
     [RequireComponent(typeof(TTSSpeaker))]
@@ -65,7 +65,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
         }
         // Load all phrase clips
-        public async virtual void LoadClips()
+        public virtual void LoadClips()
         {
             // Done
             if (_clips != null)
@@ -75,7 +75,7 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Set phrase list
-            _phrases = (await GetAllPhrases()).ToArray();
+            _phrases = GetAllPhrases().ToArray();
 
             // Load all clips
             List<TTSClipData> list = new List<TTSClipData>();
@@ -88,7 +88,7 @@ namespace Meta.WitAi.TTS.Utilities
             _clips = list.ToArray();
         }
         // Return all phrases
-        public async virtual Task<List<string>> GetAllPhrases()
+        public virtual List<string> GetAllPhrases()
         {
             // Ensure speaker exists
             SetupSpeaker();
@@ -105,7 +105,7 @@ namespace Meta.WitAi.TTS.Utilities
             for (int i = 0; i < unformattedPhrases.Count; i++)
             {
                 // Format phrases
-                List<string> newPhrases = await Speaker.GetFinalText(unformattedPhrases[i]);
+                List<string> newPhrases = Speaker.GetFinalText(unformattedPhrases[i]);
                 // Add to final list
                 if (newPhrases != null && newPhrases.Count > 0)
                 {
@@ -187,9 +187,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Returns the supported phrases per voice
         /// </summary>
-        public async virtual Task<List<string>> GetVoicePhrases(string voiceId)
+        public virtual List<string> GetVoicePhrases(string voiceId)
         {
-            return await GetAllPhrases();
+            return GetAllPhrases();
         }
         #endregion ITTSVoicePhraseProvider
     }

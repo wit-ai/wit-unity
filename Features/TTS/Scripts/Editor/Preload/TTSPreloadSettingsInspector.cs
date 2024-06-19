@@ -50,7 +50,7 @@ namespace Meta.WitAi.TTS.Preload
             LayoutPreloadData();
         }
         // Layout Preload Data
-        protected async virtual void LayoutPreloadActions()
+        protected virtual void LayoutPreloadActions()
         {
             // Layout preload actions
             EditorGUILayout.Space();
@@ -110,7 +110,7 @@ namespace Meta.WitAi.TTS.Preload
             if (WitEditorUI.LayoutTextButton("Import AutoLoader Data"))
             {
                 EditorUtility.ClearProgressBar();
-                if (await TTSPreloadUtility.ImportPhrases(Settings))
+                if (TTSPreloadUtility.ImportPhrases(Settings))
                 {
                     RefreshData();
                 }

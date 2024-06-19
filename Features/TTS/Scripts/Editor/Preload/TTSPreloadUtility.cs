@@ -460,7 +460,7 @@ namespace Meta.WitAi.TTS.Preload
         /// Find all ITTSPhraseProviders loaded in scenes & generate
         /// data file to import all phrases associated with the files.
         /// </summary>
-        public async static Task<bool> ImportPhrases(TTSPreloadSettings preloadSettings)
+        public static bool ImportPhrases(TTSPreloadSettings preloadSettings)
         {
             // Find phrase providers in all scenes
             List<ITTSPhraseProvider> phraseProviders = new List<ITTSPhraseProvider>();
@@ -497,7 +497,7 @@ namespace Meta.WitAi.TTS.Preload
                     }
 
                     // Ignore if phrases are null
-                    List<string> phrases = await phraseProvider.GetVoicePhrases(voiceId);
+                    List<string> phrases = phraseProvider.GetVoicePhrases(voiceId);
                     if (phrases == null || phrases.Count == 0)
                     {
                         continue;
