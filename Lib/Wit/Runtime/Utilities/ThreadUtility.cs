@@ -85,12 +85,19 @@ namespace Meta.WitAi
         #endif
 
         /// <summary>
+        /// Compares current thread to main thread in order
+        /// to determine location of running code.
+        /// </summary>
+        public static bool IsMainThread()
+            => Thread.CurrentThread == _mainThread;
+
+        /// <summary>
         /// Safely calls an action on the main thread using a scheduler.
         /// </summary>
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task CallOnMainThread(Action callback)
         {
-            if (Thread.CurrentThread == _mainThread)
+            if (IsMainThread())
             {
                 callback?.Invoke();
                 return Task.FromResult(true);
@@ -107,7 +114,7 @@ namespace Meta.WitAi
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task<T> CallOnMainThread<T>(Func<T> callback)
         {
-            if (Thread.CurrentThread == _mainThread)
+            if (IsMainThread())
             {
                 return Task.FromResult(callback.Invoke());
             }
@@ -148,28 +155,52 @@ namespace Meta.WitAi
         }
 
         /// <summary>
-        /// Safely backgrounds an async task if threading is enabled in this build.
+        /// Calls and awaits an action within a try/catch
         /// </summary>
-        /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
-        /// <param name="callback">The callback to execute</param>
-        public static async Task BackgroundAsync(IVLogger logger, Func<Task> callback)
+        private static Task SafeAction(IVLogger logger, Action callback)
         {
-#if THREADING_ENABLED
-            await Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await callback();
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e);
-                    throw;
-                }
-            });
-#else
-            await callback();
-#endif
+                callback();
+                return Task.FromResult(true);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                return Task.FromResult(false);
+            }
+        }
+
+        /// <summary>
+        /// Calls and awaits a task within a try/catch
+        /// </summary>
+        private static async Task SafeTask(IVLogger logger, Func<Task> callback)
+        {
+            try
+            {
+                await callback();
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calls and awaits a task with a return value within a try/catch
+        /// </summary>
+        private static async Task<T> SafeTask<T>(IVLogger logger, Func<Task<T>> callback)
+        {
+            try
+            {
+                return await callback();
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                throw;
+            }
         }
 
         /// <summary>
@@ -177,24 +208,31 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
         /// <param name="callback">The callback to execute</param>
-        public static async Task<T> BackgroundAsync<T>(IVLogger logger, Func<Task<T>> callback)
+        public static Task BackgroundAsync(IVLogger logger, Func<Task> callback)
         {
 #if THREADING_ENABLED
-            return await Task.Run(async () =>
+            if (IsMainThread())
             {
-                try
-                {
-                    return await callback();
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e);
-                    throw;
-                }
-            });
-#else
-            return await callback();
+                return Task.Run(() => SafeTask(logger, callback));
+            }
 #endif
+            return SafeTask(logger, callback);
+        }
+
+        /// <summary>
+        /// Safely backgrounds an async task if threading is enabled in this build.
+        /// </summary>
+        /// <param name="logger">The logger that should be used for any unhandled exceptions</param>
+        /// <param name="callback">The callback to execute</param>
+        public static Task<T> BackgroundAsync<T>(IVLogger logger, Func<Task<T>> callback)
+        {
+#if THREADING_ENABLED
+            if (IsMainThread())
+            {
+                return Task.Run(() => SafeTask(logger, callback));
+            }
+#endif
+            return SafeTask(logger, callback);
         }
 
         /// <summary>
@@ -205,25 +243,12 @@ namespace Meta.WitAi
         public static Task Background(IVLogger logger, Action callback)
         {
 #if THREADING_ENABLED
-            var task = new TaskCompletionSource<bool>();
-            Task.Run(() =>
+            if (IsMainThread())
             {
-                try
-                {
-                    callback();
-                    task.SetResult(true);
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e);
-                    task.SetResult(false);
-                    throw;
-                }
-            });
-#else
-            callback();
+                return Task.Run(() => SafeAction(logger, callback));
+            }
 #endif
-            return task.Task;
+            return SafeAction(logger, callback);
         }
 
         /// <summary>
