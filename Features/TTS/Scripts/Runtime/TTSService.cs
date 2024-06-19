@@ -278,127 +278,96 @@ namespace Meta.WitAi.TTS
         #endregion
 
         #region HELPERS
-        // Frequently used keys
-        private const string CLIP_ID_DELIM = "|";
-        private readonly SHA256 CLIP_HASH = SHA256.Create();
-
         /// <summary>
         /// Gets the text to be spoken after applying all relevant voice settings.
         /// </summary>
         /// <param name="textToSpeak">Text to be spoken by a particular voice</param>
         /// <param name="voiceSettings">Voice settings to be used</param>
         /// <returns>Returns a the final text to be spoken</returns>
-        public string GetFinalText(string textToSpeak, TTSVoiceSettings voiceSettings)
+        public virtual string GetFinalText(string textToSpeak, TTSVoiceSettings voiceSettings)
         {
-            StringBuilder result = new StringBuilder();
-            AppendFinalText(result, textToSpeak, voiceSettings);
-            return result.ToString();
-        }
-        // Finalize text using a string builder
-        protected virtual void AppendFinalText(StringBuilder builder, string textToSpeak, TTSVoiceSettings voiceSettings)
-        {
-            if (!string.IsNullOrEmpty(voiceSettings?.PrependedText))
+            // If no final determination is needed, return as is
+            voiceSettings ??= VoiceProvider?.VoiceDefaultSettings;
+            if (voiceSettings == null
+                || string.IsNullOrEmpty(textToSpeak)
+                || (string.IsNullOrEmpty(voiceSettings.PrependedText)
+                    && string.IsNullOrEmpty(voiceSettings.AppendedText)))
             {
-                builder.Append(voiceSettings.PrependedText);
+                return textToSpeak;
             }
-            builder.Append(textToSpeak);
-            if (!string.IsNullOrEmpty(voiceSettings?.AppendedText))
-            {
-                builder.Append(voiceSettings.AppendedText);
-            }
+            // Prepend and append
+            return $"{voiceSettings.PrependedText}{textToSpeak}{voiceSettings.AppendedText}";
         }
 
         /// <summary>
-        /// Obtain unique id for clip data
+        /// Obtain unique id for clip data using provided text
         /// </summary>
         public string GetClipID(string textToSpeak, TTSVoiceSettings voiceSettings)
         {
-            // Return empty id
-            if (string.IsNullOrEmpty(textToSpeak))
-            {
-                return "EMPTY";
-            }
-            // Ensure voice settings are set
-            voiceSettings ??= VoiceProvider?.VoiceDefaultSettings;
-            // Get a text string for a unique id
-            StringBuilder uniqueId = new StringBuilder();
-            if (voiceSettings != null)
-            {
-                Dictionary<string, string> data = voiceSettings.Encode();
-                foreach (var key in data.Keys)
-                {
-                    string keyClean = data[key].Replace(CLIP_ID_DELIM, "");
-                    uniqueId.Append(keyClean);
-                    uniqueId.Append(CLIP_ID_DELIM);
-                }
-            }
-            // Finally, add text
-            AppendFinalText(uniqueId, textToSpeak, voiceSettings);
-            // Return id
-            return GetSha256Hash(CLIP_HASH, uniqueId.ToString().ToLower());
+            var formattedText = GetFinalText(textToSpeak, voiceSettings);
+            return GetClipIDWithFinalText(formattedText, voiceSettings);
         }
 
-        private string GetSha256Hash(SHA256 shaHash, string input)
+        /// <summary>
+        /// Obtain unique id for clip data with text that has already been passed through GetFinalText
+        /// </summary>
+        protected virtual string GetClipIDWithFinalText(string formattedText, TTSVoiceSettings voiceSettings)
         {
-            // Convert the input string to a byte array and compute the hash.
-            byte[] data = shaHash.ComputeHash(Encoding.UTF8.GetBytes(input));
-
-            // Create a new Stringbuilder to collect the bytes
-            // and create a string.
-            StringBuilder sBuilder = new StringBuilder();
-
-            // Loop through each byte of the hashed data
-            // and format each one as a hexadecimal string.
-            for (int i = 0; i < data.Length; i++)
+            // Use empty
+            if (string.IsNullOrEmpty(formattedText))
             {
-                sBuilder.Append(data[i].ToString("x2"));
+                return WitConstants.TTS_EMPTY_ID;
             }
 
-            // Return the hexadecimal string.
-            return sBuilder.ToString();
+            // Use hash code for text
+            var result = formattedText;
+
+            // Prepend voice id if preset voice list is used
+            if (VoiceProvider?.PresetVoiceSettings != null
+                && VoiceProvider.PresetVoiceSettings.Length > 0)
+            {
+                voiceSettings ??= VoiceProvider?.VoiceDefaultSettings;
+                if (voiceSettings != null)
+                {
+                    result = $"{result}|{voiceSettings.UniqueId}";
+                }
+            }
+
+            // Use hash code with disk cache handler
+            if (DiskCacheHandler != null)
+            {
+                result = result.GetHashCode().ToString();
+            }
+
+            // Return string
+            return result;
         }
 
         /// <summary>
         /// Creates new clip data or returns existing cached clip
         /// </summary>
         /// <param name="textToSpeak">Text to speak</param>
-        /// <param name="clipID">Unique clip id</param>
         /// <param name="voiceSettings">Voice settings</param>
         /// <param name="diskCacheSettings">Disk Cache settings</param>
         /// <returns>Clip data structure</returns>
         public TTSClipData GetClipData(string textToSpeak, TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings)
         {
-            var clipID = GetClipID(textToSpeak, voiceSettings);
-            return GetClipData(clipID, textToSpeak, voiceSettings, diskCacheSettings);
-        }
-
-        /// <summary>
-        /// Creates new clip data or returns existing cached clip
-        /// </summary>
-        /// <param name="clipId">Unique clip id</param>
-        /// <param name="textToSpeak">Text to speak</param>
-        /// <param name="voiceSettings">Voice settings</param>
-        /// <param name="diskCacheSettings">Disk Cache settings</param>
-        /// <returns>Clip data structure</returns>
-        private TTSClipData GetClipData(string clipId, string textToSpeak, TTSVoiceSettings voiceSettings,
-            TTSDiskCacheSettings diskCacheSettings)
-        {
             // Add listeners if not set to true, otherwise ignored.
             SetListeners(true);
+
             // Use default voice settings if none are set
             voiceSettings ??= VoiceProvider?.VoiceDefaultSettings;
             // Use default disk cache settings if none are set
             diskCacheSettings ??= DiskCacheHandler?.DiskCacheDefaultSettings;
-            // Get unique clip id if needed
-            if (string.IsNullOrEmpty(clipId))
-            {
-                clipId = GetClipID(textToSpeak, voiceSettings);
-            }
+
+            // Obtain final text and final clip id
+            var finalText = GetFinalText(textToSpeak, voiceSettings);
+            var finalClipId = GetClipIDWithFinalText(finalText, voiceSettings);
 
             // Get clip from runtime cache if applicable
-            TTSClipData clipData = GetRuntimeCachedClip(clipId);
-            if (clipData != null && string.Equals(clipData.clipID, clipId))
+            TTSClipData clipData = GetRuntimeCachedClip(finalClipId);
+            if (clipData != null && string.Equals(clipData.clipID, finalClipId))
             {
                 return clipData;
             }
@@ -407,14 +376,14 @@ namespace Meta.WitAi.TTS
             AudioType audioType = GetAudioType();
             clipData = new TTSClipData()
             {
-                clipID = clipId,
-                audioType = audioType,
-                textToSpeak = GetFinalText(textToSpeak, voiceSettings),
+                clipID = finalClipId,
+                textToSpeak = finalText,
                 voiceSettings = voiceSettings,
                 diskCacheSettings = diskCacheSettings,
+                audioType = audioType,
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
-                queryParameters = voiceSettings?.Encode(),
+                queryParameters = voiceSettings?.EncodedValues,
                 queryStream = GetShouldAudioStream(audioType),
                 clipStream = CreateClipStream(),
                 useEvents = ShouldUseEvents(audioType)
@@ -786,32 +755,30 @@ namespace Meta.WitAi.TTS
             TTSDiskCacheSettings diskCacheSettings) =>
             DiskCacheHandler?.GetDiskCachePath(GetClipData(textToSpeak, voiceSettings, diskCacheSettings));
 
-        // Download options
-        public TTSClipData DownloadToDiskCache(string textToSpeak,
-            Action<TTSClipData, string, string> onDownloadComplete = null) =>
-            DownloadToDiskCache(textToSpeak, null, null, null, onDownloadComplete);
+        /// <summary>
+        /// Perform a download for a TTS audio clip
+        /// </summary>
+        /// <param name="textToSpeak">Text to be spoken in clip</param>
+        /// <param name="presetVoiceId">Specific voice id</param>
+        /// <param name="diskCacheSettings">Custom disk cache settings</param>
+        /// <param name="onDownloadComplete">Callback when file has finished downloading</param>
+        /// <returns>Generated TTS clip data</returns>
         public TTSClipData DownloadToDiskCache(string textToSpeak, string presetVoiceId,
-            Action<TTSClipData, string, string> onDownloadComplete = null) => DownloadToDiskCache(textToSpeak, null,
-            GetPresetVoiceSettings(presetVoiceId), null, onDownloadComplete);
-        public TTSClipData DownloadToDiskCache(string textToSpeak, string presetVoiceId,
-            TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string, string> onDownloadComplete = null) =>
-            DownloadToDiskCache(textToSpeak, null, GetPresetVoiceSettings(presetVoiceId), diskCacheSettings,
+            TTSDiskCacheSettings diskCacheSettings = null, Action<TTSClipData, string, string> onDownloadComplete = null) =>
+            DownloadToDiskCache(textToSpeak, GetPresetVoiceSettings(presetVoiceId), diskCacheSettings,
                 onDownloadComplete);
-        public TTSClipData DownloadToDiskCache(string textToSpeak, TTSVoiceSettings voiceSettings,
-            TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string, string> onDownloadComplete = null) =>
-            DownloadToDiskCache(textToSpeak, null, voiceSettings, diskCacheSettings, onDownloadComplete);
 
         /// <summary>
         /// Perform a download for a TTS audio clip
         /// </summary>
         /// <param name="textToSpeak">Text to be spoken in clip</param>
-        /// <param name="clipID">Unique clip id</param>
         /// <param name="voiceSettings">Custom voice settings</param>
         /// <param name="diskCacheSettings">Custom disk cache settings</param>
-        /// <param name="onDownloadComplete">Callback when file has finished downloading</param>
+        /// <param name="onDownloadComplete">Callback when file has finished
+        /// downloading with success or error</param>
         /// <returns>Generated TTS clip data</returns>
-        public TTSClipData DownloadToDiskCache(string textToSpeak, string clipID, TTSVoiceSettings voiceSettings,
-            TTSDiskCacheSettings diskCacheSettings, Action<TTSClipData, string, string> onDownloadComplete = null)
+        public TTSClipData DownloadToDiskCache(string textToSpeak, TTSVoiceSettings voiceSettings,
+            TTSDiskCacheSettings diskCacheSettings = null, Action<TTSClipData, string, string> onDownloadComplete = null)
         {
             var clipData = GetClipData(textToSpeak, voiceSettings, diskCacheSettings);
             _ = DownloadAsync(clipData, onDownloadComplete);
@@ -833,7 +800,13 @@ namespace Meta.WitAi.TTS
             return await DownloadAsync(clipData);
         }
 
-        // Performs download to disk cache
+        /// <summary>
+        /// Perform a download for a TTS audio clip
+        /// </summary>
+        /// <param name="clipData">Clip data to be used for download</param>
+        /// <param name="onDownloadComplete">Callback when file has finished
+        /// downloading with success or error</param>
+        /// <returns>Any errors that occured during the download process</returns>
         public async Task<string> DownloadAsync(TTSClipData clipData,
             Action<TTSClipData, string, string> onDownloadComplete = null)
         {

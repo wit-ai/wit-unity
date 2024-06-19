@@ -28,9 +28,14 @@ namespace Meta.WitAi.TTS.Data
         public string AppendedText;
 
         /// <summary>
-        /// Encodes all setting parameters into a dictionary for transmission
+        /// The unique id that can be used to represent a specific voice setting
         /// </summary>
-        public abstract Dictionary<string, string> Encode();
+        public abstract string UniqueId { get; }
+
+        /// <summary>
+        /// Getter for encoded values
+        /// </summary>
+        public abstract Dictionary<string, string> EncodedValues { get; }
 
         /// <summary>
         /// Decodes all setting parameters from a provided json node

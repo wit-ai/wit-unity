@@ -188,6 +188,11 @@ namespace Meta.WitAi
         public const int TTS_PITCH_MAX = 200;
 
         /// <summary>
+        /// Clip id used for empty text
+        /// </summary>
+        public const string TTS_EMPTY_ID = "EMPTY";
+
+        /// <summary>
         /// Method for obtaining audio Mime string for TTSWitAudioType
         /// </summary>
         public static string GetAudioMimeType(TTSWitAudioType witAudioType)

@@ -37,6 +37,77 @@ namespace Meta.WitAi.TTS.Integrations
         public int pitch = WitConstants.TTS_PITCH_DEFAULT;
 
         /// <summary>
+        /// The unique id that can be used to represent a specific voice setting
+        /// </summary>
+        public override string UniqueId
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_uniqueId))
+                {
+                    RefreshUniqueId();
+                }
+                return _uniqueId;
+            }
+        }
+        private string _uniqueId;
+
+        /// <summary>
+        /// Refreshes the unique voice id
+        /// </summary>
+        public void RefreshUniqueId()
+        {
+            _uniqueId = string.Format("{0}|{1}|{2:00}|{3:00}",
+                voice,
+                style,
+                speed,
+                pitch);
+        }
+
+        /// <summary>
+        /// Gets or generates a dictionary of all web service url request keys and values.
+        /// That would generate a tts request with this voice setting.
+        /// </summary>
+        public override Dictionary<string, string> EncodedValues
+        {
+            get
+            {
+                if (_encoded.Keys.Count == 0)
+                {
+                    RefreshEncodedValues();
+                }
+                return _encoded;
+            }
+        }
+        private Dictionary<string, string> _encoded = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Encodes all setting parameters into a dictionary for transmission
+        /// </summary>
+        public void RefreshEncodedValues()
+        {
+            // Clear dictionary
+            _encoded.Clear();
+
+            // Use default if voice or style is empty
+            _encoded[WitConstants.TTS_VOICE] = string.IsNullOrEmpty(voice) ? WitConstants.TTS_VOICE_DEFAULT : voice;
+            _encoded[WitConstants.TTS_STYLE] = string.IsNullOrEmpty(style) ? WitConstants.TTS_STYLE_DEFAULT : style;
+
+            // Clamp speed & don't send if it matches default
+            int val = Mathf.Clamp(speed, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
+            if (val != WitConstants.TTS_SPEED_DEFAULT)
+            {
+                _encoded[WitConstants.TTS_SPEED] = val.ToString();
+            }
+            // Clamp pitch & don't send if it matches
+            val = Mathf.Clamp(pitch, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+            if (val != WitConstants.TTS_PITCH_DEFAULT)
+            {
+                _encoded[WitConstants.TTS_PITCH] = val.ToString();
+            }
+        }
+
+        /// <summary>
         /// Checks if request can be decoded for TTS data
         /// Example Data:
         /// {
@@ -52,35 +123,6 @@ namespace Meta.WitAi.TTS.Integrations
         }
 
         /// <summary>
-        /// Encodes all setting parameters into a dictionary for transmission
-        /// </summary>
-        public override Dictionary<string, string> Encode()
-        {
-            // Generated data dictionary
-            Dictionary<string, string> data = new Dictionary<string, string>();
-
-            // Use default if voice or style is empty
-            data[WitConstants.TTS_VOICE] = string.IsNullOrEmpty(voice) ? WitConstants.TTS_VOICE_DEFAULT : voice;
-            data[WitConstants.TTS_STYLE] = string.IsNullOrEmpty(style) ? WitConstants.TTS_STYLE_DEFAULT : style;
-
-            // Clamp speed & don't send if it matches default
-            int val = Mathf.Clamp(speed, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
-            if (val != WitConstants.TTS_SPEED_DEFAULT)
-            {
-                data[WitConstants.TTS_SPEED] = val.ToString();
-            }
-            // Clamp pitch & don't send if it matches
-            val = Mathf.Clamp(pitch, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
-            if (val != WitConstants.TTS_PITCH_DEFAULT)
-            {
-                data[WitConstants.TTS_PITCH] = val.ToString();
-            }
-
-            // Return data
-            return data;
-        }
-
-        /// <summary>
         /// Decodes all setting parameters from a provided json node
         /// </summary>
         public override void Decode(WitResponseNode responseNode)
@@ -90,6 +132,8 @@ namespace Meta.WitAi.TTS.Integrations
             style = DecodeString(responseClass, WitConstants.TTS_STYLE, WitConstants.TTS_STYLE_DEFAULT);
             speed = DecodeInt(responseClass, WitConstants.TTS_SPEED, WitConstants.TTS_SPEED_DEFAULT, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
             pitch = DecodeInt(responseClass, WitConstants.TTS_PITCH, WitConstants.TTS_PITCH_DEFAULT, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+            RefreshUniqueId();
+            RefreshEncodedValues();
         }
 
         // Decodes a string if possible
