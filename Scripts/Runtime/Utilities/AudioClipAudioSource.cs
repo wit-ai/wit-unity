@@ -99,7 +99,6 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             Array.Copy(samples, index, _buffer, 0, len);
             OnSampleReady?.Invoke(len, _buffer, float.MinValue);
             index += len;
-            VLog.D($"Sending {index}/{samples.Length} [{len}] samples");
             // Wait a frame
             await Task.Yield();
         }
