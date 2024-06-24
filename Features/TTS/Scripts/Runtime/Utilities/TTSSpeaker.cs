@@ -1333,6 +1333,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Dequeue, set request and call delegates
             _queuedRequests.TryDequeue(out requestData);
             _speakingRequest = requestData;
+            RaiseEvents(RaiseOnPlaybackBegin, _speakingRequest);
 
             // Add playback event callbacks
             if (_speakingRequest.ClipData.Events != null)
