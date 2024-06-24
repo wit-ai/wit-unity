@@ -8,7 +8,6 @@
 
 using System;
 using System.IO;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -123,56 +122,41 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// The currently running requests by request id
         /// </summary>
-        private static ConcurrentDictionary<int, Task> _runningRequests = new ConcurrentDictionary<int, Task>();
-        /// <summary>
-        /// The currently queued requests in order requested
-        /// </summary>
-        private static ConcurrentQueue<VRequest> _queuedRequests = new ConcurrentQueue<VRequest>();
+        private static List<Task> _activeRequestTasks = new List<Task>();
 
         /// <summary>
         /// Async wait method to ensure
         /// </summary>
         private static async Task WaitForTurn(VRequest request)
         {
-            // Enqueue new request
-            _queuedRequests.Enqueue(request);
-
-            // Wait for any of the running requests to complete
-            while (_runningRequests.Count >= MaxConcurrentRequests
-                   || !IsNextRequest(request)
-                   || !_queuedRequests.TryDequeue(out var nextRequest))
+            // Obtain queue of tasks to be awaited
+            Task[] queue = null;
+            lock (_activeRequestTasks)
             {
-                var vals = _runningRequests.Values;
-                if (vals.Count > 0)
+                // TODO: Fix ordering issues
+                if (MaxConcurrentRequests > 0
+                    && _activeRequestTasks.Count >= MaxConcurrentRequests)
                 {
-                    await Task.WhenAny(vals);
+                    queue = _activeRequestTasks.ToArray();
                 }
             }
 
-            // Ignore if cancelled
-            if (request == null || request.IsComplete)
+            // Wait for the rest to complete
+            if (queue != null)
             {
-                return;
+                await Task.WhenAll(queue);
             }
 
-            // Now running
-            _runningRequests[request.GetHashCode()] = request.Completion.Task;
-        }
+            // Active task generation
+            request._activeTask = Task.WhenAny(request.Completion.Task,
+                Task.Delay(2 * WitConstants.DEFAULT_REQUEST_TIMEOUT /* 20 seconds */));
 
-        /// <summary>
-        /// Removes request from running list
-        /// </summary>
-        private static bool RemoveRequest(VRequest request)
-        {
-            return request != null && _runningRequests.TryRemove(request.GetHashCode(), out var removed);
+            // Add task
+            lock (_activeRequestTasks)
+            {
+                _activeRequestTasks.Add(request._activeTask);
+            }
         }
-
-        /// <summary>
-        /// Determine if request is next in the queue
-        /// </summary>
-        private static bool IsNextRequest(VRequest newRequest)
-            => _queuedRequests.TryPeek(out var checkRequest)
-               && checkRequest == newRequest;
         #endregion STATIC
 
         #region INSTANCE
@@ -255,6 +239,7 @@ namespace Meta.WitAi.Requests
         /// If request has completed queueing and running a request
         /// </summary>
         public bool IsComplete { get; private set; } = false;
+
         /// <summary>
         /// Completion source task
         /// </summary>
@@ -287,6 +272,11 @@ namespace Meta.WitAi.Requests
         /// Thread safe access to whether request has completed
         /// </summary>
         private TaskCompletionSource<bool> _unityRequestComplete;
+
+        /// <summary>
+        /// Currently running task
+        /// </summary>
+        private Task _activeTask;
 
         /// <summary>
         /// The object used for handling logs
@@ -385,55 +375,42 @@ namespace Meta.WitAi.Requests
                     _unityRequestComplete.TrySetResult(true);
                 };
             });
+            if (!IsComplete)
+            {
+                await WaitWhileRunning();
+            }
+            IsRunning = false;
             if (IsComplete)
             {
                 return new VRequestResponse<TValue>(ResponseCode, ResponseError);
             }
 
-            try
+            // Decode errors and status code
+            IsDecoding = true;
+            var responseInfo = await GetError(_request);
+            ResponseCode = responseInfo.Item1;
+            ResponseError = responseInfo.Item2;
+            if (!string.IsNullOrEmpty(ResponseError))
             {
-                await WaitWhileRunning();
-                IsRunning = false;
-                if (IsComplete)
-                {
-                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
-                }
-
-                // Decode errors and status code
-                IsDecoding = true;
-                var responseInfo = await GetError(_request);
-                ResponseCode = responseInfo.Item1;
-                ResponseError = responseInfo.Item2;
-                if (!string.IsNullOrEmpty(ResponseError))
-                {
-                    IsDecoding = false;
-                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
-                }
-
-                // Decode result
-                var decodedResult = await decoder.Invoke(_request);
                 IsDecoding = false;
-
-                // Aborted or error during decode
-                if (IsComplete)
-                {
-                    return new VRequestResponse<TValue>(ResponseCode, ResponseError);
-                }
-
-                // Dispose
-                await ThreadUtility.CallOnMainThread(Dispose);
-
-                // Return decoded result
-                return new VRequestResponse<TValue>(decodedResult);
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
             }
-            catch (Exception e)
+
+            // Decode result
+            var decodedResult = await decoder.Invoke(_request);
+            IsDecoding = false;
+
+            // Aborted or error during decode
+            if (IsComplete)
             {
-                // Return with exception
-                IsRunning = false;
-                IsDecoding = false;
-                ResponseCode = ResponseCode != (int)HttpStatusCode.OK ? ResponseCode : WitConstants.ERROR_CODE_GENERAL;
-                return new VRequestResponse<TValue>(ResponseCode, $"Exception during VRequest\n{e}");
+                return new VRequestResponse<TValue>(ResponseCode, ResponseError);
             }
+
+            // Dispose
+            await ThreadUtility.CallOnMainThread(Dispose);
+
+            // Return decoded result
+            return new VRequestResponse<TValue>(decodedResult);
         }
 
         /// <summary>
@@ -548,8 +525,16 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected virtual async Task WaitWhileRunning()
         {
-            // First await request completion
-            await _unityRequestComplete.Task;
+            // Await request completion or timeout
+            var task = await Task.WhenAny(_unityRequestComplete.Task,
+                Task.Delay(2 * WitConstants.DEFAULT_REQUEST_TIMEOUT /* 20 seconds */));
+
+            // Timeout
+            if (task != _unityRequestComplete.Task)
+            {
+                ResponseCode = WitConstants.ERROR_CODE_TIMEOUT;
+                ResponseError = WitConstants.ERROR_RESPONSE_TIMEOUT;
+            }
 
             // Stop waiting if complete, no request or an error is found
             if (IsComplete || _request == null || !string.IsNullOrEmpty(ResponseError))
@@ -561,7 +546,8 @@ namespace Meta.WitAi.Requests
             if (Downloader is IVRequestDownloadDecoder downloadDecoder
                 && downloadDecoder.Completion != null)
             {
-                await downloadDecoder.Completion.Task;
+                await Task.WhenAny(downloadDecoder.Completion.Task,
+                    Task.Delay(Timeout * 1000));
             }
         }
 
@@ -684,9 +670,7 @@ namespace Meta.WitAi.Requests
         /// Handles dispose and removal of request from running queue
         /// </summary>
         protected virtual void Dispose()
-    {
-            // Remove request from playback list
-            RemoveRequest(this);
+        {
 
             // Dispose request
             if (_request != null)
@@ -701,7 +685,16 @@ namespace Meta.WitAi.Requests
 
             // Officially complete
             IsComplete = true;
-            Completion?.SetResult(true);
+
+            // Remove request from active list
+            Completion.SetResult(true);
+            lock (_activeRequestTasks)
+            {
+                if (_activeRequestTasks.Contains(_activeTask))
+                {
+                    _activeRequestTasks.Remove(_activeTask);
+                }
+            }
         }
 
         /// <summary>
