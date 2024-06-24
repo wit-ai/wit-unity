@@ -365,15 +365,14 @@ namespace Meta.WitAi.Requests
                 }
                 _request = CreateRequest(uri, method, headers);
                 var asyncOperation = _request.SendWebRequest();
-                asyncOperation.completed += (op) =>
+                if (asyncOperation.isDone || _request.isDone)
                 {
-                    if (_request != null && !IsComplete)
-                    {
-                        ResponseCode = (int)_request.responseCode;
-                        ResponseError = _request.error;
-                    }
-                    _unityRequestComplete.TrySetResult(true);
-                };
+                    MarkRequestComplete(asyncOperation);
+                }
+                else
+                {
+                    asyncOperation.completed += MarkRequestComplete;
+                }
             });
             if (!IsComplete)
             {
@@ -518,6 +517,19 @@ namespace Meta.WitAi.Requests
 
             // Return request
             return request;
+        }
+
+        /// <summary>
+        /// Method call for async operation completion
+        /// </summary>
+        private void MarkRequestComplete(AsyncOperation asyncOperation)
+        {
+            if (_request != null && !IsComplete)
+            {
+                ResponseCode = (int)_request.responseCode;
+                ResponseError = _request.error;
+            }
+            _unityRequestComplete.TrySetResult(true);
         }
 
         /// <summary>
