@@ -120,9 +120,9 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public static int MaxConcurrentRequests = 3;
         /// <summary>
-        /// The currently running requests by request id
+        /// All currently running request completion tasks
         /// </summary>
-        private static List<Task> _activeRequestTasks = new List<Task>();
+        private static List<Task> _activeRequests = new List<Task>();
 
         /// <summary>
         /// Async wait method to ensure
@@ -130,31 +130,30 @@ namespace Meta.WitAi.Requests
         private static async Task WaitForTurn(VRequest request)
         {
             // Obtain queue of tasks to be awaited
-            Task[] queue = null;
-            lock (_activeRequestTasks)
+            Task[] line = null;
+            lock (_activeRequests)
             {
-                // TODO: Fix ordering issues
-                if (MaxConcurrentRequests > 0
-                    && _activeRequestTasks.Count >= MaxConcurrentRequests)
+                // TODO: Fix possible ordering issues
+                if (_activeRequests.Count >= MaxConcurrentRequests)
                 {
-                    queue = _activeRequestTasks.ToArray();
+                    line = _activeRequests.ToArray();
                 }
             }
 
-            // Wait for the rest to complete
-            if (queue != null)
+            // Wait for the queue to complete
+            if (line != null && line.Length > 0)
             {
-                await Task.WhenAll(queue);
+                await Task.WhenAll(line);
             }
 
             // Active task generation
-            request._activeTask = Task.WhenAny(request.Completion.Task,
+            request._task = Task.WhenAny(request.Completion.Task,
                 Task.Delay(2 * WitConstants.DEFAULT_REQUEST_TIMEOUT /* 20 seconds */));
 
             // Add task
-            lock (_activeRequestTasks)
+            lock (_activeRequests)
             {
-                _activeRequestTasks.Add(request._activeTask);
+                _activeRequests.Add(request._task);
             }
         }
         #endregion STATIC
@@ -276,7 +275,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Currently running task
         /// </summary>
-        private Task _activeTask;
+        private Task _task;
 
         /// <summary>
         /// The object used for handling logs
@@ -683,7 +682,6 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected virtual void Dispose()
         {
-
             // Dispose request
             if (_request != null)
             {
@@ -699,14 +697,11 @@ namespace Meta.WitAi.Requests
             IsComplete = true;
 
             // Remove request from active list
-            Completion.SetResult(true);
-            lock (_activeRequestTasks)
+            lock (_activeRequests)
             {
-                if (_activeRequestTasks.Contains(_activeTask))
-                {
-                    _activeRequestTasks.Remove(_activeTask);
-                }
+                _activeRequests.Remove(_task);
             }
+            Completion.SetResult(true);
         }
 
         /// <summary>
