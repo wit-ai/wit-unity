@@ -611,7 +611,7 @@ namespace Meta.WitAi.Requests
         private async Task<string> GetDownloadedText(UnityWebRequest request)
         {
             string text = null;
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 // Ignore if null
                 var downloadHandler = request?.downloadHandler;
@@ -653,7 +653,7 @@ namespace Meta.WitAi.Requests
                 ResponseCode = WitConstants.ERROR_CODE_ABORTED;
                 ResponseError = WitConstants.CANCEL_ERROR;
             }
-            ThreadUtility.CallOnMainThread(() =>
+            ThreadUtility.CallOnMainThread(_log, () =>
             {
                 // Abort
                 if (_request != null)
@@ -741,7 +741,7 @@ namespace Meta.WitAi.Requests
         private async Task<Dictionary<string, string>> DecodeFileHeaders(UnityWebRequest request)
         {
             Dictionary<string, string> results = null;
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 results = request.GetResponseHeaders();
             });
@@ -764,7 +764,7 @@ namespace Meta.WitAi.Requests
         private async Task<byte[]> DecodeFile(UnityWebRequest request)
         {
             byte[] data = null;
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 data = request.downloadHandler?.data;
             });
@@ -795,7 +795,7 @@ namespace Meta.WitAi.Requests
                 return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
                     $"Failed to setup download.\nPath: {downloadPath}\n{e}");
             }
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 Downloader = new DownloadHandlerFile(downloadTempPath);
             });
@@ -912,7 +912,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public async Task<VRequestResponse<string>> RequestText(Action<string> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 if (onPartial == null)
                 {
@@ -932,7 +932,7 @@ namespace Meta.WitAi.Requests
         private async Task<string> DecodeText(UnityWebRequest request)
         {
             string text = null;
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 text = request.downloadHandler?.text;
             });
@@ -1028,7 +1028,7 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<TData>> RequestJsonPost<TData>(byte[] postData,
             Action<TData> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 Uploader = new UploadHandlerRaw(postData);
             });
@@ -1060,7 +1060,7 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<TData>> RequestJsonPut<TData>(byte[] putData,
             Action<TData> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(() =>
+            await ThreadUtility.CallOnMainThread(_log, () =>
             {
                 Uploader = new UploadHandlerRaw(putData);
             });
@@ -1101,7 +1101,7 @@ namespace Meta.WitAi.Requests
                 // Generate decoder
                 var decoder = GetAudioDecoder(audioType, onJsonDecoded != null, onJsonDecoded);
                 // Set audio stream handler
-                await ThreadUtility.CallOnMainThread(() =>
+                await ThreadUtility.CallOnMainThread(_log, () =>
                 {
                     Downloader = new AudioStreamHandler(decoder, onSamplesDecoded);
                 });

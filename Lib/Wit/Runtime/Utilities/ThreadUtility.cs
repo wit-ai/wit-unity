@@ -15,6 +15,8 @@ using System.Collections;
 using System.Threading;
 using Meta.Voice.Logging;
 #if THREADING_ENABLED
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -33,22 +35,20 @@ namespace Meta.WitAi
         /// </summary>
         private static TaskScheduler _mainThreadScheduler;
         private static Thread _mainThread;
+        private static readonly ConcurrentQueue<EarlyTask> _earlyTasks = new ConcurrentQueue<EarlyTask>();
 
-        private class Initializer
+        /// <summary>
+        /// Tasks called prior to main thread setup
+        /// </summary>
+        private class EarlyTask
         {
             private Task _task;
-
-            public Initializer(Task task)
+            public EarlyTask(Task task)
             {
                 _task = task;
             }
-
-            public void ExecuteInit()
+            public void Start()
             {
-                #if UNITY_EDITOR
-                EditorApplication.update -= ExecuteInit;
-                #endif
-                ThreadUtility.ExecuteInit();
                 _task.Start(_mainThreadScheduler);
             }
         }
@@ -58,29 +58,35 @@ namespace Meta.WitAi
         /// call code on the main thread.
         /// </summary>
         [RuntimeInitializeOnLoadMethod]
-        private static void Init(Initializer initializer = null)
+        private static void Init()
         {
-            #if UNITY_EDITOR
-            // Ensure the init happens on the main thread if we are in the editor
-            if (null != initializer) EditorApplication.update += initializer.ExecuteInit;
-            else EditorApplication.update += ExecuteInit;
-            #else
-            ExecuteInit();
-            #endif
-        }
-
-        private static void ExecuteInit()
-        {
-            #if UNITY_EDITOR
-            EditorApplication.update -= ExecuteInit;
-            #endif
             if (_mainThreadScheduler != null)
             {
                 return;
             }
-
             _mainThread = Thread.CurrentThread;
             _mainThreadScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            while (_earlyTasks.TryDequeue(out var task))
+            {
+                task.Start();
+            }
+        }
+
+        /// <summary>
+        /// Adds task to scheduler or early task queue
+        /// </summary>
+        private static Task EnqueueMainThreadTask(Task task)
+        {
+            // Start on the main scheduler
+            if (_mainThreadScheduler != null)
+            {
+                task.Start(_mainThreadScheduler);
+                return task;
+            }
+            // Prior to main thread scheduler setup
+            var earlyTask = new EarlyTask(task);
+            _earlyTasks.Enqueue(earlyTask);
+            return task;
         }
         #endif
 
@@ -96,16 +102,22 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task CallOnMainThread(Action callback)
-        {
-            if (IsMainThread())
-            {
-                callback?.Invoke();
-                return Task.FromResult(true);
-            }
+            => CallOnMainThread(null, callback);
 
-            // Get task for callback
-            Task task = new Task(callback);
-            return StartTask(task);
+        /// <summary>
+        /// Safely calls an action on the main thread using a scheduler.
+        /// </summary>
+        /// <param name="callback">The action to be performed on the main thread</param>
+        public static Task CallOnMainThread(IVLogger logger, Action callback)
+        {
+#if THREADING_ENABLED
+            if (!IsMainThread())
+            {
+                var task = new Task(() => SafeAction(logger, callback));
+                return EnqueueMainThreadTask(task);
+            }
+#endif
+            return Task.FromResult(SafeAction(logger, callback));
         }
 
         /// <summary>
@@ -113,61 +125,69 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="callback">The action to be performed on the main thread</param>
         public static Task<T> CallOnMainThread<T>(Func<T> callback)
-        {
-            if (IsMainThread())
-            {
-                return Task.FromResult(callback.Invoke());
-            }
-            // Get task for callback
-            Task<T> task = new Task<T>(callback);
-            return (Task<T>) StartTask(task);
-        }
+            => CallOnMainThread(null, callback);
 
-        private static Task StartTask(Task task)
+        /// <summary>
+        /// Safely calls an action on the main thread using a scheduler.
+        /// </summary>
+        /// <param name="callback">The action to be performed on the main thread</param>
+        public static Task<T> CallOnMainThread<T>(IVLogger logger, Func<T> callback)
         {
 #if THREADING_ENABLED
-
-            // Start on the main scheduler
-            if (_mainThreadScheduler != null)
+            if (!IsMainThread())
             {
-                task.Start(_mainThreadScheduler);
-                return task;
+                var task = new Task<T>(() => SafeAction(logger, callback));
+                return (Task<T>)EnqueueMainThreadTask(task);
             }
-
-#if UNITY_EDITOR
-            // This is the unity editor, we need to make sure the Unity Editor foregrounder
-            // has been initialized.
-            Init(new Initializer(task));
-            return task;
-#else       // If we're in a build and we made it this far we don't have a scheduler. We will
-            // attempt to execute this anyway with a hope we're already on the main thread, but
-            // it may trigger a runtime exception. That exception should flag that something is
-            // wrong here and may need investigating.
-            task.Start();
-            return task;
 #endif
-
-#else       // Threading is not enabled, we'll call the method immediately since we're already
-            // on the main thread
-            task.Start();
-            return task;
-#endif
+            return Task.FromResult(SafeAction(logger, callback));
         }
 
         /// <summary>
         /// Calls and awaits an action within a try/catch
         /// </summary>
-        private static Task SafeAction(IVLogger logger, Action callback)
+        private static bool SafeAction(IVLogger logger, Action callback)
         {
             try
             {
                 callback();
-                return Task.FromResult(true);
+                return true;
             }
             catch (Exception e)
             {
-                logger.Error(e);
-                return Task.FromResult(false);
+                if (logger == null)
+                {
+                    VLog.E(e);
+                }
+                else
+                {
+                    logger.Error(e);
+                }
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calls and awaits an action within a try/catch
+        /// </summary>
+        private static T SafeAction<T>(IVLogger logger, Func<T> callback)
+        {
+            try
+            {
+                var result = callback();
+                return result;
+            }
+            catch (Exception e)
+            {
+                if (logger == null)
+                {
+                    VLog.E(e);
+                }
+                else
+                {
+                    logger.Error(e);
+                }
+                throw;
             }
         }
 
@@ -248,7 +268,7 @@ namespace Meta.WitAi
                 return Task.Run(() => SafeAction(logger, callback));
             }
 #endif
-            return SafeAction(logger, callback);
+            return Task.FromResult(SafeAction(logger, callback));
         }
 
         /// <summary>
