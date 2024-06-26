@@ -130,30 +130,21 @@ namespace Meta.WitAi.Requests
         private static async Task WaitForTurn(VRequest request)
         {
             // Obtain queue of tasks to be awaited
-            Task[] line = null;
+            List<Task> queue = new List<Task>();
+
+            // Lock active requests so no others can begin until this is queued
             lock (_activeRequests)
             {
-                // TODO: Fix possible ordering issues
-                if (_activeRequests.Count >= MaxConcurrentRequests)
-                {
-                    line = _activeRequests.ToArray();
-                }
+                // Get previous
+                queue.AddRange(_activeRequests);
+                // Add current
+                _activeRequests.Add(request.Completion.Task);
             }
 
-            // Wait for the queue to complete
-            if (line != null && line.Length > 0)
+            // Wait for less than max tasks to be running
+            if (queue.Count >= MaxConcurrentRequests)
             {
-                await Task.WhenAll(line);
-            }
-
-            // Active task generation
-            request._task = Task.WhenAny(request.Completion.Task,
-                Task.Delay(2 * WitConstants.DEFAULT_REQUEST_TIMEOUT /* 20 seconds */));
-
-            // Add task
-            lock (_activeRequests)
-            {
-                _activeRequests.Add(request._task);
+                await queue.WhenLessThan(MaxConcurrentRequests);
             }
         }
         #endregion STATIC
@@ -242,7 +233,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Completion source task
         /// </summary>
-        public TaskCompletionSource<bool> Completion { get; private set; }
+        public TaskCompletionSource<bool> Completion { get; private set; } = new TaskCompletionSource<bool>();
 
         /// <summary>
         /// Response Code if applicable
@@ -270,7 +261,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Thread safe access to whether request has completed
         /// </summary>
-        private TaskCompletionSource<bool> _unityRequestComplete;
+        private TaskCompletionSource<bool> _unityRequestComplete = new TaskCompletionSource<bool>();
 
         /// <summary>
         /// Currently running task
@@ -292,8 +283,6 @@ namespace Meta.WitAi.Requests
             IsRunning = false;
             IsDecoding = false;
             HasFirstResponse = false;
-            Completion = new TaskCompletionSource<bool>();
-            _unityRequestComplete = new TaskCompletionSource<bool>();
             UploadProgress = 0f;
             OnUploadProgress?.Invoke(0f);
             DownloadProgress = 0f;
@@ -354,6 +343,9 @@ namespace Meta.WitAi.Requests
                 return new VRequestResponse<TValue>(ResponseCode, ResponseError);
             }
 
+            // Perform timeout
+            _ = PerformTimeout();
+
             // Generate request on main thread and await completion
             IsRunning = true;
             await ThreadUtility.CallOnMainThread(() =>
@@ -405,7 +397,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Dispose
-            await ThreadUtility.CallOnMainThread(Dispose);
+            Dispose();
 
             // Return decoded result
             return new VRequestResponse<TValue>(decodedResult);
@@ -473,7 +465,27 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Obtains request headers if applicable
         /// </summary>
-        protected virtual Dictionary<string, string> GetHeaders() => null;
+        protected virtual Dictionary<string, string> GetHeaders() => new Dictionary<string, string>();
+
+        /// <summary>
+        /// Safely performs a timeout
+        /// </summary>
+        private async Task PerformTimeout()
+        {
+            // Awaits the timeout in ms
+            await Task.Delay(Timeout * 1000);
+
+            // Ignore if complete
+            if (IsComplete)
+            {
+                return;
+            }
+
+            // Set timeout
+            ResponseCode = WitConstants.ERROR_CODE_TIMEOUT;
+            ResponseError = WitConstants.ERROR_RESPONSE_TIMEOUT;
+            Cancel();
+        }
 
         /// <summary>
         /// Generates UnityWebRequest
@@ -484,7 +496,6 @@ namespace Meta.WitAi.Requests
         {
             // Generate request
             var request = new UnityWebRequest(uri, method);
-            request.timeout = Timeout;
 
             // Apply all headers
             if (headers != null)
@@ -536,16 +547,8 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected virtual async Task WaitWhileRunning()
         {
-            // Await request completion or timeout
-            var task = await Task.WhenAny(_unityRequestComplete.Task,
-                Task.Delay(2 * WitConstants.DEFAULT_REQUEST_TIMEOUT /* 20 seconds */));
-
-            // Timeout
-            if (task != _unityRequestComplete.Task)
-            {
-                ResponseCode = WitConstants.ERROR_CODE_TIMEOUT;
-                ResponseError = WitConstants.ERROR_RESPONSE_TIMEOUT;
-            }
+            // Await unity request or VRequest completion
+            await Task.WhenAny(_unityRequestComplete.Task, Completion.Task);
 
             // Stop waiting if complete, no request or an error is found
             if (IsComplete || _request == null || !string.IsNullOrEmpty(ResponseError))
@@ -553,12 +556,11 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // If downloader decoder is found, await completion
+            // If downloader decoder is found, await completion or VRequest completion
             if (Downloader is IVRequestDownloadDecoder downloadDecoder
                 && downloadDecoder.Completion != null)
             {
-                await Task.WhenAny(downloadDecoder.Completion.Task,
-                    Task.Delay(Timeout * 1000));
+                await Task.WhenAny(downloadDecoder.Completion.Task, Completion.Task);
             }
         }
 
@@ -664,17 +666,14 @@ namespace Meta.WitAi.Requests
                 ResponseCode = WitConstants.ERROR_CODE_ABORTED;
                 ResponseError = WitConstants.CANCEL_ERROR;
             }
-            ThreadUtility.CallOnMainThread(_log, () =>
+            // Abort
+            if (_request != null)
             {
-                // Abort
-                if (_request != null)
-                {
-                    _request.Abort();
-                }
+                ThreadUtility.CallOnMainThread(_log, () => _request?.Abort());
+            }
 
-                // Dispose and ensure complete
-                Dispose();
-            });
+            // Dispose and ensure complete
+            Dispose();
         }
 
         /// <summary>
@@ -685,12 +684,18 @@ namespace Meta.WitAi.Requests
             // Dispose request
             if (_request != null)
             {
-                // Dispose handlers
-                _request.uploadHandler?.Dispose();
-                _request.downloadHandler?.Dispose();
-                // Dispose request
-                _request.Dispose();
-                _request = null;
+                ThreadUtility.CallOnMainThread(_log, () =>
+                {
+                    if (_request != null)
+                    {
+                        // Dispose handlers
+                        _request.uploadHandler?.Dispose();
+                        _request.downloadHandler?.Dispose();
+                        // Dispose request
+                        _request.Dispose();
+                        _request = null;
+                    }
+                });
             }
 
             // Officially complete
@@ -701,6 +706,8 @@ namespace Meta.WitAi.Requests
             {
                 _activeRequests.Remove(_task);
             }
+
+            // Tasks waiting will immediately continue
             Completion.SetResult(true);
         }
 
@@ -855,7 +862,6 @@ namespace Meta.WitAi.Requests
                 var success = string.IsNullOrEmpty(results.Error) && results.Value.Keys.Count > 0;
                 return new VRequestResponse<bool>(success, results.Code, results.Error);
             }
-
 
             // Within a jar, perform a request
             if (IsJarPath(url))

@@ -16,10 +16,8 @@ using System.Threading;
 using Meta.Voice.Logging;
 #if THREADING_ENABLED
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
-using UnityEditor;
 #endif
 
 namespace Meta.WitAi
