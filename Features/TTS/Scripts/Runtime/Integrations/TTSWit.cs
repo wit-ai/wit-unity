@@ -386,14 +386,20 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Checks if file exists on disk
         /// </summary>
-        public Task<string> IsDownloadedToDisk(string diskPath)
+        public async Task<string> IsDownloadedToDisk(string diskPath)
         {
-            return ThreadUtility.BackgroundAsync(_log, async () =>
+            string error = null;
+            await ThreadUtility.BackgroundAsync(_log, async () =>
             {
                 var request = new VRequest();
                 var results = await request.RequestFileExists(diskPath);
-                return results.Error;
+                error = results.Error;
+                if (string.IsNullOrEmpty(error) && !results.Value)
+                {
+                    error = "File Not Found";
+                }
             });
+            return error;
         }
 
         /// <summary>

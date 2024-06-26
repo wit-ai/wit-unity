@@ -336,7 +336,8 @@ namespace Meta.WitAi.TTS
             // Use hash code with disk cache handler
             if (DiskCacheHandler != null)
             {
-                result = result.GetHashCode().ToString();
+                int hashcode = result.GetHashCode();
+                result = $"tts_{(hashcode < 0 ? "n" : "p")}{Mathf.Abs(hashcode)}";
             }
 
             // Return string
@@ -807,7 +808,7 @@ namespace Meta.WitAi.TTS
         /// <param name="onDownloadComplete">Callback when file has finished
         /// downloading with success or error</param>
         /// <returns>Any errors that occured during the download process</returns>
-        public async Task<string> DownloadAsync(TTSClipData clipData,
+        private async Task<string> DownloadAsync(TTSClipData clipData,
             Action<TTSClipData, string, string> onDownloadComplete = null)
         {
             // Throw error without clip data
@@ -824,31 +825,32 @@ namespace Meta.WitAi.TTS
                 onDownloadComplete?.Invoke(clipData, null, error);
                 return error;
             }
+
             // Get download path
             var downloadPath = DiskCacheHandler.GetDiskCachePath(clipData);
-            RaiseDownloadBegin(clipData, downloadPath);
 
             // Check if download
             var shouldDownload = await ShouldDownload(clipData, downloadPath);
             if (!shouldDownload.Item1)
             {
-                // Cannot download
+                // Network or service setup errors should throw download begin/error
                 if (!string.IsNullOrEmpty(shouldDownload.Item2))
                 {
+                    RaiseDownloadBegin(clipData, downloadPath);
                     RaiseDownloadError(clipData, downloadPath, shouldDownload.Item2);
-                }
-                // Found
-                else
-                {
-                    RaiseDownloadSuccess(clipData, downloadPath);
                 }
                 onDownloadComplete?.Invoke(clipData, downloadPath, shouldDownload.Item2);
                 return shouldDownload.Item2;
             }
 
             // Download to cache
+            RaiseDownloadBegin(clipData, downloadPath);
             var downloadErrors = await WebHandler.RequestDownloadFromWeb(clipData, downloadPath);
-            if (!string.IsNullOrEmpty(downloadErrors))
+            if (string.Equals(clipData.LoadError, WitConstants.CANCEL_ERROR))
+            {
+                RaiseDownloadCancel(clipData, downloadPath);
+            }
+            else if (!string.IsNullOrEmpty(downloadErrors))
             {
                 RaiseDownloadError(clipData, downloadPath, downloadErrors);
             }
@@ -871,26 +873,32 @@ namespace Meta.WitAi.TTS
                 return new Tuple<bool, string>(false, string.Empty);
             }
 
-            // Check if downloaded
+            // Empty if currently on disk
             var checkError = await WebHandler.IsDownloadedToDisk(downloadPath);
-
+            // Already downloaded
+            if (string.IsNullOrEmpty(checkError))
+            {
+                return new Tuple<bool, string>(false, string.Empty);
+            }
             // Cancelled
             if (string.Equals(clipData.LoadError, WitConstants.CANCEL_ERROR))
             {
                 return new Tuple<bool, string>(false, WitConstants.CANCEL_ERROR);
             }
-            // Perform a check on web handler
-            if (string.IsNullOrEmpty(checkError))
-            {
-                checkError = WebHandler.GetWebErrors(clipData);
-            }
             // Preload selected but not in disk cache, return a specific error
-            else if (Application.isPlaying
-                     && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
+            if (Application.isPlaying
+                && clipData.diskCacheSettings.DiskCacheLocation == TTSDiskCacheLocation.Preload)
             {
                 return new Tuple<bool, string>(false, WitConstants.ERROR_TTS_CACHE_DOWNLOAD);
             }
-            return new Tuple<bool, string>(!string.IsNullOrEmpty(checkError), checkError);
+            // Check for web errors
+            var webErrors = WebHandler.GetWebErrors(clipData);
+            if (!string.IsNullOrEmpty(webErrors))
+            {
+                return new Tuple<bool, string>(false, webErrors);
+            }
+            // Download
+            return new Tuple<bool, string>(true, checkError);
         }
         #endregion
 
@@ -933,6 +941,10 @@ namespace Meta.WitAi.TTS
             // Unloads clip stream
             clipData.clipStream?.Unload();
             clipData.clipStream = null;
+            if (clipData.loadState == TTSClipLoadState.Preparing)
+            {
+                clipData.LoadError = WitConstants.CANCEL_ERROR;
+            }
             if (clipData.loadState != TTSClipLoadState.Error)
             {
                 SetClipLoadState(clipData, TTSClipLoadState.Unloaded);

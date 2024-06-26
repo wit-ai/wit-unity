@@ -875,6 +875,7 @@ namespace Meta.WitAi.Requests
                 };
 
                 // Request async & cancels on first response
+                Method = VRequestMethod.HttpGet;
                 var results = await RequestFile(url);
                 if (!exists && (results.Value?.Length ?? 0) > 0)
                 {
@@ -889,7 +890,7 @@ namespace Meta.WitAi.Requests
             try
             {
                 Url = url;
-                bool exists = File.Exists(GetUri().ToString());
+                bool exists = File.Exists(Url);
                 return new VRequestResponse<bool>(exists);
             }
             catch (Exception e)
@@ -908,7 +909,7 @@ namespace Meta.WitAi.Requests
             bool result = Regex.IsMatch(url, "(jar:).*");
 #if UNITY_ANDROID && UNITY_EDITOR
             // Android editor: simulate jar handling
-            result = result || (Application.isPlaying && url.StartsWith(Application.streamingAssetsPath));
+            result |= url.Contains("StreamingAssets");
 #endif
             return result;
         }
@@ -1118,6 +1119,12 @@ namespace Meta.WitAi.Requests
                 {
                     Downloader = new AudioStreamHandler(decoder, onSamplesDecoded);
                 });
+            }
+
+            // Default to get
+            if (Method == VRequestMethod.Unknown)
+            {
+                Method = VRequestMethod.HttpGet;
             }
 
             // Perform default request operation & call stream complete once finished
