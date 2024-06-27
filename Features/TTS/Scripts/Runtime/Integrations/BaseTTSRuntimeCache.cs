@@ -34,7 +34,7 @@ namespace Meta.WitAi.TTS.Integrations
         /// <summary>
         /// Simple getter for all clips
         /// </summary>
-        public TTSClipData[] GetClips() => _clips.Values.ToArray();
+        public virtual TTSClipData[] GetClips() => _clips.Values.ToArray();
         // Clips contained in the class by unique id
         protected ConcurrentDictionary<string, TTSClipData> _clips = new ConcurrentDictionary<string, TTSClipData>();
 

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -52,6 +53,20 @@ namespace Meta.WitAi.TTS.Integrations
 
         // Clips & their ids
         private List<string> _clipOrder = new List<string>();
+
+        /// <summary>
+        /// Simple getter for all clips
+        /// </summary>
+        public override TTSClipData[] GetClips()
+        {
+            var clips = new TTSClipData[_clipOrder.Count];
+            for (int i = 0; i < clips.Length; i++)
+            {
+                _clips.TryGetValue(_clipOrder[i], out var clip);
+                clips[i] = clip;
+            }
+            return clips;
+        }
 
         // Remove all
         protected override void OnDestroy()
@@ -110,7 +125,9 @@ namespace Meta.WitAi.TTS.Integrations
             // If not full, evict least recently used clips
             while (IsCacheFull() && _clipOrder.Count > 0)
             {
-                RemoveClip(_clipOrder[0]);
+                var id = _clipOrder[0];
+                _clipOrder.RemoveAt(0);
+                RemoveClip(id);
             }
 
             // True if successfully added
