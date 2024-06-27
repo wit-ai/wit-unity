@@ -84,8 +84,34 @@ namespace Meta.WitAi
             // Prior to main thread scheduler setup
             var earlyTask = new EarlyTask(task);
             _earlyTasks.Enqueue(earlyTask);
+            #if UNITY_EDITOR
+            // Add editor callback
+            if (!_editorCallback)
+            {
+                _editorCallback = true;
+                UnityEditor.EditorApplication.update += EditorInit;
+            }
+            #endif
             return task;
         }
+
+#if UNITY_EDITOR
+        // Tracking for editor update callback
+        private static bool _editorCallback = false;
+
+        /// <summary>
+        /// In editor, ensure main thread scheduler is still created
+        /// </summary>
+        private static void EditorInit()
+        {
+            if (_editorCallback)
+            {
+                _editorCallback = false;
+            }
+            UnityEditor.EditorApplication.update -= EditorInit;
+            Init();
+        }
+#endif
         #endif
 
         /// <summary>

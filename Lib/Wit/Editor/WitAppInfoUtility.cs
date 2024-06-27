@@ -37,9 +37,8 @@ namespace Meta.WitAi
     {
         #region SETUP
         // Setup with server token and return on complete method
-        internal static void GetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete) =>
-            #pragma warning disable CS4014
-            WaitForGetAppInfo(serverToken, onComplete);
+        internal static void GetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
+            => _ = WaitForGetAppInfo(serverToken, onComplete);
 
         // Wait for update & return app info if possible
         private static async Task WaitForGetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
@@ -54,8 +53,7 @@ namespace Meta.WitAi
         {
             var tempConfig = new WitServerRequestConfiguration(serverToken);
             var request = new WitInfoVRequest(tempConfig, true);
-            #pragma warning disable CS4014
-            WaitForCheckServerToken(request, onComplete);
+            _ = WaitForCheckServerToken(request, onComplete);
             return request;
         }
         // Perform id lookup
