@@ -12,7 +12,7 @@ namespace Meta.WitAi
     {
         // Wit service version info
         public const string API_VERSION = "20240413";
-        public const string SDK_VERSION = "68.0.0";
+        public const string SDK_VERSION = "69.0.0";
         public const string CLIENT_NAME = "wit-unity";
 
         // Wit service endpoint info
