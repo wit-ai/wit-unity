@@ -25,7 +25,8 @@ namespace Meta.WitAi
     [LogCategory("MatchIntent")]
     internal static class MatchIntentRegistry
     {
-        private static readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public static IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger("MatchIntent");
         private static DictionaryList<string, RegisteredMatchIntent> registeredMethods;
 
         public static DictionaryList<string, RegisteredMatchIntent> RegisteredMethods

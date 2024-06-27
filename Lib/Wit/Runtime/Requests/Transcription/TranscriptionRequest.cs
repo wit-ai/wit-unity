@@ -7,6 +7,7 @@
  */
 
 using System.Text;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
@@ -21,8 +22,7 @@ namespace Meta.Voice
     /// <typeparam name="TOptions">The type containing all specific options to be passed to the end service.</typeparam>
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
-    public abstract class TranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>
-        : VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
+    public abstract class TranscriptionRequest<TUnityEvent, TOptions, TEvents, TResults>: VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
         where TUnityEvent : UnityEventBase
         where TOptions : ITranscriptionRequestOptions
         where TEvents : TranscriptionRequestEvents<TUnityEvent>

@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Lib.Wit.Runtime.Utilities.Logging;
 
 namespace Meta.Voice.Logging
 {
@@ -41,24 +42,38 @@ namespace Meta.Voice.Logging
         public VLoggerVerbosity LogSuppressionLevel { get; set; }
 
         /// <summary>
+        /// The level at which we collect and write stack traces.
+        /// </summary>
+        VLoggerVerbosity LogStackTraceLevel { get; set; }
+
+        /// <summary>
         /// When true, caches the loggers and reuse them for the same category.
         /// This should always be set to true, except in rare circumstances (such as unit tests).
         /// </summary>
         bool PoolLoggers { get; set; }
 
         /// <summary>
-        /// Gets a logger with an inferred category.
+        /// Gets a logger with a category pulled from the source directly.
         /// </summary>
-        /// <param name="logSync">An optional log sink.</param>
-        /// <returns>The logger</returns>
-        IVLogger GetLogger(ILogSink logSink = null);
+        /// <param name="logCategory">The category of the logs written by this logger.</param>
+        /// <param name="logSink">An optional log sink.</param>
+        /// <returns>The logger.</returns>
+        IVLogger GetLogger(LogCategory logCategory, ILogSink logSink = null);
+
+        /// <summary>
+        /// Gets a logger with an explicitly specified category.
+        /// </summary>
+        /// <param name="logSink">An optional log sink.</param>
+        /// <returns>The logger.</returns>
+        //[Obsolete ("Use the ILoggable overload instead of better runtime efficiency")]
+        // IVLogger GetLogger(ILogSink logSink = null);
 
         /// <summary>
         /// Gets a logger with an explicitly specified category.
         /// </summary>
         /// <param name="category">The category of the logs written by this logger.</param>
-        /// <param name="logSink"></param>
-        /// <returns>The logger</returns>
+        /// <param name="logSink">An optional log sink.</param>
+        /// <returns>The logger.</returns>
         IVLogger GetLogger(string category, ILogSink logSink = null);
 
         /// <summary>

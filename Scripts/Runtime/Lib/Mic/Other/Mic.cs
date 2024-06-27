@@ -34,6 +34,7 @@ using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice;
 using Meta.Voice.Logging;
 using UnityEngine.Serialization;
@@ -44,9 +45,10 @@ namespace Meta.WitAi.Lib
     /// A simple mic playback class
     /// </summary>
     [LogCategory(LogCategory.Audio, LogCategory.Input)]
-    public class Mic : BaseAudioClipInput
+    public class Mic : BaseAudioClipInput, ILogSource
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Input);
 
         /// <summary>
         /// The audio clip obtained from Microphone.Start
@@ -179,7 +181,7 @@ namespace Meta.WitAi.Lib
             MicBufferLength = Mathf.Max(1, MicBufferLength);
 
             // Start microphone
-            _log.Info("Start Microphone '{0}'", micName);
+            Logger.Info("Start Microphone '{0}'", micName);
             _audioClip = MicrophoneStart(micName, true, MicBufferLength, AudioSampleRate);
 
             // Failed to activate
@@ -212,7 +214,7 @@ namespace Meta.WitAi.Lib
             // Stop microphone if recording
             if (MicrophoneIsRecording(micName))
             {
-                _log.Info("Stop Microphone '{0}'", micName);
+                Logger.Info("Stop Microphone '{0}'", micName);
                 MicrophoneEnd(micName);
             }
 

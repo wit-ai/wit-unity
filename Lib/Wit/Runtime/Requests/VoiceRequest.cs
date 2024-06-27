@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi;
@@ -27,13 +28,14 @@ namespace Meta.Voice
     /// <typeparam name="TEvents">The type containing all events of TSession to be called throughout the lifecycle of the request.</typeparam>
     /// <typeparam name="TResults">The type containing all data that can be returned from the end service.</typeparam>
     [LogCategory(LogCategory.Requests)]
-    public abstract class VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>
+    public abstract class VoiceRequest<TUnityEvent, TOptions, TEvents, TResults>:ILogSource
         where TUnityEvent : UnityEventBase
         where TOptions : IVoiceRequestOptions
         where TEvents : VoiceRequestEvents<TUnityEvent>
         where TResults : IVoiceRequestResults
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public virtual IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Requests);
 
         #region SIMULATION
         public static SimulatedResponse simulatedResponse;
@@ -256,7 +258,7 @@ namespace Meta.Voice
         // Wait for hold to complete and then perform an action on the background thread
         protected void WaitForHold(Action onReady)
         {
-            _ = ThreadUtility.BackgroundAsync(_log, async () =>
+            _ = ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 if (HoldTasks != null)
                 {
@@ -325,7 +327,7 @@ namespace Meta.Voice
             // Append any request specific data
             AppendLogData(requestLog, logLevel);
             // Log
-            _log.Log(_log.CorrelationID, logLevel, "{0}", requestLog);
+            Logger.Log(Logger.CorrelationID, logLevel, "{0}", requestLog);
         }
         protected void LogW(string log) => Log(log, VLoggerVerbosity.Warning);
         protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLoggerVerbosity.Error);

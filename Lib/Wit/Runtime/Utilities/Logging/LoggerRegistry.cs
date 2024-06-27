@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEditor;
 
 namespace Meta.Voice.Logging
@@ -97,7 +98,7 @@ namespace Meta.Voice.Logging
         /// <summary>
         /// The singleton instance of the registry.
         /// </summary>
-        public static LoggerRegistry Instance { get; } = new LoggerRegistry();
+        public static ILoggerRegistry Instance { get; } = new LoggerRegistry();
 
         /// <inheritdoc/>
         public IEnumerable<IVLogger> AllLoggers => _loggers.Values;
@@ -134,17 +135,29 @@ namespace Meta.Voice.Logging
 #endif
 
         /// <inheritdoc/>
-        public IVLogger GetLogger(ILogSink logSink = null)
+        public IVLogger GetLogger(LogCategory logCategory, ILogSink logSink = null)
+        {
+            return new LazyLogger(() => GetCoreLogger(logCategory, logSink));
+        }
+
+        /// <inheritdoc/>
+        /*public IVLogger GetLogger(ILogSink logSink = null)
         {
             // Send a depth of four to account for the lambda, the lazy logger, and the main logger call
             // that would have triggered the creation.
             return new LazyLogger(() => GetCoreLogger(logSink, 4));
-        }
+        }*/
 
         /// <inheritdoc/>
         public IVLogger GetLogger(string category, ILogSink logSink)
         {
             return new LazyLogger(() => GetCoreLogger(category, logSink));
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IVLogger GetCoreLogger(LogCategory category, ILogSink logSink)
+        {
+            return GetCoreLogger(category.ToString(), logSink);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

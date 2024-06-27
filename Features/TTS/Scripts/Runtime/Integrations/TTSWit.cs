@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
@@ -23,7 +24,7 @@ using Meta.WitAi.Requests;
 
 namespace Meta.WitAi.TTS.Integrations
 {
-    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider, IWitConfigurationSetter
+    public class TTSWit : TTSService, ITTSVoiceProvider, ITTSWebHandler, IWitConfigurationProvider, IWitConfigurationSetter, ILogSource
     {
         #region TTSService
         /// <summary>
@@ -58,11 +59,6 @@ namespace Meta.WitAi.TTS.Integrations
         /// The current web socket adapter used to perform web socket requests
         /// </summary>
         private WitWebSocketAdapter _webSocketAdapter;
-
-        /// <summary>
-        /// For logging
-        /// </summary>
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <summary>
         /// Attempt to instantiate web socket adapter
@@ -310,7 +306,7 @@ namespace Meta.WitAi.TTS.Integrations
             var clipId = clipData.clipID;
             var request = CreateHttpRequest(clipData);
             _httpRequests[clipId] = request;
-            return ThreadUtility.BackgroundAsync(_log, async () =>
+            return ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 var results = await request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents);
                 _httpRequests.TryRemove(clipId, out var discard);
@@ -375,7 +371,7 @@ namespace Meta.WitAi.TTS.Integrations
             var clipId = clipData.clipID;
             var request = CreateHttpRequest(clipData);
             _httpRequests[clipId] = request;
-            return ThreadUtility.BackgroundAsync(_log, async () =>
+            return ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 var results = await request.RequestDownload(diskPath);
                 _httpRequests.TryRemove(clipId, out var discard);
@@ -389,7 +385,7 @@ namespace Meta.WitAi.TTS.Integrations
         public async Task<string> IsDownloadedToDisk(string diskPath)
         {
             string error = null;
-            await ThreadUtility.BackgroundAsync(_log, async () =>
+            await ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 var request = new VRequest();
                 var results = await request.RequestFileExists(diskPath);
@@ -455,7 +451,7 @@ namespace Meta.WitAi.TTS.Integrations
             var request = new VRequest();
             request.Url = "file://" + diskPath;
             _httpRequests[clipId] = request;
-            return ThreadUtility.BackgroundAsync(_log, async () =>
+            return ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 var results = await request.RequestAudio(clipData.audioType,
                     clipData.clipStream.AddSamples,

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Lib.Wit.Runtime.Requests;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Data.Info;
@@ -23,8 +24,11 @@ namespace Meta.Conduit.Editor
     /// <summary>
     /// Synchronizes local enums with their Wit.Ai entities.
     /// </summary>
-    internal class EnumSynchronizer
+    internal class EnumSynchronizer: ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Conduit);
+
         private const string DEFAULT_NAMESPACE = "Conduit.Generated";
 
         private readonly IWitRequestConfiguration _configuration;
@@ -32,7 +36,6 @@ namespace Meta.Conduit.Editor
         private readonly IFileIo _fileIo;
         private readonly IWitVRequestFactory _requestFactory;
         private float _progress = 0;
-        private static readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         public EnumSynchronizer(IWitRequestConfiguration configuration, IAssemblyWalker assemblyWalker, IFileIo fileIo, IWitVRequestFactory requestFactory)
         {
@@ -95,7 +98,7 @@ namespace Meta.Conduit.Editor
                     if (!success)
                     {
                         allEntitiesSynced = false;
-                        _log.Warning("Failed to sync entity {0}.\n{1}",
+                        Logger.Warning("Failed to sync entity {0}.\n{1}",
                             manifestEntity.Name, error);
                     }
                 });
@@ -194,7 +197,7 @@ namespace Meta.Conduit.Editor
             // Wit entity not found
             if (!witIncomingEntity.HasValue)
             {
-                _log.Error("Enum Synchronizer - Failed to find {0} entity on Wit.AI", entityName);
+                Logger.Error("Enum Synchronizer - Failed to find {0} entity on Wit.AI", entityName);
                 yield break;
             }
 
@@ -256,7 +259,7 @@ namespace Meta.Conduit.Editor
 
             if (assemblies.Count() != 1)
             {
-                _log.Error("Expected one assembly for type {0} but found {1}",
+                Logger.Error("Expected one assembly for type {0} but found {1}",
                     qualifiedTypeName, assemblies.Count);
                 throw new InvalidOperationException();
             }
@@ -269,7 +272,7 @@ namespace Meta.Conduit.Editor
             }
             catch (Exception)
             {
-                _log.Error("Failed to get wrapper for {0} resolved as type {1}",
+                Logger.Error("Failed to get wrapper for {0} resolved as type {1}",
                     qualifiedTypeName, enumType.FullName);
                 throw;
             }
@@ -324,7 +327,7 @@ namespace Meta.Conduit.Editor
             {
                 if (witEntityKeywords.ContainsKey(keyword.keyword))
                 {
-                    _log.Warning("Duplicate keyword {0} was found in entity {1}. Verify entities on Wit.Ai",
+                    Logger.Warning("Duplicate keyword {0} was found in entity {1}. Verify entities on Wit.Ai",
                         keyword.keyword, incomingEntity.Value.name);
                     continue;
                 }
@@ -475,7 +478,7 @@ namespace Meta.Conduit.Editor
                 requestCompleted = true;
                 if (!string.IsNullOrEmpty(result.Error))
                 {
-                    _log.Error("Failed to query Wit Entities\nError: {0}",
+                    Logger.Error("Failed to query Wit Entities\nError: {0}",
                         result.Error);
                     callBack(null);
                     return;

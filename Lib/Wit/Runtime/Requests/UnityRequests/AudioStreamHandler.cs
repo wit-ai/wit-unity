@@ -9,6 +9,7 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
@@ -28,8 +29,11 @@ namespace Meta.WitAi.Requests
     /// </summary>
     [Preserve]
     [LogCategory(LogCategory.Audio, LogCategory.Output)]
-    internal class AudioStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder
+    internal class AudioStreamHandler : DownloadHandlerScript, IVRequestDownloadDecoder, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Output);
+
         /// <summary>
         /// Whether data has arrived
         /// </summary>
@@ -95,9 +99,6 @@ namespace Meta.WitAi.Requests
         private bool _decodeComplete => _decodedBytes == Max(_receivedBytes, _expectedBytes);
         // Returns the longer of two ulong
         private ulong Max(ulong var1, ulong var2) => var1 > var2 ? var1 : var2;
-
-        // For logging
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Task performing decode
         private Task _decoder;
@@ -195,7 +196,7 @@ namespace Meta.WitAi.Requests
             var maxLength = _inRingBuffer.Length;
             if (unDecoded > maxLength)
             {
-                _log.Error("Buffer Overflow!\nReceived {0} bytes makes {1} bytes not yet decoded thereby overflowing {2} bytes in the entire ring buffer.",
+                Logger.Error("Buffer Overflow!\nReceived {0} bytes makes {1} bytes not yet decoded thereby overflowing {2} bytes in the entire ring buffer.",
                     length, unDecoded, maxLength);
             }
 
@@ -220,7 +221,7 @@ namespace Meta.WitAi.Requests
             // Enqueue decode task
             if (_decoder == null)
             {
-                _decoder = ThreadUtility.Background(_log,  DecodeAsync);
+                _decoder = ThreadUtility.Background(Logger,  DecodeAsync);
             }
         }
 
@@ -264,7 +265,7 @@ namespace Meta.WitAi.Requests
             }
             catch (Exception e)
             {
-                _log.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
+                Logger.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
             }
             _decodedBytes += (ulong)length;
             RefreshProgress();

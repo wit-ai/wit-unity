@@ -10,6 +10,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.WitAi.Json;
 using UnityEngine;
@@ -21,7 +22,7 @@ namespace Meta.Voice.Net.Encoding.Wit
     /// consisting of json mixed with binary data.
     /// </summary>
     [LogCategory(LogCategory.Encoding)]
-    public class WitChunkConverter
+    public class WitChunkConverter: ILogSource
     {
         /// <summary>
         /// Class used to encode/decode text
@@ -29,7 +30,8 @@ namespace Meta.Voice.Net.Encoding.Wit
         private static readonly UTF8Encoding TextEncoding = new UTF8Encoding();
 
         // For logging
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Encoding);
 
         #region DECODING
         // The current chunk being decoded
@@ -112,7 +114,7 @@ namespace Meta.Voice.Net.Encoding.Wit
                 // Header decode failed
                 if (_currentChunk.header.invalid)
                 {
-                    _log.Error("WitChunk Header Decode Failed: Header is invalid\nHeader: {0}",
+                    Logger.Error("WitChunk Header Decode Failed: Header is invalid\nHeader: {0}",
                         GetByteString(_headerBytes, 0, HEADER_SIZE));
                     ResetChunk();
                     return decodeLength;

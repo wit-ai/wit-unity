@@ -7,7 +7,9 @@
  */
 
 using System;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
 using Meta.WitAi.Configuration;
@@ -49,7 +51,7 @@ namespace Meta.WitAi.Requests
     /// A WitSocketRequest implementation using web sockets
     /// </summary>
     [Serializable]
-    public class WitSocketRequest : VoiceServiceRequest, IAudioUploadHandler
+    public class WitSocketRequest : VoiceServiceRequest, IAudioUploadHandler, ILogSource
     {
         /// <summary>
         /// The configuration to be used for the request

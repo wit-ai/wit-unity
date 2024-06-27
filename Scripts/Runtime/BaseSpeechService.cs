@@ -28,7 +28,8 @@ namespace Meta.WitAi
     [LogCategory(LogCategory.SpeechService)]
     public abstract class BaseSpeechService : MonoBehaviour
     {
-        protected readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.SpeechService);
 
         /// <summary>
         /// Whether this script should wrap all request event setups

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using Lib.Wit.Runtime.Utilities.Logging;
 
 namespace Meta.Voice.Logging
 {
@@ -17,12 +18,10 @@ namespace Meta.Voice.Logging
     /// A database of mitigations for known error codes.
     /// </summary>
     [LogCategory(LogCategory.Logging, LogCategory.ErrorMitigator)]
-    public class ErrorMitigator : IErrorMitigator
+    public class ErrorMitigator : IErrorMitigator, ILogSource
     {
-        /// <summary>
-        /// The logger.
-        /// </summary>
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.ErrorMitigator);
 
         public ErrorMitigator()
         {
@@ -39,7 +38,7 @@ namespace Meta.Voice.Logging
                     }
                     else
                     {
-                        _log.Error(KnownErrorCode.KnownErrorMissingDescription, "Missing error description for {0}", value);
+                        Logger.Error(KnownErrorCode.KnownErrorMissingDescription, "Missing error description for {0}", value);
                         _mitigations[value] = "Please file a bug report.";
                     }
                 }

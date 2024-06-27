@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 
 namespace Meta.Conduit.Editor
@@ -19,12 +20,13 @@ namespace Meta.Conduit.Editor
     /// Mines assemblies for callback methods and entities.
     /// </summary>
     [LogCategory(LogCategory.Conduit, LogCategory.AssemblyMiner)]
-    internal class AssemblyMiner : IAssemblyMiner
+    internal class AssemblyMiner : IAssemblyMiner, ILogSource
     {
         /// <summary>
         /// The logger.
         /// </summary>
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.AssemblyMiner);
 
         /// <summary>
         /// Validates that parameters are compatible.
@@ -85,7 +87,7 @@ namespace Meta.Conduit.Editor
                 }
                 catch (Exception e)
                 {
-                    _log.Warning("Failed to get enumeration values.\nEnum: {0}\n{1}", enumType, e);
+                    Logger.Warning("Failed to get enumeration values.\nEnum: {0}\n{1}", enumType, e);
                     continue;
                 }
 
@@ -114,7 +116,7 @@ namespace Meta.Conduit.Editor
 
                     if (enumValue == null)
                     {
-                        _log.Error(KnownErrorCode.AssemblyMinerNullEnum, "Unexpected null enum value");
+                        Logger.Error(KnownErrorCode.AssemblyMinerNullEnum, "Unexpected null enum value");
                         continue;
                     }
 
@@ -197,13 +199,13 @@ namespace Meta.Conduit.Editor
             {
                 if (method == null)
                 {
-                    _log.Error(KnownErrorCode.NullMethodInAssembly, "Found a null method in assembly: {0}", assembly.FullName);
+                    Logger.Error(KnownErrorCode.NullMethodInAssembly, "Found a null method in assembly: {0}", assembly.FullName);
                     continue;
                 }
 
                 if (method.DeclaringType == null)
                 {
-                    _log.Error(KnownErrorCode.NullDeclaringTypeInAssembly,"Method {0} in assembly {1} had null declaring type", method.Name, assembly.FullName);
+                    Logger.Error(KnownErrorCode.NullDeclaringTypeInAssembly,"Method {0} in assembly {1} had null declaring type", method.Name, assembly.FullName);
                     continue;
                 }
 
@@ -260,7 +262,7 @@ namespace Meta.Conduit.Editor
                 if (!supported)
                 {
                     compatibleParameters = false;
-                    _log.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
+                    Logger.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
                     continue;
                 }
 
@@ -274,7 +276,7 @@ namespace Meta.Conduit.Editor
             }
             else
             {
-                _log.Warning("{0} has Conduit-Incompatible Parameters", method);
+                Logger.Warning("{0} has Conduit-Incompatible Parameters", method);
                 IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
                 IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
             }
@@ -320,17 +322,17 @@ namespace Meta.Conduit.Editor
                 var methodParameters = method.GetParameters();
                 if (methodParameters.Length < 2)
                 {
-                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Not enough parameters provided for error handler {0}", method.Name);
+                    Logger.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Not enough parameters provided for error handler {0}", method.Name);
                     continue;
                 }
                 if (methodParameters[0].ParameterType != typeof(string))
                 {
-                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "First parameter must be a string for error handler {0}", method.Name);
+                    Logger.Error(KnownErrorCode.InvalidErrorHandlerParameter, "First parameter must be a string for error handler {0}", method.Name);
                     continue;
                 }
                 if (methodParameters[1].ParameterType != typeof(Exception))
                 {
-                    _log.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Second parameter must be an exception for error handler {0}", method.Name);
+                    Logger.Error(KnownErrorCode.InvalidErrorHandlerParameter, "Second parameter must be an exception for error handler {0}", method.Name);
                     continue;
                 }
 
@@ -340,7 +342,7 @@ namespace Meta.Conduit.Editor
                     if (!supported)
                     {
                         compatibleParameters = false;
-                        _log.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
+                        Logger.Warning("Conduit does not currently support parameter type: {0}", parameter.ParameterType);
                         continue;
                     }
 
@@ -354,7 +356,7 @@ namespace Meta.Conduit.Editor
                 }
                 else
                 {
-                    _log.Warning("{0} has Conduit-Incompatible Parameters", method);
+                    Logger.Warning("{0} has Conduit-Incompatible Parameters", method);
                     IncompatibleSignatureFrequency.TryGetValue(signature, out currentFrequency);
                     IncompatibleSignatureFrequency[signature] = currentFrequency + 1;
                 }

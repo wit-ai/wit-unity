@@ -11,6 +11,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Audio;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
@@ -29,8 +30,13 @@ namespace Meta.WitAi.TTS
     /// Abstract script for loading and returning text-to-speech clip streams.
     /// </summary>
     [LogCategory(LogCategory.TextToSpeech)]
-    public abstract class TTSService : MonoBehaviour
+    public abstract class TTSService : MonoBehaviour, ILogSource
     {
+        // Logging
+        [SerializeField] private bool verboseLogging;
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);
+
         #region SETUP
         /// <summary>
         /// Static singleton to be used when interacting with a single TTSService
@@ -95,10 +101,6 @@ namespace Meta.WitAi.TTS
         /// Static event called whenever any TTSService.OnDestroy is called
         /// </summary>
         public static event Action<TTSService> OnServiceDestroy;
-
-        // Logging
-        [SerializeField] private bool verboseLogging;
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         // Handles TTS events
         public TTSServiceEvents Events => _events;
@@ -231,7 +233,7 @@ namespace Meta.WitAi.TTS
             }
             if (newValue != null)
             {
-                _log.Error("Set {0} Failed\nCannot set {1} to a UnityEngine.Object property", typeof(TInterface).Name, newValue.GetType().Name);
+                Logger.Error("Set {0} Failed\nCannot set {1} to a UnityEngine.Object property", typeof(TInterface).Name, newValue.GetType().Name);
             }
             return null;
         }
@@ -252,14 +254,14 @@ namespace Meta.WitAi.TTS
         /// </summary>
         private void Log(string logMessage, TTSClipData clipData = null, VLoggerVerbosity logLevel = VLoggerVerbosity.Verbose)
         {
-            _log.Log(_log.CorrelationID, logLevel, "{0}\n{1}", logMessage, (clipData == null ? "" : clipData));
+            Logger.Log(Logger.CorrelationID, logLevel, "{0}\n{1}", logMessage, (clipData == null ? "" : clipData));
         }
 
         private void LogState(TTSClipData clipData, string message, bool fromDisk, string error = null)
         {
             if (!string.IsNullOrEmpty(error))
             {
-                _log.Error("{0} {1}\nText: {2}\nVoice: {3}\nError: {4}",
+                Logger.Error("{0} {1}\nText: {2}\nVoice: {3}\nError: {4}",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
@@ -268,7 +270,7 @@ namespace Meta.WitAi.TTS
             }
             else if (verboseLogging)
             {
-                _log.Verbose("{0} {1}\nText: {2}\nVoice: {3}",
+                Logger.Verbose("{0} {1}\nText: {2}\nVoice: {3}",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
@@ -928,7 +930,7 @@ namespace Meta.WitAi.TTS
             SetClipLoadState(clipData, TTSClipLoadState.Preparing);
             RaiseEvents(() =>
             {
-                if (verboseLogging) _log.Verbose("Clip Loading\nText: {0}", clipData.textToSpeak);
+                if (verboseLogging) Logger.Verbose("Clip Loading\nText: {0}", clipData.textToSpeak);
                 Events?.OnClipCreated?.Invoke(clipData);
             });
         }
@@ -952,7 +954,7 @@ namespace Meta.WitAi.TTS
 
             RaiseEvents(() =>
             {
-                if (verboseLogging) _log.Verbose("Clip Unloaded\nText: {0}", clipData.textToSpeak);
+                if (verboseLogging) Logger.Verbose("Clip Unloaded\nText: {0}", clipData.textToSpeak);
                 Events?.OnClipUnloaded?.Invoke(clipData);
             });
         }

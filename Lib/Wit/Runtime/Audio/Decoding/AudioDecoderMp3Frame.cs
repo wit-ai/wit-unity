@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Scripting;
 using Meta.Audio.NLayer;
@@ -20,8 +21,11 @@ namespace Meta.Voice.Audio.Decoding
     /// An audio decoder for raw MPEG audio data
     /// </summary>
     [Preserve]
-    internal class AudioDecoderMp3Frame : IMpegFrame
+    internal class AudioDecoderMp3Frame : IMpegFrame, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Audio);
+
         // Data buffer to ensure all frame data exists across packets
         private byte[] _dataBuffer = new byte[192]; // Default mpeg packet size
         private int _dataOffset = 0;
@@ -44,20 +48,6 @@ namespace Meta.Voice.Audio.Decoding
 
         // Index of how many frames have been decoded
         private uint _frameIndex;
-
-        // For logging
-        private IVLogger Log
-        {
-            get
-            {
-                if (_log == null)
-                {
-                    _log = LoggerRegistry.Instance.GetLogger();
-                }
-                return _log;
-            }
-        }
-        private IVLogger _log;
 
         /// <summary>
         /// Clears all frame specific data every frame
@@ -108,7 +98,7 @@ namespace Meta.Voice.Audio.Decoding
                 }
                 catch (Exception e)
                 {
-                    Log.Error("MP3 Frame {0} - Header Decode Failed\n\n{1}\n{2}", _frameIndex, e, this);
+                    Logger.Error("MP3 Frame {0} - Header Decode Failed\n\n{1}\n{2}", _frameIndex, e, this);
                     _frameIndex++;
                     Clear();
                     return decodedLength;
@@ -117,14 +107,14 @@ namespace Meta.Voice.Audio.Decoding
                 // Increase data buffer length if needed
                 if (_dataBuffer.Length < FrameLength)
                 {
-                    Log.Warning("MP3 Frame {0} - Data Buffer Re-generated\nNew Frame Length: {1}\nOld Frame Length: {2}\n{3}",
+                    Logger.Warning("MP3 Frame {0} - Data Buffer Re-generated\nNew Frame Length: {1}\nOld Frame Length: {2}\n{3}",
                         _frameIndex, FrameLength, _dataBuffer.Length, this);
                     _dataBuffer = new byte[FrameLength];
                 }
                 // Increase sample buffer length if needed
                 if (_sampleBuffer.Length < SampleCount)
                 {
-                    Log.Warning("MP3 Frame {0} - Sample Buffer Re-generated\nNew Sample Count: {1}\nOld Sample Count: {2}\n{3}",
+                    Logger.Warning("MP3 Frame {0} - Sample Buffer Re-generated\nNew Sample Count: {1}\nOld Sample Count: {2}\n{3}",
                         _frameIndex, SampleCount, _sampleBuffer.Length, this);
                     _sampleBuffer = new float[SampleCount];
                 }

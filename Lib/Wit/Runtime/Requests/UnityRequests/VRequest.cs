@@ -13,6 +13,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
@@ -112,8 +113,11 @@ namespace Meta.WitAi.Requests
     /// Helper class for performing http web requests using UnityWebRequest
     /// </summary>
     [LogCategory(LogCategory.Requests)]
-    internal class VRequest : IVRequest
+    internal class VRequest : IVRequest, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Requests);
+
         #region STATIC
         /// <summary>
         /// Ensures only this many requests can run at one time
@@ -269,11 +273,6 @@ namespace Meta.WitAi.Requests
         private Task _task;
 
         /// <summary>
-        /// The object used for handling logs
-        /// </summary>
-        protected readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
-        /// <summary>
         /// Resets all data
         /// </summary>
         public virtual void Reset()
@@ -332,7 +331,7 @@ namespace Meta.WitAi.Requests
             {
                 ContentType = contentType;
             }
-            _log.Verbose("Request {0}\nUrl: {1}\nMethod: {2}", typeof(TValue).Name, uri, method);
+            Logger.Verbose("Request {0}\nUrl: {1}\nMethod: {2}", typeof(TValue).Name, uri, method);
 
             // Await queue
             IsQueued = true;
@@ -624,7 +623,7 @@ namespace Meta.WitAi.Requests
         private async Task<string> GetDownloadedText(UnityWebRequest request)
         {
             string text = null;
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 // Ignore if null
                 var downloadHandler = request?.downloadHandler;
@@ -649,7 +648,7 @@ namespace Meta.WitAi.Requests
                 }
                 catch (Exception e)
                 {
-                    _log.Error(e, "VRequest failed to parse downloaded text via {0}", downloadHandler.GetType().Name);
+                    Logger.Error(e, "VRequest failed to parse downloaded text via {0}", downloadHandler.GetType().Name);
                 }
             });
             return text;
@@ -669,7 +668,7 @@ namespace Meta.WitAi.Requests
             // Abort
             if (_request != null)
             {
-                ThreadUtility.CallOnMainThread(_log, () => _request?.Abort());
+                ThreadUtility.CallOnMainThread(Logger, () => _request?.Abort());
             }
 
             // Dispose and ensure complete
@@ -684,7 +683,7 @@ namespace Meta.WitAi.Requests
             // Dispose request
             if (_request != null)
             {
-                ThreadUtility.CallOnMainThread(_log, () =>
+                ThreadUtility.CallOnMainThread(Logger, () =>
                 {
                     if (_request != null)
                     {
@@ -755,7 +754,7 @@ namespace Meta.WitAi.Requests
         private async Task<Dictionary<string, string>> DecodeFileHeaders(UnityWebRequest request)
         {
             Dictionary<string, string> results = null;
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 results = request.GetResponseHeaders();
             });
@@ -778,7 +777,7 @@ namespace Meta.WitAi.Requests
         private async Task<byte[]> DecodeFile(UnityWebRequest request)
         {
             byte[] data = null;
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 data = request.downloadHandler?.data;
             });
@@ -809,7 +808,7 @@ namespace Meta.WitAi.Requests
                 return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
                     $"Failed to setup download.\nPath: {downloadPath}\n{e}");
             }
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 Downloader = new DownloadHandlerFile(downloadTempPath);
             });
@@ -926,7 +925,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public async Task<VRequestResponse<string>> RequestText(Action<string> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 if (onPartial == null)
                 {
@@ -946,7 +945,7 @@ namespace Meta.WitAi.Requests
         private async Task<string> DecodeText(UnityWebRequest request)
         {
             string text = null;
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 text = request.downloadHandler?.text;
             });
@@ -1042,7 +1041,7 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<TData>> RequestJsonPost<TData>(byte[] postData,
             Action<TData> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 Uploader = new UploadHandlerRaw(postData);
             });
@@ -1074,7 +1073,7 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<TData>> RequestJsonPut<TData>(byte[] putData,
             Action<TData> onPartial = null)
         {
-            await ThreadUtility.CallOnMainThread(_log, () =>
+            await ThreadUtility.CallOnMainThread(Logger, () =>
             {
                 Uploader = new UploadHandlerRaw(putData);
             });
@@ -1115,7 +1114,7 @@ namespace Meta.WitAi.Requests
                 // Generate decoder
                 var decoder = GetAudioDecoder(audioType, onJsonDecoded != null, onJsonDecoded);
                 // Set audio stream handler
-                await ThreadUtility.CallOnMainThread(_log, () =>
+                await ThreadUtility.CallOnMainThread(Logger, () =>
                 {
                     Downloader = new AudioStreamHandler(decoder, onSamplesDecoded);
                 });

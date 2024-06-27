@@ -30,7 +30,8 @@ namespace Meta.Voice
         where TEvents : NLPRequestEvents<TUnityEvent, TResponseData>
         where TResults : INLPRequestResults<TResponseData>
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        public override IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Network);
+
         /// <summary>
         /// Getter for request input type
         /// </summary>
@@ -189,7 +190,7 @@ namespace Meta.Voice
         {
             _rawQueued++;
             var blockingTask = _lastDecode;
-            _lastDecode = ThreadUtility.BackgroundAsync(_log,  async () =>
+            _lastDecode = ThreadUtility.BackgroundAsync(Logger,  async () =>
             {
                 if (null != blockingTask) await blockingTask;
                 DecodeRawResponse(rawResponse, final);

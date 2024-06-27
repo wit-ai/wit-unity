@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.WitAi;
 using Meta.WitAi.Json;
@@ -23,12 +24,14 @@ namespace Meta.Conduit.Editor
     /// incoming requests to the right methods with the right parameters.
     /// </summary>
     [LogCategory(LogCategory.Conduit, LogCategory.ManifestGenerator)]
-    internal class ManifestGenerator
+    internal class ManifestGenerator: ILogSource
     {
         /// <summary>
         /// The logger.
         /// </summary>
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.ManifestGenerator);
+
         /// <summary>
         /// Provides access to available assemblies.
         /// </summary>
@@ -60,7 +63,7 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         public string GenerateManifest(string domain, string id)
         {
-            _log.Debug("Generate Manifest: {0}", domain);
+            Logger.Debug("Generate Manifest: {0}", domain);
             return GenerateManifest(_assemblyWalker.GetTargetAssemblies(), domain, id);
         }
 
@@ -81,10 +84,10 @@ namespace Meta.Conduit.Editor
         /// <returns>Extracted Intents list</returns>
         public List<string> ExtractManifestData()
         {
-            _log.Debug("Extracting manifest actions and entities.");
+            Logger.Debug("Extracting manifest actions and entities.");
 
             var (entities, actions, errorHandlers) = ExtractAssemblyData(_assemblyWalker.GetTargetAssemblies());
-            _log.Debug("Extracted {0} actions and {1} entities.", actions.Count, entities.Count);
+            Logger.Debug("Extracted {0} actions and {1} entities.", actions.Count, entities.Count);
 
             List<string> transformedActions = new HashSet<string>(actions.Select(v => v.Name).Where(v => !string.IsNullOrEmpty(v))).ToList();
 
@@ -102,11 +105,11 @@ namespace Meta.Conduit.Editor
         /// <returns>A JSON representation of the manifest.</returns>
         private string GenerateManifest(IEnumerable<IConduitAssembly> assemblies, string domain, string id)
         {
-            _log.Debug($"Generating manifest.");
+            Logger.Debug($"Generating manifest.");
 
-            var sequenceId = _log.Start(VLoggerVerbosity.Verbose, "Extract assembly data");
+            var sequenceId = Logger.Start(VLoggerVerbosity.Verbose, "Extract assembly data");
             var (entities, actions, errorHandlers) = ExtractAssemblyData(assemblies);
-            _log.End(sequenceId);
+            Logger.End(sequenceId);
 
             var manifest = new Manifest()
             {
@@ -127,7 +130,7 @@ namespace Meta.Conduit.Editor
             var actions = new List<ManifestAction>();
             var errorHandlers = new List<ManifestErrorHandler>();
 
-            using (_log.Scope(VLoggerVerbosity.Verbose, "Initializing assembly miner"))
+            using (Logger.Scope(VLoggerVerbosity.Verbose, "Initializing assembly miner"))
             {
                 _assemblyMiner.Initialize();
             }
@@ -142,7 +145,7 @@ namespace Meta.Conduit.Editor
                 }
                 catch (Exception)
                 {
-                    _log.Warning("Conduit App found no error handlers");
+                    Logger.Warning("Conduit App found no error handlers");
                 }
             }
 

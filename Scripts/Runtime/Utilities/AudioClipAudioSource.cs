@@ -30,7 +30,8 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
 
     private List<float[]> clipData = new List<float[]>();
 
-    private IVLogger _log = LoggerRegistry.Instance.GetLogger();
+    /// <inheritdoc/>
+    public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Audio);
 
     private void Start()
     {

@@ -31,7 +31,8 @@ namespace Meta.WitAi
     [LogCategory(LogCategory.Requests)]
     public class WitService : MonoBehaviour, IVoiceEventProvider, IVoiceActivationHandler, ITelemetryEventsProvider, IWitRuntimeConfigProvider, IWitConfigurationProvider
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Requests);
         private float _lastMinVolumeLevelTime;
 
         /// <summary>

@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.WitAi.Json;
 using Meta.WitAi.Speech;
 using UnityEngine;
@@ -25,8 +26,11 @@ using Meta.WitAi.TTS.Interfaces;
 namespace Meta.WitAi.TTS.Utilities
 {
     [LogCategory(Voice.Logging.LogCategory.TextToSpeech)]
-    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer
+    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);
+
         [Header("Event Settings")]
         [Tooltip("All speaker load and playback events")]
         [SerializeField] private TTSSpeakerEvents _events = new TTSSpeakerEvents();
@@ -175,9 +179,6 @@ namespace Meta.WitAi.TTS.Utilities
         // Text processors
         private ISpeakerTextPreprocessor[] _textPreprocessors;
         private ISpeakerTextPostprocessor[] _textPostprocessors;
-
-        // Logging
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <summary>
         /// The script used to perform audio playback of IAudioClipStreams.
@@ -1090,7 +1091,7 @@ namespace Meta.WitAi.TTS.Utilities
             // Decode voice settings async
             string textToSpeak = null;
             TTSVoiceSettings voiceSettings = null;
-            await ThreadUtility.BackgroundAsync(_log, () =>
+            await ThreadUtility.BackgroundAsync(Logger, () =>
             {
                 DecodeTts(responseNode, out textToSpeak, out voiceSettings);
                 return Task.FromResult(true);
@@ -1136,7 +1137,7 @@ namespace Meta.WitAi.TTS.Utilities
             if (voiceSettings == null)
             {
                 var error = "No voice provided";
-                _log.Error("{0}\nPreset: {1}", error, presetVoiceID);
+                Logger.Error("{0}\nPreset: {1}", error, presetVoiceID);
                 return error;
             }
 
@@ -1153,7 +1154,7 @@ namespace Meta.WitAi.TTS.Utilities
             if (phrases == null || phrases.Count == 0)
             {
                 var error = "No phrases provided";
-                _log.Error(error);
+                Logger.Error(error);
                 return error;
             }
 
@@ -1318,7 +1319,7 @@ namespace Meta.WitAi.TTS.Utilities
             string errors = AudioPlayer.GetPlaybackErrors();
             if (!string.IsNullOrEmpty(errors))
             {
-                _log.Error($"Refresh Playback Failed\nError: {errors}");
+                Logger.Error($"Refresh Playback Failed\nError: {errors}");
                 return;
             }
             // Check if queued request is done
@@ -1326,7 +1327,7 @@ namespace Meta.WitAi.TTS.Utilities
                 || requestData.ClipData == null
                 || requestData.ClipData.loadState != TTSClipLoadState.Loaded)
             {
-                _log.Verbose("Refresh Playback Too Soon");
+                Logger.Verbose("Refresh Playback Too Soon");
                 return;
             }
 
@@ -1652,10 +1653,10 @@ namespace Meta.WitAi.TTS.Utilities
         #region Logging
         private void Log(string format, params object[] parameters)
         {
-            if (verboseLogging) _log.Info(format, parameters);
+            if (verboseLogging) Logger.Info(format, parameters);
         }
         private void Error(string format, params object[] parameters)
-            => _log.Warning(format, parameters);
+            => Logger.Warning(format, parameters);
 
         private void LogRequest(string comment, TTSSpeakerRequestData requestData, string error = null)
         {

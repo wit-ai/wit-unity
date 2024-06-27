@@ -36,8 +36,6 @@ namespace Meta.WitAi
     [LogCategory(LogCategory.Requests)]
     public class WitRequest : VoiceServiceRequest, IAudioUploadHandler
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
         #region PARAMETERS
         /// <summary>
         /// The wit Configuration to be used with this request
@@ -72,7 +70,7 @@ namespace Meta.WitAi
                 }
                 else
                 {
-                    _log.Warning("Cannot set WitRequest.Path while after transmission.");
+                    Logger.Warning("Cannot set WitRequest.Path while after transmission.");
                 }
             }
         }
@@ -379,20 +377,20 @@ namespace Meta.WitAi
             #endif
 
             // Run on background thread
-            _requestThread = new Thread(async () => await StartThreadedRequest(_log.CorrelationID));
+            _requestThread = new Thread(async () => await StartThreadedRequest(Logger.CorrelationID));
             _requestThread.Start();
             #endif
         }
 
         private void SetupSend(out Uri uri, out Dictionary<string, string> headers, CorrelationID correlationID)
         {
-            _log.CorrelationID = correlationID;
+            Logger.CorrelationID = correlationID;
 
             // Get uri & prevent further path changes
             uri = GetUri();
             _canSetPath = false;
 
-            _log.Verbose(correlationID, "Setup request with URL: {0}", uri);
+            Logger.Verbose(correlationID, "Setup request with URL: {0}", uri);
 
             // Get headers
             headers = GetHeaders();
@@ -413,7 +411,7 @@ namespace Meta.WitAi
 
             // Create http web request
             _request = WebRequest.Create(uri.AbsoluteUri) as HttpWebRequest;
-            _log.Verbose("Created web request: {0}", _request?.RequestUri.AbsoluteUri);
+            Logger.Verbose("Created web request: {0}", _request?.RequestUri.AbsoluteUri);
 
             // Off to not wait for a response indefinitely
             _request.KeepAlive = false;
@@ -878,7 +876,7 @@ namespace Meta.WitAi
                     }
                     catch (Exception e)
                     {
-                        _log.Warning("Write Stream - Close Failed\n{0}", e);
+                        Logger.Warning("Write Stream - Close Failed\n{0}", e);
                     }
                     _writeStream = null;
                 }

@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using UnityEngine;
 using Meta.WitAi;
@@ -32,9 +33,10 @@ namespace Meta.Voice.Net.WebSockets
     /// used to find the appropriate IWitWebSocketSubscriber which then will generate a request to handle the response.
     /// </summary>
     [LogCategory(LogCategory.Network)]
-    public sealed class WitWebSocketClient : IWitWebSocketClient
+    public sealed class WitWebSocketClient : IWitWebSocketClient, ILogSource
     {
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Network);
 
         /// <summary>
         /// The settings required to connect, authenticate and drive server/client communication.
@@ -150,7 +152,7 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             ConnectionState = newConnectionState;
-            _log.Info(ConnectionState.ToString());
+            Logger.Info(ConnectionState.ToString());
             OnConnectionStateChanged?.Invoke(ConnectionState);
         }
 
@@ -569,7 +571,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Wait for reconnection
-            _log.Info($"Reconnect Attempt {FailedConnectionAttempts}");
+            Logger.Info($"Reconnect Attempt {FailedConnectionAttempts}");
             await ConnectAsync();
         }
         #endregion RECONNECT
@@ -784,7 +786,7 @@ namespace Meta.Voice.Net.WebSockets
             request.TimeoutMs = Settings.RequestTimeoutMs;
             _requests[request.RequestId] = request;
             request.OnComplete += CompleteRequestTracking;
-            _log.Info($"Track Request\n{request}");
+            Logger.Info($"Track Request\n{request}");
 
             // Invoke callback for subscribed topics
             var topicId = request.TopicId;
@@ -845,7 +847,7 @@ namespace Meta.Voice.Net.WebSockets
             {
                 request.Cancel();
             }
-            _log.Info($"Untrack Request\n{request}");
+            Logger.Info($"Untrack Request\n{request}");
             return true;
         }
 
@@ -859,7 +861,7 @@ namespace Meta.Voice.Net.WebSockets
             // Ignore no longer tracked requests
             if (_untrackedRequests.Contains(requestId))
             {
-                _log.Info($"Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                Logger.Info($"Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
                 return null;
             }
             // Get topic id if possible
@@ -878,7 +880,7 @@ namespace Meta.Voice.Net.WebSockets
                 return null;
             }
             // Generate message request if topic is found
-            _log.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
+            Logger.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
             var request = new WitWebSocketMessageRequest(jsonData, requestId);
             request.TopicId = topicId;
             TrackRequest(request);
@@ -1104,7 +1106,7 @@ namespace Meta.Voice.Net.WebSockets
             }
             else
             {
-                _log.Info($"{state}\nTopic Id: {topicId}");
+                Logger.Info($"{state}\nTopic Id: {topicId}");
             }
 
             // Call delegate

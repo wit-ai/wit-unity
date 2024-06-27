@@ -44,8 +44,6 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override bool DecodeRawResponses => true;
 
-        private IVLogger _log = LoggerRegistry.Instance.GetLogger();
-
         /// <summary>
         /// Apply configuration
         /// </summary>
@@ -114,7 +112,7 @@ namespace Meta.WitAi.Requests
             // Send message request
             if (_request is WitMessageVRequest messageRequest)
             {
-                _ = ThreadUtility.BackgroundAsync(_log,
+                _ = ThreadUtility.BackgroundAsync(Logger,
                     async () => await SendMessageAsync(messageRequest));
             }
         }

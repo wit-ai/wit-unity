@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Meta.WitAi.Data.Configuration.Tabs;
 using Lib.Wit.Runtime.Requests;
+using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Conduit.Editor;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Configuration;
@@ -25,8 +26,11 @@ using Meta.WitAi.Windows.Components;
 namespace Meta.WitAi.Windows
 {
     [InitializeOnLoadAttribute]
-    public class WitConfigurationEditor : Editor
+    public class WitConfigurationEditor : Editor, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; }  = LoggerRegistry.Instance.GetLogger(LogCategory.Editor);
+
         private ConduitManifestGenerationManager _conduitManifestGenerationManager;
 
         public WitConfiguration Configuration {
@@ -72,8 +76,6 @@ namespace Meta.WitAi.Windows
         public virtual string HeaderUrl => WitTexts.GetAppURL(Configuration.GetApplicationId(), WitTexts.WitAppEndpointType.Settings);
         protected virtual string DocsUrl => WitTexts.Texts.WitDocsUrl;
         protected virtual string OpenButtonLabel => WitTexts.Texts.WitOpenButtonLabel;
-
-        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger();
 
         /// <summary>
         /// Number of days in between automatic refreshes
@@ -508,7 +510,7 @@ namespace Meta.WitAi.Windows
             Configuration.UpdateDataAssets();
             if (Configuration.useConduit)
             {
-                _ = ThreadUtility.BackgroundAsync(_log, async () => await CheckAutoTrainAvailabilityIfNeeded());
+                _ = ThreadUtility.BackgroundAsync(Logger, async () => await CheckAutoTrainAvailabilityIfNeeded());
             }
         }
 

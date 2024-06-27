@@ -33,6 +33,8 @@ namespace Meta.Voice.Logging
         Input,
         Output,
         Encoding,
-        WebSockets
+        WebSockets,
+        Editor,
+        Composer
     }
 }
