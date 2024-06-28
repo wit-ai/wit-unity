@@ -12,12 +12,12 @@
 
 using System;
 using System.Collections;
-using System.Threading;
+using System.Threading.Tasks;
 using Meta.Voice.Logging;
 #if THREADING_ENABLED
-using System.Collections.Concurrent;
 using UnityEngine;
-using System.Threading.Tasks;
+using System.Threading;
+using System.Collections.Concurrent;
 #endif
 
 namespace Meta.WitAi
@@ -34,6 +34,13 @@ namespace Meta.WitAi
         private static TaskScheduler _mainThreadScheduler;
         private static Thread _mainThread;
         private static readonly ConcurrentQueue<EarlyTask> _earlyTasks = new ConcurrentQueue<EarlyTask>();
+
+        /// <summary>
+        /// Compares current thread to main thread in order
+        /// to determine location of running code.
+        /// </summary>
+        public static bool IsMainThread()
+            => Thread.CurrentThread == _mainThread;
 
         /// <summary>
         /// Tasks called prior to main thread setup
@@ -113,13 +120,6 @@ namespace Meta.WitAi
         }
 #endif
         #endif
-
-        /// <summary>
-        /// Compares current thread to main thread in order
-        /// to determine location of running code.
-        /// </summary>
-        public static bool IsMainThread()
-            => Thread.CurrentThread == _mainThread;
 
         /// <summary>
         /// Safely calls an action on the main thread using a scheduler.
