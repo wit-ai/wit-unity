@@ -1653,7 +1653,7 @@ namespace Meta.WitAi.TTS.Utilities
         #region Logging
         private void Log(string format, params object[] parameters)
         {
-            if (verboseLogging) Logger.Info(format, parameters);
+            if (verboseLogging) Logger.Verbose(format, parameters);
         }
         private void Error(string format, params object[] parameters)
             => Logger.Warning(format, parameters);

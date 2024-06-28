@@ -235,15 +235,14 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Unsubscribe(string topicId)
         {
-            Logger.Verbose("Subscribing to topic : {0}", topicId);
             // Ignore if null or not connected
             if (string.IsNullOrEmpty(topicId) || !_connected)
             {
-                Logger.Verbose("Topic {0} was null or was not connected", topicId);
                 return;
             }
 
             // Unsubscribe from topic id
+            Logger.Verbose("Unsubscribe from topic: {0}", topicId);
             WebSocketClient.Unsubscribe(topicId);
 
             // Immediately set state as not subscribed
@@ -256,12 +255,9 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void Subscribe(string topicId)
         {
-            Logger.Verbose("Unsubscribing to topic : {0}", topicId);
-
             // Ignore if null or not connected
             if (string.IsNullOrEmpty(topicId) || !_connected)
             {
-                Logger.Verbose("Topic {0} was null or was not connected", topicId);
                 return;
             }
 
@@ -269,6 +265,7 @@ namespace Meta.Voice.Net.WebSockets
             SetSubscriptionState(WebSocketClient.GetTopicSubscriptionState(topicId));
 
             // Begin subscribing
+            Logger.Verbose("Subscribe to topic: {0}", topicId);
             WebSocketClient.Subscribe(topicId);
         }
 

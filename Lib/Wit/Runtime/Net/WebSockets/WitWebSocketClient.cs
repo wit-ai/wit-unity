@@ -35,9 +35,6 @@ namespace Meta.Voice.Net.WebSockets
     [LogCategory(LogCategory.Network)]
     public sealed class WitWebSocketClient : IWitWebSocketClient, ILogSource
     {
-        /// <inheritdoc/>
-        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Network);
-
         /// <summary>
         /// The settings required to connect, authenticate and drive server/client communication.
         /// </summary>
@@ -106,6 +103,9 @@ namespace Meta.Voice.Net.WebSockets
         private int _uploadCount;
         // Total number of responses currently being decoded
         private int _downloadCount;
+
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Network);
 
         /// <summary>
         /// The requests currently being tracked by this client. Each access generates
@@ -644,6 +644,7 @@ namespace Meta.Voice.Net.WebSockets
             // Get chunk
             var chunk = new WitChunk()
             {
+                jsonString = requestJsonData?.ToString(),
                 jsonData = requestJsonData,
                 binaryData = requestBinaryData
             };
@@ -653,6 +654,7 @@ namespace Meta.Voice.Net.WebSockets
             // Perform send
             if (rawData != null)
             {
+                if (Settings.VerboseJsonLogging) Logger.Verbose("Upload Chunk:\n{0}\n", chunk.jsonString);
                 await _socket.Send(rawData);
             }
 
@@ -697,6 +699,7 @@ namespace Meta.Voice.Net.WebSockets
             {
                 for (int i = 0; i < _decodedChunks.Count; i++)
                 {
+                    if (Settings.VerboseJsonLogging) Logger.Verbose("Downloaded Chunk:\n{0}\n", _decodedChunks[i].jsonString);
                     HandleChunk(_decodedChunks[i]);
                 }
                 _decodedChunks.Clear();

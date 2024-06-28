@@ -16,6 +16,11 @@ namespace Meta.Voice.Net.WebSockets
     public class WitWebSocketSettings
     {
         /// <summary>
+        /// Option for logging every uploaded and downloaded json chunk
+        /// </summary>
+        public bool VerboseJsonLogging { get; set; } = false;
+
+        /// <summary>
         /// The url to connect with on client.Connect()
         /// </summary>
         public string ServerUrl { get; set; } = WitConstants.WIT_SOCKET_URL;

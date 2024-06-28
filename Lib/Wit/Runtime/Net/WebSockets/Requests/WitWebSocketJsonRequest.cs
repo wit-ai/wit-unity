@@ -304,17 +304,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            var result = $"Type: {GetType().Name}";
-            result += $"\nId: {RequestId}";
-            if (!string.IsNullOrEmpty(TopicId))
-            {
-                result += $"\nTopic Id: {TopicId}";
-            }
-            if (!string.IsNullOrEmpty(Error))
-            {
-                result += $"\nError: {Error}";
-            }
-            return result;
+            return string.Format("Type: {0}\nId: {1}\nTopic Id: {2}\nError: {3}",
+                GetType().Name,
+                RequestId,
+                TopicId ?? "Null",
+                Error ?? "Null");
         }
     }
 }

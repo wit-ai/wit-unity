@@ -9,13 +9,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Voice.Audio.Decoding;
 using Meta.Voice.Net.Encoding.Wit;
-using Meta.WitAi.Requests;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -262,18 +259,15 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            var result = new StringBuilder();
-            result.AppendLine(base.ToString());
-            result.AppendLine($"Text: {TextToSpeak}");
-            result.AppendLine($"Voice Settings");
-            foreach (var key in VoiceSettings.Keys)
-            {
-                result.AppendLine($"\t{key}: {VoiceSettings[key]}");
-            }
-            result.AppendLine($"Audio Type: {AudioType}");
-            result.AppendLine($"Use Events: {UseEvents}");
-            result.AppendLine($"Download Path: {(string.IsNullOrEmpty(DownloadPath) ? "-" : DownloadPath)}");
-            return result.ToString();
+            return string.Format("Type: {0}\nId: {1}\nTopic Id: {2}\nText: {3}\nAudio Type: {4}\nUse Events: {5}\nDownload Path: {6}\nError: {7}",
+                GetType().Name,
+                RequestId,
+                TopicId ?? "Null",
+                TextToSpeak ?? "Null",
+                AudioType,
+                UseEvents,
+                DownloadPath ?? "Null",
+                Error ?? "Null");
         }
     }
 }
