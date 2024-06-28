@@ -11,6 +11,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.Voice.Logging;
 using Meta.WitAi.Data.Info;
 using Meta.WitAi.Requests;
 using UnityEngine;
@@ -33,8 +34,12 @@ namespace Meta.WitAi
      * 7. UpdateExportInfo to receive and update export data info
      * then it returns any warnings that occured
      */
+    [LogCategory(LogCategory.Editor)]
     internal static class WitAppInfoUtility
     {
+        // Editor log
+        public static IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Editor);
+
         #region SETUP
         // Setup with server token and return on complete method
         internal static void GetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
@@ -129,7 +134,7 @@ namespace Meta.WitAi
             if (configuration == null)
             {
                 string error = "Cannot update a null configuration";
-                VLog.E($"Update Info - Failed\n{error}");
+                Logger.Error("Update Info - Failed\n{0}", error);
                 return error;
             }
 
@@ -142,7 +147,7 @@ namespace Meta.WitAi
             if (!hasServerToken && !hasClientToken)
             {
                 string error = "Cannot update configuration without a server access token or a client access token";
-                VLog.E($"Update Info - Failed\n{error}");
+                Logger.Error("Update Info - Failed\n{0}", error);
                 return error;
             }
 
@@ -178,8 +183,9 @@ namespace Meta.WitAi
             if (string.IsNullOrEmpty(clientToken))
             {
                 warnings.AppendLine("Cannot update configuration info without client access token.");
-                VLog.E($"Update Info - Failed\n{warnings}");
-                return warnings.ToString();
+                var error = warnings.ToString();
+                Logger.Error("Update Info - Failed\n{0}", error);
+                return error;
             }
 
             // Begin update
@@ -194,12 +200,15 @@ namespace Meta.WitAi
             // Log success
             if (warnings.Length == 0)
             {
-                VLog.D($"Update Info - Complete\nApp: {configuration.GetApplicationInfo().name}");
+                Logger.Info("Update Info - Complete\nApp: {0}",
+                    configuration.GetApplicationInfo().name);
             }
             // Log warnings
             else
             {
-                VLog.W($"Update Info - Complete with Warnings\nApp: {configuration.GetApplicationInfo().name}\n\n{warnings}\n");
+                Logger.Warning("Update Info - Complete with Warnings\nApp: {0}\n\n{1}\n",
+                    configuration.GetApplicationInfo().name,
+                    warnings);
             }
 
             // Update complete, return warnings
@@ -265,7 +274,7 @@ namespace Meta.WitAi
             }
 
             // Return new items
-            VLog.I($"Update Info - {name} update success (Total: {total})");
+            Logger.Verbose("Update Info - {0} update success (Total: {1})", name, total);
             return newItems;
         }
 
@@ -318,7 +327,7 @@ namespace Meta.WitAi
             string newAppId = HandleResults(result, "App id update failed", warnings);
             if (string.IsNullOrEmpty(newAppId))
             {
-                VLog.I("Update Info - App id update failed");
+                Logger.Verbose("Update Info - App id update failed");
                 return oldAppId;
             }
 
@@ -328,7 +337,7 @@ namespace Meta.WitAi
             configuration.SetApplicationInfo(appInfo);
 
             // Return new app id
-            VLog.I($"Update Info - App id update success\nApp Id: {newAppId}");
+            Logger.Verbose("Update Info - App id update success\nApp Id: {0}", newAppId);
             return newAppId;
         }
 
@@ -346,13 +355,15 @@ namespace Meta.WitAi
             if (string.IsNullOrEmpty(newInfo.id))
             {
                 warnings.AppendLine($"App info update failed.\nOld Id: '{oldInfo.id}'");
-                VLog.I($"Update Info - App info update failed\nOld Id: {oldInfo.id}");
+                Logger.Verbose("Update Info - App info update failed");
                 return oldInfo;
             }
 
             // Set & return new info
             configuration.SetApplicationInfo(newInfo);
-            VLog.I($"Update Info - App info update success\nApp: {newInfo.name}\nId: {newInfo.id}");
+            Logger.Verbose("Update Info - App info update success\nApp: {0}\nId: {1}",
+                newInfo.name,
+                newInfo.id);
             return newInfo;
         }
 
@@ -373,7 +384,7 @@ namespace Meta.WitAi
             string newClientToken = HandleResults(result, "Client token request failed", warnings);
             if (string.IsNullOrEmpty(newClientToken))
             {
-                VLog.I($"Update Info - Client token update failed");
+                Logger.Verbose("Update Info - Client token update failed");
                 return oldClientToken;
             }
 
@@ -381,7 +392,7 @@ namespace Meta.WitAi
             configuration.SetClientAccessToken(newClientToken);
 
             // Success
-            VLog.I($"Update Info - Client token update success");
+            Logger.Verbose("Update Info - Client token update success");
             return newClientToken;
         }
 
@@ -410,7 +421,7 @@ namespace Meta.WitAi
             WitAppInfo appInfo = configuration.GetApplicationInfo();
             appInfo.versionTags = versionTags;
             configuration.SetApplicationInfo(appInfo);
-            VLog.I($"Update Info -  Version tags update success (Total: {versionTags.Length})");
+            Logger.Verbose("Update Info -  Version tags update success (Total: {0})", versionTags.Length);
         }
         #endregion
 
@@ -475,7 +486,7 @@ namespace Meta.WitAi
             WitAppInfo appInfo = configuration.GetApplicationInfo();
             appInfo.voices = voiceList.ToArray();
             configuration.SetApplicationInfo(appInfo);
-            VLog.I($"Update Info -  TTS Voices update success (Total: {voiceList.Count})");
+            Logger.Verbose("Update Info -  TTS Voices update success (Total: {0})", voiceList.Count);
         }
         #endregion
     }
