@@ -963,6 +963,7 @@ namespace Meta.WitAi.Requests
             ContentType = "application/json";
 
             // Last partial decoder
+            bool decoded = false;
             TData lastPartial = default(TData);
             Action<string> decoder = null;
             if (onPartial != null)
@@ -972,6 +973,7 @@ namespace Meta.WitAi.Requests
                     var partial = DecodeJson<TData>(partialText);
                     if (partial != null)
                     {
+                        decoded = true;
                         lastPartial = partial;
                         onPartial?.Invoke(lastPartial);
                     }
@@ -987,7 +989,7 @@ namespace Meta.WitAi.Requests
                 return new VRequestResponse<TData>(result.Code, result.Error);
             }
             // If empty, decode now
-            if (lastPartial == null)
+            if (!decoded)
             {
                 lastPartial = DecodeJson<TData>(result.Value);
             }
