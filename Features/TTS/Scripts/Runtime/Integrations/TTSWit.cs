@@ -176,7 +176,8 @@ namespace Meta.WitAi.TTS.Integrations
         // Generate tts web socket request and handle responses
         private WitWebSocketTtsRequest CreateWebSocketRequest(TTSClipData clipData, string downloadPath)
         {
-            var request = new WitWebSocketTtsRequest(clipData.textToSpeak,
+            var request = new WitWebSocketTtsRequest(clipData.queryRequestId,
+                clipData.textToSpeak,
                 clipData.queryParameters,
                 RequestSettings.audioType,
                 clipData.useEvents,
