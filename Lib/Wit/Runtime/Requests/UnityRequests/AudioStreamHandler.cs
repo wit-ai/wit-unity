@@ -7,6 +7,8 @@
  */
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
@@ -18,11 +20,6 @@ using Meta.Voice.Logging;
 
 namespace Meta.WitAi.Requests
 {
-    /// <summary>
-    /// A delegate to be called when all audio samples have been decoded
-    /// </summary>
-    public delegate void AudioDecodeCompleteDelegate(string error);
-
     /// <summary>
     /// A download handler for UnityWebRequest that decodes audio data and
     /// performs audio sample decoded callbacks.
@@ -82,9 +79,13 @@ namespace Meta.WitAi.Requests
         public AudioSampleDecodeDelegate OnSamplesDecoded { get; }
 
         // Ring buffer and counters for decoding bytes
-        private static readonly ArrayPool<byte> _inRingBufferPool = new (WitConstants.ENDPOINT_TTS_BUFFER_LENGTH);
-        private readonly byte[] _inRingBuffer;
-        private int _inRingOffset = 0;
+        private const int BUFFER_LENGTH = WitConstants.ENDPOINT_TTS_BUFFER_LENGTH;
+        private static readonly ArrayPool<byte> _bufferPool = new (BUFFER_LENGTH);
+        private readonly Queue<byte[]> _buffers = new Queue<byte[]>(); // All currently used buffers
+        private byte[] _inBuffer;
+        private int _inBufferOffset = 0;
+        private byte[] _decodeBuffer;
+        private int _decodeBufferOffset = 0;
 
         // Total bytes expected to arrive
         private ulong _expectedBytes = 0;
@@ -102,7 +103,7 @@ namespace Meta.WitAi.Requests
 
         // Task performing decode
         private Task _decoder;
-        private bool _pooled = false;
+        private bool _unloaded = false;
 
         /// <summary>
         /// The constructor that generates the decoder and handles routing callbacks
@@ -115,10 +116,6 @@ namespace Meta.WitAi.Requests
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
             DecodeInBackground = AudioDecoder.DecodeInBackground;
-            if (DecodeInBackground)
-            {
-                _inRingBuffer = _inRingBufferPool.Get();
-            }
         }
 
         /// <summary>
@@ -126,11 +123,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         ~AudioStreamHandler()
         {
-            if (!_pooled)
-            {
-                _inRingBufferPool.Return(_inRingBuffer);
-                _pooled = true;
-            }
+            UnloadBuffers();
         }
 
         /// <summary>
@@ -191,30 +184,36 @@ namespace Meta.WitAi.Requests
         // Push to the ring buffer then decode async
         private void EnqueueAndDecodeChunkAsync(byte[] chunk, int offset, int length)
         {
-            // Log error if looping prior to decoding
-            var unDecoded = length + (int)(_receivedBytes - _decodedBytes);
-            var maxLength = _inRingBuffer.Length;
-            if (unDecoded > maxLength)
-            {
-                Logger.Error("Buffer Overflow!\nReceived {0} bytes makes {1} bytes not yet decoded thereby overflowing {2} bytes in the entire ring buffer.",
-                    length, unDecoded, maxLength);
-            }
-
             // Decode a chunk
             while (length > 0)
             {
+                // Get new buffer
+                if (_inBuffer == null)
+                {
+                    _inBuffer = _bufferPool.Get();
+                    lock (_buffers)
+                    {
+                        _buffers.Enqueue(_inBuffer);
+                    }
+                }
+
                 // Get largest possible push length
-                var pushLength = Mathf.Min(length, maxLength - _inRingOffset);
+                var pushLength = Mathf.Min(length, _inBuffer.Length - _inBufferOffset);
 
                 // Push chunk
-                Array.Copy(chunk, offset, _inRingBuffer, _inRingOffset, pushLength);
+                Array.Copy(chunk, offset, _inBuffer, _inBufferOffset, pushLength);
 
                 // Attempt to iterate through the pushed data chunk
                 offset += pushLength;
                 length -= pushLength;
                 // Loop offset as needed
-                _inRingOffset = (_inRingOffset + pushLength) % maxLength;
-                // Increment
+                _inBufferOffset += pushLength;
+                if (_inBufferOffset >= _inBuffer.Length)
+                {
+                    _inBufferOffset = 0;
+                    _inBuffer = null;
+                }
+                // Increment total received bytes
                 _receivedBytes += (ulong)pushLength;
             }
 
@@ -238,15 +237,45 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
-            // Decode chunk
+            // Decode all undecoded bytes
             while (_decodedBytes < _receivedBytes)
             {
-                var max = _inRingBuffer.Length;
-                var offset = (int)(_decodedBytes % (ulong)max);
+                // Dequeue the next buffer
+                if (_decodeBuffer == null)
+                {
+                    lock (_buffers)
+                    {
+                        if (!_buffers.TryDequeue(out _decodeBuffer))
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                // Determine decode length and offset
                 var remainder = (int)(_receivedBytes - _decodedBytes);
-                var length = Mathf.Min(remainder, _inRingBuffer.Length - offset);
-                DecodeChunk(_inRingBuffer, offset, length);
+                var decodeLength = Mathf.Min(remainder, _decodeBuffer.Length - _decodeBufferOffset);
+
+                // Decode
+                DecodeChunk(_decodeBuffer, _decodeBufferOffset, decodeLength);
+
+                // Increment
+                _decodeBufferOffset += decodeLength;
+                _decodedBytes += (ulong)decodeLength;
+
+                // Unload once completely used
+                if (_decodeBufferOffset >= _decodeBuffer.Length)
+                {
+                    _decodeBufferOffset = 0;
+                    _bufferPool.Return(_decodeBuffer);
+                    _decodeBuffer = null;
+                }
+
+                // Refresh
+                RefreshProgress();
             }
+
+            // Remove decoder task reference
             _decoder = null;
 
             // Try to finalize on main thread
@@ -267,17 +296,15 @@ namespace Meta.WitAi.Requests
             {
                 Logger.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
             }
-            _decodedBytes += (ulong)length;
-            RefreshProgress();
         }
 
         // Used for error handling
         [Preserve]
         protected override string GetText()
         {
-            if (IsError)
+            if (IsError && _inBuffer != null)
             {
-                return Encoding.UTF8.GetString(_inRingBuffer, 0, _inRingOffset);
+                return Encoding.UTF8.GetString(_inBuffer, 0, _inBufferOffset);
             }
             return null;
         }
@@ -347,13 +374,36 @@ namespace Meta.WitAi.Requests
         public override void Dispose()
         {
             base.Dispose();
-            if (!_pooled)
-            {
-                _inRingBufferPool.Return(_inRingBuffer);
-                _pooled = true;
-            }
+            UnloadBuffers();
             IsComplete = true;
             Completion.TrySetResult(true);
+        }
+
+        // Safely unload buffers back into pool
+        private void UnloadBuffers()
+        {
+            if (_unloaded)
+            {
+                return;
+            }
+            // Remove in buffer (Already in buffers queue)
+            _inBuffer = null;
+            // Dequeue and unload each buffer
+            lock (_buffers)
+            {
+                while (_buffers.TryDequeue(out var buffer))
+                {
+                    _bufferPool.Return(buffer);
+                }
+            }
+            // Unload out buffer
+            if (_decodeBuffer != null)
+            {
+                _bufferPool.Return(_decodeBuffer);
+                _decodeBuffer = null;
+            }
+            // Unloaded
+            _unloaded = true;
         }
     }
 }
