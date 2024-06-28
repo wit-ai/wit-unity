@@ -331,7 +331,7 @@ namespace Meta.WitAi.Requests
             {
                 ContentType = contentType;
             }
-            Logger.Verbose("Request {0}\nUrl: {1}\nMethod: {2}", typeof(TValue).Name, uri, method);
+            Logger.Verbose("{0} Request<{1}>\nUrl: {2}", method, typeof(TValue).Name, uri);
 
             // Await queue
             IsQueued = true;

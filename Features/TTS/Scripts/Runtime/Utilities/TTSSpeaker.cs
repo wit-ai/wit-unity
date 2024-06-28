@@ -329,7 +329,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Check if clip request is active
         private bool IsClipRequestSpeaking(TTSSpeakerRequestData requestData)
         {
-            return _speakingRequest.Equals(requestData);
+            return _speakingRequest != null && _speakingRequest.Equals(requestData);
         }
         #endregion
 
@@ -1006,12 +1006,9 @@ namespace Meta.WitAi.TTS.Utilities
             }
 
             // Cancel each clip from loading
-            while (_queuedRequests.Count > 0)
+            while (_queuedRequests.TryDequeue(out var request))
             {
-                if (_queuedRequests.TryDequeue(out var request))
-                {
-                    RaiseEvents(RaiseOnLoadAborted, request);
-                }
+                RaiseEvents(RaiseOnLoadAborted, request);
             }
 
             // Refresh in queue check
@@ -1287,15 +1284,10 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Stop previously spoken clip and play next
-            if (requestData.StopPlaybackOnLoad && IsSpeaking)
+            // If ready has not yet called, do so now
+            if (!requestData.IsReady)
             {
-                StopSpeaking();
-            }
-            // Attempt to play next in queue
-            else
-            {
-                RefreshPlayback();
+                TryPlayLoadedClip(requestData);
             }
         }
         #endregion Load
