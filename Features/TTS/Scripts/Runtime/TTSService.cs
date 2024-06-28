@@ -987,7 +987,10 @@ namespace Meta.WitAi.TTS
                 // Log and call errors
                 LogState(clipData, "Stream Error", fromDisk, error);
                 Events?.Stream?.OnStreamError?.Invoke(clipData, error);
-                clipData.LoadReady.SetResult(true);
+                if (!clipData.LoadReady.Task.IsCompleted)
+                {
+                    clipData.LoadReady.SetResult(false);
+                }
 
                 // Stream complete
                 RaiseStreamComplete(clipData, fromDisk);
@@ -1005,7 +1008,10 @@ namespace Meta.WitAi.TTS
                 // Log and call ready
                 LogState(clipData, "Stream Cancelled", fromDisk);
                 Events?.Stream?.OnStreamCancel?.Invoke(clipData);
-                clipData.LoadReady.SetResult(true);
+                if (!clipData.LoadReady.Task.IsCompleted)
+                {
+                    clipData.LoadReady.SetResult(false);
+                }
 
                 // Stream complete
                 RaiseStreamComplete(clipData, fromDisk);
@@ -1040,7 +1046,10 @@ namespace Meta.WitAi.TTS
                 clipData.onPlaybackReady?.Invoke(clipData);
                 clipData.onPlaybackReady = null;
                 Events?.Stream?.OnStreamReady?.Invoke(clipData);
-                clipData.LoadReady.SetResult(true);
+                if (!clipData.LoadReady.Task.IsCompleted)
+                {
+                    clipData.LoadReady.SetResult(true);
+                }
             });
         }
         // Log and call all events related to stream load completion
@@ -1057,7 +1066,10 @@ namespace Meta.WitAi.TTS
                 {
                     Events?.WebRequest?.OnRequestComplete.Invoke(clipData);
                 }
-                clipData.LoadCompletion.SetResult(true);
+                if (!clipData.LoadCompletion.Task.IsCompleted)
+                {
+                    clipData.LoadCompletion.SetResult(true);
+                }
 
                 // Unload any failures/cancellations
                 if (clipData.loadState == TTSClipLoadState.Error)
