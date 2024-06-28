@@ -117,7 +117,7 @@ namespace Meta.WitAi.Requests
             DecodeInBackground = AudioDecoder.DecodeInBackground;
             if (DecodeInBackground)
             {
-                _inRingBuffer = _inRingBufferPool.Load();
+                _inRingBuffer = _inRingBufferPool.Get();
             }
         }
 
@@ -128,7 +128,7 @@ namespace Meta.WitAi.Requests
         {
             if (!_pooled)
             {
-                _inRingBufferPool.Unload(_inRingBuffer);
+                _inRingBufferPool.Return(_inRingBuffer);
                 _pooled = true;
             }
         }
@@ -349,7 +349,7 @@ namespace Meta.WitAi.Requests
             base.Dispose();
             if (!_pooled)
             {
-                _inRingBufferPool.Unload(_inRingBuffer);
+                _inRingBufferPool.Return(_inRingBuffer);
                 _pooled = true;
             }
             IsComplete = true;
