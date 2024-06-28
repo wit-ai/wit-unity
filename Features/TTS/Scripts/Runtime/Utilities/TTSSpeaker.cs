@@ -1892,7 +1892,7 @@ namespace Meta.WitAi.TTS.Utilities
             get
             {
                 // Not speaking
-                if (!IsSpeaking)
+                if (!IsSpeaking || _audioPlayer?.ClipStream == null)
                 {
                     return 0;
                 }
