@@ -74,10 +74,13 @@ namespace Meta.Voice.Net.WebSockets
 
         // Whether or not connection to server has been requested
         private bool _connected = false;
+        // Whether or not currently active in heirarchy
+        private bool _active = false;
 
         #region LIFECYCLE
         protected virtual void OnEnable()
         {
+            _active = true;
             SetClientProvider(WebSocketProvider);
             Connect();
         }
@@ -92,6 +95,7 @@ namespace Meta.Voice.Net.WebSockets
         }
         protected virtual void OnDisable()
         {
+            _active = false;
             Disconnect();
         }
         protected virtual void OnDestroy()
@@ -115,7 +119,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Disconnect previous web socket client if active
-            if (gameObject.activeInHierarchy)
+            if (_active)
             {
                 Disconnect();
             }
@@ -131,7 +135,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Connect new web socket client if active
-            if (gameObject.activeInHierarchy)
+            if (_active)
             {
                 Connect();
             }
