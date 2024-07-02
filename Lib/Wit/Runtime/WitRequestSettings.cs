@@ -7,18 +7,39 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using Meta.Voice.Audio.Decoding;
 
 namespace Meta.WitAi
 {
+    /// <summary>
+    /// Audio types supported by tts
+    /// </summary>
+    public enum TTSWitAudioType
+    {
+        /// <summary>
+        /// Raw pcm 16 data
+        /// </summary>
+        PCM = 0,
+        /// <summary>
+        /// MP3 data format
+        /// </summary>
+        MPEG = 1,
+        /// <summary>
+        /// Wave data format
+        /// </summary>
+        WAV = 2
+    }
+
     /// <summary>
     /// A static script for obtaining header information related to wit requests
     /// </summary>
     public static class WitRequestSettings
     {
+        #region SETUP
         // User-agent specific information
         private static string _operatingSystem;
         private static string _deviceModel;
@@ -49,7 +70,9 @@ namespace Meta.WitAi
             if (_appIdentifier == null) _appIdentifier = Application.identifier;
             if (_unityVersion == null) _unityVersion = Application.unityVersion;
         }
+        #endregion SETUP
 
+        #region URL AND HEADERS
         /// <summary>
         /// Get custom wit uri using a specific path & query parameters
         /// </summary>
@@ -211,5 +234,113 @@ namespace Meta.WitAi
             // Return user agent
             return userAgent.ToString();
         }
+        #endregion URL AND HEADERS
+
+        #region TTS
+        /// <summary>
+        /// Method for determining if there are problems that will arise
+        /// with performing a tts web request prior to doing so
+        /// </summary>
+        public static string GetTtsErrors(string textToSpeak, IWitRequestConfiguration configuration)
+        {
+            // Invalid text
+            if (string.IsNullOrEmpty(textToSpeak))
+            {
+                return WitConstants.ENDPOINT_TTS_NO_TEXT;
+            }
+            // Check configuration & configuration token
+            if (configuration == null)
+            {
+                return WitConstants.ERROR_NO_CONFIG;
+            }
+            if (string.IsNullOrEmpty(configuration.GetClientAccessToken()))
+            {
+                return WitConstants.ERROR_NO_CONFIG_TOKEN;
+            }
+            // Should be good
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Method for determining if stream is supported
+        /// </summary>
+        public static bool CanStreamAudio(TTSWitAudioType witAudioType)
+            => witAudioType != TTSWitAudioType.WAV;
+
+        /// <summary>
+        /// Method for obtaining audio Mime string for TTSWitAudioType
+        /// </summary>
+        public static string GetAudioMimeType(TTSWitAudioType witAudioType)
+        {
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.PCM:
+                    return "audio/raw";
+                case TTSWitAudioType.MPEG:
+                case TTSWitAudioType.WAV:
+                default:
+                    return $"audio/{witAudioType.ToString().ToLower()}";
+            }
+        }
+
+        /// <summary>
+        /// Method for obtaining audio Mime string for TTSWitAudioType
+        /// </summary>
+        public static string GetAudioExtension(TTSWitAudioType witAudioType, bool includeEvents)
+        {
+            string ext;
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.MPEG:
+                    ext = ".mp3";
+                    break;
+                case TTSWitAudioType.PCM:
+                    ext = ".raw";
+                    break;
+                case TTSWitAudioType.WAV:
+                default:
+                    ext = $".{witAudioType.ToString().ToLower()}";
+                    break;
+            }
+            if (includeEvents)
+            {
+                ext += WitConstants.ENDPOINT_TTS_EVENT_EXTENSION;
+            }
+            return ext;
+        }
+
+        /// <summary>
+        /// Instantiate an audio decoder based on the wit audio type that allows for decoding directly from wit.
+        /// </summary>
+        /// <param name="witAudioType">The audio type supported by wit</param>
+        public static IAudioDecoder GetTtsAudioDecoder(TTSWitAudioType witAudioType)
+        {
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.PCM:
+                    return new AudioDecoderPcm(AudioDecoderPcmType.Int16);
+                case TTSWitAudioType.MPEG:
+                    return new AudioDecoderMp3();
+            }
+            throw new ArgumentException($"{witAudioType} audio decoder not supported");
+        }
+
+        /// <summary>
+        /// Instantiate an audio decoder based on the wit audio type that allows for decoding directly from wit.
+        /// </summary>
+        /// <param name="witAudioType">The audio type supported by wit</param>
+        /// <param name="onEventsDecoded">If this delegate is provided then the feed will be decoded
+        /// for audio event data as well.</param>
+        public static IAudioDecoder GetTtsAudioDecoder(TTSWitAudioType witAudioType,
+            AudioJsonDecodeDelegate onEventsDecoded)
+        {
+            var audioDecoder = GetTtsAudioDecoder(witAudioType);
+            if (audioDecoder != null && onEventsDecoded != null)
+            {
+                return new AudioDecoderJson(audioDecoder, onEventsDecoded);
+            }
+            return audioDecoder;
+        }
+        #endregion TTS
     }
 }

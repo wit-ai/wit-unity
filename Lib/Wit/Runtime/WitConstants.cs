@@ -196,54 +196,6 @@ namespace Meta.WitAi
         /// Default audio type suggested for use
         /// </summary>
         public const TTSWitAudioType TTS_TYPE_DEFAULT = TTSWitAudioType.PCM;
-
-        /// <summary>
-        /// Method for determining if stream is supported
-        /// </summary>
-        public static bool CanStreamAudio(TTSWitAudioType witAudioType)
-            => witAudioType != TTSWitAudioType.WAV;
-
-        /// <summary>
-        /// Method for obtaining audio Mime string for TTSWitAudioType
-        /// </summary>
-        public static string GetAudioMimeType(TTSWitAudioType witAudioType)
-        {
-            switch (witAudioType)
-            {
-                case TTSWitAudioType.PCM:
-                    return "audio/raw";
-                case TTSWitAudioType.MPEG:
-                case TTSWitAudioType.WAV:
-                default:
-                    return $"audio/{witAudioType.ToString().ToLower()}";
-            }
-        }
-
-        /// <summary>
-        /// Method for obtaining audio Mime string for TTSWitAudioType
-        /// </summary>
-        public static string GetAudioExtension(TTSWitAudioType witAudioType, bool includeEvents)
-        {
-            string ext;
-            switch (witAudioType)
-            {
-                case TTSWitAudioType.MPEG:
-                    ext = ".mp3";
-                    break;
-                case TTSWitAudioType.PCM:
-                    ext = ".raw";
-                    break;
-                case TTSWitAudioType.WAV:
-                default:
-                    ext = $".{witAudioType.ToString().ToLower()}";
-                    break;
-            }
-            if (includeEvents)
-            {
-                ext += ENDPOINT_TTS_EVENT_EXTENSION;
-            }
-            return ext;
-        }
         #endregion TTS
 
         #region Response Body Runtime
@@ -344,24 +296,5 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY = "1";//"TRANSCRIPTION";
         public const string WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY = "2";//"COMPOSER_RESULT";
         #endregion
-    }
-
-    /// <summary>
-    /// Audio types supported by tts
-    /// </summary>
-    public enum TTSWitAudioType
-    {
-        /// <summary>
-        /// Raw pcm 16 data
-        /// </summary>
-        PCM = 0,
-        /// <summary>
-        /// MP3 data format
-        /// </summary>
-        MPEG = 1,
-        /// <summary>
-        /// Wave data format
-        /// </summary>
-        WAV = 2
     }
 }

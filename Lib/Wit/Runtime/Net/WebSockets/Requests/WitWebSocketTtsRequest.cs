@@ -78,7 +78,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             AudioType = audioType;
             UseEvents = useEvents;
             DownloadPath = downloadPath;
-            _audioDecoder = WitTTSVRequest.GetTtsAudioDecoder(audioType);
+            _audioDecoder = WitRequestSettings.GetTtsAudioDecoder(audioType);
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 synthNode[key] = voiceSettings[key];
             }
-            synthNode[WitConstants.WIT_SOCKET_ACCEPT_KEY] = WitConstants.GetAudioMimeType(audioType);
+            synthNode[WitConstants.WIT_SOCKET_ACCEPT_KEY] = WitRequestSettings.GetAudioMimeType(audioType);
             if (useEvents)
             {
                 synthNode[WitConstants.ENDPOINT_TTS_EVENTS] = new WitResponseData(true);
@@ -212,7 +212,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 // Get file name
                 string downloadFileName = Path.GetFileNameWithoutExtension(DownloadPath);
-                string audioExt = WitConstants.GetAudioExtension(AudioType, UseEvents);
+                string audioExt = WitRequestSettings.GetAudioExtension(AudioType, UseEvents);
                 string audioFilePath = Path.Join(downloadDirectory, downloadFileName + audioExt);
                 // Create file stream
                 _fileStream = new FileStream(audioFilePath, FileMode.Create);

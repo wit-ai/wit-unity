@@ -140,7 +140,7 @@ namespace Meta.WitAi.TTS.Integrations
             {
                 return invalidErrors;
             }
-            var webErrors = WitTTSVRequest.GetWebErrors(clipData?.textToSpeak, Configuration);
+            var webErrors = WitRequestSettings.GetTtsErrors(clipData?.textToSpeak, Configuration);
             if (!string.IsNullOrEmpty(webErrors))
             {
                 return webErrors;
@@ -169,7 +169,7 @@ namespace Meta.WitAi.TTS.Integrations
                 loadProgress = 0f,
                 queryParameters = voiceSettings?.EncodedValues,
                 clipStream = CreateClipStream(),
-                extension = WitConstants.GetAudioExtension(RequestSettings.audioType, RequestSettings.useEvents),
+                extension = WitRequestSettings.GetAudioExtension(RequestSettings.audioType, RequestSettings.useEvents),
                 queryStream = RequestSettings.audioStream,
                 useEvents = RequestSettings.useEvents
             };
