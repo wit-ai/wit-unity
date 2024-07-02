@@ -26,7 +26,7 @@ namespace Meta.Voice.Audio.Decoding
         bool WillDecodeInBackground { get; }
 
         /// <summary>
-        /// A method for decoded bytes and calling an AddSample delegate for each
+        /// A method for decoded bytes and calling onSamplesDecoded as float[] are decoded
         /// </summary>
         /// <param name="buffer">A buffer of bytes to be decoded into audio sample data</param>
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>

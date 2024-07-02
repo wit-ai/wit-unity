@@ -31,7 +31,11 @@ namespace Meta.WitAi
         /// <summary>
         /// Wave data format
         /// </summary>
-        WAV = 2
+        WAV = 2,
+        /// <summary>
+        /// Opus data format
+        /// </summary>
+        OPUS = 3
     }
 
     /// <summary>
@@ -276,6 +280,8 @@ namespace Meta.WitAi
             {
                 case TTSWitAudioType.PCM:
                     return "audio/raw";
+                case TTSWitAudioType.OPUS:
+                    return "audio/opus-demo";
                 case TTSWitAudioType.MPEG:
                 case TTSWitAudioType.WAV:
                 default:
@@ -296,6 +302,9 @@ namespace Meta.WitAi
                     break;
                 case TTSWitAudioType.PCM:
                     ext = ".raw";
+                    break;
+                case TTSWitAudioType.OPUS:
+                    ext = ".opusd"; // Add d due to custom wit encoding
                     break;
                 case TTSWitAudioType.WAV:
                 default:
@@ -321,6 +330,8 @@ namespace Meta.WitAi
                     return new AudioDecoderPcm(AudioDecoderPcmType.Int16);
                 case TTSWitAudioType.MPEG:
                     return new AudioDecoderMp3();
+                case TTSWitAudioType.OPUS:
+                    return new AudioDecoderOpus(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
             }
             throw new ArgumentException($"{witAudioType} audio decoder not supported");
         }

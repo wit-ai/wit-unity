@@ -5,7 +5,8 @@
         "VoiceSDK.Telemetry",
         "VoiceSDK.Telemetry.Runtime",
         "Meta.Net.endel.nativewebsocket",
-        "Meta.Voice.NLayer"
+        "Meta.Voice.NLayer",
+        "Meta.Voice.Opus"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

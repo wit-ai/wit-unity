@@ -669,6 +669,7 @@ MonoBehaviour:
     style: default
     speed: 100
     pitch: 100
+  verboseLogging: 0
 --- !u!4 &954133170
 Transform:
   m_ObjectHideFlags: 0
@@ -813,25 +814,6 @@ MonoBehaviour:
     DiskCacheLocation: 0
     StreamFromDisk: 0
     StreamBufferLength: 5
-  _events:
-    OnStreamBegin:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamReady:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamClipUpdate:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamComplete:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamCancel:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamError:
-      m_PersistentCalls:
-        m_Calls: []
 --- !u!114 &1078439741
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -844,6 +826,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6b3124b830442d45b9f357ff99b152f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  verboseLogging: 0
+  _audioSystem: {fileID: 0}
+  _runtimeCacheHandler: {fileID: 0}
+  _diskCacheHandler: {fileID: 0}
   _events:
     OnClipCreated:
       m_PersistentCalls:
@@ -904,7 +890,7 @@ MonoBehaviour:
           m_Calls: []
   RequestSettings:
     _configuration: {fileID: 11400000, guid: a383f193a505b554496ca8f22be900f1, type: 2}
-    audioType: 1
+    audioType: 3
     audioStream: 1
     useEvents: 1
   _presetVoiceSettings:

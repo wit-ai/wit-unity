@@ -414,7 +414,7 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <summary>
         /// Returns a string of all bytes within an array
         /// </summary>
-        private static string GetByteString(byte[] bytes, int start, int length, bool reverse = false)
+        internal static string GetByteString(byte[] bytes, int start, int length, bool reverse = false)
         {
             string results = BitConverter.ToString(bytes, start, length);
             if (reverse)
