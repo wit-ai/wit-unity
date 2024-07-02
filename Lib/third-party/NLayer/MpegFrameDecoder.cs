@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Meta.Audio.NLayer
+namespace Meta.Voice.NLayer
 {
     public class MpegFrameDecoder
     {

@@ -33,7 +33,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     /// <summary>
     /// Class Implementing Layer 3 Decoder.

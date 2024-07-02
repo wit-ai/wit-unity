@@ -27,7 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     class Huffman
     {

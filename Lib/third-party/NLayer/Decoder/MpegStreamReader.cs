@@ -26,7 +26,7 @@
 using System;
 using System.IO;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     class MpegStreamReader
     {

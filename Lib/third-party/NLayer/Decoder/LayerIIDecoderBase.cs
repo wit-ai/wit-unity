@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     // Layers I & II are basically identical...  Layer II adds sample grouping, per subband allocation schemes, and granules
     // Because of this fact, we can use the same decoder for both

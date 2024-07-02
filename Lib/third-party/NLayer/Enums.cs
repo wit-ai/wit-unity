@@ -1,7 +1,7 @@
 ﻿/*
  * MIT License
  *
- * Copyright (c) 2018 Mark Heath, Andrew Ward and Contributors
+ * Copyright (c) 2018 Mark Heath, Andrew Ward & Contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,35 +23,37 @@
  *
  */
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer
 {
-    class VBRInfo
+    public enum MpegVersion
     {
-        internal VBRInfo() { }
+        Unknown = 0,
+        Version1 = 10,
+        Version2 = 20,
+        Version25 = 25,
+    }
 
-        internal int SampleCount { get; set; }
-        internal int SampleRate { get; set; }
-        internal int Channels { get; set; }
-        internal int VBRFrames { get; set; }
-        internal int VBRBytes { get; set; }
-        internal int VBRQuality { get; set; }
-        internal int VBRDelay { get; set; }
+    public enum MpegLayer
+    {
+        Unknown = 0,
+        LayerI = 1,
+        LayerII = 2,
+        LayerIII = 3,
+    }
 
-        internal long VBRStreamSampleCount
-        {
-            get
-            {
-                // we assume the entire stream is consistent wrt samples per frame
-                return VBRFrames * SampleCount;
-            }
-        }
+    public enum MpegChannelMode
+    {
+        Stereo,
+        JointStereo,
+        DualChannel,
+        Mono,
+    }
 
-        internal int VBRAverageBitrate
-        {
-            get
-            {
-                return (int)((VBRBytes / (VBRStreamSampleCount / (double)SampleRate)) * 8);
-            }
-        }
+    public enum StereoMode
+    {
+        Both,
+        LeftOnly,
+        RightOnly,
+        DownmixToMono,
     }
 }

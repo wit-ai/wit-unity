@@ -23,7 +23,7 @@
  *
  */
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     // there's not much we have to do here... table selection, granule count, scalefactor selection
     class LayerIIDecoder : LayerIIDecoderBase

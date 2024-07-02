@@ -32,7 +32,7 @@
 
 using System.Collections.Generic;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     abstract class LayerDecoderBase
     {

@@ -23,7 +23,7 @@
  *
  */
 
-namespace Meta.Audio.NLayer
+namespace Meta.Voice.NLayer
 {
     /// <summary>
     /// Defines a standard way of representing a MPEG frame to the decoder

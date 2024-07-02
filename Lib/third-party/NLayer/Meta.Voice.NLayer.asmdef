@@ -1,12 +1,7 @@
 {
-    "name": "Meta.WitAi.Lib",
+    "name": "Meta.Voice.NLayer",
     "rootNamespace": "",
-    "references": [
-        "VoiceSDK.Telemetry",
-        "VoiceSDK.Telemetry.Runtime",
-        "Meta.Net.endel.nativewebsocket",
-        "Meta.Voice.NLayer"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

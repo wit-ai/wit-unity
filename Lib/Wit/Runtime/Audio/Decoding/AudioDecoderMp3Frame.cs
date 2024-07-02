@@ -12,7 +12,7 @@ using System.Text;
 using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Scripting;
-using Meta.Audio.NLayer;
+using Meta.Voice.NLayer;
 using Meta.Voice.Logging;
 
 namespace Meta.Voice.Audio.Decoding

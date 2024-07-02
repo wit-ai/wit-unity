@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Meta.Audio.NLayer.Decoder
+namespace Meta.Voice.NLayer.Decoder
 {
     abstract class FrameBase
     {
