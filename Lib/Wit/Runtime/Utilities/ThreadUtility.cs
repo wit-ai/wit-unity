@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL || UNITY_EDITOR
 #define THREADING_ENABLED
 #endif
 
