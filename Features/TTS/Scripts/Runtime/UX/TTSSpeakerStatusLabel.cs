@@ -111,7 +111,7 @@ namespace Meta.WitAi.TTS.UX
             status.AppendLine(clipKey);
             status.AppendLine($"\tText: '{clipData.textToSpeak}'");
             status.AppendLine($"\tVoice: {(clipData.voiceSettings == null ? "" : clipData.voiceSettings.SettingsId)}");
-            status.AppendLine($"\tType: {clipData.audioType}");
+            status.AppendLine($"\tType: {clipData.extension}");
             status.AppendLine($"\tStatus: {clipData.loadState}");
             if (clipData.loadState == TTSClipLoadState.Loaded)
             {

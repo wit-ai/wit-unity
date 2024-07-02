@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -34,6 +35,11 @@ namespace Meta.WitAi.Requests
         public bool UseEvents { get; set; }
 
         /// <summary>
+        /// Audio decoder to be used
+        /// </summary>
+        private IAudioDecoder _decoder;
+
+        /// <summary>
         /// Constructor for wit based text-to-speech VRequests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
@@ -52,6 +58,25 @@ namespace Meta.WitAi.Requests
         }
 
         /// <summary>
+        /// Requests stream from a disk location
+        /// </summary>
+        /// <param name="onSamplesDecoded">Called one or more times as audio samples are decoded.</param>
+        /// <param name="onJsonDecoded">Called one or more times as json data is decoded.</param>
+        public async Task<VRequestResponse<bool>> RequestStreamFromDisk(string diskPath,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded)
+        {
+            Url = "file://" + diskPath;
+            Method = VRequestMethod.HttpGet;
+            _decoder = GetTtsAudioDecoder(FileType, UseEvents ? onJsonDecoded : null);
+            await ThreadUtility.CallOnMainThread(() =>
+            {
+                Downloader = new AudioStreamHandler(_decoder, onSamplesDecoded);
+            });
+            return await Request(DecodeSuccess);
+        }
+
+        /// <summary>
         /// Performs a wit tts request that streams audio data into the
         /// provided audio clip stream.
         /// </summary>
@@ -60,16 +85,12 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<bool>> RequestStream(AudioSampleDecodeDelegate onSamplesDecoded,
             AudioJsonDecodeDelegate onJsonDecoded)
         {
-            // Setup with errors
-            var errors = await SetupTts(false);
+            var errors = await SetupTts(false, onSamplesDecoded, onJsonDecoded);
             if (!string.IsNullOrEmpty(errors))
             {
                 return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL, errors);
             }
-
-            // Perform an audio stream request
-            return await RequestAudio(WitConstants.GetUnityAudioType(FileType),
-                onSamplesDecoded, UseEvents ? onJsonDecoded : null);
+            return await Request(DecodeSuccess);
         }
 
         /// <summary>
@@ -80,7 +101,7 @@ namespace Meta.WitAi.Requests
         public async Task<VRequestResponse<bool>> RequestDownload(string downloadPath)
         {
             // Setup with errors
-            var errors = await SetupTts(false);
+            var errors = await SetupTts(true, null, null);
             if (!string.IsNullOrEmpty(errors))
             {
                 return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL, errors);
@@ -91,7 +112,9 @@ namespace Meta.WitAi.Requests
         }
 
         // Internal base method for tts request
-        private async Task<string> SetupTts(bool download)
+        private async Task<string> SetupTts(bool download,
+            AudioSampleDecodeDelegate onSamplesDecoded,
+            AudioJsonDecodeDelegate onJsonDecoded)
         {
             // Error check
             string errors = GetWebErrors(download);
@@ -112,10 +135,20 @@ namespace Meta.WitAi.Requests
             Method = VRequestMethod.HttpPost;
             ContentType = WitConstants.ENDPOINT_JSON_MIME;
 
-            // Get post data and set to an uplooad handler
+            // Generate decoder
+            if (!download)
+            {
+                _decoder = GetTtsAudioDecoder(FileType, UseEvents ? onJsonDecoded : null);
+            }
+
+            // Set upload handler and download handler if applicable
             await ThreadUtility.CallOnMainThread(() =>
             {
                 Uploader = new UploadHandlerRaw(postData);
+                if (!download)
+                {
+                    Downloader = new AudioStreamHandler(_decoder, onSamplesDecoded);
+                }
             });
 
             // Success
@@ -132,12 +165,14 @@ namespace Meta.WitAi.Requests
             {
                 if (Application.platform == RuntimePlatform.WebGLPlayer)
                 {
-                    VLog.W($"Wit cannot currently stream TTS in WebGL");
+                    Logger.Warning("Wit cannot currently stream TTS in WebGL");
                     Stream = false;
                 }
-                else if (!CanStreamAudio(WitConstants.GetUnityAudioType(FileType)))
+                else if (!WitConstants.CanStreamAudio(FileType))
                 {
-                    VLog.W($"Wit cannot stream {FileType} files please use {TTSWitAudioType.PCM} instead.");
+                    Logger.Warning("Wit cannot stream {0} files please use {1} instead.",
+                        FileType,
+                        WitConstants.TTS_TYPE_DEFAULT);
                     Stream = false;
                 }
             }
@@ -184,6 +219,39 @@ namespace Meta.WitAi.Requests
             }
             string jsonString = JsonConvert.SerializeObject(ttsData);
             return Encoding.UTF8.GetBytes(jsonString);
+        }
+
+        /// <summary>
+        /// Instantiate an audio decoder based on the wit audio type that allows for decoding directly from wit.
+        /// </summary>
+        /// <param name="witAudioType">The audio type supported by wit</param>
+        public static IAudioDecoder GetTtsAudioDecoder(TTSWitAudioType witAudioType)
+        {
+            switch (witAudioType)
+            {
+                case TTSWitAudioType.PCM:
+                    return new AudioDecoderPcm(AudioDecoderPcmType.Int16);
+                case TTSWitAudioType.MPEG:
+                    return new AudioDecoderMp3();
+            }
+            throw new ArgumentException($"{witAudioType} audio decoder not supported");
+        }
+
+        /// <summary>
+        /// Instantiate an audio decoder based on the wit audio type that allows for decoding directly from wit.
+        /// </summary>
+        /// <param name="witAudioType">The audio type supported by wit</param>
+        /// <param name="onEventsDecoded">If this delegate is provided then the feed will be decoded
+        /// for audio event data as well.</param>
+        public static IAudioDecoder GetTtsAudioDecoder(TTSWitAudioType witAudioType,
+            AudioJsonDecodeDelegate onEventsDecoded)
+        {
+            var audioDecoder = GetTtsAudioDecoder(witAudioType);
+            if (audioDecoder != null && onEventsDecoded != null)
+            {
+                return new AudioDecoderJson(audioDecoder, onEventsDecoded);
+            }
+            return audioDecoder;
         }
     }
 }

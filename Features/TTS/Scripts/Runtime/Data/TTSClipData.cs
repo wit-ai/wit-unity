@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using UnityEngine;
@@ -31,7 +30,8 @@ namespace Meta.WitAi.TTS.Data
         public string textToSpeak;
         // Unique identifier
         public string clipID;
-        // Audio type
+        // Audio type extension
+        [Obsolete("Use extension directly.")]
         public AudioType audioType;
         // Voice settings for request
         public TTSVoiceSettings voiceSettings;
@@ -104,6 +104,11 @@ namespace Meta.WitAi.TTS.Data
         /// The currently set tts events
         /// </summary>
         public TTSEventContainer Events { get; } = new TTSEventContainer();
+
+        /// <summary>
+        /// The file extension to be used for this specific file type
+        /// </summary>
+        public string extension;
 
         /// <summary>
         /// Any error that occurs during the load process
@@ -186,7 +191,7 @@ namespace Meta.WitAi.TTS.Data
                 textToSpeak,
                 voiceSettings?.SettingsId ?? "Null",
                 clipID,
-                audioType,
+                extension,
                 queryStream,
                 Events?.Events?.Count ?? 0,
                 clipStream?.Length ?? 0

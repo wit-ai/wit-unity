@@ -104,7 +104,7 @@ namespace Meta.WitAi.TTS.Integrations
         };
 
         // Http requests by unique clip id key
-        private ConcurrentDictionary<string, VRequest> _httpRequests = new ConcurrentDictionary<string, VRequest>();
+        private ConcurrentDictionary<string, WitTTSVRequest> _httpRequests = new ConcurrentDictionary<string, WitTTSVRequest>();
         // Web socket requests by unique clip id key
         private ConcurrentDictionary<string, WitWebSocketTtsRequest> _webSocketRequests = new ConcurrentDictionary<string, WitWebSocketTtsRequest>();
 
@@ -169,7 +169,7 @@ namespace Meta.WitAi.TTS.Integrations
                 loadProgress = 0f,
                 queryParameters = voiceSettings?.EncodedValues,
                 clipStream = CreateClipStream(),
-                audioType = WitConstants.GetUnityAudioType(RequestSettings.audioType),
+                extension = WitConstants.GetAudioExtension(RequestSettings.audioType, RequestSettings.useEvents),
                 queryStream = RequestSettings.audioStream,
                 useEvents = RequestSettings.useEvents
             };
@@ -463,14 +463,13 @@ namespace Meta.WitAi.TTS.Integrations
             string diskPath)
         {
             var clipId = clipData.clipID;
-            var request = new VRequest();
-            request.Url = "file://" + diskPath;
+            var request = CreateHttpRequest(clipData);
             _httpRequests[clipId] = request;
             return ThreadUtility.BackgroundAsync(Logger, async () =>
             {
-                var results = await request.RequestAudio(clipData.audioType,
+                var results = await request.RequestStreamFromDisk(diskPath,
                     clipData.clipStream.AddSamples,
-                    clipData.useEvents ? clipData.Events.AddEvents : null);
+                    clipData.Events.AddEvents);
                 _httpRequests.TryRemove(clipId, out var discard);
                 return results.Error;
             });

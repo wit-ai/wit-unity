@@ -98,12 +98,5 @@ namespace Meta.WitAi.Requests
         /// </summary>
         Task<VRequestResponse<TData>> RequestJsonPut<TData>(string postText,
             Action<TData> onPartial = null);
-
-        /// <summary>
-        /// Perform a json put request with string data and the option for a partial response
-        /// </summary>
-        Task<VRequestResponse<bool>> RequestAudio(AudioType audioType,
-            AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioJsonDecodeDelegate onJsonDecoded = null);
     }
 }

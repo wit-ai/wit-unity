@@ -13,6 +13,7 @@ using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Voice.Audio.Decoding;
 using Meta.Voice.Net.Encoding.Wit;
+using Meta.WitAi.Requests;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -77,7 +78,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             AudioType = audioType;
             UseEvents = useEvents;
             DownloadPath = downloadPath;
-            _audioDecoder = GetAudioDecoder(audioType);
+            _audioDecoder = WitTTSVRequest.GetTtsAudioDecoder(audioType);
         }
 
         /// <summary>
@@ -102,23 +103,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
             dataNode[WitConstants.ENDPOINT_TTS] = synthNode;
             ttsNode[WitConstants.WIT_SOCKET_DATA_KEY] = dataNode;
             return ttsNode;
-        }
-
-        /// <summary>
-        /// Gets an audio decoder based on the audio type
-        /// </summary>
-        private static IAudioDecoder GetAudioDecoder(TTSWitAudioType audioType)
-        {
-            switch (audioType)
-            {
-                case TTSWitAudioType.PCM:
-                    return new AudioDecoderPcm();
-                case TTSWitAudioType.MPEG:
-                    return new AudioDecoderMp3();
-                default:
-                    VLog.E(nameof(WitWebSocketTtsRequest), $"No audio decoder currently exists for '{audioType}' audio");
-                    return null;
-            }
         }
 
         /// <summary>

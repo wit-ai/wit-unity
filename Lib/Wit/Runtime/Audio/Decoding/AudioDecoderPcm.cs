@@ -49,12 +49,6 @@ namespace Meta.Voice.Audio.Decoding
         private readonly float[] _samples;
 
         /// <summary>
-        /// Default constructor for PCM16
-        /// </summary>
-        [Preserve]
-        public AudioDecoderPcm() : this(AudioDecoderPcmType.Int16) {}
-
-        /// <summary>
         /// Constructor that allows selection of pcm type
         /// </summary>
         [Preserve]

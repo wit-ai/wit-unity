@@ -80,7 +80,7 @@ namespace Meta.WitAi.TTS.Integrations
             }
 
             // Return clip path
-            return Path.Combine(directory, clipData.clipID + "." + WitTTSVRequest.GetAudioExtension(clipData.audioType, clipData.useEvents));
+            return Path.Combine(directory, clipData.clipID, clipData.extension);
         }
 
         /// <summary>

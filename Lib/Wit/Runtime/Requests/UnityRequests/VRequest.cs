@@ -17,7 +17,6 @@ using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Networking;
 using Meta.WitAi.Json;
-using Meta.Voice.Audio.Decoding;
 using Meta.Voice.Logging;
 
 namespace Meta.WitAi.Requests
@@ -841,7 +840,7 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Returns true if no error
         /// </summary>
-        private Task<bool> DecodeSuccess(UnityWebRequest request)
+        protected Task<bool> DecodeSuccess(UnityWebRequest request)
         {
             return Task.FromResult(true);
         }
@@ -1094,146 +1093,6 @@ namespace Meta.WitAi.Requests
 
         // Internal helper method for encoding text
         private static byte[] EncodeText(string text) => Encoding.UTF8.GetBytes(text);
-        #endregion
-
-        #region AUDIO
-        /// <summary>
-        /// Perform a json put request with string data and the option for a partial response
-        /// </summary>
-        public async Task<VRequestResponse<bool>> RequestAudio(AudioType audioType,
-            AudioSampleDecodeDelegate onSamplesDecoded,
-            AudioJsonDecodeDelegate onJsonDecoded = null)
-        {
-            // Use custom audio stream handler
-            if (Downloader == null)
-            {
-                // Cannot decode
-                if (!CanDecodeAudio(audioType))
-                {
-                    return new VRequestResponse<bool>(WitConstants.ERROR_CODE_GENERAL,
-                        $"Unable to decode audio: {audioType}");
-                }
-                // Generate decoder
-                var decoder = GetAudioDecoder(audioType, onJsonDecoded != null, onJsonDecoded);
-                // Set audio stream handler
-                await ThreadUtility.CallOnMainThread(Logger, () =>
-                {
-                    Downloader = new AudioStreamHandler(decoder, onSamplesDecoded);
-                });
-            }
-
-            // Default to get
-            if (Method == VRequestMethod.Unknown)
-            {
-                Method = VRequestMethod.HttpGet;
-            }
-
-            // Perform default request operation & call stream complete once finished
-            return await Request(DecodeSuccess);
-        }
-
-        /// <summary>
-        /// Get audio extension from audio type
-        /// </summary>
-        /// <param name="audioType">The specified audio type</param>
-        /// <returns>Audio extension without period.</returns>
-        public static string GetAudioExtension(AudioType audioType)
-        {
-            switch (audioType)
-            {
-                // PCM
-                case AudioType.UNKNOWN:
-                    return "raw";
-                // OGG
-                case AudioType.OGGVORBIS:
-                    return "ogg";
-                // MP3
-                case AudioType.MPEG:
-                    return "mp3";
-                // WAV
-                case AudioType.WAV:
-                    return "wav";
-                default:
-                    VLog.W($"Attempting to process unsupported audio type: {audioType}");
-                    return audioType.ToString().ToLower();
-            }
-        }
-
-        /// <summary>
-        /// Get audio extension from audio type
-        /// </summary>
-        /// <param name="audioType">The specified audio type</param>
-        /// <param name="textStream">Whether data includes text</param>
-        /// <returns>Audio extension without period.</returns>
-        public static string GetAudioExtension(AudioType audioType, bool textStream) =>
-            GetAudioExtension(audioType) + (textStream ? "v" : "");
-
-        /// <summary>
-        /// Returns the IAudioDecoder type that works best with the specified AudioType
-        /// for the current platform.
-        /// </summary>
-        public static Type GetAudioDecoderType(AudioType audioType)
-        {
-            switch (audioType)
-            {
-                // Assume PCM16 decoder
-                case AudioType.UNKNOWN:
-                    return typeof(AudioDecoderPcm);
-                // MP3 decoder
-                case AudioType.MPEG:
-                    return typeof(AudioDecoderMp3);
-            }
-            // Not handled
-            return null;
-        }
-
-        /// <summary>
-        /// Whether or not a specific audio type can be decoded
-        /// </summary>
-        public static bool CanDecodeAudio(AudioType audioType) => GetAudioDecoderType(audioType) != null;
-
-        /// <summary>
-        /// Default DownloadHandlerAudioClip stream compatibility
-        /// </summary>
-        private static bool CanUnityStreamAudio(AudioType audioType)
-        {
-            // Supported via DownloadHandlerAudioClip
-            if (audioType == AudioType.OGGVORBIS)
-            {
-                return true;
-            }
-            // Not supported by Unity
-            return false;
-        }
-
-        /// <summary>
-        /// Whether or not audio can be streamed for a specific audio type
-        /// </summary>
-        public static bool CanStreamAudio(AudioType audioType) =>
-            CanUnityStreamAudio(audioType) || CanDecodeAudio(audioType);
-
-        /// <summary>
-        /// Instantiate an audio decoder based on the audio type to allow for
-        /// complex streaming scenarios
-        /// </summary>
-        /// <param name="audioType">Audio decoder type allowed</param>
-        /// <param name="includeJson">Whether or not json will be returned within the stream</param>
-        /// <param name="onJsonDecoded">The json decode callback which will be called multiple times</param>
-        public virtual IAudioDecoder GetAudioDecoder(AudioType audioType, bool includeJson = false,
-            AudioJsonDecodeDelegate onJsonDecoded = null)
-        {
-            var decoderType = GetAudioDecoderType(audioType);
-            if (decoderType == null)
-            {
-                return null;
-            }
-            var audioDecoder =  Activator.CreateInstance(decoderType) as IAudioDecoder;
-            if (includeJson)
-            {
-                return new AudioDecoderJson(audioDecoder, onJsonDecoded);
-            }
-            return audioDecoder;
-        }
         #endregion
     }
 }

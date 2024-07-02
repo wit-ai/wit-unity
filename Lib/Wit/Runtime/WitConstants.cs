@@ -244,42 +244,6 @@ namespace Meta.WitAi
             }
             return ext;
         }
-
-        /// <summary>
-        /// Converts from TTSWitAudioType to UnityEngine.AudioType
-        /// </summary>
-        public static UnityEngine.AudioType GetUnityAudioType(TTSWitAudioType witAudioType)
-        {
-            switch (witAudioType)
-            {
-                case TTSWitAudioType.MPEG:
-                    return UnityEngine.AudioType.MPEG;
-                case TTSWitAudioType.WAV:
-                    return UnityEngine.AudioType.WAV;
-                // Custom implementation
-                case TTSWitAudioType.PCM:
-                default:
-                    return UnityEngine.AudioType.UNKNOWN;
-            }
-        }
-
-        /// <summary>
-        /// Converts from UnityEngine.AudioType to TTSWitAudioType
-        /// </summary>
-        public static TTSWitAudioType GetWitAudioType(UnityEngine.AudioType unityAudioType)
-        {
-            switch (unityAudioType)
-            {
-                case UnityEngine.AudioType.MPEG:
-                    return TTSWitAudioType.MPEG;
-                case UnityEngine.AudioType.WAV:
-                    return TTSWitAudioType.WAV;
-                // Custom implementation
-                case UnityEngine.AudioType.UNKNOWN:
-                default:
-                    return TTSWitAudioType.PCM;
-            }
-        }
         #endregion TTS
 
         #region Response Body Runtime
