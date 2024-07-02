@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +14,7 @@ using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
+using UnityEngine.Profiling;
 using Meta.Voice.Audio.Decoding;
 using Meta.Voice.Logging;
 
@@ -69,9 +69,11 @@ namespace Meta.WitAi.Requests
         public IAudioDecoder AudioDecoder { get; }
 
         /// <summary>
-        /// Whether or not this audio stream handler will decode on the main thread
+        /// Quick accessor for audio decoder's will decode in background method.
+        /// If true, performant but requires multiple buffers.
+        /// If false, buffers are not required but less performant.
         /// </summary>
-        public bool DecodeInBackground { get; }
+        public bool WillDecodeInBackground => AudioDecoder.WillDecodeInBackground;
 
         /// <summary>
         /// Callback for audio sample decode
@@ -81,7 +83,7 @@ namespace Meta.WitAi.Requests
         // Ring buffer and counters for decoding bytes
         private const int BUFFER_LENGTH = WitConstants.ENDPOINT_TTS_BUFFER_LENGTH;
         private static readonly ArrayPool<byte> _bufferPool = new (BUFFER_LENGTH);
-        private readonly Queue<byte[]> _buffers = new Queue<byte[]>(); // All currently used buffers
+        private readonly Queue<byte[]> _buffers; // All currently used buffers
         private byte[] _inBuffer;
         private int _inBufferOffset = 0;
         private byte[] _decodeBuffer;
@@ -115,7 +117,10 @@ namespace Meta.WitAi.Requests
         {
             AudioDecoder = audioDecoder;
             OnSamplesDecoded = onSamplesDecoded;
-            DecodeInBackground = AudioDecoder.DecodeInBackground;
+            if (WillDecodeInBackground)
+            {
+                _buffers = new Queue<byte[]>();
+            }
         }
 
         /// <summary>
@@ -166,7 +171,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Enqueue and then decode async
-            if (DecodeInBackground)
+            if (WillDecodeInBackground)
             {
                 EnqueueAndDecodeChunkAsync(bufferData, 0, length);
             }
@@ -175,6 +180,10 @@ namespace Meta.WitAi.Requests
             {
                 _receivedBytes += (uint)length;
                 DecodeChunk(bufferData, 0, length);
+                if (_decodeComplete)
+                {
+                    TryToFinalize();
+                }
             }
 
             // Success
@@ -261,7 +270,6 @@ namespace Meta.WitAi.Requests
 
                 // Increment
                 _decodeBufferOffset += decodeLength;
-                _decodedBytes += (ulong)decodeLength;
 
                 // Unload once completely used
                 if (_decodeBufferOffset >= _decodeBuffer.Length)
@@ -290,11 +298,17 @@ namespace Meta.WitAi.Requests
         {
             try
             {
+                Profiler.BeginSample("[VSDK] Audio Decode");
                 AudioDecoder.Decode(chunk, offset, length, OnSamplesDecoded);
             }
             catch (Exception e)
             {
                 Logger.Error("AudioStreamHandler Decode Failed\nException: {0}", e);
+            }
+            finally
+            {
+                _decodedBytes += (ulong)length;
+                Profiler.EndSample();
             }
         }
 

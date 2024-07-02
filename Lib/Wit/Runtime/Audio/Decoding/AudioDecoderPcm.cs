@@ -69,9 +69,9 @@ namespace Meta.Voice.Audio.Decoding
         }
 
         /// <summary>
-        /// Perform pcm decode on main thread due to speed
+        /// All pcm decoding should occur in background due to large amount of data
         /// </summary>
-        public bool DecodeInBackground => true;
+        public bool WillDecodeInBackground => true;
 
         /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each

@@ -20,9 +20,10 @@ namespace Meta.Voice.Audio.Decoding
     {
         /// <summary>
         /// Whether or not this decoder should run all decoding on a background thread.
-        /// If false and decoding on the main thread, byte[] buffer is no longer required.
+        /// If true, performant but requires multiple buffers.
+        /// If false, buffers are not required but less performant.
         /// </summary>
-        bool DecodeInBackground { get; }
+        bool WillDecodeInBackground { get; }
 
         /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each

@@ -22,9 +22,9 @@ namespace Meta.Voice.Audio.Decoding
         private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
 
         /// <summary>
-        /// Decode mpegs on background thread due to slow speed
+        /// All mpeg decoding should occur in background due to slow decode speed
         /// </summary>
-        public bool DecodeInBackground => true;
+        public bool WillDecodeInBackground => true;
 
         /// <summary>
         /// A method for decoded bytes and calling an AddSample delegate for each
