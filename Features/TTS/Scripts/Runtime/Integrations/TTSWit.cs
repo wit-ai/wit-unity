@@ -98,7 +98,7 @@ namespace Meta.WitAi.TTS.Integrations
         [FormerlySerializedAs("_settings")]
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
-            audioType = TTSWitAudioType.PCM,
+            audioType = WitConstants.TTS_TYPE_DEFAULT,
             audioStream = true,
             useEvents = true
         };
@@ -148,17 +148,31 @@ namespace Meta.WitAi.TTS.Integrations
             return string.Empty;
         }
 
-        // Returns current audio type setting for initial TTSClipData setup
-        protected override AudioType GetAudioType() =>
-            WitConstants.GetUnityAudioType(RequestSettings.audioType);
-
-        // Returns current audio stream setting for initial TTSClipData setup
-        protected override bool GetShouldAudioStream(AudioType audioType) =>
-            RequestSettings.audioStream && base.GetShouldAudioStream(audioType);
-
-        // Returns true provided audio type can be decoded
-        protected override bool ShouldUseEvents(AudioType audioType) =>
-            RequestSettings.useEvents && base.ShouldUseEvents(audioType);
+        /// <summary>
+        /// Method for creating a new TTSClipData
+        /// </summary>
+        /// <param name="clipId">Unique clip identifier</param>
+        /// <param name="textToSpeak">Text to be spoken</param>
+        /// <param name="voiceSettings">Settings for how the clip should sound during playback.</param>
+        /// <param name="diskCacheSettings">If and how this clip should be cached.</param>
+        public TTSClipData CreateClipData(string clipId,
+            string textToSpeak,
+            TTSVoiceSettings voiceSettings,
+            TTSDiskCacheSettings diskCacheSettings)
+            => new TTSClipData()
+            {
+                clipID = clipId,
+                textToSpeak = textToSpeak,
+                voiceSettings = voiceSettings,
+                diskCacheSettings = diskCacheSettings,
+                loadState = TTSClipLoadState.Unloaded,
+                loadProgress = 0f,
+                queryParameters = voiceSettings?.EncodedValues,
+                clipStream = CreateClipStream(),
+                audioType = WitConstants.GetUnityAudioType(RequestSettings.audioType),
+                queryStream = RequestSettings.audioStream,
+                useEvents = RequestSettings.useEvents
+            };
 
         // Get tts request prior to transmission
         private WitTTSVRequest CreateHttpRequest(TTSClipData clipData)

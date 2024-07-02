@@ -24,6 +24,18 @@ namespace Meta.WitAi.TTS.Interfaces
         string GetWebErrors(TTSClipData clipData);
 
         /// <summary>
+        /// Method for creating a new TTSClipData
+        /// </summary>
+        /// <param name="clipId">Unique clip identifier</param>
+        /// <param name="textToSpeak">Text to be spoken</param>
+        /// <param name="voiceSettings">Settings for how the clip should sound during playback.</param>
+        /// <param name="diskCacheSettings">If and how this clip should be cached.</param>
+        TTSClipData CreateClipData(string clipId,
+            string textToSpeak,
+            TTSVoiceSettings voiceSettings,
+            TTSDiskCacheSettings diskCacheSettings);
+
+        /// <summary>
         /// Decode a response node into text to be spoken or a specific voice setting
         /// </summary>
         /// <param name="responseNode">Parsed data that includes text to be spoken and voice settings</param>

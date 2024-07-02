@@ -193,6 +193,17 @@ namespace Meta.WitAi
         public const string TTS_EMPTY_ID = "EMPTY";
 
         /// <summary>
+        /// Default audio type suggested for use
+        /// </summary>
+        public const TTSWitAudioType TTS_TYPE_DEFAULT = TTSWitAudioType.PCM;
+
+        /// <summary>
+        /// Method for determining if stream is supported
+        /// </summary>
+        public static bool CanStreamAudio(TTSWitAudioType witAudioType)
+            => witAudioType != TTSWitAudioType.WAV;
+
+        /// <summary>
         /// Method for obtaining audio Mime string for TTSWitAudioType
         /// </summary>
         public static string GetAudioMimeType(TTSWitAudioType witAudioType)
