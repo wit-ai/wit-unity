@@ -14,7 +14,7 @@ namespace Meta.WitAi
     /// <summary>
     /// A data struct for pooling objects for reuse
     /// </summary>
-    public class ObjectPool<T>
+    public class ObjectPool<T> : IDisposable
     {
         /// <summary>
         /// The method used to generate objects
@@ -37,6 +37,14 @@ namespace Meta.WitAi
             _available = new ConcurrentBag<T>();
             // Preload if desired
             Preload(preload);
+        }
+
+        /// <summary>
+        /// Dispose when unloaded
+        /// </summary>
+        ~ObjectPool()
+        {
+            Dispose();
         }
 
         /// <summary>
@@ -72,6 +80,14 @@ namespace Meta.WitAi
             {
                 Return(_generator());
             }
+        }
+
+        /// <summary>
+        /// Immediately unload all available items
+        /// </summary>
+        public void Dispose()
+        {
+            _available.Clear();
         }
     }
 }
