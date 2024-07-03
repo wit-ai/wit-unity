@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using Meta.WitAi;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -74,7 +73,7 @@ namespace Meta.Voice.Audio.Decoding
         /// <param name="bufferOffset">The buffer start offset used for decoding a reused buffer</param>
         /// <param name="bufferLength">The total number of bytes to be used from the buffer</param>
         /// <param name="onSamplesDecoded">Callback following a sample decode</param>
-        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
+        public virtual void Decode(byte[] buffer, int bufferOffset, int bufferLength, AudioSampleDecodeDelegate onSamplesDecoded)
         {
             // Append previous overflow
             if (_overflowOffset > 0)

@@ -9,9 +9,9 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
-using System.Linq;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
+using Meta.WitAi;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -115,7 +115,7 @@ namespace Meta.Voice.Net.Encoding.Wit
                 if (_currentChunk.header.invalid)
                 {
                     Logger.Error("WitChunk Header Decode Failed: Header is invalid\nHeader: {0}",
-                        GetByteString(_headerBytes, 0, HEADER_SIZE));
+                        WitRequestSettings.GetByteString(_headerBytes, 0, HEADER_SIZE));
                     ResetChunk();
                     return decodeLength;
                 }
@@ -410,19 +410,6 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <param name="index">Total indices to shift</param>
         private static int SafeShift(byte flags, int index)
             => BitConverter.IsLittleEndian ? flags >> index : flags << index;
-
-        /// <summary>
-        /// Returns a string of all bytes within an array
-        /// </summary>
-        internal static string GetByteString(byte[] bytes, int start, int length, bool reverse = false)
-        {
-            string results = BitConverter.ToString(bytes, start, length);
-            if (reverse)
-            {
-                return new string(results.Reverse().ToArray());
-            }
-            return results;
-        }
         #endregion HEADER
     }
 }

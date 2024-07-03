@@ -74,6 +74,18 @@ namespace Meta.WitAi
             if (_appIdentifier == null) _appIdentifier = Application.identifier;
             if (_unityVersion == null) _unityVersion = Application.unityVersion;
         }
+
+        /// <summary>
+        /// Returns a string of all bytes within an array
+        /// </summary>
+        internal static string GetByteString(byte[] bytes)
+            => GetByteString(bytes, 0, bytes.Length);
+
+        /// <summary>
+        /// Returns a string of a substring of bytes within an array
+        /// </summary>
+        internal static string GetByteString(byte[] bytes, int start, int length)
+            => BitConverter.ToString(bytes, start, length);
         #endregion SETUP
 
         #region URL AND HEADERS
@@ -330,6 +342,8 @@ namespace Meta.WitAi
                     return new AudioDecoderPcm(AudioDecoderPcmType.Int16);
                 case TTSWitAudioType.MPEG:
                     return new AudioDecoderMp3();
+                case TTSWitAudioType.WAV:
+                    return new AudioDecoderWav();
                 case TTSWitAudioType.OPUS:
                     return new AudioDecoderOpus(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
             }
