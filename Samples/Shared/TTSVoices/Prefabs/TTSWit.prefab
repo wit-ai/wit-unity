@@ -26,13 +26,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4852061571279439017}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4852061571279439023
 MonoBehaviour:
@@ -46,6 +46,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6b3124b830442d45b9f357ff99b152f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  verboseLogging: 0
+  _audioSystem: {fileID: 0}
+  _runtimeCacheHandler: {fileID: 0}
+  _diskCacheHandler: {fileID: 0}
   _events:
     OnClipCreated:
       m_PersistentCalls:
@@ -105,9 +109,13 @@ MonoBehaviour:
         m_PersistentCalls:
           m_Calls: []
   RequestSettings:
-    configuration: {fileID: 11400000, guid: 6329e25e1005d4845b580a523e588979, type: 2}
-    audioType: 0
+    _configuration: {fileID: 11400000, guid: 6329e25e1005d4845b580a523e588979, type: 2}
+    audioType: 3
     audioStream: 1
+    useEvents: 1
+    audioStreamPreloadCount: 5
+    audioReadyDuration: 1.5
+    audioMaxDuration: 15
   _presetVoiceSettings:
   - SettingsId: CAEL
     PrependedText: 
@@ -254,22 +262,3 @@ MonoBehaviour:
     DiskCacheLocation: 0
     StreamFromDisk: 0
     StreamBufferLength: 5
-  _events:
-    OnStreamBegin:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamReady:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamClipUpdate:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamComplete:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamCancel:
-      m_PersistentCalls:
-        m_Calls: []
-    OnStreamError:
-      m_PersistentCalls:
-        m_Calls: []

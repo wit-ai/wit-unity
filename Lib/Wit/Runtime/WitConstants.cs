@@ -69,7 +69,7 @@ namespace Meta.WitAi
         public const string ENDPOINT_TTS_NO_TEXT = "No text provided";
         public const int ENDPOINT_TTS_CHANNELS = 1;
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24_000;
-        public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 2.5f;
+        public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 1.5f;
         public const float ENDPOINT_TTS_DEFAULT_MAX_LENGTH = 15f;
         public const int ENDPOINT_TTS_DEFAULT_PRELOAD = 5;
         public const int ENDPOINT_TTS_BUFFER_LENGTH = ENDPOINT_TTS_CHANNELS * ENDPOINT_TTS_SAMPLE_RATE; // Buffer rate is a single second of audio

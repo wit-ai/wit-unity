@@ -6,9 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using UnityEngine;
-using Meta.WitAi;
-
 namespace Meta.Voice.Audio
 {
     /// <summary>
@@ -16,12 +13,5 @@ namespace Meta.Voice.Audio
     /// </summary>
     public class UnityAudioSystem : BaseAudioSystem<RawAudioClipStream, UnityAudioPlayer>
     {
-        /// <summary>
-        /// Generates a raw audio clip stream
-        /// </summary>
-        protected override RawAudioClipStream GenerateClip()
-        {
-            return new RawAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, readyLength, maxLength);
-        }
     }
 }

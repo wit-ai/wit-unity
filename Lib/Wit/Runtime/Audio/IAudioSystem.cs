@@ -11,17 +11,49 @@ using UnityEngine;
 namespace Meta.Voice.Audio
 {
     /// <summary>
+    /// Clip settings required for setup
+    /// </summary>
+    public struct AudioClipSettings
+    {
+        /// <summary>
+        /// The total number of channels expected for the audio clip
+        /// </summary>
+        public int Channels;
+        /// <summary>
+        /// The expected sample rate of the audio clip
+        /// </summary>
+        public int SampleRate;
+        /// <summary>
+        /// The total number of seconds to be buffered in order to consider ready
+        /// </summary>
+        public float ReadyDuration;
+        /// <summary>
+        /// Maximum length of audio clip stream in seconds.
+        /// </summary>
+        public float MaxDuration;
+    }
+
+    /// <summary>
     /// An interface for an audio system that can be used to return custom audio
     /// clip streams and audio players on specific gameObjects
     /// </summary>
     public interface IAudioSystem
     {
         /// <summary>
+        /// The clip generation settings to be used for all clip generations
+        /// </summary>
+        public AudioClipSettings ClipSettings { get; set; }
+
+        /// <summary>
+        /// A method for preloading clip streams into a cache
+        /// </summary>
+        /// <param name="total">Total clip streams to be preloaded</param>
+        void PreloadClipStreams(int total);
+
+        /// <summary>
         /// Returns a new audio clip stream for audio stream handling
         /// </summary>
-        /// <param name="channels">Number of channels within audio</param>
-        /// <param name="sampleRate">Desired rate of playback</param>
-        IAudioClipStream GetAudioClipStream(int channels, int sampleRate);
+        IAudioClipStream GetAudioClipStream();
 
         /// <summary>
         /// Returns a new audio player for managing audio clip stream playback states

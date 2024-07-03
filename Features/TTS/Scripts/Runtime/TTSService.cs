@@ -261,20 +261,22 @@ namespace Meta.WitAi.TTS
         {
             if (!string.IsNullOrEmpty(error))
             {
-                Logger.Error("{0} {1}\nText: {2}\nVoice: {3}\nError: {4}",
+                Logger.Error("{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nError: {5}",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
                     clipData?.voiceSettings?.SettingsId ?? "Null",
+                    clipData?.readyDuration ?? 0f,
                     error);
             }
             else if (verboseLogging)
             {
-                Logger.Verbose("{0} {1}\nText: {2}\nVoice: {3}",
+                Logger.Verbose("{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
-                    clipData?.voiceSettings?.SettingsId ?? "Null");
+                    clipData?.voiceSettings?.SettingsId ?? "Null",
+                    clipData?.readyDuration ?? 0f);
             }
         }
         #endregion
@@ -380,18 +382,6 @@ namespace Meta.WitAi.TTS
 
             // Return generated clip
             return clipData;
-        }
-        // Generate a new audio clip stream
-        protected virtual IAudioClipStream CreateClipStream()
-        {
-            // Default
-            if (AudioSystem == null)
-            {
-                return new RawAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
-            }
-            // Get audio clip via audio system
-            return AudioSystem.GetAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS,
-                WitConstants.ENDPOINT_TTS_SAMPLE_RATE);
         }
         // Set clip state
         protected virtual void SetClipLoadState(TTSClipData clipData, TTSClipLoadState loadState)

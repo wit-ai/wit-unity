@@ -6,54 +6,83 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Meta.WitAi;
-using UnityEngine.Serialization;
+using Meta.Voice.Logging;
+using Lib.Wit.Runtime.Utilities.Logging;
 
 namespace Meta.Voice.Audio
 {
     /// <summary>
     /// An abstract audio system class that defaults to use RawAudioClipStream and
     /// </summary>
+    [LogCategory(LogCategory.Audio)]
     public abstract class BaseAudioSystem<TAudioClipStream, TAudioPlayer>
-        : MonoBehaviour, IAudioSystem
+        : MonoBehaviour, IAudioSystem, ILogSource
         where TAudioClipStream : IAudioClipStream
         where TAudioPlayer : MonoBehaviour, IAudioPlayer
     {
-        /// <summary>
-        /// Total seconds of audio required before OnReady callbacks occur.
-        /// </summary>
-        [Tooltip("Total seconds of audio required before OnReady callbacks occur.")]
-        [FormerlySerializedAs("AudioClipReadyLength")]
-        public float readyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH;
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Audio);
 
         /// <summary>
-        /// Maximum length of audio clip stream in seconds.
+        /// The clip settings accessor
         /// </summary>
-        [Tooltip("Maximum length of audio clip stream in seconds.")]
-        [FormerlySerializedAs("ChunkBufferLength")]
-        public float maxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH;
-
-        /// <summary>
-        /// Number of audio clip streams to pool immediately on awake.
-        /// </summary>
-        [Tooltip("Number of audio clip streams to pool immediately on awake.")]
-        [FormerlySerializedAs("AudioClipPreloadCount")]
-        public int clipPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD;
-
-        // Clip containers
-        private ConcurrentQueue<TAudioClipStream> _unusedClips = new ConcurrentQueue<TAudioClipStream>();
-        private ConcurrentDictionary<int, TAudioClipStream> _usedClips = new ConcurrentDictionary<int, TAudioClipStream>();
-
-        /// <summary>
-        /// Preload clips into audio clip cache
-        /// </summary>
-        protected virtual void Awake()
+        public AudioClipSettings ClipSettings
         {
-            PreloadClipCache(clipPreloadCount);
+            get => _clipSettings;
+            set
+            {
+                if (_clipSettings.Equals(value))
+                {
+                    return;
+                }
+                _clipSettings = value;
+                if (_pool != null)
+                {
+                    Logger.Warning("Due to a settings change, the pool is being cleared.");
+                    _pool.Dispose();
+                    _pool = null;
+                }
+            }
+        }
+        private AudioClipSettings _clipSettings = new AudioClipSettings()
+        {
+            Channels = WitConstants.ENDPOINT_TTS_CHANNELS,
+            SampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE,
+            ReadyDuration = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
+            MaxDuration = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH
+        };
+
+        // Clip stream pool
+        private ObjectPool<TAudioClipStream> _pool;
+
+        /// <summary>
+        /// Generate pool if missing
+        /// </summary>
+        protected virtual void GeneratePool()
+        {
+            if (_pool != null)
+            {
+                return;
+            }
+            _pool = new ObjectPool<TAudioClipStream>(GenerateClip);
+        }
+
+        /// <summary>
+        /// Attempts to generate the specified clip stream if possible
+        /// </summary>
+        protected virtual TAudioClipStream GenerateClip()
+        {
+            if (typeof(TAudioClipStream) == typeof(RawAudioClipStream))
+            {
+                object streamRef = new RawAudioClipStream(ClipSettings.Channels, ClipSettings.SampleRate,
+                    ClipSettings.ReadyDuration, ClipSettings.MaxDuration);
+                return (TAudioClipStream)streamRef;
+            }
+            Logger.Warning("{0}.GenerateClip() is missing clip instantiation for {1}",
+                GetType().Name, typeof(TAudioClipStream).Name);
+            return default(TAudioClipStream);
         }
 
         /// <summary>
@@ -61,7 +90,41 @@ namespace Meta.Voice.Audio
         /// </summary>
         protected virtual void OnDestroy()
         {
-            DestroyClipCache();
+            _pool.Dispose();
+            _pool = null;
+        }
+
+        /// <summary>
+        /// A method for preloading clip streams into a cache
+        /// </summary>
+        /// <param name="total">Total clip streams to be preloaded</param>
+        public virtual void PreloadClipStreams(int total)
+        {
+            GeneratePool();
+            _pool.Preload(total);
+        }
+
+        /// <summary>
+        /// Returns a new audio clip stream for audio stream handling
+        /// </summary>
+        public virtual IAudioClipStream GetAudioClipStream()
+        {
+            GeneratePool();
+            var clipStream = _pool.Get();
+            clipStream.OnStreamUnloaded += UnloadAudioClipStream;
+            return clipStream;
+        }
+
+        /// <summary>
+        /// Unload method to add back to the pool
+        /// </summary>
+        protected virtual void UnloadAudioClipStream(IAudioClipStream clipStream)
+        {
+            if (clipStream is TAudioClipStream tClipStream)
+            {
+                tClipStream.OnStreamUnloaded -= UnloadAudioClipStream;
+                _pool.Return(tClipStream);
+            }
         }
 
         /// <summary>
@@ -69,105 +132,5 @@ namespace Meta.Voice.Audio
         /// </summary>
         /// <param name="root">The gameobject to add the player to if applicable</param>
         public virtual IAudioPlayer GetAudioPlayer(GameObject root) => root.AddComponent<TAudioPlayer>();
-
-        /// <summary>
-        /// Returns a new audio clip stream for audio stream handling
-        /// </summary>
-        /// <param name="channels">Number of channels within audio</param>
-        /// <param name="sampleRate">Desired rate of playback</param>
-        public virtual IAudioClipStream GetAudioClipStream(int channels, int sampleRate) => DequeueClip();
-
-        #region CLIP CACHE
-        /// <summary>
-        /// Ensures the specified amount of TAudioClipStreams are generated and ready for use
-        /// </summary>
-        public void PreloadClipCache(int count)
-        {
-            // Ignore if none are needed
-            var needed = count - _unusedClips.Count;
-            if (needed <= 0)
-            {
-                return;
-            }
-            // Generate and enqueue needed clips
-            for (int i = 0; i < needed; i++)
-            {
-                _unusedClips.Enqueue(GenerateClip());
-            }
-        }
-
-        /// <summary>
-        /// Destroys all generated TAudioClipStreams
-        /// </summary>
-        public void DestroyClipCache()
-        {
-            var usedClips = _usedClips;
-            _usedClips = new ConcurrentDictionary<int, TAudioClipStream>();
-            var unusedClips = _unusedClips;
-            _unusedClips = new ConcurrentQueue<TAudioClipStream>();
-            foreach (var clip in usedClips.Values)
-            {
-                clip.Unload();
-            }
-            foreach (var clip in unusedClips)
-            {
-                clip.Unload();
-            }
-        }
-
-        /// <summary>
-        /// Dequeues a clip if possible, otherwise destroys it
-        /// </summary>
-        private TAudioClipStream DequeueClip()
-        {
-            // Attempt to dequeue an existing clip
-            if (!_unusedClips.TryDequeue(out TAudioClipStream clip) || clip == null)
-            {
-                // Generate if no unused clip is found
-                clip = GenerateClip();
-            }
-            // Add to used set and return
-            _usedClips[clip.GetHashCode()] = clip;
-            // Enqueues clip following stream completion
-            clip.OnStreamUnloaded += UnloadClip;
-            return clip;
-        }
-
-        /// <summary>
-        /// Abstract method for generating new audio clip streams
-        /// </summary>
-        protected abstract TAudioClipStream GenerateClip();
-
-        /// <summary>
-        /// Unload method for clip
-        /// </summary>
-        private void UnloadClip(IAudioClipStream clipStream)
-        {
-            if (clipStream is TAudioClipStream localClipStream)
-            {
-                EnqueueClip(localClipStream);
-            }
-        }
-
-        /// <summary>
-        /// Unloads clip stream
-        /// </summary>
-        private void EnqueueClip(TAudioClipStream audioClipStream)
-        {
-            // Remove callback
-            audioClipStream.OnStreamUnloaded -= UnloadClip;
-            // Remove from used clips
-            int hashcode = audioClipStream.GetHashCode();
-            if (_usedClips.ContainsKey(hashcode))
-            {
-                _usedClips.TryRemove(hashcode, out var discard);
-            }
-            // Add to unused queue
-            if (!_unusedClips.Contains(audioClipStream))
-            {
-                _unusedClips.Enqueue(audioClipStream);
-            }
-        }
-        #endregion CLIP POOL
     }
 }

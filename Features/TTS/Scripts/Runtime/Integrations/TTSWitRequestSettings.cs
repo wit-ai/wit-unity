@@ -23,21 +23,43 @@ namespace Meta.WitAi.TTS.Integrations
         /// The configuration used for audio requests
         /// </summary>
         [FormerlySerializedAs("configuration")]
+        [Tooltip("The configuration used for audio requests.")]
         [SerializeField] internal WitConfiguration _configuration;
 
         /// <summary>
-        /// The desired audio type from wit
+        /// The desired audio type to be requested from wit
         /// </summary>
+        [Tooltip("The desired audio type to be requested from wit.")]
         public TTSWitAudioType audioType;
 
         /// <summary>
         /// Whether or not audio should be streamed from wit if possible
         /// </summary>
+        [Tooltip("Whether or not audio should be streamed from wit if possible.")]
         public bool audioStream;
 
         /// <summary>
         /// Whether or not events should be requested along with audio data
         /// </summary>
+        [Tooltip("Whether or not events should be requested along with audio data.")]
         public bool useEvents;
+
+        /// <summary>
+        /// Number of audio clip streams to pool immediately on first enable.
+        /// </summary>
+        [Tooltip("Number of audio clip streams to pool immediately on first enable.")]
+        public int audioStreamPreloadCount;
+
+        /// <summary>
+        /// The total number of seconds to be buffered in order to consider ready
+        /// </summary>
+        [Tooltip("The total number of seconds to be buffered in order to consider ready.")]
+        public float audioReadyDuration;
+
+        /// <summary>
+        /// Maximum length of audio clip stream in seconds.
+        /// </summary>
+        [Tooltip("Maximum length of audio clip stream in seconds.")]
+        public float audioMaxDuration;
     }
 }

@@ -10,7 +10,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
-using Meta.Voice.Logging;
+using Meta.Voice.Audio;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
 using UnityEngine;
@@ -61,12 +61,17 @@ namespace Meta.WitAi.TTS.Integrations
         private WitWebSocketAdapter _webSocketAdapter;
 
         /// <summary>
-        /// Attempt to instantiate web socket adapter
+        /// Attempt to instantiate web socket adapter and setup audio system
         /// </summary>
         protected override void OnEnable()
         {
             base.OnEnable();
             RefreshWebSocketSettings();
+            RefreshAudioSystemSettings();
+            if (AudioSystem != null)
+            {
+                AudioSystem.PreloadClipStreams(RequestSettings.audioStreamPreloadCount);
+            }
         }
 
         /// <summary>
@@ -99,6 +104,9 @@ namespace Meta.WitAi.TTS.Integrations
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
             audioType = WitConstants.TTS_TYPE_DEFAULT,
+            audioReadyDuration = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
+            audioMaxDuration = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH,
+            audioStreamPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD,
             audioStream = true,
             useEvents = true
         };
@@ -168,11 +176,42 @@ namespace Meta.WitAi.TTS.Integrations
                 loadState = TTSClipLoadState.Unloaded,
                 loadProgress = 0f,
                 queryParameters = voiceSettings?.EncodedValues,
-                clipStream = CreateClipStream(),
+                clipStream = string.IsNullOrEmpty(textToSpeak) ? null : CreateClipStream(),
                 extension = WitRequestSettings.GetAudioExtension(RequestSettings.audioType, RequestSettings.useEvents),
                 queryStream = RequestSettings.audioStream,
                 useEvents = RequestSettings.useEvents
             };
+
+        // Generate a new audio clip stream
+        private IAudioClipStream CreateClipStream()
+        {
+            // Default
+            if (AudioSystem == null)
+            {
+                return new RawAudioClipStream(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, RequestSettings.audioReadyDuration);
+            }
+            // Get audio clip via audio system
+            RefreshAudioSystemSettings();
+            return AudioSystem.GetAudioClipStream();
+        }
+
+        /// <summary>
+        /// Set audio clip settings
+        /// </summary>
+        private void RefreshAudioSystemSettings()
+        {
+            if (AudioSystem == null)
+            {
+                return;
+            }
+            AudioSystem.ClipSettings = new AudioClipSettings()
+            {
+                Channels = WitConstants.ENDPOINT_TTS_CHANNELS,
+                SampleRate = WitConstants.ENDPOINT_TTS_SAMPLE_RATE,
+                ReadyDuration = RequestSettings.audioReadyDuration,
+                MaxDuration = RequestSettings.audioMaxDuration
+            };
+        }
 
         // Get tts request prior to transmission
         private WitTTSVRequest CreateHttpRequest(TTSClipData clipData)
