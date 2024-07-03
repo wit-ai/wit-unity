@@ -28,11 +28,10 @@ namespace Meta.Voice.Audio.Decoding
         // Store header in case of split between
         private const int _headerLength = 8;
         // Maximum allowed frame size
-        private const int _frameMax = 120; // 32000 is technically max but largest we see is 100
+        private const int _frameMax = 240; // 32000 is technically max but largest we see is 240
 
         // Header specific data
         private int _frameLength;
-        private uint _encFinalRange;
         private bool _validHeader;
 
         // Current offset of the frame buffer
@@ -73,8 +72,16 @@ namespace Meta.Voice.Audio.Decoding
                     continue;
                 }
 
-                // Copy to local buffer
+                // Determine length
                 var length = Mathf.Min(_frameLength - _frameOffset, bufferLength);
+                if (length == 0)
+                {
+                    _validHeader = false;
+                    _frameOffset = 0;
+                    continue;
+                }
+
+                // Copy to local buffer
                 Array.Copy(buffer, bufferOffset, _frameBuffer, _frameOffset, length);
                 _frameOffset += length;
                 bufferOffset += length;
@@ -111,14 +118,12 @@ namespace Meta.Voice.Audio.Decoding
             // Get frame size & range
             Array.Reverse(_frameBuffer, 0, 4); // Account for Big-Endian
             _frameLength = BitConverter.ToInt32(_frameBuffer, 0);
-            Array.Reverse(_frameBuffer, 4, 4); // Account for Big-Endian
-            _encFinalRange = BitConverter.ToUInt32(_frameBuffer, 4);
 
             // Check for length errors
             if (_frameLength == 0)
                 throw new Exception("Invalid zero-length opus frame");
             if (_frameLength > _frameMax)
-                throw new Exception("Max encoded Opus frame size exceeded");
+                throw new Exception($"Frame size ({_frameLength}) exceeded max frame size ({_frameMax})");
 
             // Mark valid
             _validHeader = true;

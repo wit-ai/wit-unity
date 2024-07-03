@@ -706,7 +706,10 @@ namespace Meta.WitAi.Requests
             }
 
             // Tasks waiting will immediately continue
-            Completion.SetResult(true);
+            if (!Completion.Task.IsCompleted)
+            {
+                Completion.SetResult(true);
+            }
         }
 
         /// <summary>

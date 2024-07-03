@@ -403,11 +403,14 @@ namespace Meta.WitAi.Requests
             // Remove in buffer (Already in buffers queue)
             _inBuffer = null;
             // Dequeue and unload each buffer
-            lock (_buffers)
+            if (WillDecodeInBackground)
             {
-                while (_buffers.TryDequeue(out var buffer))
+                lock (_buffers)
                 {
-                    _bufferPool.Return(buffer);
+                    while (_buffers.TryDequeue(out var buffer))
+                    {
+                        _bufferPool.Return(buffer);
+                    }
                 }
             }
             // Unload out buffer

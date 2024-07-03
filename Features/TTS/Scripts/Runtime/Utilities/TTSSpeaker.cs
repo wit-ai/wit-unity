@@ -1901,7 +1901,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// The total samples available for the current tts events
         /// </summary>
-        public int TotalSamples => IsSpeaking ? SpeakingClip.clipStream.TotalSamples : 0;
+        public int TotalSamples => IsSpeaking && SpeakingClip?.clipStream != null ? SpeakingClip.clipStream.TotalSamples : 0;
 
         /// <summary>
         /// The callback following the change of the current sample
