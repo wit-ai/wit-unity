@@ -287,6 +287,7 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_ABORT_KEY = "abort";
         public const string WIT_SOCKET_TRANSCRIBE_KEY = "transcribe";
         public const string WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY = "multiple_segments";
+        public const string WIT_SOCKET_TRANSCRIBE_IS_FINAL = "end_transcription";
         // Pub/sub data keys
         public const string WIT_SOCKET_EXTERNAL_ENDPOINT_KEY = "external";
         public const string WIT_SOCKET_PUBSUB_SUBSCRIBE_KEY = "subscribe";

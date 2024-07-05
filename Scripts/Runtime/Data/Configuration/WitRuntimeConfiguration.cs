@@ -80,6 +80,8 @@ namespace Meta.WitAi.Configuration
         [Tooltip("If using web sockets, the topic id will publish and subscribe to all requests made for the specified topic.")]
         [SerializeField]
         public string pubSubTopicId;
+        [Tooltip("If enabled, only transcription requests will be made.")]
+        public bool transcribeOnly = false;
 
         /// <summary>
         /// An action to be invoked following any configuration data change.

@@ -46,7 +46,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         {
             if (!MultipleSegments)
             {
-                return base.IsEndOfStream(responseData);
+                if (base.IsEndOfStream(responseData))
+                {
+                    return true;
+                }
+                return responseData?[WitConstants.WIT_SOCKET_TRANSCRIBE_IS_FINAL].AsBool ?? false;
             }
             return false;
         }

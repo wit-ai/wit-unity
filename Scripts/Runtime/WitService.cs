@@ -229,7 +229,15 @@ namespace Meta.WitAi
             }
             if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
+                if (RuntimeConfiguration.transcribeOnly)
+                {
+                    return WitSocketRequest.GetTranscribeRequest(config, _webSocketAdapter, _buffer, newOptions, newEvents);
+                }
                 return WitSocketRequest.GetSpeechRequest(config, _webSocketAdapter, _buffer, newOptions, newEvents);
+            }
+            if (RuntimeConfiguration.transcribeOnly)
+            {
+                _log.Warning("Transcribe request is not available with HTTP.");
             }
             return config.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
