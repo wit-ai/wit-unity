@@ -169,6 +169,7 @@ namespace Meta.WitAi.Requests
             request.SetWebSocketRequest(webSocketRequest);
             request.Init(webSocketRequest.Endpoint, WitAudioRequestOption.None,
                 configuration, webSocketAdapter, null);
+            request.Results.ResponseData = webSocketRequest.ResponseData;
             return request;
         }
 

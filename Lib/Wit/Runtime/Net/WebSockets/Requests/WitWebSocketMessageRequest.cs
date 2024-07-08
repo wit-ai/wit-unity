@@ -39,6 +39,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             : base(externalPostData, requestId)
         {
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
+            SetResponseData(externalPostData);
             BeginTimeout();
         }
 
