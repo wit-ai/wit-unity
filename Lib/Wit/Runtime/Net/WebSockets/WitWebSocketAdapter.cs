@@ -216,8 +216,6 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SetTopicId(string newTopicId)
         {
-            Logger.Verbose("Setting topic ID from {0} to {1}", TopicId, newTopicId);
-
             // Ignore if same topic
             if (string.Equals(TopicId, newTopicId, StringComparison.CurrentCultureIgnoreCase))
             {
@@ -228,6 +226,7 @@ namespace Meta.Voice.Net.WebSockets
             Unsubscribe(TopicId);
 
             // Set new topic
+            Logger.Verbose("PubSub Topic ID Set from {0} to {1}", TopicId, newTopicId);
             _topicId = newTopicId;
 
             // Subscribe to new topic
