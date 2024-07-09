@@ -67,5 +67,22 @@ namespace Meta.WitAi
                 await Task.Yield();
             }
         }
+
+        /// <summary>
+        /// Awaits an IAsyncResult using Task.Factory.AsyncWa
+        /// </summary>
+        public static Task FromAsyncResult(IAsyncResult asyncResult)
+        {
+            // Already done
+            if (asyncResult.IsCompleted)
+            {
+                return Task.FromResult(true);
+            }
+            // Await
+            return Task.Factory.FromAsync(asyncResult, StubForTaskFactory);
+        }
+
+        // Empty method used since Task.Factory.FromAsync requires a completion method
+        private static void StubForTaskFactory(IAsyncResult result) { }
     }
 }

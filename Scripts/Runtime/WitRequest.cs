@@ -458,7 +458,7 @@ namespace Meta.WitAi
             if (_request.Method == "POST" || _request.Method == "PUT")
             {
                 var getPostStream = _request.BeginGetRequestStream(HandleWriteStream, _request);
-                await TaskUtility.WaitWhile(() => !getPostStream.IsCompleted);
+                await TaskUtility.FromAsyncResult(getPostStream);
             }
 
             // Cancellation
@@ -470,7 +470,7 @@ namespace Meta.WitAi
 
             // Get response stream & wait for completion
             var getResponseStream = _request.BeginGetResponse(HandleResponse, _request);
-            await TaskUtility.WaitWhile(() => !getResponseStream.IsCompleted);
+            await TaskUtility.FromAsyncResult(getResponseStream);
         }
 
         // Handle timeout callback
