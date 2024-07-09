@@ -93,9 +93,12 @@ namespace Meta.WitAi.Windows
             }
 
             var manifest = ManifestLoader.LoadManifest(configuration.ManifestLocalPath);
+            if (manifest == null)
+            {
+                return;
+            }
 
             var intentName = property.FindPropertyRelative("name")?.stringValue;
-
             if (!manifest.ContainsAction(intentName))
             {
                 return;
