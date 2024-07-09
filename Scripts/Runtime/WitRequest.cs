@@ -23,6 +23,7 @@ using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
+using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Meta.WitAi
@@ -449,9 +450,8 @@ namespace Meta.WitAi
                 _request.Headers[key] = headers[key];
             }
 
-            // Handle timeout locally
-            _timeoutThread = new Thread(HandleTimeout);
-            _timeoutThread.Start();
+            // Handle timeout on background thread
+            _ = ThreadUtility.BackgroundAsync(Logger, WaitForTimeout);
             _request.Timeout = -1;
 
             // If post or put, get post stream & wait for completion
@@ -474,20 +474,22 @@ namespace Meta.WitAi
         }
 
         // Handle timeout callback
-        private Thread _timeoutThread;
-        private DateTime _timeoutStart;
-        private const int TIMEOUT_DELAY_MS = 100;
-        private void HandleTimeout()
+        private DateTime _timeoutLastUpdate;
+        private async Task WaitForTimeout()
         {
-            // Await a specific timeout in ms
-            double elapsed;
-            _timeoutStart = DateTime.UtcNow;
-            do
+            // Await specified timeout
+            var timeout = TimeoutMs;
+            _timeoutLastUpdate = DateTime.UtcNow;
+            while (timeout > 0)
             {
-                Thread.Sleep(TIMEOUT_DELAY_MS);
-                elapsed = (DateTime.UtcNow - _timeoutStart).TotalMilliseconds;
-            } while (elapsed < TimeoutMs);
-            _timeoutThread = null;
+                // Await timeout
+                await Task.Delay(timeout);
+
+                // Ensure timeout since last update in the case _timeoutLastUpdate
+                // changes due to receiving a response packet.
+                var elapsed = (DateTime.UtcNow - _timeoutLastUpdate).TotalMilliseconds;
+                timeout = Mathf.Max(0, TimeoutMs - Mathf.FloorToInt((float)elapsed));
+            }
 
             // Ignore if no longer active
             if (!IsActive)
@@ -504,7 +506,7 @@ namespace Meta.WitAi
             }
 
             // Get error
-            var error = $"Request [{path}] timed out after {elapsed:0.00} ms";
+            var error = $"Request [{path}] timed out after {(DateTime.UtcNow - _timeoutLastUpdate).TotalMilliseconds:0.0} ms";
 
             // Call error
             MainThreadCallback(() => HandleFailure(WitConstants.ERROR_CODE_TIMEOUT, error));
@@ -804,7 +806,7 @@ namespace Meta.WitAi
         // Handles raw response
         private void ProcessStringResponse(string stringResponse)
         {
-            _timeoutStart = DateTime.UtcNow;
+            _timeoutLastUpdate = DateTime.UtcNow;
             HandleRawResponse(stringResponse, false);
         }
         // On raw response callback, ensure on main thread
@@ -859,12 +861,6 @@ namespace Meta.WitAi
         {
             // No longer ready
             IsInputStreamReady = false;
-            // Abort timeout
-            if (_timeoutThread != null)
-            {
-                _timeoutThread.Abort();
-                _timeoutThread = null;
-            }
             // Close write stream
             lock (_streamLock)
             {
