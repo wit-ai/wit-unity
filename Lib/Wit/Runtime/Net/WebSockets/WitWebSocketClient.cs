@@ -271,7 +271,7 @@ namespace Meta.Voice.Net.WebSockets
             }
             else
             {
-                VLog.W(GetType().Name, $"Socket Error\nMessage: {errorMessage}");
+                Logger.Warning("Socket Error\nMessage: {0}", errorMessage);
             }
         }
 
@@ -368,13 +368,13 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
-                VLog.E(GetType().Name, $"Connection Failed\n{error}");
+                Logger.Error("Connection Failed\nMessage: {0}", error);
                 FailedConnectionAttempts++;
                 ForceDisconnect();
             }
             else
             {
-                VLog.W(GetType().Name, $"Connection Cancelled\n{error}");
+                Logger.Warning("Connection Cancelled\nMessage: {0}", error);
             }
         }
         #endregion CONNECT
@@ -387,7 +387,7 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
-                VLog.W(GetType().Name, $"Socket Closed\nReason: {closeCode}");
+                Logger.Warning("Socket Closed\nReason: {0}", closeCode);
                 ForceDisconnect();
             }
         }
@@ -441,7 +441,7 @@ namespace Meta.Voice.Net.WebSockets
             // Fail if changed during breakdown
             if (ConnectionState != WitWebSocketConnectionState.Disconnecting)
             {
-                VLog.W(GetType().Name, $"State changed to {ConnectionState} during breakdown.");
+                Logger.Warning("State changed to {0} during breakdown.", ConnectionState);
                 return;
             }
 
@@ -541,7 +541,9 @@ namespace Meta.Voice.Net.WebSockets
             // Ignore if failed too many times
             if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
             {
-                VLog.E(GetType().Name, $"Reconnect Failed\nToo many failed reconnect attempts\nFailures: {FailedConnectionAttempts}\nAttempts Allowed: {Settings.ReconnectAttempts}");
+                Logger.Error("Reconnect Failed\nToo many failed reconnect attempts\nFailures: {0}\nAttempts Allowed: {1}",
+                    FailedConnectionAttempts,
+                    Settings.ReconnectAttempts);
                 return;
             }
             // Wait and reconnect
@@ -726,8 +728,8 @@ namespace Meta.Voice.Net.WebSockets
             {
                 if (string.IsNullOrEmpty(_lastRequestId))
                 {
-                    VLog.E(GetType().Name,
-                        $"Download Chunk - Failed\nNo request id found in chunk\nJson:\n{(chunk.jsonData?.ToString() ?? "Null")}");
+                    Logger.Error("Download Chunk Failed\nError: no request id found in chunk\nJson: {0}",
+                        chunk.jsonString ?? "Null");
                     return;
                 }
                 requestId = _lastRequestId;
@@ -746,7 +748,7 @@ namespace Meta.Voice.Net.WebSockets
             // Returned untracked request, generate if needed
             if (!_requests.TryGetValue(requestId, out var request))
             {
-                request = GenerateRequest(requestId, chunk.jsonData);
+                request = GenerateRequest(requestId, chunk);
             }
             if (request == null)
             {
@@ -761,7 +763,9 @@ namespace Meta.Voice.Net.WebSockets
             // Catch exceptions or else they will be ignored
             catch (Exception e)
             {
-                VLog.E(GetType().Name, $"Request HandleDownload method exception caught\n{request}\n\n{e}\n");
+                Logger.Error("Request HandleDownload method exception caught\n{0}\n\n{1}\n",
+                    request,
+                    e);
                 UntrackRequest(request);
             }
         }
@@ -781,7 +785,8 @@ namespace Meta.Voice.Net.WebSockets
             // Ensure not already tracked
             if (_requests.ContainsValue(request))
             {
-                VLog.E(GetType().Name, $"Track Request - Failed\nReason: Already tracking this request\n{request}");
+                Logger.Error("Track Request - Failed\nReason: Already tracking this request\n{0}",
+                    request);
                 return false;
             }
 
@@ -837,7 +842,8 @@ namespace Meta.Voice.Net.WebSockets
             // Ensure already tracked
             if (string.IsNullOrEmpty(requestId) || !_requests.ContainsKey(requestId))
             {
-                VLog.E(GetType().Name, $"Untrack Request - Failed\nReason: Not tracking this request\nRequest Id: {requestId}");
+                Logger.Error("Untrack Request - Failed\nReason: Not tracking this request\nRequest Id: {0}",
+                    requestId);
                 return false;
             }
 
@@ -858,20 +864,24 @@ namespace Meta.Voice.Net.WebSockets
         /// Attempts to generate a request to handle a specific json response
         /// </summary>
         /// <param name="requestId">The request id that should be handling the response.</param>
-        /// <param name="jsonData">The json response that is currently unhandled.</param>
-        private IWitWebSocketRequest GenerateRequest(string requestId, WitResponseNode jsonData)
+        /// <param name="chunk">The data chunk provided including json data</param>
+        private IWitWebSocketRequest GenerateRequest(string requestId, WitChunk chunk)
         {
             // Ignore no longer tracked requests
             if (_untrackedRequests.Contains(requestId))
             {
-                Logger.Info($"Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                Logger.Info("Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {0}\nJson:\n{1}",
+                    requestId,
+                    chunk.jsonString ?? "Null");
                 return null;
             }
             // Get topic id if possible
-            var topicId = jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY].Value;
+            var topicId = chunk.jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY].Value;
             if (string.IsNullOrEmpty(topicId))
             {
-                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: No topic id provided in response\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                Logger.Warning("Generate Request - Failed\nReason: No topic id provided in response\nRequest Id: {0}\nJson:\n{1}",
+                    requestId,
+                    chunk.jsonString ?? "Null");
                 return null;
             }
             // Check if topic is subscribed
@@ -879,12 +889,15 @@ namespace Meta.Voice.Net.WebSockets
             if (subState != PubSubSubscriptionState.Subscribed
                 && subState != PubSubSubscriptionState.Subscribing)
             {
-                VLog.W(GetType().Name, $"Generate Request - Failed\nReason: Topic id is not currently subscribed to\nTopic Id: {topicId}\nRequest Id: {requestId}\nJson:\n{(jsonData?.ToString() ?? "Null")}");
+                Logger.Warning("Generate Request - Failed\nReason: Topic id is not currently subscribed to\nTopic Id: {0}\nRequest Id: {1}\nJson:\n{2}",
+                    topicId,
+                    requestId,
+                    chunk.jsonString ?? "Null");
                 return null;
             }
             // Generate message request if topic is found
             Logger.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
-            var request = new WitWebSocketMessageRequest(jsonData, requestId);
+            var request = new WitWebSocketMessageRequest(chunk.jsonData, requestId);
             request.TopicId = topicId;
             TrackRequest(request);
             return request;
@@ -1105,7 +1118,10 @@ namespace Meta.Voice.Net.WebSockets
             // Log
             if (!string.IsNullOrEmpty(error))
             {
-                VLog.W(GetType().Name, $"{state}\nError: {error}\nTopic Id: {topicId}");
+                Logger.Warning("Set State Failed\nState: {0}\nError: {1}\nTopic Id: {2}",
+                    state,
+                    error,
+                    topicId);
             }
             else
             {
