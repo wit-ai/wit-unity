@@ -8,6 +8,7 @@
 
 using System;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Meta.WitAi
 {
@@ -84,5 +85,26 @@ namespace Meta.WitAi
 
         // Empty method used since Task.Factory.FromAsync requires a completion method
         private static void StubForTaskFactory(IAsyncResult result) { }
+
+        /// <summary>
+        /// Awaits an AsyncOperation by using a
+        /// completion source with it's completed delegate
+        /// </summary>
+        public static Task FromAsyncOp(AsyncOperation asyncOperation)
+        {
+            // Already done
+            if (asyncOperation.isDone)
+            {
+                return Task.FromResult(true);
+            }
+            // Generate completion source & set result on complete
+            var completion = new TaskCompletionSource<bool>();
+            asyncOperation.completed += operation =>
+            {
+                completion.SetResult(true);
+            };
+            // Return completion source
+            return completion.Task;
+        }
     }
 }
