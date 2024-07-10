@@ -680,8 +680,6 @@ namespace Meta.Voice.Net.WebSockets
             _ = DecodeChunkAsync(rawBytes);
         }
 
-        private readonly List<WitChunk> _decodedChunks = new List<WitChunk>();
-
         /// <summary>
         /// Performs a decode on a background thread
         /// </summary>
@@ -696,17 +694,6 @@ namespace Meta.Voice.Net.WebSockets
             // Decode one or more chunks
             DecodeChunk(rawBytes, 0, rawBytes.Length);
 
-            // Perform send
-            if (_decodedChunks.Count > 0)
-            {
-                for (int i = 0; i < _decodedChunks.Count; i++)
-                {
-                    if (Settings.VerboseJsonLogging) Logger.Verbose("Downloaded Chunk:\n{0}\n", _decodedChunks[i].jsonString);
-                    HandleChunk(_decodedChunks[i]);
-                }
-                _decodedChunks.Clear();
-            }
-
             // Decrement download count
             _downloadCount--;
         }
@@ -715,13 +702,16 @@ namespace Meta.Voice.Net.WebSockets
         /// Decodes the provided buffer data into one or more WitChunks
         /// </summary>
         private void DecodeChunk(byte[] rawBytes, int start, int length) =>
-            _decoder.Decode(rawBytes, start, length, _decodedChunks);
+            _decoder.Decode(rawBytes, start, length, ApplyDecodedChunk);
 
         /// <summary>
         /// Determines request id and applies chunk to the applicable request for handling
         /// </summary>
-        private void HandleChunk(WitChunk chunk)
+        private void ApplyDecodedChunk(WitChunk chunk)
         {
+            // Log if desired
+            if (Settings.VerboseJsonLogging) Logger.Verbose("Downloaded Chunk:\n{0}\n", chunk.jsonString);
+
             // Iterate safely due to background thread
             var requestId = chunk.jsonData?[WitConstants.WIT_SOCKET_REQUEST_ID_KEY];
             if (string.IsNullOrEmpty(requestId))

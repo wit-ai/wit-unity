@@ -76,13 +76,14 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <param name="bufferLength">The total number of bytes to be used within chunkData</param>
         /// <param name="decodedChunks">A list that newly decoded chunks will be added to</param>
         /// <param name="customBinaryDecoder">If exists, binary data will be sent back here instead of the WitChunk</param>
-        public void Decode(byte[] buffer, int bufferOffset, int bufferLength, List<WitChunk> decodedChunks,
+        public void Decode(byte[] buffer, int bufferOffset, int bufferLength,
+            Action<WitChunk> onChunkDecoded,
             Action<byte[], int, int> customBinaryDecoder = null)
         {
             while (bufferLength > 0)
             {
                 // Decode a single chunk
-                var decodeLength = DecodeChunk(buffer, bufferOffset, bufferLength, decodedChunks, customBinaryDecoder);
+                var decodeLength = DecodeChunk(buffer, bufferOffset, bufferLength, onChunkDecoded, customBinaryDecoder);
 
                 // Increment counts
                 bufferOffset += decodeLength;
@@ -93,7 +94,8 @@ namespace Meta.Voice.Net.Encoding.Wit
         /// <summary>
         /// Decodes an array of chunk data
         /// </summary>
-        private int DecodeChunk(byte[] buffer, int bufferOffset, int bufferLength, List<WitChunk> decodedChunks,
+        private int DecodeChunk(byte[] buffer, int bufferOffset, int bufferLength,
+            Action<WitChunk> onChunkDecoded,
             Action<byte[], int, int> customBinaryDecoder)
         {
             // Total decoded from the buffer
@@ -143,7 +145,7 @@ namespace Meta.Voice.Net.Encoding.Wit
                 // If custom binary handler exists, return json asap
                 if (IsJsonDecoded && customBinaryDecoder != null)
                 {
-                    decodedChunks.Add(_currentChunk);
+                    onChunkDecoded?.Invoke(_currentChunk);
                 }
             }
 
@@ -160,7 +162,7 @@ namespace Meta.Voice.Net.Encoding.Wit
                 // If no custom binary handler, return once complete
                 if (customBinaryDecoder == null)
                 {
-                    decodedChunks.Add(_currentChunk);
+                    onChunkDecoded?.Invoke(_currentChunk);
                 }
                 // Reset chunk
                 ResetChunk();

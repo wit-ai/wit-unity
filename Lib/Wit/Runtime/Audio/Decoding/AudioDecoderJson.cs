@@ -26,7 +26,6 @@ namespace Meta.Voice.Audio.Decoding
     public class AudioDecoderJson : IAudioDecoder
     {
         // Temp list for wit chunk info and the decoder itself
-        private readonly List<WitChunk> _decodedChunks = new List<WitChunk>();
         private readonly WitChunkConverter _chunkDecoder = new WitChunkConverter();
 
         // Temp list for holding decoded json nodes and callback following json decode
@@ -65,27 +64,10 @@ namespace Meta.Voice.Audio.Decoding
         {
             // Decode audio and json
             _onSamplesDecoded = onSamplesDecoded;
-            _chunkDecoder.Decode(buffer, bufferOffset, bufferLength, _decodedChunks, DecodeAudio);
+            _chunkDecoder.Decode(buffer, bufferOffset, bufferLength, DecodeJson, DecodeAudio);
             _onSamplesDecoded = null;
 
             // If chunks exist, iterate
-            if (_decodedChunks.Count == 0)
-            {
-                return;
-            }
-            for (int i = 0; i < _decodedChunks.Count; i++)
-            {
-                var jsonNode = _decodedChunks[i].jsonData;
-                if (jsonNode is WitResponseArray jsonArray)
-                {
-                    _decodedJson.AddRange(jsonArray.Childs);
-                }
-                else if (jsonNode != null)
-                {
-                    _decodedJson.Add(jsonNode);
-                }
-            }
-            _decodedChunks.Clear();
             if (_decodedJson.Count == 0)
             {
                 return;
@@ -94,6 +76,19 @@ namespace Meta.Voice.Audio.Decoding
             // Return json
             _onJsonDecoded?.Invoke(_decodedJson);
             _decodedJson.Clear();
+        }
+
+        // Adds the json data to the decoded list if possible
+        private void DecodeJson(WitChunk chunk)
+        {
+            if (chunk.jsonData is WitResponseArray jsonArray)
+            {
+                _decodedJson.AddRange(jsonArray.Childs);
+            }
+            else if (chunk.jsonData != null)
+            {
+                _decodedJson.Add(chunk.jsonData);
+            }
         }
 
         // Performs the audio decode using the provided buffer offset and length
