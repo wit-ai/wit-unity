@@ -145,14 +145,26 @@ namespace Meta.Voice.NLayer.Decoder
                 _nextBlock.Clear();
             }
 
+            private float[] _prevBlockFirst = new float[SSLIMIT * SBLIMIT];
+            private float[] _nextBlockFirst = new float[SSLIMIT * SBLIMIT];
             void GetPrevBlock(int channel, out float[] prevBlock, out float[] nextBlock)
             {
                 while (_prevBlock.Count <= channel)
                 {
+                    if (_prevBlock.Count == 0)
+                    {
+                        _prevBlock.Add(_prevBlockFirst);
+                        continue;
+                    }
                     _prevBlock.Add(new float[SSLIMIT * SBLIMIT]);
                 }
                 while (_nextBlock.Count <= channel)
                 {
+                    if (_nextBlock.Count == 0)
+                    {
+                        _nextBlock.Add(_nextBlockFirst);
+                        continue;
+                    }
                     _nextBlock.Add(new float[SSLIMIT * SBLIMIT]);
                 }
                 prevBlock = _prevBlock[channel];
@@ -222,10 +234,21 @@ namespace Meta.Voice.NLayer.Decoder
                 }
             }
 
-            static void LongIMDCT(float[] invec, float[] outvec)
+            private readonly float[] _imdct_H = new float[17];
+            private readonly float[] _imdct_h = new float[18];
+            private readonly float[] _imdct_even = new float[9];
+            private readonly float[] _imdct_odd = new float[9];
+            private readonly float[] _imdct_even_idct = new float[9];
+            private readonly float[] _imdct_odd_idct = new float[9];
+            void LongIMDCT(float[] invec, float[] outvec)
             {
                 int i;
-                float[] H = new float[17], h = new float[18], even = new float[9], odd = new float[9], even_idct = new float[9], odd_idct = new float[9];
+                var H = _imdct_H;
+                var h = _imdct_h;
+                var even = _imdct_even;
+                var odd = _imdct_odd;
+                var even_idct = _imdct_even_idct;
+                var odd_idct = _imdct_odd_idct;
 
                 for (i = 0; i < 17; i++)
                     H[i] = invec[i] + invec[i + 1];
@@ -294,10 +317,13 @@ namespace Meta.Voice.NLayer.Decoder
                 return icos72_table[4 * i + 1];
             }
 
-            static void imdct_9pt(float[] invec, float[] outvec)
+            private readonly float[] _imdct_9pt_even_idct = new float[5];
+            private readonly float[] _imdct_9pt_odd_idct = new float[4];
+            void imdct_9pt(float[] invec, float[] outvec)
             {
                 int i;
-                float[] even_idct = new float[5], odd_idct = new float[4];
+                var even_idct = _imdct_9pt_even_idct;
+                var odd_idct = _imdct_9pt_odd_idct;
                 float t0, t1, t2;
 
                 /* BEGIN 5 Point IMDCT */
@@ -405,10 +431,17 @@ namespace Meta.Voice.NLayer.Decoder
 
             const float sqrt32 = 0.8660254037844385965883020617184229195117950439453125f;
 
-            static void ShortIMDCT(float[] invec, int inIdx, float[] outvec)
+            private readonly float[] _ShortIMDCT_H = new float[6];
+            private readonly float[] _ShortIMDCT_h = new float[6];
+            private readonly float[] _ShortIMDCT_even_idct = new float[3];
+            private readonly float[] _ShortIMDCT_odd_idct = new float[3];
+            void ShortIMDCT(float[] invec, int inIdx, float[] outvec)
             {
                 int i;
-                float[] H = new float[6], h = new float[6], even_idct = new float[3], odd_idct = new float[3];
+                var H = _ShortIMDCT_H;
+                var h = _ShortIMDCT_h;
+                var even_idct = _ShortIMDCT_even_idct;
+                var odd_idct = _ShortIMDCT_odd_idct;
                 float t0, t1, t2;
 
                 /* Preprocess the input to the two 3-point IDCT's */
@@ -468,6 +501,14 @@ namespace Meta.Voice.NLayer.Decoder
 
         #endregion
 
+        #region Allocation Reductions
+        // Used for ReadSamples
+        private readonly float[][] _chanBufs = new float[2][];
+        // Used for ReadLsfScalefactors
+        private readonly int[] _readLsfScalefactorsSlen = new int[4];
+        private readonly int[] _readLsfScalefactorsBuffer = new int[54];
+        #endregion
+
         static internal bool GetCRC(MpegFrame frame, ref uint crc)
         {
             var cnt = frame.GetSideDataSize();
@@ -478,7 +519,7 @@ namespace Meta.Voice.NLayer.Decoder
             return true;
         }
 
-        HybridMDCT _hybrid = new HybridMDCT();
+        readonly HybridMDCT _hybrid = new HybridMDCT();
         BitReservoir _bitRes = new BitReservoir();
 
         internal LayerIIIDecoder()
@@ -495,7 +536,6 @@ namespace Meta.Voice.NLayer.Decoder
                 new float[][] { new float[3], new float[3] },
             };
         }
-
         internal override int DecodeFrame(IMpegFrame frame, float[] ch0, float[] ch1)
         {
             // load the frame information
@@ -511,23 +551,22 @@ namespace Meta.Voice.NLayer.Decoder
             PrepTables(frame);
 
             // do our stereo mode setup
-            var chanBufs = new float[2][];
             var startChannel = 0;
             var endChannel = _channels - 1;
             if (_channels == 1 || StereoMode == StereoMode.LeftOnly || StereoMode == StereoMode.DownmixToMono)
             {
-                chanBufs[0] = ch0;
+                _chanBufs[0] = ch0;
                 endChannel = 0;
             }
             else if (StereoMode == StereoMode.RightOnly)
             {
-                chanBufs[1] = ch0;  // this is correct... if there's only a single channel output, it goes in channel 0's buffer
+                _chanBufs[1] = ch0;  // this is correct... if there's only a single channel output, it goes in channel 0's buffer
                 startChannel = 1;
             }
             else    // MpegStereoMode.Both
             {
-                chanBufs[0] = ch0;
-                chanBufs[1] = ch1;
+                _chanBufs[0] = ch0;
+                _chanBufs[1] = ch1;
             }
 
             // get the granule count
@@ -601,7 +640,7 @@ namespace Meta.Voice.NLayer.Decoder
                     FrequencyInversion(buf);
 
                     // inverse polyphase
-                    InversePolyphase(buf, ch, offset, chanBufs[ch]);
+                    InversePolyphase(buf, ch, offset, _chanBufs[ch]);
                 }
 
                 offset += SBLIMIT * SSLIMIT;
@@ -1185,40 +1224,43 @@ namespace Meta.Voice.NLayer.Decoder
                 blockTypeNumber = 0;
             }
 
-            int[] slen = new int[4];
             int blockNumber;
             if ((chanModeExt & 1) == 1 && ch == 1)
             {
                 var tsfc = sfc >> 1;
                 if (tsfc < 180)
                 {
-                    slen[0] = tsfc / 36;                    // <= 4, 15
-                    slen[1] = (tsfc % 36) / 6;              // <= 5, 31
-                    slen[2] = tsfc % 6;                     // <= 5, 31
-                    slen[3] = 0;
+                    _readLsfScalefactorsSlen[0] = tsfc / 36;                    // <= 4, 15
+                    _readLsfScalefactorsSlen[1] = (tsfc % 36) / 6;              // <= 5, 31
+                    _readLsfScalefactorsSlen[2] = tsfc % 6;                     // <= 5, 31
+                    _readLsfScalefactorsSlen[3] = 0;
                     _preflag[gr][ch] = 0;
                     blockNumber = 3;
                 }
                 else if (tsfc < 244)
                 {
-                    slen[0] = ((tsfc - 180) % 64) >> 4;     // <= 3, 7
-                    slen[1] = ((tsfc - 180) % 16) >> 2;     // <= 3, 7
-                    slen[2] = ((tsfc - 180) % 4);           // <= 3, 7
-                    slen[3] = 0;
+                    _readLsfScalefactorsSlen[0] = ((tsfc - 180) % 64) >> 4;     // <= 3, 7
+                    _readLsfScalefactorsSlen[1] = ((tsfc - 180) % 16) >> 2;     // <= 3, 7
+                    _readLsfScalefactorsSlen[2] = ((tsfc - 180) % 4);           // <= 3, 7
+                    _readLsfScalefactorsSlen[3] = 0;
                     _preflag[gr][ch] = 0;
                     blockNumber = 4;
                 }
                 else if (tsfc < 255)
                 {
-                    slen[0] = (tsfc - 244) / 3;             // <= 3, 7
-                    slen[1] = (tsfc - 244) % 3;             // <= 1, 1
-                    slen[2] = 0;
-                    slen[3] = 0;
+                    _readLsfScalefactorsSlen[0] = (tsfc - 244) / 3;             // <= 3, 7
+                    _readLsfScalefactorsSlen[1] = (tsfc - 244) % 3;             // <= 1, 1
+                    _readLsfScalefactorsSlen[2] = 0;
+                    _readLsfScalefactorsSlen[3] = 0;
                     _preflag[gr][ch] = 0;
                     blockNumber = 5;
                 }
                 else
                 {
+                    _readLsfScalefactorsSlen[0] = 0;
+                    _readLsfScalefactorsSlen[1] = 0;
+                    _readLsfScalefactorsSlen[2] = 0;
+                    _readLsfScalefactorsSlen[3] = 0;
                     blockNumber = 0;
                 }
             }
@@ -1227,54 +1269,48 @@ namespace Meta.Voice.NLayer.Decoder
                 //   if scalefac_comp < 400
                 if (sfc < 400)
                 {
-                    slen[0] = (sfc >> 4) / 5;               // <= 4, 15
-                    slen[1] = (sfc >> 4) % 5;               // <= 4, 15
-                    slen[2] = (sfc & 15) >> 2;              // <= 3, 7
-                    slen[3] = sfc & 3;                      // <= 3, 7
+                    _readLsfScalefactorsSlen[0] = (sfc >> 4) / 5;               // <= 4, 15
+                    _readLsfScalefactorsSlen[1] = (sfc >> 4) % 5;               // <= 4, 15
+                    _readLsfScalefactorsSlen[2] = (sfc & 15) >> 2;              // <= 3, 7
+                    _readLsfScalefactorsSlen[3] = sfc & 3;                      // <= 3, 7
                     _preflag[gr][ch] = 0;
                     blockNumber = 0;
                 }
                 else if (sfc < 500)
                 {
-                    slen[0] = ((sfc - 400) >> 2) / 5;       // <= 4, 15
-                    slen[1] = ((sfc - 400) >> 2) % 5;       // <= 4, 15
-                    slen[2] = (sfc - 400) & 3;              // <= 3, 7
-                    slen[3] = 0;
+                    _readLsfScalefactorsSlen[0] = ((sfc - 400) >> 2) / 5;       // <= 4, 15
+                    _readLsfScalefactorsSlen[1] = ((sfc - 400) >> 2) % 5;       // <= 4, 15
+                    _readLsfScalefactorsSlen[2] = (sfc - 400) & 3;              // <= 3, 7
+                    _readLsfScalefactorsSlen[3] = 0;
                     _preflag[gr][ch] = 0;
                     blockNumber = 1;
                 }
                 else if (sfc < 512)
                 {
-                    slen[0] = (sfc - 500) / 3;              // <= 3, 7
-                    slen[1] = (sfc - 500) % 3;              // <= 2, 3
-                    slen[2] = 0;
-                    slen[3] = 0;
+                    _readLsfScalefactorsSlen[0] = (sfc - 500) / 3;              // <= 3, 7
+                    _readLsfScalefactorsSlen[1] = (sfc - 500) % 3;              // <= 2, 3
+                    _readLsfScalefactorsSlen[2] = 0;
+                    _readLsfScalefactorsSlen[3] = 0;
                     _preflag[gr][ch] = 1;
                     blockNumber = 2;
                 }
                 else
                 {
+                    _readLsfScalefactorsSlen[0] = 0;
+                    _readLsfScalefactorsSlen[1] = 0;
+                    _readLsfScalefactorsSlen[2] = 0;
+                    _readLsfScalefactorsSlen[3] = 0;
                     blockNumber = 0;
                 }
             }
-
-            // now we populate our buffer...
-            var buffer = new int[54];
 
             var k = 0;
             var blkCnt = _sfbBlockCntTab[blockNumber][blockTypeNumber];
             for (int i = 0; i < 4; i++)
             {
-                if (slen[i] != 0)
+                for (int j = 0; j < blkCnt[i]; j++, k++)
                 {
-                    for (int j = 0; j < blkCnt[i]; j++, k++)
-                    {
-                        buffer[k] = _bitRes.GetBits(slen[i]);
-                    }
-                }
-                else
-                {
-                    k += blkCnt[i];
+                    _readLsfScalefactorsBuffer[k] = _readLsfScalefactorsSlen[i] != 0 ? _bitRes.GetBits(_readLsfScalefactorsSlen[i]) : 0;
                 }
             }
 
@@ -1287,7 +1323,7 @@ namespace Meta.Voice.NLayer.Decoder
                 {
                     for (; sfb < 8; sfb++)
                     {
-                        _scalefac[ch][3][sfb] = buffer[k++];
+                        _scalefac[ch][3][sfb] = _readLsfScalefactorsBuffer[k++];
                     }
                     sfb = 3;
                 }
@@ -1296,7 +1332,7 @@ namespace Meta.Voice.NLayer.Decoder
                 {
                     for (int window = 0; window < 3; window++)
                     {
-                        _scalefac[ch][window][sfb] = buffer[k++];
+                        _scalefac[ch][window][sfb] = _readLsfScalefactorsBuffer[k++];
                     }
                 }
                 _scalefac[ch][0][12] = 0;
@@ -1307,12 +1343,15 @@ namespace Meta.Voice.NLayer.Decoder
             {
                 for (; sfb < 21; sfb++)
                 {
-                    _scalefac[ch][3][sfb] = buffer[k++];
+                    _scalefac[ch][3][sfb] = _readLsfScalefactorsBuffer[k++];
                 }
                 _scalefac[ch][3][22] = 0;
             }
 
-            return slen[0] * blkCnt[0] + slen[1] * blkCnt[1] + slen[2] * blkCnt[2] + slen[3] * blkCnt[3];
+            return _readLsfScalefactorsSlen[0] * blkCnt[0]
+                   + _readLsfScalefactorsSlen[1] * blkCnt[1]
+                   + _readLsfScalefactorsSlen[2] * blkCnt[2]
+                   + _readLsfScalefactorsSlen[3] * blkCnt[3];
         }
 
         #endregion

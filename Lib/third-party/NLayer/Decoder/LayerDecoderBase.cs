@@ -237,11 +237,18 @@ namespace Meta.Voice.NLayer.Decoder
             DewindowOutput(ippuv, data);
         }
 
+        private const int SynBufSize = 1024;
+        private float[] _synBufFirst = new float[SynBufSize]; // Allocate one asap
         void GetBufAndOffset(int channel, out float[] synBuf, out int k)
         {
             while (_synBuf.Count <= channel)
             {
-                _synBuf.Add(new float[1024]);
+                if (_synBuf.Count == 0)
+                {
+                    _synBuf.Add(_synBufFirst);
+                    continue;
+                }
+                _synBuf.Add(new float[SynBufSize]);
             }
 
             while (_bufOffset.Count <= channel)

@@ -19,7 +19,7 @@ namespace Meta.Voice.Audio.Decoding
         /// <summary>
         /// Decoder on a frame by frame basis
         /// </summary>
-        private AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
+        private readonly AudioDecoderMp3Frame _frame = new AudioDecoderMp3Frame();
 
         /// <summary>
         /// All mpeg decoding should occur in background due to slow decode speed

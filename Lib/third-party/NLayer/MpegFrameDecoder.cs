@@ -31,7 +31,7 @@ namespace Meta.Voice.NLayer
     {
         Decoder.LayerIDecoder _layerIDecoder;
         Decoder.LayerIIDecoder _layerIIDecoder;
-        Decoder.LayerIIIDecoder _layerIIIDecoder;
+        Decoder.LayerIIIDecoder _layerIIIDecoder = new Decoder.LayerIIIDecoder();
 
         float[] _eqFactors;
 

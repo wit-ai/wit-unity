@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Text;
 using Lib.Wit.Runtime.Utilities.Logging;
 using UnityEngine;
@@ -27,14 +26,14 @@ namespace Meta.Voice.Audio.Decoding
         public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Audio);
 
         // Data buffer to ensure all frame data exists across packets
-        private byte[] _dataBuffer = new byte[192]; // Default mpeg packet size
+        private readonly byte[] _dataBuffer = new byte[192]; // Default mpeg packet size
         private int _dataOffset = 0;
         // Total header bytes decoded
         public bool IsHeaderDecoded => _dataOffset >= HeaderLength;
         private const int HeaderLength = 4;
 
         // Sample buffer with max samples per mpeg frame
-        private float[] _sampleBuffer = new float[576]; // Default mpeg sample size
+        private readonly float[] _sampleBuffer = new float[576]; // Default mpeg sample size
 
         // Script that handles decoding frames
         private readonly MpegFrameDecoder _decoder = new MpegFrameDecoder();
@@ -107,16 +106,14 @@ namespace Meta.Voice.Audio.Decoding
                 // Increase data buffer length if needed
                 if (_dataBuffer.Length < FrameLength)
                 {
-                    Logger.Warning("MP3 Frame {0} - Data Buffer Re-generated\nNew Frame Length: {1}\nOld Frame Length: {2}\n{3}",
+                    Logger.Error("MP3 Frame {0} - Data Buffer Needs Increase\nNew Frame Length: {1}\nOld Frame Length: {2}\n{3}",
                         _frameIndex, FrameLength, _dataBuffer.Length, this);
-                    _dataBuffer = new byte[FrameLength];
                 }
                 // Increase sample buffer length if needed
                 if (_sampleBuffer.Length < SampleCount)
                 {
-                    Logger.Warning("MP3 Frame {0} - Sample Buffer Re-generated\nNew Sample Count: {1}\nOld Sample Count: {2}\n{3}",
+                    Logger.Error("MP3 Frame {0} - Sample Buffer Needs Increase\nNew Sample Count: {1}\nOld Sample Count: {2}\n{3}",
                         _frameIndex, SampleCount, _sampleBuffer.Length, this);
-                    _sampleBuffer = new float[SampleCount];
                 }
             }
 
@@ -231,45 +228,41 @@ namespace Meta.Voice.Audio.Decoding
         /// </summary>
         public int SampleCount { get; private set; }
 
+        // All 1s
+        const int frameSyncMask = 2047;
+
+        /// <summary>
+        /// Reverse array without 66 Byte allocation
+        /// </summary>
+        public static void Reverse<T>(T[] array, int start, int length)
+        {
+            for (int i = 0; i < length / 2; i++)
+            {
+                var from = start + i;
+                var to = start + length - i - 1;
+                (array[from], array[to]) = (array[to], array[from]);
+            }
+        }
+
         // Decode header data
         private void DecodeHeader()
         {
             // Reverse header bytes & encode to int32
-            Array.Reverse(_dataBuffer, 0, HeaderLength);
-            int headerData = BitConverter.ToInt32(_dataBuffer, 0);
+            Reverse(_dataBuffer, 0, HeaderLength);
+            var headerData = BitConverter.ToInt32(_dataBuffer, 0);
 
             // Frame sync (31, 21)
-            const int frameSyncMask = 2047; // All 1s
-            int frameSync = BitRShift(headerData, 21) & frameSyncMask;
+            var frameSync = BitRShift(headerData, 21) & frameSyncMask;
             if (frameSync != frameSyncMask)
             {
                 throw new Exception($"Invalid frame {_frameIndex} sync\nBits: {GetBitString(headerData)}");
             }
 
             // Mpeg version (20, 19)
-            int versionInt = BitRShift(headerData, 19) & 3;
-            switch (versionInt)
-            {
-                case 1:
-                    Version = MpegVersion.Version1;
-                    break;
-                case 2:
-                    Version = MpegVersion.Version2;
-                    break;
-                case 0:
-                    Version = MpegVersion.Version25; // MPEG v2.5
-                    break;
-                default:
-                    Version = MpegVersion.Unknown;
-                    throw new Exception($"Invalid frame {_frameIndex} Mpeg Version\nBits: {GetBitString(headerData)}");
-            }
+            Version = GetMpegVersion(headerData);
 
             // Layer description (18, 17)
-            Layer = (MpegLayer)(4 - BitRShift(headerData, 17) & 3);
-            if (Layer == MpegLayer.Unknown)
-            {
-                throw new Exception($"Invalid frame {_frameIndex} Mpeg Layer\nBits: {GetBitString(headerData)}");
-            }
+            Layer = GetMpegLayer(headerData);
 
             // Protection bit (16)
             HasCrc = (BitRShift(headerData, 16) & 1) == 0;
@@ -324,7 +317,7 @@ namespace Meta.Voice.Audio.Decoding
             }
 
             // Frame is padded (9)
-            int padding = (BitRShift(headerData, 9) & 1);
+            var padding = (BitRShift(headerData, 9) & 1);
 
             // Channel mode (7, 6)
             ChannelMode = (MpegChannelMode)(BitRShift(headerData, 6) & 3);
@@ -364,6 +357,30 @@ namespace Meta.Voice.Audio.Decoding
 
             // Crc check disabled
             IsCorrupted = false;
+        }
+        private static MpegVersion GetMpegVersion(int header)
+        {
+            int versionInt = BitRShift(header, 19) & 3;
+            switch (versionInt)
+            {
+                case 1:
+                    return MpegVersion.Version1;
+                case 2:
+                    return MpegVersion.Version2;
+                case 0:
+                    return MpegVersion.Version25; // MPEG v2.5
+                default:
+                    throw new Exception($"Invalid Mpeg Version\nBits: {GetBitString(header)}");
+            }
+        }
+        private static MpegLayer GetMpegLayer(int header)
+        {
+            var result = (MpegLayer)(4 - BitRShift(header, 17) & 3);
+            if (result == MpegLayer.Unknown)
+            {
+                throw new Exception($"Invalid frame Mpeg Layer\nBits: {GetBitString(header)}");
+            }
+            return result;
         }
         // Simple bit shift for easy bit parsing
         internal static int BitRShift(int number, int bits)
