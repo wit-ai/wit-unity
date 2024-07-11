@@ -66,7 +66,7 @@ namespace Meta.WitAi.Requests
             AudioSampleDecodeDelegate onSamplesDecoded,
             AudioJsonDecodeDelegate onJsonDecoded)
         {
-            Url = "file://" + diskPath;
+            Url = $"{FilePrepend}{diskPath}";
             Method = VRequestMethod.HttpGet;
             _decoder = WitRequestSettings.GetTtsAudioDecoder(FileType, UseEvents ? onJsonDecoded : null);
             await ThreadUtility.CallOnMainThread(() =>

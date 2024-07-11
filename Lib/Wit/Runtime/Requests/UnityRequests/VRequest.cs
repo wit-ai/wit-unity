@@ -404,12 +404,13 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Obtains uri from the url and url parameters
         /// </summary>
+        protected const string FilePrepend = "file://";
         protected virtual Uri GetUri()
         {
             string final = Url;
             if (!HasUriSchema(final))
             {
-                final = $"file://{final}";
+                final = $"{FilePrepend}{final}";
             }
             if (UrlParameters != null)
             {
@@ -633,7 +634,9 @@ namespace Meta.WitAi.Requests
                 try
                 {
                     // Use raw bytes if audio handler
-                    if (downloadHandler is DownloadHandlerAudioClip)
+                    if (downloadHandler is DownloadHandlerAudioClip
+                        || downloadHandler is DownloadHandlerFile
+                        || downloadHandler is DownloadHandlerBuffer)
                     {
                         var rawBytes = downloadHandler.data;
                         if (rawBytes != null)
@@ -770,6 +773,13 @@ namespace Meta.WitAi.Requests
         {
             Url = url;
             if (Method == VRequestMethod.Unknown) Method = VRequestMethod.HttpGet;
+            if (Downloader == null)
+            {
+                await ThreadUtility.CallOnMainThread(Logger, () =>
+                {
+                    Downloader = new DownloadHandlerBuffer();
+                });
+            }
             return await Request(DecodeFile);
         }
 
@@ -876,9 +886,8 @@ namespace Meta.WitAi.Requests
                 };
 
                 // Request async & cancels on first response
-                Method = VRequestMethod.HttpGet;
                 var results = await RequestFile(url);
-                if (!exists && (results.Value?.Length ?? 0) > 0)
+                if (!exists && results.Code == (int)HttpStatusCode.OK)
                 {
                     exists = true;
                 }

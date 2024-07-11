@@ -7,8 +7,6 @@
  */
 
 using System;
-using System.Text;
-using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
@@ -16,7 +14,6 @@ using Meta.Voice.Audio;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.Json;
-using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
@@ -110,7 +107,7 @@ namespace Meta.WitAi.TTS
         // Current thread safe active state
         private bool _isActive;
         // Thread safe listener state
-        private bool _hasListeners;
+        private bool _hasListeners = false;
 
         /// <summary>
         /// Returns error if invalid
@@ -132,6 +129,10 @@ namespace Meta.WitAi.TTS
         protected virtual void Awake()
         {
             _instance = this;
+#if UNITY_EDITOR
+            // Ensure listeners are reset if added in editor
+            SetListeners(false);
+#endif
         }
         // Call event
         protected virtual void Start()
@@ -777,6 +778,9 @@ namespace Meta.WitAi.TTS
         private async Task<string> DownloadAsync(TTSClipData clipData,
             Action<TTSClipData, string, string> onDownloadComplete = null)
         {
+            // Ensure disk cache is found if needed
+            SetListeners(true);
+
             // Throw error without clip data
             if (clipData == null)
             {

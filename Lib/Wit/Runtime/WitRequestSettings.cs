@@ -74,6 +74,20 @@ namespace Meta.WitAi
             if (_appIdentifier == null) _appIdentifier = Application.identifier;
             if (_unityVersion == null) _unityVersion = Application.unityVersion;
         }
+        #if UNITY_EDITOR
+        /// <summary>
+        /// Add constructor to init in editor only
+        /// </summary>
+        static WitRequestSettings()
+        {
+            UnityEditor.EditorApplication.update += EditorInit;
+        }
+        static void EditorInit()
+        {
+            UnityEditor.EditorApplication.update -= EditorInit;
+            Init();
+        }
+        #endif
 
         /// <summary>
         /// Returns a string of all bytes within an array
@@ -140,10 +154,6 @@ namespace Meta.WitAi
         /// </summary>
         public static Dictionary<string, string> GetHeaders(IWitRequestConfiguration configuration, string requestId, bool useServerToken)
         {
-            // Ensure init method is called prior to get headers
-            // Needed since this can be called in editor as well
-            Init();
-
             // Get headers
             Dictionary<string, string> headers = new Dictionary<string, string>();
 

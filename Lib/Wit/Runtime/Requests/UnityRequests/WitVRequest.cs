@@ -68,13 +68,29 @@ namespace Meta.WitAi.Requests
             _useServerToken = useServerToken;
         }
 
+        // Check for local file
+        protected bool IsLocalFile()
+            => !string.IsNullOrEmpty(Url) && Url.StartsWith(FilePrepend);
+
         // Gets uri using the specified url and parameters
         protected override Uri GetUri()
-            => WitRequestSettings.GetUri(Configuration, Url, UrlParameters);
+        {
+            if (IsLocalFile())
+            {
+                return base.GetUri();
+            }
+            return WitRequestSettings.GetUri(Configuration, Url, UrlParameters);
+        }
 
         // Gets wit headers using static header generation
         protected override Dictionary<string, string> GetHeaders()
-            => WitRequestSettings.GetHeaders(Configuration, RequestId, _useServerToken);
+        {
+            if (IsLocalFile())
+            {
+                return base.GetHeaders();
+            }
+            return WitRequestSettings.GetHeaders(Configuration, RequestId, _useServerToken);
+        }
 
         /// <summary>
         /// Override base class to ensure configuration is correct
