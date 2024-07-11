@@ -45,7 +45,7 @@ namespace Meta.Net.NativeWebSocket
 {
     public delegate void WebSocketOpenEventHandler();
 
-    public delegate void WebSocketMessageEventHandler(byte[] data);
+    public delegate void WebSocketMessageEventHandler(byte[] data, int offset, int length);
 
     public delegate void WebSocketErrorEventHandler(string errorMsg);
 
@@ -343,9 +343,9 @@ namespace Meta.Net.NativeWebSocket
             OnOpen?.Invoke();
         }
 
-        public void DelegateOnMessageEvent(byte[] data)
+        public void DelegateOnMessageEvent(byte[] data, int offset, int length)
         {
-            OnMessage?.Invoke(data);
+            OnMessage?.Invoke(data, offset, length);
         }
 
         public void DelegateOnErrorEvent(string errorMsg)
@@ -584,23 +584,6 @@ namespace Meta.Net.NativeWebSocket
             if (buffer.Count > 0) await SendMessage(queue, messageType, buffer);
         }
 
-        // simple dispatcher for queued messages.
-        public void DispatchMessageQueue()
-        {
-            if (m_MessageList.Count == 0) return;
-
-            List<byte[]> messageListCopy;
-
-            lock (IncomingMessageLock)
-            {
-                messageListCopy = new List<byte[]>(m_MessageList);
-                m_MessageList.Clear();
-            }
-
-            var len = messageListCopy.Count;
-            for (var i = 0; i < len; i++) OnMessage?.Invoke(messageListCopy[i]);
-        }
-
         public async Task Receive()
         {
             var closeCode = WebSocketCloseCode.Abnormal;
@@ -612,37 +595,17 @@ namespace Meta.Net.NativeWebSocket
                 while (m_Socket.State == System.Net.WebSockets.WebSocketState.Open)
                 {
                     WebSocketReceiveResult result = null;
-
-                    using (var ms = new MemoryStream())
+                    do
                     {
-                        do
-                        {
-                            result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken);
-                            ms.Write(buffer.Array, buffer.Offset, result.Count);
-                        } while (!result.EndOfMessage);
+                        result = await m_Socket.ReceiveAsync(buffer, m_CancellationToken);
+                        OnMessage?.Invoke(buffer.Array, buffer.Offset, result.Count);
+                    } while (!result.EndOfMessage);
 
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        if (result.MessageType == WebSocketMessageType.Text)
-                        {
-                            lock (IncomingMessageLock)
-                            {
-                                m_MessageList.Add(ms.ToArray());
-                            }
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Binary)
-                        {
-                            lock (IncomingMessageLock)
-                            {
-                                m_MessageList.Add(ms.ToArray());
-                            }
-                        }
-                        else if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            await Close();
-                            closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus);
-                            break;
-                        }
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await Close();
+                        closeCode = WebSocketHelpers.ParseCloseCodeEnum((int)result.CloseStatus);
+                        break;
                     }
                 }
             }
@@ -750,6 +713,8 @@ namespace Meta.Net.NativeWebSocket
             if (instances.TryGetValue(instanceId, out instanceRef)) instanceRef.DelegateOnOpenEvent();
         }
 
+        private static byte[] _msg = new byte[8192];
+
         [MonoPInvokeCallback(typeof(OnMessageCallback))]
         public static void DelegateOnMessageEvent(int instanceId, IntPtr msgPtr, int msgSize)
         {
@@ -757,10 +722,15 @@ namespace Meta.Net.NativeWebSocket
 
             if (instances.TryGetValue(instanceId, out instanceRef))
             {
-                var msg = new byte[msgSize];
-                Marshal.Copy(msgPtr, msg, 0, msgSize);
-
-                instanceRef.DelegateOnMessageEvent(msg);
+                var msgOffset = 0;
+                while (msgSize > 0)
+                {
+                    var length = Mathf.Min(msgSize, _msg.Length - msgOffset);
+                    Marshal.Copy(msgPtr, msgOffset, _msg, 0, length);
+                    instanceRef.DelegateOnMessageEvent(msg, 0, length);
+                    msgOffset += length;
+                    msgSize -= length;
+                }
             }
         }
 

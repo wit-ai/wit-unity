@@ -29,7 +29,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Callback when message is received from web socket server
         /// </summary>
-        event Action<byte[]> OnMessage;
+        event Action<byte[], int, int> OnMessage;
 
         /// <summary>
         /// Callback when an error is received from web socket server

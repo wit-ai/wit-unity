@@ -6,17 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-#define WEBGL_JSLIB
-#endif
-
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 using Meta.Net.NativeWebSocket;
-using Meta.WitAi;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -86,6 +79,7 @@ namespace Meta.Voice.Net.WebSockets
         /// Callback when web socket is opened
         /// </summary>
         public event Action OnOpen;
+        private void RaiseOpen() => OnOpen?.Invoke();
 
         /// <summary>
         /// Method to send byte data to a web socket
@@ -95,8 +89,8 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Callback when message is received from web socket server
         /// </summary>
-        public event Action<byte[]> OnMessage;
-        private void RaiseMessage(byte[] data) => OnMessage?.Invoke(data);
+        public event Action<byte[], int, int> OnMessage;
+        private void RaiseMessage(byte[] data, int offset, int length) => OnMessage?.Invoke(data, offset, length);
 
         /// <summary>
         /// Callback when an error is received from web socket server
@@ -113,67 +107,6 @@ namespace Meta.Voice.Net.WebSockets
         /// Callback when message is received from web socket server
         /// </summary>
         public event Action<WebSocketCloseCode> OnClose;
-
-        #if WEBGL_JSLIB
-        /// <summary>
-        /// Method to raise OnOpen callback
-        /// </summary>
-        private void RaiseOpen() => OnOpen?.Invoke();
-
-        /// <summary>
-        /// Method to raise OnClose callback
-        /// </summary>
         private void RaiseClose(Meta.Net.NativeWebSocket.WebSocketCloseCode closeCode) => OnClose?.Invoke((WebSocketCloseCode)closeCode);
-        #else
-        /// <summary>
-        /// Script that safely performs coroutines
-        /// </summary>
-        private CoroutineUtility.CoroutinePerformer _dispatcher;
-
-        /// <summary>
-        /// Method to raise OnOpen callback & create dispatcher for messages
-        /// </summary>
-        private void RaiseOpen()
-        {
-            // Begin dispatching messages
-            _dispatcher = CoroutineUtility.StartCoroutine(DispatchResponses());
-            // Callback
-            OnOpen?.Invoke();
-        }
-
-        /// <summary>
-        /// Dispatches responses every frame while connected
-        /// </summary>
-        private IEnumerator DispatchResponses()
-        {
-            // Dispatch responses once a frame
-            while (_webSocket != null && _webSocket.State == WebSocketState.Open)
-            {
-                yield return new WaitForEndOfFrame();
-                _webSocket?.DispatchMessageQueue();
-            }
-            // Destroy & remove reference
-            if (_dispatcher != null)
-            {
-                _dispatcher.DestroySafely();
-                _dispatcher = null;
-            }
-        }
-
-        /// <summary>
-        /// Method to raise OnClose callback & destroy dispatcher
-        /// </summary>
-        private void RaiseClose(Meta.Net.NativeWebSocket.WebSocketCloseCode closeCode)
-        {
-            // Destroy dispatcher
-            if (_dispatcher != null)
-            {
-                _dispatcher.DestroySafely();
-                _dispatcher = null;
-            }
-            // Callback
-            OnClose?.Invoke((WebSocketCloseCode)closeCode);
-        }
-        #endif
     }
 }

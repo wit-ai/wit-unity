@@ -9,6 +9,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
@@ -718,36 +719,16 @@ namespace Meta.Voice.Net.WebSockets
         #endregion UPLOAD
 
         #region DOWNLOAD
-        // The most recent decode task
-        private Task _decodeTask;
-
         /// <summary>
         /// When dispatched, begins async decoding of response bytes
         /// </summary>
-        private void HandleSocketResponse(byte[] rawBytes)
-        {
-            var lastDecode = _decodeTask;
-            _decodeTask = ThreadUtility.BackgroundAsync(Logger,
-                async () =>
-                {
-                    // Await if a previous decode is occuring
-                    if (lastDecode != null) await lastDecode;
-
-                    // Decode
-                    DecodeChunk(rawBytes);
-                });
-        }
-
-        /// <summary>
-        /// Performs a decode on a background thread
-        /// </summary>
-        private void DecodeChunk(byte[] rawBytes)
+        private void HandleSocketResponse(byte[] rawBytes, int offset, int length)
         {
             // Increment upload count
             _downloadCount++;
 
             // Decode one or more chunks
-            _decoder.Decode(rawBytes, 0, rawBytes.Length, ApplyDecodedChunk);
+            _decoder.Decode(rawBytes, offset, length, ApplyDecodedChunk);
 
             // Decrement download count
             _downloadCount--;
