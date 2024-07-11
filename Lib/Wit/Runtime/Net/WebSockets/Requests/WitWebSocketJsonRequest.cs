@@ -50,6 +50,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public bool IsComplete { get; private set; }
 
         /// <summary>
+        /// A task that is used to track completion of this request
+        /// </summary>
+        public TaskCompletionSource<bool> Completion { get; } = new TaskCompletionSource<bool>();
+
+        /// <summary>
         /// A response code if applicable
         /// </summary>
         public string Code { get; protected set; }
@@ -288,6 +293,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
             _uploader = null;
             IsDownloading = false;
             IsComplete = true;
+            if (!Completion.Task.IsCompleted)
+            {
+                Completion.SetResult(string.IsNullOrEmpty(Error));
+            }
             ThreadUtility.CallOnMainThread(RaiseComplete);
         }
 

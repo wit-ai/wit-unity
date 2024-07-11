@@ -43,8 +43,8 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Whether the web socket is disconnected, connecting, connected, or disconnecting.
         /// </summary>
-        public WitWebSocketConnectionState ConnectionState { get; private set; } =
-            WitWebSocketConnectionState.Disconnected;
+        public WitWebSocketConnectionState ConnectionState { get; private set; }
+            = WitWebSocketConnectionState.Disconnected;
 
         /// <summary>
         /// Whether authentication had completed successfully or not
@@ -97,6 +97,12 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
 
+        /// <summary>
+        /// Task completed when successfully connected and authenticated
+        /// </summary>
+        public TaskCompletionSource<bool> Connecting { get; private set; }
+            = new TaskCompletionSource<bool>();
+
         // Stores last request id to handle binary data without headers
         private string _lastRequestId;
         // Total number of chunks currently being uploaded
@@ -120,7 +126,7 @@ namespace Meta.Voice.Net.WebSockets
         private IWebSocket _socket;
 
         // Script used for decoding server responses
-        private WitChunkConverter _decoder = new WitChunkConverter();
+        private readonly WitChunkConverter _decoder = new WitChunkConverter();
 
 #if UNITY_EDITOR
         /// <summary>
@@ -154,6 +160,19 @@ namespace Meta.Voice.Net.WebSockets
             ConnectionState = newConnectionState;
             Logger.Info(ConnectionState.ToString());
             OnConnectionStateChanged?.Invoke(ConnectionState);
+
+            // Now connected
+            if (ConnectionState == WitWebSocketConnectionState.Connected
+                && !Connecting.Task.IsCompleted)
+            {
+                Connecting.SetResult(true);
+            }
+            // No longer connected
+            else if (ConnectionState == WitWebSocketConnectionState.Disconnected
+                     && Connecting.Task.IsCompleted)
+            {
+                Connecting = new TaskCompletionSource<bool>();
+            }
         }
 
         #region CONNECT
@@ -326,15 +345,14 @@ namespace Meta.Voice.Net.WebSockets
 
             // Make authentication request and return any encountered error
             var authRequest = new WitWebSocketAuthRequest(clientAccessToken);
-            SendRequest(authRequest);
-            await TaskUtility.WaitWhile(() => !authRequest.IsComplete);
+            var authError = await SendRequestAsync(authRequest);
 
             // Auth error
-            IsAuthenticated = string.IsNullOrEmpty(authRequest.Error);
+            IsAuthenticated = string.IsNullOrEmpty(authError);
             if (!IsAuthenticated)
             {
                 Settings.ReconnectAttempts = 0; // Don't retry
-                HandleSetupFailed(authRequest.Error);
+                HandleSetupFailed(authError);
                 return;
             }
             // Cancelled elsewhere
@@ -596,11 +614,33 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
+        /// Send a request via this client if possible
+        /// </summary>
+        public async Task<string> SendRequestAsync(IWitWebSocketRequest request)
+        {
+            // Begin tracking request
+            if (!TrackRequest(request))
+            {
+                return "Request is already tracked";
+            }
+
+            // Begin upload and send method for chunks when ready to be sent
+            _ = ThreadUtility.Background(Logger, () => request.HandleUpload(SendChunk));
+
+            // Await completion
+            await request.Completion.Task;
+
+            // Return error if applicable
+            return request.Error;
+        }
+
+        /// <summary>
         /// Safely builds WitChunk with request id and then enqueues
         /// </summary>
         private void SendChunk(string requestId, WitResponseNode requestJsonData, byte[] requestBinaryData)
         {
-            _ = SendChunkAsync(requestId, requestJsonData, requestBinaryData);
+            _ = ThreadUtility.BackgroundAsync(Logger,
+                () => SendChunkAsync(requestId, requestJsonData, requestBinaryData));
         }
 
         /// <summary>
@@ -608,14 +648,12 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private async Task SendChunkAsync(string requestId, WitResponseNode requestJsonData, byte[] requestBinaryData)
         {
-            // Move async
-            await Task.Yield();
-
             // If not authorization chunk, wait while connecting or reconnecting
             bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
             if (!isAuth)
             {
-                await TaskUtility.WaitWhile(() => ConnectionState == WitWebSocketConnectionState.Connecting || IsReconnecting);
+                // Wait for connection task to complete
+                await Connecting.Task;
                 if (ConnectionState != WitWebSocketConnectionState.Connected && !IsReconnecting)
                 {
                     return;

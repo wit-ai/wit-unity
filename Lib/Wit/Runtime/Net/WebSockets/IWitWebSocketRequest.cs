@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Threading.Tasks;
 using Meta.WitAi.Json;
 
 namespace Meta.Voice.Net.WebSockets
@@ -68,6 +69,11 @@ namespace Meta.Voice.Net.WebSockets
         /// Whether request is currently complete
         /// </summary>
         bool IsComplete { get; }
+
+        /// <summary>
+        /// A task that is used to track completion of this request
+        /// </summary>
+        TaskCompletionSource<bool> Completion { get; }
 
         /// <summary>
         ///  The response code if applicable
