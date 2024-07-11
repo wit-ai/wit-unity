@@ -42,6 +42,11 @@ namespace Meta.Voice.Net.WebSockets
         public WitWebSocketSettings Settings { get; }
 
         /// <summary>
+        /// The unique id associated with this connection request
+        /// </summary>
+        public string ConnectionRequestId { get; private set; }
+
+        /// <summary>
         /// Whether the web socket is disconnected, connecting, connected, or disconnecting.
         /// </summary>
         public WitWebSocketConnectionState ConnectionState { get; private set; }
@@ -228,8 +233,8 @@ namespace Meta.Voice.Net.WebSockets
             try
             {
                 // Obtain all data required for socket connection
-                var requestId = WitConstants.GetUniqueId();
-                var headers = WitRequestSettings.GetHeaders(Settings.Configuration, requestId, false);
+                ConnectionRequestId = WitConstants.GetUniqueId();
+                var headers = WitRequestSettings.GetHeaders(Settings.Configuration, ConnectionRequestId, false);
                 if (headers.ContainsKey(WitConstants.HEADER_AUTH))
                 {
                     headers.Remove(WitConstants.HEADER_AUTH);
@@ -398,13 +403,17 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
-                Logger.Error("Connection Failed\nMessage: {0}", error);
+                Logger.Error("Connection Failed\nConnection Request Id: {0}\nMessage: {1}",
+                    ConnectionRequestId,
+                    error);
                 FailedConnectionAttempts++;
                 ForceDisconnect();
             }
             else
             {
-                Logger.Warning("Connection Cancelled\nMessage: {0}", error);
+                Logger.Warning("Connection Cancelled\nConnection Request Id: {0}\nMessage: {1}",
+                    ConnectionRequestId,
+                    error);
             }
         }
         #endregion CONNECT
@@ -417,7 +426,9 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
-                Logger.Warning("Socket Closed\nReason: {0}", closeCode);
+                Logger.Warning("Socket Closed\nConnection Request Id: {0}\nReason: {1}",
+                    ConnectionRequestId,
+                    closeCode);
                 ForceDisconnect();
             }
         }
