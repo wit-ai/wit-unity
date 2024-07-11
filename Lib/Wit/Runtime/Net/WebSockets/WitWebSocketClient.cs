@@ -98,9 +98,10 @@ namespace Meta.Voice.Net.WebSockets
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
 
         /// <summary>
-        /// Task completed when successfully connected and authenticated
+        /// A task that will complete once the connection process completes.
+        /// Response will be true if connected successfully and false otherwise.
         /// </summary>
-        public TaskCompletionSource<bool> Connecting { get; private set; }
+        public TaskCompletionSource<bool> ConnectionCompletion { get; private set; }
             = new TaskCompletionSource<bool>();
 
         // Stores last request id to handle binary data without headers
@@ -161,17 +162,23 @@ namespace Meta.Voice.Net.WebSockets
             Logger.Info(ConnectionState.ToString());
             OnConnectionStateChanged?.Invoke(ConnectionState);
 
-            // Now connected
-            if (ConnectionState == WitWebSocketConnectionState.Connected
-                && !Connecting.Task.IsCompleted)
+            // Complete connection completion state
+            if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
-                Connecting.SetResult(true);
+                if (!ConnectionCompletion.Task.IsCompleted)
+                {
+                    ConnectionCompletion.SetResult(true);
+                }
             }
-            // No longer connected
-            else if (ConnectionState == WitWebSocketConnectionState.Disconnected
-                     && Connecting.Task.IsCompleted)
+            // Create new connection completion state & complete previous if needed
+            else if (ConnectionState == WitWebSocketConnectionState.Disconnected)
             {
-                Connecting = new TaskCompletionSource<bool>();
+                var old = ConnectionCompletion;
+                ConnectionCompletion = new TaskCompletionSource<bool>();
+                if (!old.Task.IsCompleted)
+                {
+                    old.SetResult(false);
+                }
             }
         }
 
@@ -187,26 +194,35 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-
-            // Ignore if already active
+            // Connect safely
+            ConnectSafely();
+        }
+        /// <summary>
+        /// Connects without incrementing reference count
+        /// </summary>
+        private void ConnectSafely()
+        {
+            // Ignore if already connected or connecting
             if (ConnectionState == WitWebSocketConnectionState.Connecting
                 || ConnectionState == WitWebSocketConnectionState.Connected)
             {
                 return;
             }
 
-            // Connect
-            _ = ConnectAsync();
-        }
+            // Begin connecting
+            SetConnectionState(WitWebSocketConnectionState.Connecting);
 
+            // Begin a timeout check
+            _ = WaitForConnectionTimeout();
+
+            // Attempt connect
+            _ = ThreadUtility.BackgroundAsync(Logger, ConnectAsync);
+        }
         /// <summary>
         /// Performs connection asynchronously
         /// </summary>
         private async Task ConnectAsync()
         {
-            // Begin connecting
-            SetConnectionState(WitWebSocketConnectionState.Connecting);
-
             // Connect async to specified server url with specified options
             try
             {
@@ -224,9 +240,6 @@ namespace Meta.Voice.Net.WebSockets
                 _socket.OnMessage += HandleSocketResponse;
                 _socket.OnError += HandleSocketError;
                 _socket.OnClose += HandleSocketDisconnect;
-
-                // Begin a timeout check
-                _ = WaitForConnectionTimeout();
 
                 // Connect and wait until connection completes
                 await _socket.Connect();
@@ -248,8 +261,9 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private async Task WaitForConnectionTimeout()
         {
-            // Wait for connection timeout
-            await Task.Delay(Settings.ServerConnectionTimeoutMs);
+            // Wait for either connection timeout or connection complete
+            await Task.WhenAny(ConnectionCompletion.Task,
+                Task.Delay(Settings.ServerConnectionTimeoutMs));
 
             // Invalid socket or connected
             if (_socket == null || _socket.State != WitWebSocketConnectionState.Connecting)
@@ -324,7 +338,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Perform final setup
-            _ = SetupAsync();
+            _ = ThreadUtility.BackgroundAsync(Logger, SetupAsync);
         }
 
         /// <summary>
@@ -332,9 +346,6 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private async Task SetupAsync()
         {
-            // Move async
-            await Task.Yield();
-
             // Get client access token
             string clientAccessToken = Settings?.Configuration?.GetClientAccessToken();
             if (string.IsNullOrEmpty(clientAccessToken))
@@ -487,8 +498,12 @@ namespace Meta.Voice.Net.WebSockets
             {
                 UntrackRequest(requestIds[i]);
             }
-            // Clear untracked list
-            _untrackedRequests.Clear();
+
+            // Clear untracked requests
+            lock (_requests)
+            {
+                _untrackedRequests.Clear();
+            }
 
             // Sets all currently subscribed topics to 'Subscribing' state
             var topicIds = _subscriptions.Keys.ToArray();
@@ -564,8 +579,8 @@ namespace Meta.Voice.Net.WebSockets
                     Settings.ReconnectAttempts);
                 return;
             }
-            // Wait and reconnect
-            _ = WaitAndConnect();
+            // Wait and reconnect on background thread
+            _ = ThreadUtility.BackgroundAsync(Logger, WaitAndConnect);
         }
         /// <summary>
         /// Wait and attempt to connect
@@ -573,16 +588,9 @@ namespace Meta.Voice.Net.WebSockets
         private async Task WaitAndConnect()
         {
             // Wait for reconnect interval
-            var delay = Mathf.RoundToInt(Settings.ReconnectInterval * 1000f);
-            if (delay > 0f)
-            {
-                await Task.Delay(delay);
-            }
-            // Don't allow immediate reconnect
-            else
-            {
-                await TaskUtility.Wait();
-            }
+            var delay = Mathf.Max(WitConstants.WIT_SOCKET_RECONNECT_INTERVAL_MIN,
+                Mathf.RoundToInt(Settings.ReconnectInterval * 1000f));
+            await Task.Delay(delay);
 
             // Ignore should no longer reconnect
             if (!IsReconnecting)
@@ -592,7 +600,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Wait for reconnection
             Logger.Info($"Reconnect Attempt {FailedConnectionAttempts}");
-            await ConnectAsync();
+            ConnectSafely();
         }
         #endregion RECONNECT
 
@@ -652,16 +660,16 @@ namespace Meta.Voice.Net.WebSockets
             bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
             if (!isAuth)
             {
-                // Wait for connection task to complete
-                await Connecting.Task;
-                if (ConnectionState != WitWebSocketConnectionState.Connected && !IsReconnecting)
+                // Wait while connecting
+                await ConnectionCompletion.Task;
+                // No longer connected or reconnecting
+                if (ConnectionState != WitWebSocketConnectionState.Connected)
                 {
                     return;
                 }
             }
-            // If auth chunk, ignore connecting or connected
-            else if (ConnectionState != WitWebSocketConnectionState.Connecting
-                     && ConnectionState != WitWebSocketConnectionState.Connected)
+            // If auth chunk, ignore unless connecting
+            else if (ConnectionState != WitWebSocketConnectionState.Connecting)
             {
                 return;
             }
@@ -814,16 +822,17 @@ namespace Meta.Voice.Net.WebSockets
                 return false;
             }
             // Ensure not already tracked
-            if (_requests.ContainsValue(request))
+            lock (_requests)
             {
-                Logger.Error("Track Request - Failed\nReason: Already tracking this request\n{0}",
-                    request);
-                return false;
+                if (_requests.ContainsValue(request))
+                {
+                    return false;
+                }
+                _requests[request.RequestId] = request;
             }
 
             // Begin tracking
             request.TimeoutMs = Settings.RequestTimeoutMs;
-            _requests[request.RequestId] = request;
             request.OnComplete += CompleteRequestTracking;
             Logger.Info($"Track Request\n{request}");
 
@@ -871,18 +880,25 @@ namespace Meta.Voice.Net.WebSockets
         public bool UntrackRequest(string requestId)
         {
             // Ensure already tracked
-            if (string.IsNullOrEmpty(requestId) || !_requests.ContainsKey(requestId))
+            if (string.IsNullOrEmpty(requestId))
             {
-                Logger.Error("Untrack Request - Failed\nReason: Not tracking this request\nRequest Id: {0}",
-                    requestId);
                 return false;
+            }
+            // Remove
+            IWitWebSocketRequest request;
+            lock (_requests)
+            {
+                if (!_requests.ContainsKey(requestId))
+                {
+                    return false;
+                }
+                request = _requests[requestId];
+                _requests.Remove(requestId);
+                _untrackedRequests.Add(requestId);
             }
 
             // Remove request from tracking
-            var request = _requests[requestId];
             request.OnComplete -= CompleteRequestTracking;
-            _requests.Remove(requestId);
-            _untrackedRequests.Add(requestId);
             if (!request.IsComplete)
             {
                 request.Cancel();

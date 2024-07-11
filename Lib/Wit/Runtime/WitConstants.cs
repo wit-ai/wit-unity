@@ -272,6 +272,7 @@ namespace Meta.WitAi
         public const int WIT_SOCKET_CONNECT_TIMEOUT = 2000; // Default connection timeout in ms
         public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Default is retry infinitely
         public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Default to one retry per second
+        public const int WIT_SOCKET_RECONNECT_INTERVAL_MIN = 100; // Minimum interval in ms
         public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";
         public const string WIT_SOCKET_API_KEY = "api_version";
         public const string WIT_SOCKET_CONTENT_KEY = "content_type";
