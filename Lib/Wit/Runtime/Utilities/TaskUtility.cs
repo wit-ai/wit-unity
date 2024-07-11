@@ -106,5 +106,39 @@ namespace Meta.WitAi
             // Return completion source
             return completion.Task;
         }
+
+        /// <summary>
+        /// Awaits a timeout with the option for updated last update and a completion task if desired to quit early
+        /// </summary>
+        public static async Task WaitForTimeout(int timeoutMs,
+            Func<DateTime> getLastUpdate = null,
+            Task completionTask = null)
+        {
+            // Use the timeout provided as the current timeout
+            var currentTimeout = timeoutMs;
+            while (currentTimeout > 0)
+            {
+                // If completion task exists, allow early completion
+                if (completionTask != null)
+                {
+                    var task = await Task.WhenAny(completionTask, Task.Delay(currentTimeout));
+                    if (task.Equals(completionTask))
+                    {
+                        return;
+                    }
+                }
+                // Await current timeout only
+                else
+                {
+                    await Task.Delay(currentTimeout);
+                }
+
+                // Check if a new timeout is required due to an update since we began
+                var now = DateTime.UtcNow;
+                var lastUpdate = getLastUpdate != null ? getLastUpdate.Invoke() : now;
+                var elapsed = (now - lastUpdate).TotalMilliseconds;
+                currentTimeout = Mathf.Max(0, timeoutMs - (int)elapsed);
+            }
+        }
     }
 }

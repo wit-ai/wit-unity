@@ -9,7 +9,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;

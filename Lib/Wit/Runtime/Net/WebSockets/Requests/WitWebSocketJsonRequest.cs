@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Meta.WitAi;
 using Meta.WitAi.Json;
@@ -97,7 +98,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Start of the timeout
         /// </summary>
-        protected DateTime _timeoutStart;
+        protected DateTime _lastResponseReceivedTime;
 
         /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
@@ -134,35 +135,36 @@ namespace Meta.Voice.Net.WebSockets.Requests
             _uploader?.Invoke(RequestId, PostData, null);
 
             // Generate task to handle timeout error
-            BeginTimeout();
-        }
-
-        /// <summary>
-        /// Generates a task to watch for timeout
-        /// </summary>
-        protected void BeginTimeout()
-        {
-            _timeoutStart = DateTime.UtcNow;
-            _ = CheckForTimeout();
+            _ = WaitForTimeout();
         }
 
         /// <summary>
         /// Timeout if needed
         /// </summary>
-        private async Task CheckForTimeout()
+        protected async Task WaitForTimeout()
         {
             // Wait while not complete and not timed out
-            await TaskUtility.WaitWhile(() => !IsComplete && (DateTime.UtcNow - _timeoutStart).TotalMilliseconds < TimeoutMs);
+            _lastResponseReceivedTime = DateTime.UtcNow;
+            await TaskUtility.WaitForTimeout(TimeoutMs, GetLastResponse, Completion.Task);
 
-            // Timed out
-            if (!IsComplete)
+            // Ignore if completed
+            if (IsComplete)
             {
-                SendAbort(WitConstants.ERROR_RESPONSE_TIMEOUT);
-                Code = WitConstants.ERROR_CODE_TIMEOUT.ToString();
-                Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
-                HandleComplete();
+                return;
             }
+
+            // Send abort
+            SendAbort(WitConstants.ERROR_RESPONSE_TIMEOUT);
+
+            // Set code, error and callback for completion
+            Code = WitConstants.ERROR_CODE_TIMEOUT.ToString();
+            Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
+            HandleComplete();
         }
+        /// <summary>
+        /// Getter for last response
+        /// </summary>
+        private DateTime GetLastResponse() => _lastResponseReceivedTime;
 
         /// <summary>
         /// Cancel current request
@@ -247,7 +249,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="newResponseData">New response data received</param>
         protected virtual void SetResponseData(WitResponseNode newResponseData)
         {
-            _timeoutStart = DateTime.UtcNow;
+            _lastResponseReceivedTime = DateTime.UtcNow;
             ResponseData = newResponseData;
             Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];

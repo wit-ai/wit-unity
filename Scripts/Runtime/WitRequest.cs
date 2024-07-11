@@ -475,21 +475,12 @@ namespace Meta.WitAi
 
         // Handle timeout callback
         private DateTime _timeoutLastUpdate;
+        private DateTime GetLastUpdate() => _timeoutLastUpdate;
         private async Task WaitForTimeout()
         {
             // Await specified timeout
-            var timeout = TimeoutMs;
             _timeoutLastUpdate = DateTime.UtcNow;
-            while (timeout > 0)
-            {
-                // Await timeout
-                await Task.Delay(timeout);
-
-                // Ensure timeout since last update in the case _timeoutLastUpdate
-                // changes due to receiving a response packet.
-                var elapsed = (DateTime.UtcNow - _timeoutLastUpdate).TotalMilliseconds;
-                timeout = Mathf.Max(0, TimeoutMs - Mathf.FloorToInt((float)elapsed));
-            }
+            await TaskUtility.WaitForTimeout(TimeoutMs, GetLastUpdate);
 
             // Ignore if no longer active
             if (!IsActive)
