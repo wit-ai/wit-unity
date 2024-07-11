@@ -672,37 +672,40 @@ namespace Meta.Voice.Net.WebSockets
         #endregion UPLOAD
 
         #region DOWNLOAD
+        // The most recent decode task
+        private Task _decodeTask;
+
         /// <summary>
         /// When dispatched, begins async decoding of response bytes
         /// </summary>
         private void HandleSocketResponse(byte[] rawBytes)
         {
-            _ = DecodeChunkAsync(rawBytes);
+            var lastDecode = _decodeTask;
+            _decodeTask = ThreadUtility.BackgroundAsync(Logger,
+                async () =>
+                {
+                    // Await if a previous decode is occuring
+                    if (lastDecode != null) await lastDecode;
+
+                    // Decode
+                    DecodeChunk(rawBytes);
+                });
         }
 
         /// <summary>
         /// Performs a decode on a background thread
         /// </summary>
-        private async Task DecodeChunkAsync(byte[] rawBytes)
+        private void DecodeChunk(byte[] rawBytes)
         {
             // Increment upload count
             _downloadCount++;
 
-            // Move async
-            await Task.Yield();
-
             // Decode one or more chunks
-            DecodeChunk(rawBytes, 0, rawBytes.Length);
+            _decoder.Decode(rawBytes, 0, rawBytes.Length, ApplyDecodedChunk);
 
             // Decrement download count
             _downloadCount--;
         }
-
-        /// <summary>
-        /// Decodes the provided buffer data into one or more WitChunks
-        /// </summary>
-        private void DecodeChunk(byte[] rawBytes, int start, int length) =>
-            _decoder.Decode(rawBytes, start, length, ApplyDecodedChunk);
 
         /// <summary>
         /// Determines request id and applies chunk to the applicable request for handling
