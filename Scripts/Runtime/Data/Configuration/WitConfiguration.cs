@@ -308,7 +308,7 @@ namespace Meta.WitAi.Data.Configuration
             {
                 return null;
             }
-            return _configData.FirstOrDefault((data) => data.GetType() == typeof(TConfigData)) as TConfigData;
+            return _configData.FirstOrDefault((data) => data?.GetType() == typeof(TConfigData)) as TConfigData;
         }
 
         /// <summary>
