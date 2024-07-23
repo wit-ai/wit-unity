@@ -662,7 +662,7 @@ namespace Meta.WitAi.Requests
         public virtual void Cancel()
         {
             // Set response
-            if (!IsComplete)
+            if (!IsComplete && string.IsNullOrEmpty(ResponseError))
             {
                 ResponseCode = WitConstants.ERROR_CODE_ABORTED;
                 ResponseError = WitConstants.CANCEL_ERROR;
