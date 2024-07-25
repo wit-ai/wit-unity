@@ -314,6 +314,34 @@ namespace Meta.WitAi
                 isUpdated = true;
             }
         }
+        public static void LayoutPopupField(GUIContent key, string[] options, ref string selectedOption, ref bool isUpdated)
+        {
+            if (options == null
+                || options.Length == 0)
+            {
+                LayoutTextField(key, ref selectedOption, ref isUpdated);
+                return;
+            }
+            int oldSelectedIndex = Array.IndexOf(options, selectedOption);
+            int newSelectedIndex = EditorGUILayout.Popup(key, oldSelectedIndex, options);
+            newSelectedIndex = Mathf.Max(0, newSelectedIndex);
+            if (newSelectedIndex != oldSelectedIndex)
+            {
+                selectedOption = options[newSelectedIndex];
+                isUpdated = true;
+            }
+        }
+        public static void LayoutProperty(SerializedObject serializedObject, string propertyName)
+        {
+            var property = serializedObject.FindProperty(propertyName);
+            if (property == null)
+            {
+                LayoutErrorLabel($"'{propertyName}' property not found");
+                return;
+            }
+            EditorGUILayout.PropertyField(property);
+            serializedObject.ApplyModifiedProperties();
+        }
         public static void LayoutIntField(GUIContent key, ref int fieldValue, ref bool isUpdated)
         {
             // Simple layout

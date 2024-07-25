@@ -23,8 +23,6 @@ using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
-using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Meta.WitAi
 {

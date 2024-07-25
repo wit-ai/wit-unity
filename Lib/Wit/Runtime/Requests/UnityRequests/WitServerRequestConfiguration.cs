@@ -47,6 +47,7 @@ namespace Meta.WitAi
         public string GetClientAccessToken() => _clientToken;
         public void SetClientAccessToken(string newToken) => _clientToken = newToken;
         public string GetServerAccessToken() => _serverToken;
+        public string GetVersionTag() => string.Empty;
 
         // Endpoint info
         public IWitRequestEndpointInfo GetEndpointInfo() => this;

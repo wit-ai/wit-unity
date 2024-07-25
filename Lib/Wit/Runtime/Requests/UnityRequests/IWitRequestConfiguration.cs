@@ -58,6 +58,7 @@ namespace Meta.WitAi
         int RequestTimeoutMs { get; }
 
         string GetConfigurationId();
+        string GetVersionTag();
         string GetApplicationId();
         WitAppInfo GetApplicationInfo();
         WitConfigurationAssetData[] GetConfigData();

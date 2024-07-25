@@ -19,6 +19,7 @@ using Meta.WitAi.Data.Configuration;
 using Meta.Conduit;
 using Meta.Voice.Logging;
 using Meta.Voice.TelemetryUtilities;
+using Meta.WitAi.Data.Info;
 using UnityEditor;
 using UnityEngine;
 using Meta.WitAi.Windows.Components;
@@ -386,6 +387,10 @@ namespace Meta.WitAi.Windows
                 Configuration.RequestTimeoutMs = requestTimeout;
                 Configuration.SetClientAccessToken(clientAccessToken);
             }
+
+            // Layout editor and build numbers
+            WitEditorUI.LayoutProperty(serializedObject, nameof(Configuration.editorVersionTag));
+            WitEditorUI.LayoutProperty(serializedObject, nameof(Configuration.buildVersionTag));
 
             // Show configuration app data
             LayoutConfigurationEndpoint();

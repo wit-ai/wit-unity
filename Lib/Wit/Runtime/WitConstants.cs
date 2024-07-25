@@ -11,8 +11,8 @@ namespace Meta.WitAi
     public static class WitConstants
     {
         // Wit service version info
-        public const string API_VERSION = "20240413";
-        public const string SDK_VERSION = "69.0.0";
+        public const string API_VERSION = "20240713";
+        public const string SDK_VERSION = "70.0.0";
         public const string CLIENT_NAME = "wit-unity";
 
         // Wit service endpoint info
@@ -33,6 +33,7 @@ namespace Meta.WitAi
         public const string HEADER_USERAGENT_CONFID_MISSING = "not-yet-configured";
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
+        public const string HEADER_TAG_ID = "tag";
 
         // Wit response types
         public const string RESPONSE_TYPE_KEY = "type";

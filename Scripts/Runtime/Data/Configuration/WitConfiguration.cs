@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Meta.Voice.Net.WebSockets;
+using Meta.WitAi.Composer.Attributes;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data.Info;
 using UnityEngine;
@@ -32,6 +33,32 @@ namespace Meta.WitAi.Data.Configuration
         [Tooltip("Access token used in builds to make requests for data from Wit.ai")]
         [FormerlySerializedAs("clientAccessToken")]
         [SerializeField] private string _clientAccessToken;
+
+        /// <summary>
+        /// The which deployed version to use (defaults to current when empty)
+        /// </summary>
+        [Tooltip("Which deployed version to use in editor (defaults to current when empty)")]
+        [VersionTagDropdown]
+        public string editorVersionTag;
+
+        /// <summary>
+        /// The which deployed version to use (defaults to current when empty)
+        /// </summary>
+        [Tooltip("Which deployed version to use in a build (defaults to current when empty)")]
+        [VersionTagDropdown]
+        public string buildVersionTag;
+
+        /// <summary>
+        /// Obtains the version tag to be used with this configuration
+        /// </summary>
+        public string GetVersionTag()
+        {
+            #if UNITY_EDITOR
+            return editorVersionTag;
+            #else
+            return buildVersionTag;
+            #endif
+        }
 
         /// <summary>
         /// Application info

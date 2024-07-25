@@ -19,16 +19,20 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Generates request with client access token
         /// </summary>
-        public WitWebSocketAuthRequest(string clientAccessToken) : base(GetAuthNode(clientAccessToken)) { }
+        public WitWebSocketAuthRequest(string clientAccessToken, string versionTag) : base(GetAuthNode(clientAccessToken, versionTag)) { }
 
         /// <summary>
         /// Gets a static response node from the client access token
         /// </summary>
-        private static WitResponseNode GetAuthNode(string clientAccessToken)
+        private static WitResponseNode GetAuthNode(string clientAccessToken, string versionTag)
         {
             WitResponseClass authNode = new WitResponseClass();
             authNode[WitConstants.WIT_SOCKET_AUTH_TOKEN] = clientAccessToken;
             authNode[WitConstants.WIT_SOCKET_API_KEY] = WitConstants.API_VERSION;
+            if (!string.IsNullOrEmpty(versionTag))
+            {
+                authNode[WitConstants.HEADER_TAG_ID] = versionTag;
+            }
             return authNode;
         }
 

@@ -360,7 +360,8 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Make authentication request and return any encountered error
-            var authRequest = new WitWebSocketAuthRequest(clientAccessToken);
+            var versionTag = Settings?.Configuration?.GetVersionTag();
+            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag);
             var authError = await SendRequestAsync(authRequest);
 
             // Auth error

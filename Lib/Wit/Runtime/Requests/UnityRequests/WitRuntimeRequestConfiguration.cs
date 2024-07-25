@@ -39,11 +39,12 @@ namespace Meta.WitAi
 
         public string GetClientAccessToken() => _userToken;
         public void SetClientAccessToken(string newToken) => _userToken = newToken;
-
         public string GetServerAccessToken()
         {
             throw new System.NotImplementedException();
         }
+
+        public string GetVersionTag() => string.Empty;
 
         public void SetApplicationInfo(WitAppInfo newInfo) => _appInfo = newInfo;
 

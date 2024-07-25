@@ -53,11 +53,6 @@ namespace Meta.WitAi
 
             if (null != requestOptions)
             {
-                if (!string.IsNullOrEmpty(requestOptions.tag))
-                {
-                    requestOptions.QueryParams["tag"] = requestOptions.tag;
-                }
-
                 if (null != requestOptions.dynamicEntities)
                 {
                     foreach (var entity in requestOptions.dynamicEntities.GetDynamicEntities())
@@ -114,10 +109,12 @@ namespace Meta.WitAi
         /// <summary>
         /// Appends additional options to a wit request prior to submission.
         /// </summary>
+        /// <param name="configuration">The configuration used for obtaining request options.</param>
         /// <param name="newOptions">The base options to be used if initialized elsewhere.</param>
         /// <param name="additionalDynamicEntities">Used to append dynamic entities
         /// to request options prior to request.</param>
-        public static WitRequestOptions GetSetupOptions(WitRequestOptions newOptions,
+        public static WitRequestOptions GetSetupOptions(WitConfiguration configuration,
+            WitRequestOptions newOptions,
             IDynamicEntitiesProvider[] additionalDynamicEntities)
         {
             // Generate options exist
@@ -127,13 +124,14 @@ namespace Meta.WitAi
             {
                 options.QueryParams["n"] = options.nBestIntents.ToString();
             }
+            // Set tag to query params if set
+            var tag = configuration.GetVersionTag();
+            if (!string.IsNullOrEmpty(tag))
+            {
+                options.QueryParams[WitConstants.HEADER_TAG_ID] = tag;
+            }
             // Set dynamic entities
             HandleWitRequestOptions(options, additionalDynamicEntities);
-            // Set tag
-            if (!string.IsNullOrEmpty(options.tag))
-            {
-                options.QueryParams["tag"] = options.tag;
-            }
             return options;
         }
 
@@ -145,7 +143,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static VoiceServiceRequest CreateMessageRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
-            var options = GetSetupOptions(requestOptions, additionalEntityProviders);
+            var options = GetSetupOptions(config, requestOptions, additionalEntityProviders);
             return new WitUnityRequest(config, NLPRequestInputType.Text, options, requestEvents);
         }
 
@@ -156,7 +154,7 @@ namespace Meta.WitAi
         /// <returns></returns>
         public static WitRequest CreateSpeechRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents, IDynamicEntitiesProvider[] additionalEntityProviders = null)
         {
-            var options = GetSetupOptions(requestOptions, additionalEntityProviders);
+            var options = GetSetupOptions(config, requestOptions, additionalEntityProviders);
             var path = config.GetEndpointInfo().Speech;
             return new WitRequest(config, path, options, requestEvents);
         }
@@ -169,7 +167,7 @@ namespace Meta.WitAi
         /// <returns>WitRequest</returns>
         public static WitRequest CreateDictationRequest(this WitConfiguration config, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents = null)
         {
-            var options = GetSetupOptions(requestOptions, null);
+            var options = GetSetupOptions(config, requestOptions, null);
             var path = config.GetEndpointInfo().Dictation;
             return new WitRequest(config, path, options, requestEvents);
         }

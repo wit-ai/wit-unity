@@ -79,6 +79,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 foreach (var key in parameters.Keys)
                 {
+                    if (string.Equals(key, WitConstants.HEADER_TAG_ID))
+                    {
+                        continue;
+                    }
                     parameterNode[key] = parameters[key];
                 }
             }

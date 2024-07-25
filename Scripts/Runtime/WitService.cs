@@ -183,10 +183,10 @@ namespace Meta.WitAi
         /// </summary>
         private VoiceServiceRequest GetTextRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+            var config = Configuration;
+            var newOptions = WitRequestFactory.GetSetupOptions(config, requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
             requestOptions.InputType = NLPRequestInputType.Text;
-            var config = Configuration;
             if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();
@@ -211,10 +211,10 @@ namespace Meta.WitAi
         /// </summary>
         private VoiceServiceRequest GetAudioRequest(WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
-            var newOptions = WitRequestFactory.GetSetupOptions(requestOptions, _dynamicEntityProviders);
+            var config = Configuration;
+            var newOptions = WitRequestFactory.GetSetupOptions(config, requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
             requestOptions.InputType = NLPRequestInputType.Audio;
-            var config = Configuration;
             if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();

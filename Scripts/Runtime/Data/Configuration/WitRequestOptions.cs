@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using Meta.WitAi.Interfaces;
+using UnityEngine;
 
 namespace Meta.WitAi.Configuration
 {
@@ -27,8 +28,10 @@ namespace Meta.WitAi.Configuration
         public int nBestIntents = -1;
 
         /// <summary>
-        /// The tag for snapshot
+        /// Tag is now set during authentication and cannot always be set on a per request basis.
         /// </summary>
+        [Obsolete("Use WitConfiguration.editorVersionTag or WitConfiguration.buildVersionTag")]
+        [SerializeField] [HideInInspector]
         public string tag;
 
         /// <summary>
@@ -58,7 +61,6 @@ namespace Meta.WitAi.Configuration
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             parameters["nBestIntents"] = nBestIntents.ToString();
-            parameters["tag"] = tag;
             parameters["requestID"] = RequestId;
             foreach (var key in QueryParams.Keys)
             {
