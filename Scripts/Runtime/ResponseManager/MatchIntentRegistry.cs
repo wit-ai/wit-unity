@@ -26,7 +26,7 @@ namespace Meta.WitAi
     internal static class MatchIntentRegistry
     {
         /// <inheritdoc/>
-        public static IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger("MatchIntent");
+        public static IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger("MatchIntent");
         private static DictionaryList<string, RegisteredMatchIntent> registeredMethods;
 
         public static DictionaryList<string, RegisteredMatchIntent> RegisteredMethods
@@ -53,7 +53,7 @@ namespace Meta.WitAi
         {
             if (null != registeredMethods) return;
             registeredMethods = new DictionaryList<string, RegisteredMatchIntent>();
-            new Thread(RefreshAssemblies).Start();
+            _ = ThreadUtility.Background(Logger, RefreshAssemblies);
         }
 
         internal static void RefreshAssemblies()
@@ -81,19 +81,19 @@ namespace Meta.WitAi
                                                 matchIntent = mi
                                             });
                                         } catch (Exception e) {
-                                            _log.Debug(e.Message);
+                                            Logger.Debug(e.Message);
                                         }
                                     }
                                 } catch (Exception e) {
-                                    _log.Debug(e.Message);
+                                    Logger.Debug(e.Message);
                                 }
                             }
                         } catch (Exception e) {
-                            _log.Debug(e.Message);
+                            Logger.Debug(e.Message);
                         }
                     }
                 } catch (Exception e) {
-                    _log.Debug(e.Message);
+                    Logger.Debug(e.Message);
                 }
             }
 

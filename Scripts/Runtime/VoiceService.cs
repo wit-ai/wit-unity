@@ -280,11 +280,6 @@ namespace Meta.WitAi
         protected virtual void Awake()
         {
             InitializeEventListeners();
-
-            if (UseIntentAttributes && !UseConduit)
-            {
-                MatchIntentRegistry.Initialize();
-            }
         }
 
         private void InitializeEventListeners()
@@ -308,6 +303,10 @@ namespace Meta.WitAi
             if (UseConduit)
             {
                 _ = InitializeConduit();
+            }
+            else if (UseIntentAttributes)
+            {
+                MatchIntentRegistry.Initialize();
             }
             TranscriptionProvider?.OnFullTranscription.AddListener(OnFinalTranscription);
             VoiceEvents.OnResponse.AddListener(HandleResponse);
@@ -381,7 +380,7 @@ namespace Meta.WitAi
                 ConduitDispatcher.InvokeAction(_conduitParameterProvider, intent.name,
                     _witConfiguration.relaxedResolution, intent.confidence, false);
             }
-            else
+            else if (UseIntentAttributes)
             {
                 var methods = MatchIntentRegistry.RegisteredMethods[intent.name];
                 foreach (var method in methods)
