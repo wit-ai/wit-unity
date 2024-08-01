@@ -139,10 +139,8 @@ namespace Meta.WitAi.TTS.LipSync
             }
         }
 
-        public virtual void OnVisemeChanged(Viseme viseme)
-        {
-            // Let lerp handle this.
-        }
+        public void OnVisemeStarted(Viseme viseme){}
+        public void OnVisemeFinished(Viseme viseme){}
 
         // Simply sets to the previous unless equal to the next
         public virtual void OnVisemeLerp(Viseme fromEvent, Viseme toEvent, float percentage)

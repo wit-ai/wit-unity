@@ -158,14 +158,12 @@ namespace Meta.WitAi.TTS.LipSync
             Renderer.material.SetTexture("_MainTex", texture);
         }
 
-        public void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage)
-        {
-            // Let viseme changed handle this.
-        }
-
-        public void OnVisemeChanged(Viseme viseme)
+        public void OnVisemeStarted(Viseme viseme)
         {
             SetViseme(viseme);
         }
+
+        public void OnVisemeFinished(Viseme viseme){}
+        public void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage){}
     }
 }

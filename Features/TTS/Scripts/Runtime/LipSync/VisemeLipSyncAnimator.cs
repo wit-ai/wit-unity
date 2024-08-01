@@ -6,10 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Integrations;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Meta.WitAi.TTS.LipSync
 {
@@ -18,30 +20,39 @@ namespace Meta.WitAi.TTS.LipSync
     /// </summary>
     public class VisemeLipSyncAnimator : TTSEventAnimator<TTSVisemeEvent, Viseme>, IVisemeAnimatorProvider
     {
-        public Viseme CurrentViseme { get; private set; }
-
         [Header("Viseme Events")]
-        [TooltipBox("Fired when transitioning from one viseme to the next")]
+        [TooltipBox("Fired when entering or passing a sample with this specified viseme")]
         [SerializeField]
-        private VisemeLerpEvent onVisemeLerp = new VisemeLerpEvent();
-        [TooltipBox("Fired when a transition is completed and the next viseme should be fully shown")]
-        [SerializeField]
-        private VisemeChangedEvent onVisemeChanged = new VisemeChangedEvent();
+        private VisemeChangedEvent _onVisemeStarted = new VisemeChangedEvent();
+        public VisemeChangedEvent OnVisemeStarted => _onVisemeStarted;
 
-        public VisemeLerpEvent OnVisemeLerp => onVisemeLerp;
-        public VisemeChangedEvent OnVisemeChanged => onVisemeChanged;
+        [TooltipBox("Fired when entering or passing a new sample with a different specified viseme")]
+        [SerializeField]
+        private VisemeChangedEvent _onVisemeFinished = new VisemeChangedEvent();
+        public VisemeChangedEvent OnVisemeFinished => _onVisemeFinished;
+
+        [TooltipBox("Fired once per frame with the previous viseme and next viseme as well as a percentage of the current frame in between each viseme.")]
+        [SerializeField] [FormerlySerializedAs("onVisemeLerp")]
+        private VisemeLerpEvent _onVisemeLerp = new VisemeLerpEvent();
+        public VisemeLerpEvent OnVisemeLerp => _onVisemeLerp;
+
+        [Obsolete("Use OnVisemeStarted, OnVisemeLerp or OnVisemeFinished instead.")]
+        public VisemeChangedEvent OnVisemeChanged => OnVisemeStarted;
+
+        /// <summary>
+        /// The last viseme passed during audio playback
+        /// </summary>
+        public Viseme LastViseme { get; private set; }
 
         // Simply sets to the previous unless equal to the next
         protected override void LerpEvent(TTSVisemeEvent fromEvent, TTSVisemeEvent toEvent, float percentage)
         {
-            var viseme = fromEvent.Data;
-            if (percentage >= 1f)
-            {
-                onVisemeLerp?.Invoke(fromEvent.Data, toEvent.Data, 1);
-                viseme = toEvent.Data;
-            }
-            onVisemeLerp?.Invoke(fromEvent.Data, toEvent.Data, Mathf.Clamp01(percentage));
-            SetViseme(viseme);
+            // Set viseme if changed
+            SetViseme(percentage >= 1f ? toEvent.Data : fromEvent.Data);
+
+            // Callback viseme lerp
+            percentage = Mathf.Clamp01(percentage);
+            OnVisemeLerp?.Invoke(fromEvent.Data, toEvent.Data, percentage);
         }
 
         /// <summary>
@@ -49,12 +60,14 @@ namespace Meta.WitAi.TTS.LipSync
         /// </summary>
         private void SetViseme(Viseme newViseme)
         {
-            if (CurrentViseme == newViseme)
+            if (LastViseme == newViseme)
             {
                 return;
             }
-            CurrentViseme = newViseme;
-            OnVisemeChanged?.Invoke(CurrentViseme);
+            var oldViseme = LastViseme;
+            LastViseme = newViseme;
+            OnVisemeFinished?.Invoke(oldViseme);
+            OnVisemeStarted?.Invoke(LastViseme);
         }
     }
 }

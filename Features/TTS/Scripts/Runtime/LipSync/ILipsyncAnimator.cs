@@ -13,17 +13,21 @@ namespace Meta.WitAi.TTS.LipSync
     public interface ILipsyncAnimator
     {
         /// <summary>
+        /// Called when entering or passing a sample with this specified viseme.
+        /// </summary>
+        void OnVisemeStarted(Viseme viseme);
+
+        /// <summary>
+        /// Called when entering or passing a new sample with a different specified viseme.
+        /// </summary>
+        void OnVisemeFinished(Viseme viseme);
+
+        /// <summary>
         /// Called when a viseme is in the process of lerping from one value to another
         /// </summary>
         /// <param name="oldVieseme">The last viseme shown</param>
         /// <param name="newViseme">The viseme that is being transitioned to</param>
         /// <param name="percentage">The percentage of the progress of transitioning</param>
         void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage);
-        
-        /// <summary>
-        /// Called when a viseme has fully changed to a new viseme
-        /// </summary>
-        /// <param name="viseme"></param>
-        void OnVisemeChanged(Viseme viseme);
     }
 }
