@@ -25,6 +25,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public string RequestId { get; }
 
         /// <summary>
+        /// The client user identifier that is making the request
+        /// </summary>
+        public string ClientUserId { get; }
+
+        /// <summary>
         /// The specific topic id that is being published to or received via subscription, if applicable.
         /// </summary>
         public string TopicId { get; set; }
@@ -103,10 +108,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
         /// </summary>
-        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null)
+        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null, string clientUserId = null)
         {
             PostData = postData;
             RequestId = string.IsNullOrEmpty(requestId) ? WitConstants.GetUniqueId() : requestId;
+            ClientUserId = string.IsNullOrEmpty(clientUserId) ? WitRequestSettings.LocalClientUserId : clientUserId;
         }
 
         /// <summary>
@@ -129,6 +135,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY] = TopicId;
                 publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY] = TopicId;
                 PostData[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
+            }
+            // Set client user id
+            if (!string.IsNullOrEmpty(ClientUserId) && PostData != null)
+            {
+                PostData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY] = ClientUserId;
             }
 
             // Upload chunk
@@ -315,9 +326,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            return string.Format("Type: {0}\nId: {1}\nTopic Id: {2}\nError: {3}",
+            return string.Format("Type: {0}\nRequest Id: {1}\nClient User Id: {2}\nTopic Id: {3}\nError: {4}",
                 GetType().Name,
                 RequestId,
+                ClientUserId ?? "Null",
                 TopicId ?? "Null",
                 Error ?? "Null");
         }

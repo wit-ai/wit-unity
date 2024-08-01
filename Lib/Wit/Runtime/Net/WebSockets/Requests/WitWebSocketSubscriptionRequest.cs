@@ -33,7 +33,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Generates subscribe/unsubscribe request using a specific topic
         /// </summary>
-        public WitWebSocketSubscriptionRequest(string topicId, WitWebSocketSubscriptionType subscriptionType) : base(GetSubscriptionNode(topicId, subscriptionType))
+        public WitWebSocketSubscriptionRequest(string topicId, WitWebSocketSubscriptionType subscriptionType)
+            : base(GetSubscriptionNode(topicId, subscriptionType))
         {
             TopicId = topicId;
             SubscriptionType = subscriptionType;

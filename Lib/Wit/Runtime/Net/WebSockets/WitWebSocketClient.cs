@@ -934,9 +934,15 @@ namespace Meta.Voice.Net.WebSockets
                     chunk.jsonString ?? "Null");
                 return null;
             }
+            // Attempt to determine client user id
+            var clientUserId = chunk.jsonData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY].Value;
+            if (string.IsNullOrEmpty(clientUserId))
+            {
+                clientUserId = WitConstants.WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY;
+            }
             // Generate message request if topic is found
-            Logger.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}");
-            var request = new WitWebSocketMessageRequest(chunk.jsonData, requestId);
+            Logger.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}\nClient User Id: {clientUserId}");
+            var request = new WitWebSocketMessageRequest(chunk.jsonData, requestId, clientUserId);
             request.TopicId = topicId;
             TrackRequest(request);
             return request;

@@ -81,7 +81,22 @@ namespace Meta.WitAi
         /// </summary>
         /// <param name="witResponse">The response node class or null if none was found.</param>
         public static string GetRequestId(this WitResponseNode witResponse) =>
-            witResponse?[WitConstants.HEADER_REQUEST_ID].Value ?? string.Empty;
+            witResponse?[WitConstants.RESPONSE_REQUEST_ID].Value ?? string.Empty;
+
+        /// <summary>
+        /// Gets the unique client user id if included in the response
+        /// </summary>
+        /// <param name="witResponse">The response node class or null if none was found.</param>
+        public static string GetClientUserId(this WitResponseNode witResponse)
+        {
+            var result = witResponse?[WitConstants.RESPONSE_CLIENT_USER_ID].Value ?? string.Empty;
+            if (string.IsNullOrEmpty(result))
+            {
+                return WitConstants.WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY;
+            }
+            return result;
+        }
+
 
         /// <summary>
         /// Gets the content of a witResponse's partial or final response whichever is present.

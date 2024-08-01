@@ -29,6 +29,11 @@ namespace Meta.WitAi.Requests
         protected VoiceServiceRequest(NLPRequestInputType newInputType, WitRequestOptions newOptions, VoiceServiceRequestEvents newEvents) : base(newInputType, newOptions, newEvents) {}
 
         /// <summary>
+        /// Check if request is local
+        /// </summary>
+        public bool IsLocalRequest => string.Equals(Options.ClientUserId, WitRequestSettings.LocalClientUserId);
+
+        /// <summary>
         /// The status code returned from the last request
         /// </summary>
         public int StatusCode => Results.StatusCode;
@@ -93,9 +98,11 @@ namespace Meta.WitAi.Requests
         // Sets request id
         protected override void ApplyResponseData(WitResponseNode responseData, bool isFinal)
         {
+            // Ensures request id & client id are present on all responses
             if (responseData != null)
             {
-                responseData[WitConstants.HEADER_REQUEST_ID] = Options?.RequestId;
+                responseData[WitConstants.RESPONSE_REQUEST_ID] = Options?.RequestId;
+                responseData[WitConstants.RESPONSE_CLIENT_USER_ID] = Options?.ClientUserId;
             }
             base.ApplyResponseData(responseData, isFinal);
         }

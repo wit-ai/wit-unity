@@ -27,9 +27,14 @@ namespace Meta.Voice.Net.WebSockets
     public interface IWitWebSocketRequest
     {
         /// <summary>
-        /// The priority of data submission
+        /// The unique request identifier
         /// </summary>
         string RequestId { get; }
+
+        /// <summary>
+        /// The client user identifier that is making the request
+        /// </summary>
+        string ClientUserId { get; }
 
         /// <summary>
         /// The specific topic id that is being published to or received via subscription, if applicable.

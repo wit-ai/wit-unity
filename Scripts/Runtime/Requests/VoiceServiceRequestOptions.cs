@@ -18,6 +18,11 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public string RequestId { get; private set; }
         /// <summary>
+        /// Unique client user id used for tracking user that made specified request
+        /// </summary>
+        public string ClientUserId { get; private set; }
+
+        /// <summary>
         /// Additional request query parameters to be sent with the request
         /// </summary>
         public Dictionary<string, string> QueryParams { get; private set; }
@@ -41,17 +46,26 @@ namespace Meta.WitAi.Requests
         public float AudioThreshold { get; set; }
 
         /// <summary>
-        /// Setup with a specific guid
+        /// Setup with a specific request id and user id
         /// </summary>
-        public VoiceServiceRequestOptions(string newRequestId, params QueryParam[] newParams)
+        public VoiceServiceRequestOptions(string newRequestId, string newClientUserId, params QueryParam[] newParams)
         {
             RequestId = string.IsNullOrEmpty(newRequestId) ? WitConstants.GetUniqueId() : newRequestId;
+            ClientUserId = string.IsNullOrEmpty(newClientUserId) ? WitRequestSettings.LocalClientUserId : newClientUserId;
             QueryParams = ConvertQueryParams(newParams);
         }
+
         /// <summary>
         /// Setup with a randomly generated guid
         /// </summary>
-        public VoiceServiceRequestOptions(params QueryParam[] newParams) : this(null, newParams){}
+        public VoiceServiceRequestOptions(params QueryParam[] newParams)
+            : this(null, newParams){}
+
+        /// <summary>
+        /// Setup with a specific request guid
+        /// </summary>
+        public VoiceServiceRequestOptions(string newRequestId, params QueryParam[] newParams)
+            : this(newRequestId, null, newParams){}
 
         /// <summary>
         /// Generates a dictionary of key/value strings from a query param array

@@ -382,7 +382,7 @@ namespace Meta.WitAi
                 return;
             }
             // Wrap web socket request
-            var options = new WitRequestOptions(webSocketRequest.RequestId);
+            var options = new WitRequestOptions(webSocketRequest.RequestId, webSocketRequest.ClientUserId);
             var voiceRequest = WitSocketRequest.GetExternalRequest(messageRequest, RuntimeConfiguration.witConfiguration, _webSocketAdapter, options);
             SetupRequest(voiceRequest);
         }

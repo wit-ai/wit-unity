@@ -17,5 +17,10 @@ namespace Meta.Voice
         /// The unique request identifier
         /// </summary>
         string RequestId { get; }
+
+        /// <summary>
+        /// The unique client user identifier
+        /// </summary>
+        string ClientUserId { get; }
     }
 }

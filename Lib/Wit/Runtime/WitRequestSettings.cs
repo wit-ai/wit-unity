@@ -73,6 +73,16 @@ namespace Meta.WitAi
             if (_deviceModel == null) _deviceModel = SystemInfo.deviceModel;
             if (_appIdentifier == null) _appIdentifier = Application.identifier;
             if (_unityVersion == null) _unityVersion = Application.unityVersion;
+            if (string.IsNullOrEmpty(_localClientUserId))
+            {
+                _localClientUserId = PlayerPrefs.GetString(PREF_CLIENT_USER_ID);
+                if (string.IsNullOrEmpty(_localClientUserId))
+                {
+                    _localClientUserId = System.Guid.NewGuid().ToString();
+                    PlayerPrefs.SetString(PREF_CLIENT_USER_ID, _localClientUserId);
+                    PlayerPrefs.Save();
+                }
+            }
         }
         #if UNITY_EDITOR
         /// <summary>
@@ -88,6 +98,33 @@ namespace Meta.WitAi
             Init();
         }
         #endif
+
+        /// <summary>
+        /// The default client user id sent with locally generated requests
+        /// if not overriden by request options.
+        /// </summary>
+        public static string LocalClientUserId
+        {
+            get => _localClientUserId;
+            set
+            {
+                // Ignore if same
+                if (string.Equals(value, _localClientUserId))
+                {
+                    return;
+                }
+                // Otherwise, set
+                _localClientUserId = value;
+                // Attempt to set on main thread
+                ThreadUtility.CallOnMainThread(() =>
+                {
+                    PlayerPrefs.SetString(PREF_CLIENT_USER_ID, _localClientUserId);
+                    PlayerPrefs.Save();
+                });
+            }
+        }
+        private static string _localClientUserId;
+        private const string PREF_CLIENT_USER_ID = WitConstants.HEADER_CLIENT_USER_ID;
 
         /// <summary>
         /// Returns a string of all bytes within an array
@@ -152,13 +189,20 @@ namespace Meta.WitAi
         /// <summary>
         /// Obtain headers to be used with every wit service
         /// </summary>
-        public static Dictionary<string, string> GetHeaders(IWitRequestConfiguration configuration, string requestId, bool useServerToken)
+        public static Dictionary<string, string> GetHeaders(IWitRequestConfiguration configuration, string requestId, bool useServerToken, string clientUserId = null)
         {
             // Get headers
             Dictionary<string, string> headers = new Dictionary<string, string>();
 
             // Set authorization
             headers[WitConstants.HEADER_AUTH] = GetAuthorizationHeader(configuration, useServerToken);
+
+            // Use local client user id if empty
+            if (string.IsNullOrEmpty(clientUserId))
+            {
+                clientUserId = LocalClientUserId;
+            }
+            headers[WitConstants.HEADER_CLIENT_USER_ID] = clientUserId;
 
             #if UNITY_EDITOR || !UNITY_WEBGL
             // Set request id

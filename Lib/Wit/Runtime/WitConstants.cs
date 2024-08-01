@@ -28,12 +28,17 @@ namespace Meta.WitAi
 
         // Wit service header keys
         public const string HEADER_REQUEST_ID = "X-Wit-Client-Request-Id";
+        public const string HEADER_CLIENT_USER_ID = "client-user-id";
         public const string HEADER_AUTH = "Authorization";
         public const string HEADER_USERAGENT = "User-Agent";
         public const string HEADER_USERAGENT_CONFID_MISSING = "not-yet-configured";
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
         public const string HEADER_TAG_ID = "tag";
+
+        // Wit service response keys
+        public const string RESPONSE_REQUEST_ID = "client_request_id";
+        public const string RESPONSE_CLIENT_USER_ID = "client_user_id";
 
         // Wit response types
         public const string RESPONSE_TYPE_KEY = "type";
@@ -276,7 +281,8 @@ namespace Meta.WitAi
         public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Default is retry infinitely
         public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Default to one retry per second
         public const int WIT_SOCKET_RECONNECT_INTERVAL_MIN = 100; // Minimum interval in ms
-        public const string WIT_SOCKET_REQUEST_ID_KEY = "client_request_id";
+        public const string WIT_SOCKET_REQUEST_ID_KEY = RESPONSE_REQUEST_ID;
+        public const string WIT_SOCKET_CLIENT_USER_ID_KEY = RESPONSE_CLIENT_USER_ID;
         public const string WIT_SOCKET_API_KEY = "api_version";
         public const string WIT_SOCKET_CONTENT_KEY = "content_type";
         // Authorization request constant keys & values
@@ -294,6 +300,7 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_TRANSCRIBE_IS_FINAL = "end_transcription";
         // Pub/sub data keys
         public const string WIT_SOCKET_EXTERNAL_ENDPOINT_KEY = "external";
+        public const string WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY = "unknown";
         public const string WIT_SOCKET_PUBSUB_SUBSCRIBE_KEY = "subscribe";
         public const string WIT_SOCKET_PUBSUB_UNSUBSCRIBE_KEY = "unsubscribe";
         public const string WIT_SOCKET_PUBSUB_TOPIC_KEY = "topic";

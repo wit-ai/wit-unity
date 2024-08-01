@@ -34,9 +34,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         /// <param name="externalPostData">The data used exernally for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
+        /// <param name="clientUserId">A unique id that can be used to determine the interacting client user</param>
         public WitWebSocketMessageRequest(WitResponseNode externalPostData,
-            string requestId)
-            : base(externalPostData, requestId)
+            string requestId, string clientUserId)
+            : base(externalPostData, requestId, clientUserId)
         {
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
             SetResponseData(externalPostData);
@@ -50,8 +51,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="parameters">All additional data required for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
         public WitWebSocketMessageRequest(string endpoint, Dictionary<string, string> parameters,
-            string requestId = null)
-            : base(GetPostData(endpoint, parameters), requestId)
+            string requestId = null, string clientUserId = null)
+            : base(GetPostData(endpoint, parameters), requestId, clientUserId)
         {
             Endpoint = endpoint;
         }

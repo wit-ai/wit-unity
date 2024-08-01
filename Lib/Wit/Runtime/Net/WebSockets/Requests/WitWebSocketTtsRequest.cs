@@ -243,7 +243,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public override string ToString()
         {
-            return string.Format("Type: {0}\nId: {1}\nTopic Id: {2}\nText: {3}\nAudio Type: {4}\nUse Events: {5}\nDownload Path: {6}\nError: {7}",
+            return string.Format("Type: {0}\nRequest Id: {1}\nTopic Id: {2}\nText: {3}\nAudio Type: {4}\nUse Events: {5}\nDownload Path: {6}\nError: {7}",
                 GetType().Name,
                 RequestId,
                 TopicId ?? "Null",
