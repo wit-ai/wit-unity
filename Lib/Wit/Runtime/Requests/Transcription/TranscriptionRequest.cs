@@ -167,6 +167,7 @@ namespace Meta.Voice
             ThreadUtility.CallOnMainThread(() =>
             {
                 Events?.OnPartialTranscription?.Invoke(Transcription);
+                Events?.OnUserPartialTranscription?.Invoke(Options.ClientUserId, Transcription);
             });
         }
 
@@ -179,6 +180,7 @@ namespace Meta.Voice
             ThreadUtility.CallOnMainThread(() =>
             {
                 Events?.OnFullTranscription?.Invoke(Transcription);
+                Events?.OnUserFullTranscription?.Invoke(Options.ClientUserId, Transcription);
             });
         }
         #endregion TRANSCRIPTION

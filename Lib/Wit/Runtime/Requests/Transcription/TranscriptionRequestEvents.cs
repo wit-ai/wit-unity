@@ -18,6 +18,12 @@ namespace Meta.Voice
     [Serializable]
     public class TranscriptionRequestEvent : UnityEvent<string> {}
 
+    /// <summary>
+    /// A unity event that returns a string for the client user id and an additional string for the transcription
+    /// </summary>
+    [Serializable]
+    public class UserTranscriptionRequestEvent : UnityEvent<string, string> {}
+
     [Serializable]
     public class TranscriptionRequestEvents<TUnityEvent>
         : VoiceRequestEvents<TUnityEvent>
@@ -68,5 +74,14 @@ namespace Meta.Voice
         public TranscriptionRequestEvent OnFullTranscription => _onFullTranscription;
         [Tooltip("Called on request transcription when audio has been completely transferred.")]
         [SerializeField] private TranscriptionRequestEvent _onFullTranscription = Activator.CreateInstance<TranscriptionRequestEvent>();
+
+
+        [Tooltip("Called on request transcription while audio is still being analyzed.  Also returns client user id as first parameter")]
+        [SerializeField] private UserTranscriptionRequestEvent _onUserPartialTranscription = Activator.CreateInstance<UserTranscriptionRequestEvent>();
+        public UserTranscriptionRequestEvent OnUserPartialTranscription => _onUserPartialTranscription;
+
+        [Tooltip("Called on request transcription when audio has been completely transferred.  Also returns client user id as first parameter")]
+        [SerializeField] private UserTranscriptionRequestEvent _onUserFullTranscription = Activator.CreateInstance<UserTranscriptionRequestEvent>();
+        public UserTranscriptionRequestEvent OnUserFullTranscription => _onUserFullTranscription;
     }
 }

@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using Meta.Voice;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
@@ -192,6 +193,14 @@ namespace Meta.WitAi.Events
         public WitTranscriptionEvent OnFullTranscription => _onFullTranscription;
         [Obsolete("Deprecated for 'OnPartialTranscription' event")]
         public WitTranscriptionEvent onFullTranscription => OnFullTranscription;
+
+        [Tooltip("Called on request transcription while audio is still being analyzed.  Also returns client user id as first parameter")]
+        [SerializeField] private UserTranscriptionRequestEvent _onUserPartialTranscription = Activator.CreateInstance<UserTranscriptionRequestEvent>();
+        public UserTranscriptionRequestEvent OnUserPartialTranscription => _onUserPartialTranscription;
+
+        [Tooltip("Called on request transcription when audio has been completely transferred.  Also returns client user id as first parameter")]
+        [SerializeField] private UserTranscriptionRequestEvent _onUserFullTranscription = Activator.CreateInstance<UserTranscriptionRequestEvent>();
+        public UserTranscriptionRequestEvent OnUserFullTranscription => _onUserFullTranscription;
         #endregion Transcription Events
 
         #region Listen Wrapping
@@ -252,7 +261,8 @@ namespace Meta.WitAi.Events
             OnMicAudioLevelChanged.SetListener(listener.OnMicAudioLevelChanged.Invoke, add);
             OnPartialTranscription.SetListener(listener.OnPartialTranscription.Invoke, add);
             OnFullTranscription.SetListener(listener.OnFullTranscription.Invoke, add);
-
+            OnUserPartialTranscription.SetListener(listener.OnUserPartialTranscription.Invoke, add);
+            OnUserFullTranscription.SetListener(listener.OnUserFullTranscription.Invoke, add);
 
             #pragma warning disable CS0618
             // Set obsolete callbacks

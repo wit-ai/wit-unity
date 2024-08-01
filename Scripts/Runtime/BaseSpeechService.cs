@@ -323,6 +323,7 @@ namespace Meta.WitAi
         {
             RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.PartialTranscriptionReceived);
             GetSpeechEvents()?.OnPartialTranscription?.Invoke(transcription);
+            GetSpeechEvents()?.OnUserPartialTranscription?.Invoke(request.Options.ClientUserId, transcription);
         }
 
         // Called when VoiceServiceRequest OnFullTranscription is returned from request with final ASR
@@ -331,6 +332,7 @@ namespace Meta.WitAi
             RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.FullTranscriptionReceived);
             Log(request, $"Request Full Transcription\nText: {transcription}");
             GetSpeechEvents()?.OnFullTranscription?.Invoke(transcription);
+            GetSpeechEvents()?.OnUserFullTranscription?.Invoke(request.Options.ClientUserId, transcription);
         }
 
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
