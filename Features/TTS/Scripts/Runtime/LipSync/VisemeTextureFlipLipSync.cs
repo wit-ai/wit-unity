@@ -14,19 +14,21 @@ namespace Meta.WitAi.TTS.LipSync
     /// <summary>
     /// A class for swapping out mouth textures during an audio animation based on the current viseme
     /// </summary>
-    [RequireComponent(typeof(VisemeLipSyncAnimator))]
     public class VisemeTextureFlipLipSync : BaseTextureFlipLipSync
     {
         [FormerlySerializedAs("renderer")] [SerializeField] private Renderer visemeRenderer;
-        
-        private VisemeLipSyncAnimator _lipSyncAnimator;
+
+        [SerializeField] private VisemeLipSyncAnimator _lipSyncAnimator;
 
         public override Renderer Renderer => visemeRenderer;
 
         protected override void Awake()
         {
             base.Awake();
-            _lipSyncAnimator = GetComponent<VisemeLipSyncAnimator>();
+            if (!_lipSyncAnimator)
+            {
+                _lipSyncAnimator = GetComponent<VisemeLipSyncAnimator>();
+            }
             if (!visemeRenderer)
             {
                 visemeRenderer = GetComponent<Renderer>();
@@ -41,13 +43,12 @@ namespace Meta.WitAi.TTS.LipSync
                 enabled = false;
                 return;
             }
-
-            _lipSyncAnimator.OnVisemeLerp?.AddListener(OnVisemeLerp);
+            _lipSyncAnimator.OnVisemeChanged?.AddListener(OnVisemeChanged);
         }
 
         protected virtual void OnDisable()
         {
-            _lipSyncAnimator.OnVisemeLerp?.RemoveListener(OnVisemeLerp);
+            _lipSyncAnimator.OnVisemeChanged?.RemoveListener(OnVisemeChanged);
         }
     }
 }

@@ -32,8 +32,6 @@ namespace Meta.WitAi.TTS.LipSync
         public VisemeTextureData[] VisemeTextures;
         // A dictionary per viseme lookup
         private Dictionary<Viseme, int> _textureLookup = new Dictionary<Viseme, int>();
-        // Current viseme
-        private Viseme _currentViseme = (Viseme)(-1);
 
         // Stored texture data
         [Serializable]
@@ -137,14 +135,6 @@ namespace Meta.WitAi.TTS.LipSync
                 return;
             }
 
-            // Ignore if same
-            if (_currentViseme == v)
-            {
-                return;
-            }
-            // Set current viseme
-            _currentViseme = v;
-
             // Get texture index
             int visemeIndex = _textureLookup[v];
             int textureIndex = 0;
@@ -170,14 +160,7 @@ namespace Meta.WitAi.TTS.LipSync
 
         public void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage)
         {
-            if (percentage < 1f)
-            {
-                SetViseme(oldVieseme);
-            }
-            else
-            {
-                SetViseme(newViseme);
-            }
+            // Let viseme changed handle this.
         }
 
         public void OnVisemeChanged(Viseme viseme)

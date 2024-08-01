@@ -18,6 +18,8 @@ namespace Meta.WitAi.TTS.LipSync
     /// </summary>
     public class VisemeLipSyncAnimator : TTSEventAnimator<TTSVisemeEvent, Viseme>, IVisemeAnimatorProvider
     {
+        public Viseme CurrentViseme { get; private set; }
+
         [Header("Viseme Events")]
         [TooltipBox("Fired when transitioning from one viseme to the next")]
         [SerializeField]
@@ -32,15 +34,27 @@ namespace Meta.WitAi.TTS.LipSync
         // Simply sets to the previous unless equal to the next
         protected override void LerpEvent(TTSVisemeEvent fromEvent, TTSVisemeEvent toEvent, float percentage)
         {
-
-            // Set to final viseme weight
+            var viseme = fromEvent.Data;
             if (percentage >= 1f)
             {
                 onVisemeLerp?.Invoke(fromEvent.Data, toEvent.Data, 1);
-                onVisemeChanged?.Invoke(toEvent.Data);
+                viseme = toEvent.Data;
             }
-
             onVisemeLerp?.Invoke(fromEvent.Data, toEvent.Data, Mathf.Clamp01(percentage));
+            SetViseme(viseme);
+        }
+
+        /// <summary>
+        /// Sets the current viseme and performs callback on change
+        /// </summary>
+        private void SetViseme(Viseme newViseme)
+        {
+            if (CurrentViseme == newViseme)
+            {
+                return;
+            }
+            CurrentViseme = newViseme;
+            OnVisemeChanged?.Invoke(CurrentViseme);
         }
     }
 }
