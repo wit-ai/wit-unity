@@ -318,34 +318,15 @@ namespace Meta.Voice
         /// <summary>
         /// Internal method for
         /// </summary>
-        protected void Log(string log, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
+        protected virtual void Log(string log, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
-            // Start log
-            StringBuilder requestLog = new StringBuilder();
-            // Append sent log
-            requestLog.AppendLine(log);
-            // Append any request specific data
-            AppendLogData(requestLog, logLevel);
-            // Log
-            Logger.Log(Logger.CorrelationID, logLevel, "{0}", requestLog);
+            Logger.Log(Logger.CorrelationID, logLevel, "{0}\nRequest Id: {1}\nRequest State: {2}",
+                log,
+                Options?.RequestId,
+                State);
         }
         protected void LogW(string log) => Log(log, VLoggerVerbosity.Warning);
         protected void LogE(string log, Exception e) => Log($"{log}\n\n{e}", VLoggerVerbosity.Error);
-
-        /// <summary>
-        /// Append request specific data to log
-        /// </summary>
-        /// <param name="log">Building log</param>
-        /// <param name="warning">True if this is a warning log</param>
-        protected virtual void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
-        {
-            #if UNITY_EDITOR
-            // Append request id
-            log.AppendLine($"Request Id: {Options?.RequestId}");
-            #endif
-            // Append request state
-            log.AppendLine($"Request State: {State}");
-        }
         #endregion INITIALIZATION
 
         #region TRANSMISSION

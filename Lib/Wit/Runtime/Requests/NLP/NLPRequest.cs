@@ -80,12 +80,15 @@ namespace Meta.Voice
         /// <summary>
         /// Append NLP request specific data to log
         /// </summary>
-        /// <param name="log">Building log</param>
-        /// <param name="warning">True if this is a warning log</param>
-        protected override void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
+        protected override void Log(string log, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
-            base.AppendLogData(log, logLevel);
-            log.AppendLine($"Input Type: {InputType}");
+            Logger.Log(Logger.CorrelationID, logLevel, "{0}\nRequest Id: {1}\nRequest State: {2}\nAudio Input State: {3}\nTranscription: {4}\nInput: {5}",
+                log,
+                Options?.RequestId,
+                State,
+                AudioInputState,
+                Results?.Transcription,
+                InputType);
         }
 
         /// <summary>

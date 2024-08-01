@@ -107,16 +107,16 @@ namespace Meta.Voice
         }
 
         /// <summary>
-        /// Append request specific data to log
+        /// Recreates log with specified info
         /// </summary>
-        /// <param name="log">Building log</param>
-        protected override void AppendLogData(StringBuilder log, VLoggerVerbosity logLevel)
+        protected override void Log(string log, VLoggerVerbosity logLevel = VLoggerVerbosity.Info)
         {
-            base.AppendLogData(log, logLevel);
-            // Append audio input state
-            log.AppendLine($"Audio Input State: {AudioInputState}");
-            // Append current transcription
-            log.AppendLine($"Transcription: {Results?.Transcription}");
+            Logger.Log(Logger.CorrelationID, logLevel, "{0}\nRequest Id: {1}\nRequest State: {2}\nAudio Input State: {3}\nTranscription: {4}",
+                log,
+                Options?.RequestId,
+                State,
+                AudioInputState,
+                Results?.Transcription);
         }
         #endregion INITIALIZATION
 
