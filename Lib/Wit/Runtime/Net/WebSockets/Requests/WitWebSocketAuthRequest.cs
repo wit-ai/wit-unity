@@ -37,23 +37,15 @@ namespace Meta.Voice.Net.WebSockets.Requests
         }
 
         /// <summary>
-        /// Called on server response.  Sets an error if a successful auth response was not received.
+        /// Apply response data but add an additional check for authentication errors
         /// </summary>
-        /// <param name="jsonString">Raw json string.</param>
-        /// <param name="jsonData">Decoded json data object.</param>
-        /// <param name="binaryData">Decoded binary data chunk which should be empty.</param>
-        public override void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData)
+        /// <param name="newResponseData">New response data received</param>
+        protected override void SetResponseData(WitResponseNode newResponseData)
         {
-            base.HandleDownload(jsonString, jsonData, binaryData);
+            base.SetResponseData(newResponseData);
 
-            // Ignore if error already occured
-            if (!string.IsNullOrEmpty(Error))
-            {
-                return;
-            }
-
-            // Ensure auth response matches
-            var authText = jsonData[WitConstants.WIT_SOCKET_AUTH_RESPONSE_KEY];
+            // Set error using auth error if failed
+            var authText = newResponseData[WitConstants.WIT_SOCKET_AUTH_RESPONSE_KEY];
             if (!string.Equals(authText, WitConstants.WIT_SOCKET_AUTH_RESPONSE_VAL))
             {
                 Error = WitConstants.WIT_SOCKET_AUTH_RESPONSE_ERROR;
