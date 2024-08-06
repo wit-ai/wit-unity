@@ -1116,15 +1116,8 @@ namespace Meta.Voice.Net.WebSockets
                     : PubSubSubscriptionState.UnsubscribeError;
                 SetTopicSubscriptionState(subscription, topicId, errorType, request.Error);
 
-                // Retry
-                if (subscribing)
-                {
-                    Subscribe(topicId, true);
-                }
-                else
-                {
-                    Unsubscribe(topicId, true);
-                }
+                // Retry after frame
+                _ = WaitAndRetry(subscribing, topicId);
                 return;
             }
 
@@ -1133,6 +1126,22 @@ namespace Meta.Voice.Net.WebSockets
                 ? PubSubSubscriptionState.Subscribed
                 : PubSubSubscriptionState.NotSubscribed;
             SetTopicSubscriptionState(subscription, topicId, successType);
+        }
+
+        /// <summary>
+        /// Waits 10ms and then retries the sub/unsub
+        /// </summary>
+        private async Task WaitAndRetry(bool subscribing, string topicId)
+        {
+            await Task.Delay(10);
+            if (subscribing)
+            {
+                Subscribe(topicId, true);
+            }
+            else
+            {
+                Unsubscribe(topicId, true);
+            }
         }
 
         /// <summary>

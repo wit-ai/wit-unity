@@ -8,6 +8,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Meta.Voice.Net.PubSub;
 using Meta.WitAi.Json;
 
 namespace Meta.Voice.Net.WebSockets
@@ -40,6 +41,11 @@ namespace Meta.Voice.Net.WebSockets
         /// The specific topic id that is being published to or received via subscription, if applicable.
         /// </summary>
         string TopicId { get; set; }
+
+        /// <summary>
+        /// The specific publish options for pubsub
+        /// </summary>
+        PubSubResponseOptions PublishOptions { get; set; }
 
         /// <summary>
         /// The request timeout in milliseconds

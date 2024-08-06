@@ -17,9 +17,9 @@ namespace Meta.Voice.Net.PubSub
     public interface IPubSubAdapter
     {
         /// <summary>
-        /// The topic id to be published to or received
+        /// The publish and subscribe settings
         /// </summary>
-        string TopicId { get; set; }
+        PubSubSettings Settings { get; set; }
 
         /// <summary>
         /// The current topic subscription state

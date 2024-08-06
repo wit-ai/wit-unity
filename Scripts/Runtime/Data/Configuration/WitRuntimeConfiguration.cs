@@ -7,6 +7,7 @@
  */
 
 using System;
+using Meta.Voice.Net.PubSub;
 using Meta.WitAi.Data.Configuration;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Utilities;
@@ -77,11 +78,10 @@ namespace Meta.WitAi.Configuration
         public float preferredActivationOffset = -.5f;
 
         [Header("Web Sockets")]
-        [Tooltip("If using web sockets, the topic id will publish and subscribe to all requests made for the specified topic.")]
-        [SerializeField]
-        public string pubSubTopicId;
         [Tooltip("If enabled, only transcription requests will be made.")]
         public bool transcribeOnly = false;
+        [Tooltip("Various publish and subscription options available for this specific service.")]
+        public PubSubSettings pubSubSettings = new PubSubSettings();
 
         /// <summary>
         /// An action to be invoked following any configuration data change.

@@ -7,8 +7,10 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Meta.Voice.Net.PubSub;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -33,6 +35,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// The specific topic id that is being published to or received via subscription, if applicable.
         /// </summary>
         public string TopicId { get; set; }
+
+        /// <summary>
+        /// The specific publish options for pubsub
+        /// </summary>
+        public PubSubResponseOptions PublishOptions { get; set; }
 
         /// <summary>
         /// The timeout in milliseconds from the initial upload to the response from the server.
@@ -132,8 +139,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
             if (!string.IsNullOrEmpty(TopicId) && PostData != null)
             {
                 var publish = new WitResponseClass();
-                publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY] = TopicId;
-                publish[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY] = TopicId;
+                var topics = new Dictionary<string, string>();
+                PubSubSettings.GetTopics(topics, TopicId, PublishOptions);
+                foreach (var topic in topics)
+                {
+                    publish[topic.Key] = topic.Value;
+                }
                 PostData[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
             }
             // Set client user id

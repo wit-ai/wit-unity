@@ -7,9 +7,12 @@
  */
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
+using Meta.WitAi;
 using UnityEngine;
 using Meta.WitAi.Attributes;
 using UnityEngine.Events;
@@ -38,14 +41,14 @@ namespace Meta.Voice.Net.WebSockets
         public IWitWebSocketClient WebSocketClient { get; private set; }
 
         /// <summary>
-        /// The topic to be used for publishing/subscribing to the current client provider
+        /// The various pub sub settings available
         /// </summary>
-        public string TopicId
+        public PubSubSettings Settings
         {
-            get => _topicId;
-            set => SetTopicId(value);
+            get => _settings;
+            set => SetSettings(value);
         }
-        [SerializeField] private string _topicId;
+        private PubSubSettings _settings;
 
         /// <summary>
         /// The current subscription state of the adapter
@@ -76,6 +79,9 @@ namespace Meta.Voice.Net.WebSockets
         private bool _connected = false;
         // Whether or not currently active in heirarchy
         private bool _active = false;
+        // Current subscriptions per topic
+        private ConcurrentDictionary<string, PubSubSubscriptionState> _subscriptionsPerTopic =
+            new ConcurrentDictionary<string, PubSubSubscriptionState>();
 
         #region LIFECYCLE
         protected virtual void OnEnable()
@@ -87,7 +93,7 @@ namespace Meta.Voice.Net.WebSockets
         protected virtual void HandleRequestGenerated(string topicId,
             IWitWebSocketRequest request)
         {
-            if (!string.Equals(TopicId, topicId))
+            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
             {
                 return;
             }
@@ -153,12 +159,12 @@ namespace Meta.Voice.Net.WebSockets
             _connected = true;
 
             // Connect to server if possible
-            WebSocketClient.OnTopicSubscriptionStateChange += HandleSubscriptionStateChange;
+            WebSocketClient.OnTopicSubscriptionStateChange += ApplySubscriptionPerTopic;
             WebSocketClient.OnTopicRequestTracked += HandleRequestGenerated;
             WebSocketClient.Connect();
 
             // Subscribe to current topic
-            Subscribe(TopicId);
+            Subscribe();
         }
 
         /// <summary>
@@ -172,12 +178,12 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Unsubscribe from current topic
-            Unsubscribe(TopicId);
+            Unsubscribe();
 
             // Disconnect if possible
             _connected = false;
             WebSocketClient.Disconnect();
-            WebSocketClient.OnTopicSubscriptionStateChange -= HandleSubscriptionStateChange;
+            WebSocketClient.OnTopicSubscriptionStateChange -= ApplySubscriptionPerTopic;
             WebSocketClient.OnTopicRequestTracked -= HandleRequestGenerated;
         }
         #endregion CONNECT & DISCONNECT
@@ -188,126 +194,186 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public void SendRequest(IWitWebSocketRequest request)
         {
-            // Append topic
-            Publish(request, TopicId);
+            // Append settings
+            if (Settings != null)
+            {
+                request.TopicId = Settings.PubSubTopicId;
+                request.PublishOptions = Settings.PublishOptions;
+            }
 
             // Send request
             WebSocketClient.SendRequest(request);
-        }
-
-        /// <summary>
-        /// Attempt to publish request if applicable
-        /// </summary>
-        private void Publish(IWitWebSocketRequest request, string topicId)
-        {
-            // Ignore if topic is null
-            if (string.IsNullOrEmpty(topicId))
-            {
-                return;
-            }
-            // Set request's topic id
-            request.TopicId = topicId;
         }
         #endregion SEND & PUBLISH
 
         #region SUBSCRIBE & UNSUBSCRIBE
         /// <summary>
-        /// Set the topic, unsubscribe to the previous & subscribe to a new
+        /// Set the pubsub settings, unsubscribe to the previous & subscribe to a new
         /// </summary>
-        public void SetTopicId(string newTopicId)
+        public void SetSettings(PubSubSettings settings)
         {
-            // Ignore if same topic
-            if (string.Equals(TopicId, newTopicId, StringComparison.CurrentCultureIgnoreCase))
+            // Ensure spamming of subscriptions does not occur
+            if (string.Equals(settings?.PubSubTopicId, _settings?.PubSubTopicId))
             {
                 return;
             }
 
-            // Unsubscribe from old topic id
-            Unsubscribe(TopicId);
+            // Unsubscribe from old topic ids
+            Unsubscribe();
 
             // Set new topic
-            Logger.Verbose("PubSub Topic ID Set from {0} to {1}", TopicId, newTopicId);
-            _topicId = newTopicId;
+            Logger.Verbose("PubSub Topic ID Set from {0} to {1}", Settings?.PubSubTopicId ?? "Null", settings?.PubSubTopicId ?? "Null");
+            _settings = settings;
 
-            // Subscribe to new topic
-            Subscribe(TopicId);
+            // Subscribe to new topic ids
+            Subscribe();
         }
 
         /// <summary>
         /// Unsubscribe if topic id exists and connected
         /// </summary>
-        private void Unsubscribe(string topicId)
+        private void Unsubscribe()
         {
             // Ignore if null or not connected
-            if (string.IsNullOrEmpty(topicId) || !_connected)
+            if (string.IsNullOrEmpty(Settings?.PubSubTopicId) || !_connected)
             {
                 return;
             }
 
             // Unsubscribe from topic id
-            Logger.Verbose("Unsubscribe from topic: {0}", topicId);
-            WebSocketClient.Unsubscribe(topicId);
+            Logger.Verbose("Unsubscribe from topic: {0}", Settings.PubSubTopicId);
 
-            // Immediately set state as not subscribed
-            SetSubscriptionState(PubSubSubscriptionState.Unsubscribing);
-            SetSubscriptionState(PubSubSubscriptionState.NotSubscribed);
+            // Iterate each subscription topic
+            var topics = Settings.GetSubscribeTopics();
+            foreach (var topicValue in topics.Values)
+            {
+                ApplySubscriptionPerTopic(topicValue, PubSubSubscriptionState.Unsubscribing);
+            }
+            foreach (var topicValue in topics.Values)
+            {
+                WebSocketClient.Unsubscribe(topicValue);
+                ApplySubscriptionPerTopic(topicValue, PubSubSubscriptionState.NotSubscribed);
+            }
+
+            // Clear all
+            _subscriptionsPerTopic.Clear();
         }
 
         /// <summary>
         /// Subscribe if topic id exists and connected
         /// </summary>
-        private void Subscribe(string topicId)
+        private void Subscribe()
         {
             // Ignore if null or not connected
-            if (string.IsNullOrEmpty(topicId) || !_connected)
+            if (string.IsNullOrEmpty(Settings?.PubSubTopicId) || !_connected)
             {
                 return;
             }
 
-            // Get current state (in case already subscribing elsewhere)
-            SetSubscriptionState(WebSocketClient.GetTopicSubscriptionState(topicId));
-
             // Begin subscribing
-            Logger.Verbose("Subscribe to topic: {0}", topicId);
-            WebSocketClient.Subscribe(topicId);
+            Logger.Verbose("Subscribe to topic: {0}", Settings.PubSubTopicId);
+
+            // Iterate each subscription topic
+            var topics = Settings.GetSubscribeTopics();
+            foreach (var topicValue in topics.Values)
+            {
+                ApplySubscriptionPerTopic(topicValue, PubSubSubscriptionState.Subscribing);
+                WebSocketClient.Subscribe(topicValue);
+            }
         }
 
         /// <summary>
         /// Handle currently set topic id subscription changes only
         /// </summary>
-        protected virtual void HandleSubscriptionStateChange(string topicId,
+        protected virtual void ApplySubscriptionPerTopic(string topicId,
             PubSubSubscriptionState subscriptionState)
         {
             // Only check if currently subscribed
-            if (!string.Equals(TopicId, topicId))
+            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
             {
                 return;
             }
-            // Set state
-            SetSubscriptionState(subscriptionState);
+            // Ignore if the same
+            if (_subscriptionsPerTopic.ContainsKey(topicId)
+                && _subscriptionsPerTopic[topicId] == subscriptionState)
+            {
+                return;
+            }
+
+            // Set the state
+            _subscriptionsPerTopic[topicId] = subscriptionState;
+
+            // Refresh current subscription state
+            RefreshSubscriptionState();
+        }
+
+        /// <summary>
+        /// Set the current subscription state to the determined state
+        /// </summary>
+        private void RefreshSubscriptionState()
+            => SetSubscriptionState(DetermineSubscriptionState());
+
+        /// <summary>
+        /// Determines the current subscription state
+        /// </summary>
+        protected PubSubSubscriptionState DetermineSubscriptionState()
+        {
+            var state = PubSubSubscriptionState.NotSubscribed;
+            var subscribed = _subscriptionsPerTopic.Keys.Count > 0;
+            foreach (var key in _subscriptionsPerTopic.Keys)
+            {
+                if (!_subscriptionsPerTopic.TryGetValue(key, out var topicState))
+                {
+                    continue;
+                }
+                // Error
+                if (topicState == PubSubSubscriptionState.SubscribeError
+                    || topicState == PubSubSubscriptionState.UnsubscribeError)
+                {
+                    return topicState;
+                }
+                // Not subscribed
+                if (subscribed && topicState != PubSubSubscriptionState.Subscribed)
+                {
+                    subscribed = false;
+                }
+                // Set as most recent subscribing or unsubscribing
+                if (topicState == PubSubSubscriptionState.Subscribing
+                    || topicState == PubSubSubscriptionState.Unsubscribing)
+                {
+                    state = topicState;
+                }
+            }
+            // If still subscribed
+            if (subscribed)
+            {
+                return PubSubSubscriptionState.Subscribed;
+            }
+            return state;
         }
 
         /// <summary>
         /// Set the current subscription state
         /// </summary>
-        protected void SetSubscriptionState(PubSubSubscriptionState subscriptionState)
+        private void SetSubscriptionState(PubSubSubscriptionState newSubState)
         {
             // Ignore if the same state
-            if (SubscriptionState == subscriptionState)
+            if (SubscriptionState == newSubState)
             {
                 return;
             }
 
             // Set the new state
-            SubscriptionState = subscriptionState;
-
-            // Invoke all callbacks
+            SubscriptionState = newSubState;
             OnTopicSubscriptionStateChange?.Invoke(SubscriptionState);
-            if (subscriptionState == PubSubSubscriptionState.Subscribed)
+
+            // Subscribed if set
+            if (SubscriptionState == PubSubSubscriptionState.Subscribed)
             {
                 OnSubscribed?.Invoke();
             }
-            else if (subscriptionState == PubSubSubscriptionState.NotSubscribed)
+            // Unsubscribed if set after unsubscribing or error
+            else if (SubscriptionState == PubSubSubscriptionState.NotSubscribed)
             {
                 OnUnsubscribed?.Invoke();
             }
