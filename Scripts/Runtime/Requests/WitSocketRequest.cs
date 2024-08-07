@@ -401,11 +401,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override string GetActivateAudioError()
         {
-            if (Options.InputType != NLPRequestInputType.Audio)
-            {
-                return string.Empty;
-            }
-            if (AudioInput == null)
+            if (AudioInput == null && Options.InputType == NLPRequestInputType.Audio)
             {
                 return "No audio input provided";
             }
