@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8687239950874716805}
-  - component: {fileID: 1505987942697342542}
   - component: {fileID: 5445742422506655039}
   - component: {fileID: 3513267561506601928}
   m_Layer: 0
@@ -35,50 +34,6 @@ Transform:
   - {fileID: 8007122341299788224}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
---- !u!114 &1505987942697342542
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6014210938073694145}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b877e8b6d61e46aba75553ba5668f485, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _player: {fileID: 0}
-  easeIgnored: 0
-  easeCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 1
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  onVisemeLerp:
-    m_PersistentCalls:
-      m_Calls: []
-  onVisemeChanged:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &5445742422506655039
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -140,6 +95,7 @@ MonoBehaviour:
     - {fileID: 2800000, guid: 2bac8918846c2f341a515254b70c4bd1, type: 3}
     - {fileID: 2800000, guid: a7e7832cbcaae89438f8019f52ddd4fc, type: 3}
   visemeRenderer: {fileID: 1022138882204660472}
+  _lipSyncAnimator: {fileID: 0}
 --- !u!114 &3513267561506601928
 MonoBehaviour:
   m_ObjectHideFlags: 0

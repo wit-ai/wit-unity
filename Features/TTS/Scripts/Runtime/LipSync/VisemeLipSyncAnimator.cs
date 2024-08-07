@@ -24,25 +24,21 @@ namespace Meta.WitAi.TTS.LipSync
         [TooltipBox("Fired when entering or passing a sample with this specified viseme")]
         [SerializeField]
         private VisemeChangedEvent _onVisemeStarted = new VisemeChangedEvent();
-        public VisemeChangedEvent OnVisemeStarted => _onVisemeStarted;
 
         [TooltipBox("Fired when entering or passing a new sample with a different specified viseme")]
         [SerializeField]
         private VisemeChangedEvent _onVisemeFinished = new VisemeChangedEvent();
-        public VisemeChangedEvent OnVisemeFinished => _onVisemeFinished;
 
         [TooltipBox("Fired once per frame with the previous viseme and next viseme as well as a percentage of the current frame in between each viseme.")]
         [SerializeField] [FormerlySerializedAs("onVisemeLerp")]
         private VisemeLerpEvent _onVisemeLerp = new VisemeLerpEvent();
-        public VisemeLerpEvent OnVisemeLerp => _onVisemeLerp;
 
+        public Viseme LastViseme { get; private set; }
+        public VisemeChangedEvent OnVisemeStarted => _onVisemeStarted;
+        public VisemeChangedEvent OnVisemeFinished => _onVisemeFinished;
+        public VisemeLerpEvent OnVisemeLerp => _onVisemeLerp;
         [Obsolete("Use OnVisemeStarted, OnVisemeLerp or OnVisemeFinished instead.")]
         public VisemeChangedEvent OnVisemeChanged => OnVisemeStarted;
-
-        /// <summary>
-        /// The last viseme passed during audio playback
-        /// </summary>
-        public Viseme LastViseme { get; private set; }
 
         // Simply sets to the previous unless equal to the next
         protected override void LerpEvent(TTSVisemeEvent fromEvent, TTSVisemeEvent toEvent, float percentage)

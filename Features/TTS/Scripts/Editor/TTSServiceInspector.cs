@@ -141,7 +141,7 @@ namespace Meta.WitAi.TTS
             }
             EditorGUI.indentLevel++;
             var events = eventContainer.Events;
-            if (events != null && events.Count > 0)
+            if (events != null)
             {
                 int count = 0;
                 foreach (var ttsEvent in events)
@@ -163,6 +163,10 @@ namespace Meta.WitAi.TTS
                         }
                     }
                     count++;
+                }
+                if (count == 0)
+                {
+                    WitEditorUI.LayoutLabel("No TTSEvents");
                 }
             }
             else

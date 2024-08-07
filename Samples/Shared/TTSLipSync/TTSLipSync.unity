@@ -247,11 +247,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7415982386058067738, guid: bc9a9a1b425d0bc48babf7b9e222ceae, type: 3}
+      propertyPath: _lipSyncAnimator
+      value: 
+      objectReference: {fileID: 954133171}
     - target: {fileID: 9083533583576272356, guid: bc9a9a1b425d0bc48babf7b9e222ceae, type: 3}
       propertyPath: m_Name
       value: SHUB_TextureFlip_LipSync
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4152228005701002347, guid: bc9a9a1b425d0bc48babf7b9e222ceae, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -516,6 +521,7 @@ GameObject:
   - component: {fileID: 954133170}
   - component: {fileID: 954133169}
   - component: {fileID: 954133168}
+  - component: {fileID: 954133171}
   m_Layer: 0
   m_Name: TTSSpeaker
   m_TagString: Untagged
@@ -686,6 +692,62 @@ Transform:
   - {fileID: 2028572883}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &954133171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 954133167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b877e8b6d61e46aba75553ba5668f485, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _player: {fileID: 954133169}
+  easeIgnored: 0
+  easeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.9036286
+      value: 0.2905783
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _onVisemeStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  _onVisemeFinished:
+    m_PersistentCalls:
+      m_Calls: []
+  _onVisemeLerp:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1036777633
 GameObject:
   m_ObjectHideFlags: 0
@@ -893,21 +955,10 @@ MonoBehaviour:
     audioType: 3
     audioStream: 1
     useEvents: 1
+    audioStreamPreloadCount: 5
+    audioReadyDuration: 1.5
+    audioMaxDuration: 15
   _presetVoiceSettings:
-  - SettingsId: MARIA
-    PrependedText: 
-    AppendedText: 
-    voice: Maria
-    style: default
-    speed: 100
-    pitch: 100
-  - SettingsId: SKULLY
-    PrependedText: 
-    AppendedText: 
-    voice: Skully
-    style: default
-    speed: 100
-    pitch: 100
   - SettingsId: WIT$BRITISH BUTLER
     PrependedText: 
     AppendedText: 
@@ -1457,6 +1508,10 @@ PrefabInstance:
       propertyPath: _player
       value: 
       objectReference: {fileID: 954133169}
+    - target: {fileID: 5192179313937817201, guid: cd3df941dffc7394bb9b7eab77997f40, type: 3}
+      propertyPath: _lipsyncAnimator
+      value: 
+      objectReference: {fileID: 954133171}
     - target: {fileID: 5497406605804605702, guid: cd3df941dffc7394bb9b7eab77997f40, type: 3}
       propertyPath: m_Name
       value: Melinda_BlendShape_LipSync

@@ -40,10 +40,5 @@ namespace Meta.WitAi.TTS.Interfaces
         /// The current TTS events if applicable
         /// </summary>
         TTSEventContainer CurrentEvents { get; }
-
-        /// <summary>
-        /// The callback following a event update
-        /// </summary>
-        TTSEventContainerDelegate OnEventsUpdated { get; set; }
     }
 }

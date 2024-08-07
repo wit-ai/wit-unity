@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Meta.Voice.Audio;
 using UnityEngine;
@@ -193,7 +194,7 @@ namespace Meta.WitAi.TTS.Data
                 clipID,
                 extension,
                 queryStream,
-                Events?.Events?.Count ?? 0,
+                Events?.Events?.Count() ?? 0,
                 clipStream?.Length ?? 0
             );
         }

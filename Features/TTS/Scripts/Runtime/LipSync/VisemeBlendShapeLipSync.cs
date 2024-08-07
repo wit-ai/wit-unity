@@ -13,7 +13,6 @@ namespace Meta.WitAi.TTS.LipSync
     /// <summary>
     /// A class for adjusting mouth position during an audio animation based on the current viseme
     /// </summary>
-    [RequireComponent(typeof(VisemeLipSyncAnimator))]
     public class VisemeBlendShapeLipSync : BaseVisemeBlendShapeLipSync
     {
         /// <summary>
@@ -21,13 +20,16 @@ namespace Meta.WitAi.TTS.LipSync
         /// </summary>
         public SkinnedMeshRenderer meshRenderer;
 
-        private VisemeLipSyncAnimator _lipsyncAnimator;
+        [SerializeField] private VisemeLipSyncAnimator _lipsyncAnimator;
 
         public override SkinnedMeshRenderer SkinnedMeshRenderer => meshRenderer;
 
         protected override void Awake()
         {
-            _lipsyncAnimator = GetComponent<VisemeLipSyncAnimator>();
+            if (!_lipsyncAnimator)
+            {
+                _lipsyncAnimator = GetComponent<VisemeLipSyncAnimator>();
+            }
             base.Awake();
         }
 

@@ -1366,13 +1366,6 @@ namespace Meta.WitAi.TTS.Utilities
             _speakingRequest = nextRequest;
             RaiseEvents(RaiseOnPlaybackBegin, _speakingRequest);
 
-            // Add playback event callbacks
-            if (_speakingRequest.ClipData.Events != null)
-            {
-                _speakingRequest.ClipData.Events.OnEventsUpdated += RaisePlaybackEventsUpdated;
-                RaisePlaybackEventsUpdated(_speakingRequest.ClipData.Events);
-            }
-
             // Resume prior to playback
             if (_speakingRequest.StopPlaybackOnLoad && IsPaused)
             {
@@ -1482,12 +1475,7 @@ namespace Meta.WitAi.TTS.Utilities
             _speakingRequest = null;
 
             // Remove playback event callbacks
-            if (lastRequestData.ClipData.Events != null)
-            {
-                lastRequestData.ClipData.Events.OnEventsUpdated -= RaisePlaybackEventsUpdated;
-            }
             RaisePlaybackSampleUpdated(0);
-            RaisePlaybackEventsUpdated(null);
 
             // Stop audio source playback
             _ = ThreadUtility.CallOnMainThread(() => AudioPlayer.Stop());
@@ -1956,19 +1944,6 @@ namespace Meta.WitAi.TTS.Utilities
         /// The current tts events available
         /// </summary>
         public TTSEventContainer CurrentEvents => SpeakingClip?.Events;
-
-        /// <summary>
-        /// The callback following a tts event update
-        /// </summary>
-        public TTSEventContainerDelegate OnEventsUpdated { get; set; }
-
-        /// <summary>
-        /// Updates event callback
-        /// </summary>
-        protected virtual void RaisePlaybackEventsUpdated(TTSEventContainer events)
-        {
-            OnEventsUpdated?.Invoke(events);
-        }
         #endregion
     }
 }

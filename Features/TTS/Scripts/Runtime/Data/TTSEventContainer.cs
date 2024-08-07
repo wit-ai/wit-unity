@@ -7,9 +7,10 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Meta.WitAi.Json;
-using UnityEngine.Scripting;
 
 namespace Meta.WitAi.TTS.Data
 {
@@ -25,29 +26,22 @@ namespace Meta.WitAi.TTS.Data
     public class TTSEventContainer
     {
         /// <summary>
-        /// All events provided in a access safe list
+        /// Accessible enumerable for all events
         /// </summary>
-        public List<ITTSEvent> Events => GetEvents<ITTSEvent>();
-        /// <summary>
-        /// Thread safe current event count
-        /// </summary>
-        public int EventCount => _events == null ? 0 : _events.Count;
+        public IEnumerable<ITTSEvent> Events => _events;
         /// <summary>
         /// All events for specified tts word start sample
         /// </summary>
-        public List<TTSWordEvent> WordEvents => GetEvents<TTSWordEvent>();
+        public IEnumerable<TTSWordEvent> WordEvents => GetEvents<TTSWordEvent>();
         /// <summary>
         /// All events for specified tts mouth position start sample
         /// </summary>
-        public List<TTSVisemeEvent> VisemeEvents => GetEvents<TTSVisemeEvent>();
+        public IEnumerable<TTSVisemeEvent> VisemeEvents => GetEvents<TTSVisemeEvent>();
 
         /// <summary>
-        /// Delegate for event updates
+        /// The currently used events
         /// </summary>
-        public event TTSEventContainerDelegate OnEventsUpdated;
-
-        // Current event list, not thread safe due to appending on background thread
-        private List<ITTSEvent> _events = new List<ITTSEvent>();
+        private ConcurrentQueue<ITTSEvent> _events = new ConcurrentQueue<ITTSEvent>();
 
         // Json response keys
         internal const string EVENT_TYPE_KEY = "type";
@@ -58,57 +52,43 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// Getters for a list of events based on keys
         /// </summary>
-        /// <param name="eventTypeKey">The type key for the specified event</param>
         /// <typeparam name="TEvent">The event type to be returned</typeparam>
-        public List<TEvent> GetEvents<TEvent>(string eventTypeKey = null)
+        /// <param name="eventTypeKey">An optional type key for the specified event</param>
+        public IEnumerable<TEvent> GetEvents<TEvent>(string eventTypeKey = null)
             where TEvent : ITTSEvent
         {
-            // Get new list
-            var results = new List<TEvent>();
-            // Cannot use foreach due to bg thread access
-            for (int e = 0; e < EventCount; e++)
-            {
-                // If desired type & matching event type (if provided) then return event
-                if (_events[e] is TEvent ttsEvent && (string.IsNullOrEmpty(eventTypeKey) || eventTypeKey.Equals(ttsEvent.EventType)))
-                {
-                    results.Add(ttsEvent);
-                }
-            }
-            // Return results
-            return results;
+            var results = _events.Where(e => e is TEvent
+                                             && (string.IsNullOrEmpty(eventTypeKey) || eventTypeKey.Equals(e.EventType)));
+            return results.Select(e => (TEvent)e);
         }
 
         /// <summary>
         /// Decodes and appends an event included in multiple json nodes.
         /// </summary>
-        public void AddEvents(List<WitResponseNode> events)
+        public void AddEvents(IEnumerable<WitResponseNode> events)
         {
-            // Ignore if null
-            if (events == null || events.Count == 0)
+            if (events == null)
             {
                 return;
             }
-
-            // Decode events
-            var count = 0;
-            for (int i = 0; i < events.Count; i++)
+            foreach (var e in events)
             {
-                ITTSEvent ttsEvent = DecodeEvent(events[i]);
-                if (ttsEvent != null)
-                {
-                    _events.Add(ttsEvent);
-                    count++;
-                }
+                AddEvent(e);
             }
+        }
 
-            // Stop if none were added
-            if (count == 0)
+        /// <summary>
+        /// Safely decodes and adds an event to the events list
+        /// </summary>
+        public bool AddEvent(WitResponseNode eventNode)
+        {
+            ITTSEvent ttsEvent = DecodeEvent(eventNode);
+            if (ttsEvent == null)
             {
-                return;
+                return false;
             }
-
-            // Raise events changed on main thread
-            _ = ThreadUtility.CallOnMainThread(RaiseEventsUpdated);
+            _events.Enqueue(ttsEvent);
+            return true;
         }
 
         // Decodes event based on switch statement
@@ -134,8 +114,37 @@ namespace Meta.WitAi.TTS.Data
             }
         }
 
-        // Callback for events updated
-        [Preserve]
-        private void RaiseEventsUpdated() => OnEventsUpdated?.Invoke(this);
+        /// <summary>
+        /// Called frequently to determine the closest events of a specific type to the specified sample
+        /// </summary>
+        public void GetClosestEvents<TEvent>(int sample, ref int previousEventIndex, ref TEvent previousEvent, ref TEvent nextEvent) where TEvent : ITTSEvent
+        {
+            // If no previous event or sample now before previous event, start at beginning
+            if (previousEvent == null || sample < previousEvent.SampleOffset)
+            {
+                previousEventIndex = 0;
+            }
+
+            // Iterate from previous event index
+            nextEvent = default(TEvent);
+            int i = 0;
+            foreach (var e in _events)
+            {
+                if (i >= previousEventIndex && e is TEvent tEvent)
+                {
+                    if (sample >= tEvent.SampleOffset)
+                    {
+                        previousEventIndex = i;
+                        previousEvent = tEvent;
+                    }
+                    else
+                    {
+                        nextEvent = tEvent;
+                        break;
+                    }
+                }
+                i++;
+            }
+        }
     }
 }
