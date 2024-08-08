@@ -103,6 +103,12 @@ namespace Meta.Voice.Net.WebSockets
         public event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
 
         /// <summary>
+        /// An event callback for processing a response for a request originating
+        /// on a different client with a topic this client has subscribed to.
+        /// </summary>
+        public event WitWebSocketResponseProcessor OnProcessForwardedResponse;
+
+        /// <summary>
         /// A task that will complete once the connection process completes.
         /// Response will be true if connected successfully and false otherwise.
         /// </summary>
@@ -779,7 +785,11 @@ namespace Meta.Voice.Net.WebSockets
             // Returned untracked request, generate if needed
             if (!_requests.TryGetValue(requestId, out var request))
             {
-                request = GenerateRequest(requestId, chunk);
+                // Get additional data from decoded response and send out to event listeners
+                ProcessForwardedResponse(requestId, chunk);
+
+                // Attempt to get request once more in case it was added during previous process
+                _requests.TryGetValue(requestId, out request);
             }
             if (request == null)
             {
@@ -798,6 +808,68 @@ namespace Meta.Voice.Net.WebSockets
                     request,
                     e);
                 UntrackRequest(request);
+            }
+        }
+
+        /// <summary>
+        /// Process a response for a request originating from a different source
+        /// with a topic this client has subscribed to.
+        /// </summary>
+        private void ProcessForwardedResponse(string requestId, WitChunk chunk)
+        {
+            // Ignore no longer tracked requests
+            if (_untrackedRequests.Contains(requestId))
+            {
+                Logger.Verbose("Process Forwarded Response - Ignored\nReason: Request has been cancelled\nRequest Id: {0}\nJson:\n{1}",
+                    requestId,
+                    chunk.jsonString ?? "Null");
+                return;
+            }
+            // Determine topic id if possible
+            var topicId = chunk.jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY].Value;
+            if (string.IsNullOrEmpty(topicId))
+            {
+                Logger.Warning("Process Forwarded Response - Failed\nReason: No topic id provided in response\nRequest Id: {0}\nJson:\n{1}",
+                    requestId,
+                    chunk.jsonString ?? "Null");
+                return;
+            }
+            // Check if topic is subscribed
+            var subState = GetTopicSubscriptionState(topicId);
+            if (subState != PubSubSubscriptionState.Subscribed
+                && subState != PubSubSubscriptionState.Subscribing)
+            {
+                Logger.Warning("Process Forwarded Response - Failed\nReason: Topic id is not currently subscribed to\nTopic Id: {0}\nRequest Id: {1}\nJson:\n{2}",
+                    topicId,
+                    requestId,
+                    chunk.jsonString ?? "Null");
+                return;
+            }
+            // Attempt to determine client user id
+            var clientUserId = chunk.jsonData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY].Value;
+            if (string.IsNullOrEmpty(clientUserId))
+            {
+                clientUserId = WitConstants.WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY;
+            }
+            // Perform process callback on all
+            bool processed = false;
+            if (OnProcessForwardedResponse != null)
+            {
+                foreach (var processor in OnProcessForwardedResponse.GetInvocationList())
+                {
+                    if (processor is WitWebSocketResponseProcessor witProcessor)
+                    {
+                        processed |= witProcessor(topicId, requestId, clientUserId, chunk);
+                    }
+                }
+            }
+            // Warn if unprocessed
+            if (!processed)
+            {
+                Logger.Warning("Process Forwarded Response - Ignored\nReason: No OnProcessForwardedResponse events handled the response\nTopic Id: {0}\nRequest Id: {1}\nClient User Id: {2}",
+                    topicId,
+                    requestId,
+                    clientUserId);
             }
         }
         #endregion DOWNLOAD
@@ -897,55 +969,6 @@ namespace Meta.Voice.Net.WebSockets
             }
             Logger.Info($"Untrack Request\n{request}");
             return true;
-        }
-
-        /// <summary>
-        /// Attempts to generate a request to handle a specific json response
-        /// </summary>
-        /// <param name="requestId">The request id that should be handling the response.</param>
-        /// <param name="chunk">The data chunk provided including json data</param>
-        private IWitWebSocketRequest GenerateRequest(string requestId, WitChunk chunk)
-        {
-            // Ignore no longer tracked requests
-            if (_untrackedRequests.Contains(requestId))
-            {
-                Logger.Info("Generate Request - Ignored\nReason: Request has been cancelled\nRequest Id: {0}\nJson:\n{1}",
-                    requestId,
-                    chunk.jsonString ?? "Null");
-                return null;
-            }
-            // Get topic id if possible
-            var topicId = chunk.jsonData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY].Value;
-            if (string.IsNullOrEmpty(topicId))
-            {
-                Logger.Warning("Generate Request - Failed\nReason: No topic id provided in response\nRequest Id: {0}\nJson:\n{1}",
-                    requestId,
-                    chunk.jsonString ?? "Null");
-                return null;
-            }
-            // Check if topic is subscribed
-            var subState = GetTopicSubscriptionState(topicId);
-            if (subState != PubSubSubscriptionState.Subscribed
-                && subState != PubSubSubscriptionState.Subscribing)
-            {
-                Logger.Warning("Generate Request - Failed\nReason: Topic id is not currently subscribed to\nTopic Id: {0}\nRequest Id: {1}\nJson:\n{2}",
-                    topicId,
-                    requestId,
-                    chunk.jsonString ?? "Null");
-                return null;
-            }
-            // Attempt to determine client user id
-            var clientUserId = chunk.jsonData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY].Value;
-            if (string.IsNullOrEmpty(clientUserId))
-            {
-                clientUserId = WitConstants.WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY;
-            }
-            // Generate message request if topic is found
-            Logger.Info($"Generate Request - Success\nTopic Id: {topicId}\nRequest Id: {requestId}\nClient User Id: {clientUserId}");
-            var request = new WitWebSocketMessageRequest(chunk.jsonData, requestId, clientUserId);
-            request.TopicId = topicId;
-            TrackRequest(request);
-            return request;
         }
         #endregion REQUESTS
 

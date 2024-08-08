@@ -8,10 +8,25 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
 
 namespace Meta.Voice.Net.WebSockets
 {
+    /// <summary>
+    /// A callback to process a response for a request originating from a different source
+    /// with a topic this client has subscribed to.  Should return true if processed successfully
+    /// and false if not processed successfully.
+    /// </summary>
+    public delegate bool WitWebSocketResponseProcessor(string topicId,
+        string requestId,
+        string clientUserId,
+        WitChunk responseChunk);
+
+    /// <summary>
+    /// An interface for all web socket client settings, state determinations, event callbacks,
+    /// connection, disconnection and request interactions.
+    /// </summary>
     public interface IWitWebSocketClient : IPubSubSubscriber
     {
         /// <summary>
@@ -77,6 +92,12 @@ namespace Meta.Voice.Net.WebSockets
         /// Callback on connection state change.
         /// </summary>
         event Action<WitWebSocketConnectionState> OnConnectionStateChanged;
+
+        /// <summary>
+        /// An event callback for processing a response for a request originating
+        /// on a different client with a topic this client has subscribed to.
+        /// </summary>
+        event WitWebSocketResponseProcessor OnProcessForwardedResponse;
 
         /// <summary>
         /// Attempts to connect to the specified

@@ -8,11 +8,10 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
+using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
-using Meta.WitAi;
 using UnityEngine;
 using Meta.WitAi.Attributes;
 using UnityEngine.Events;
@@ -71,6 +70,12 @@ namespace Meta.Voice.Net.WebSockets
         public UnityEvent OnUnsubscribed { get; } = new UnityEvent();
 
         /// <summary>
+        /// An event callback for processing a response for a request originating
+        /// on a different client with a topic this client adapter has subscribed to.
+        /// </summary>
+        public event WitWebSocketResponseProcessor OnProcessForwardedResponse;
+
+        /// <summary>
         /// Callback when a request is generated for the subscribed topic
         /// </summary>
         public event Action<IWitWebSocketRequest> OnRequestGenerated;
@@ -89,6 +94,17 @@ namespace Meta.Voice.Net.WebSockets
             _active = true;
             SetClientProvider(WebSocketProvider);
             Connect();
+        }
+        protected virtual bool RaiseProcessForwardedResponse(string topicId,
+            string requestId,
+            string clientUserId,
+            WitChunk responseChunk)
+        {
+            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
+            {
+                return false;
+            }
+            return OnProcessForwardedResponse?.Invoke(topicId, requestId, clientUserId, responseChunk) ?? false;
         }
         protected virtual void HandleRequestGenerated(string topicId,
             IWitWebSocketRequest request)
@@ -160,6 +176,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Connect to server if possible
             WebSocketClient.OnTopicSubscriptionStateChange += ApplySubscriptionPerTopic;
+            WebSocketClient.OnProcessForwardedResponse += RaiseProcessForwardedResponse;
             WebSocketClient.OnTopicRequestTracked += HandleRequestGenerated;
             WebSocketClient.Connect();
 
@@ -184,6 +201,7 @@ namespace Meta.Voice.Net.WebSockets
             _connected = false;
             WebSocketClient.Disconnect();
             WebSocketClient.OnTopicSubscriptionStateChange -= ApplySubscriptionPerTopic;
+            WebSocketClient.OnProcessForwardedResponse -= RaiseProcessForwardedResponse;
             WebSocketClient.OnTopicRequestTracked -= HandleRequestGenerated;
         }
         #endregion CONNECT & DISCONNECT

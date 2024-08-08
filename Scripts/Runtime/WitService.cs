@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Meta.Voice;
 using Meta.Voice.Logging;
+using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
@@ -271,6 +272,7 @@ namespace Meta.WitAi
             SetupWebSockets();
             if (_webSocketAdapter != null)
             {
+                _webSocketAdapter.OnProcessForwardedResponse += ProcessForwardedWebSocketResponse;
                 _webSocketAdapter.OnRequestGenerated += HandleWebSocketRequestGeneration;
             }
             _dynamicEntityProviders = GetComponents<IDynamicEntitiesProvider>();
@@ -284,6 +286,7 @@ namespace Meta.WitAi
             }
             if (_webSocketAdapter != null)
             {
+                _webSocketAdapter.OnProcessForwardedResponse -= ProcessForwardedWebSocketResponse;
                 _webSocketAdapter.OnRequestGenerated -= HandleWebSocketRequestGeneration;
             }
             SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -363,6 +366,22 @@ namespace Meta.WitAi
             bool useWebSockets = config != null && config.RequestType == WitRequestType.WebSocket;
             _webSocketAdapter.SetClientProvider(useWebSockets ? config : null);
             _webSocketAdapter.SetSettings(useWebSockets ? RuntimeConfiguration.pubSubSettings : null);
+        }
+
+        /// <summary>
+        /// If a response is forwarded from a request originating from a different source client on a channel
+        /// to which this adapter has subscribed then this will be called to generate a request that handles
+        /// response event callbacks.
+        /// </summary>
+        private bool ProcessForwardedWebSocketResponse(string topicId,
+            string requestId,
+            string clientUserId,
+            WitChunk responseChunk)
+        {
+            var request = new WitWebSocketMessageRequest(responseChunk.jsonData, requestId, clientUserId, RuntimeConfiguration.transcribeOnly);
+            request.TopicId = topicId;
+            _webSocketAdapter.WebSocketClient.TrackRequest(request);
+            return true;
         }
 
         /// <summary>

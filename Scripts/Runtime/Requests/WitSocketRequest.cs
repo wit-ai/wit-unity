@@ -295,11 +295,11 @@ namespace Meta.WitAi.Requests
             switch (AudioRequestOption)
             {
                 case WitAudioRequestOption.Speech:
-                    return new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                    return new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId);
                 case WitAudioRequestOption.Transcribe:
-                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, false, Options.RequestId);
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, false);
                 case WitAudioRequestOption.Dictation:
-                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, true, Options.RequestId);
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, true);
             }
             return null;
         }

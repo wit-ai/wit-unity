@@ -27,7 +27,9 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Constructor for transcribe request
         /// </summary>
-        public WitWebSocketTranscribeRequest(string endpoint, Dictionary<string, string> parameters, bool multipleSegments, string requestId = null) : base(endpoint, parameters, requestId)
+        public WitWebSocketTranscribeRequest(string endpoint, Dictionary<string, string> parameters,
+            string requestId = null, string clientUserId = null, bool multipleSegments = true)
+            : base(endpoint, parameters, requestId, clientUserId, !multipleSegments)
         {
             // Store multiple segments value
             MultipleSegments = multipleSegments;
@@ -37,22 +39,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 PostData[WitConstants.WIT_SOCKET_DATA_KEY][endpoint][WitConstants.WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY] =
                     true.ToString();
             }
-        }
-
-        /// <summary>
-        /// Returns true if 'is_final' is within the response
-        /// </summary>
-        protected override bool IsEndOfStream(WitResponseNode responseData)
-        {
-            if (!MultipleSegments)
-            {
-                if (base.IsEndOfStream(responseData))
-                {
-                    return true;
-                }
-                return responseData?[WitConstants.WIT_SOCKET_TRANSCRIBE_IS_FINAL].AsBool ?? false;
-            }
-            return false;
         }
 
         /// <summary>

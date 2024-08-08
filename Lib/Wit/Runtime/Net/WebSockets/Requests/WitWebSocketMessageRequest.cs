@@ -25,6 +25,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public string Endpoint { get; }
 
         /// <summary>
+        /// Whether or not this request should consider an end of transcription as the end of the request
+        /// </summary>
+        public bool EndWithFullTranscription { get; }
+
+        /// <summary>
         /// Callback one or more times when a chunk of json is decoded
         /// </summary>
         public event Action<WitResponseNode> OnDecodedResponse;
@@ -35,11 +40,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="externalPostData">The data used exernally for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
         /// <param name="clientUserId">A unique id that can be used to determine the interacting client user</param>
+        /// <param name="endWithFullTranscription">Whether or not this request should consider an end of transcription as the end of the request</param>
         public WitWebSocketMessageRequest(WitResponseNode externalPostData,
-            string requestId, string clientUserId)
+            string requestId, string clientUserId, bool endWithFullTranscription = false)
             : base(externalPostData, requestId, clientUserId)
         {
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
+            EndWithFullTranscription = endWithFullTranscription;
             SetResponseData(externalPostData);
             _ = WaitForTimeout();
         }
@@ -50,11 +57,14 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="endpoint">The endpoint to be used for the request</param>
         /// <param name="parameters">All additional data required for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
+        /// <param name="clientUserId">A unique id that can be used to determine the interacting client user</param>
+        /// <param name="endWithFullTranscription">Whether or not this request should consider an end of transcription as the end of the request</param>
         public WitWebSocketMessageRequest(string endpoint, Dictionary<string, string> parameters,
-            string requestId = null, string clientUserId = null)
+            string requestId = null, string clientUserId = null, bool endWithFullTranscription = false)
             : base(GetPostData(endpoint, parameters), requestId, clientUserId)
         {
             Endpoint = endpoint;
+            EndWithFullTranscription = endWithFullTranscription;
         }
 
         /// <summary>
@@ -135,7 +145,17 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         protected virtual bool IsEndOfStream(WitResponseNode responseData)
         {
-            return responseData?[WitConstants.KEY_RESPONSE_IS_FINAL].AsBool ?? false;
+            // End with final response
+            if (responseData?[WitConstants.KEY_RESPONSE_IS_FINAL].AsBool ?? false)
+            {
+                return true;
+            }
+            // If end with full transcription, do so now
+            if (EndWithFullTranscription)
+            {
+                return responseData?[WitConstants.WIT_SOCKET_TRANSCRIBE_IS_FINAL].AsBool ?? false;
+            }
+            return false;
         }
 
         /// <summary>

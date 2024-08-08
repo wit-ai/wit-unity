@@ -36,7 +36,9 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="endpoint">The endpoint to be used for the request</param>
         /// <param name="parameters">All additional data required for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
-        public WitWebSocketSpeechRequest(string endpoint, Dictionary<string, string> parameters, string requestId = null) : base(endpoint, parameters, requestId)
+        public WitWebSocketSpeechRequest(string endpoint, Dictionary<string, string> parameters,
+            string requestId = null, string clientUserId = null, bool endWithFullTranscription = false)
+            : base(endpoint, parameters, requestId, clientUserId, endWithFullTranscription)
         {
         }
 
