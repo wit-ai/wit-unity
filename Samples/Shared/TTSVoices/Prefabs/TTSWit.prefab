@@ -110,122 +110,220 @@ MonoBehaviour:
           m_Calls: []
   RequestSettings:
     _configuration: {fileID: 11400000, guid: 6329e25e1005d4845b580a523e588979, type: 2}
-    audioType: 3
+    audioType: 1
     audioStream: 1
     useEvents: 1
     audioStreamPreloadCount: 5
     audioReadyDuration: 1.5
     audioMaxDuration: 15
   _presetVoiceSettings:
-  - SettingsId: CAEL
+  - SettingsId: WIT$BRITISH BUTLER
     PrependedText: 
     AppendedText: 
-    voice: Cael
+    voice: wit$British Butler
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: CAM
+  - SettingsId: WIT$CAEL
     PrependedText: 
     AppendedText: 
-    voice: Cam
+    voice: wit$Cael
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: CARL
+  - SettingsId: WIT$CAM
     PrependedText: 
     AppendedText: 
-    voice: Carl
+    voice: wit$Cam
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: CHARLIE
+  - SettingsId: WIT$CARL
     PrependedText: 
     AppendedText: 
-    voice: Charlie
+    voice: wit$Carl
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: CODY
+  - SettingsId: WIT$CARTOON BABY
     PrependedText: 
     AppendedText: 
-    voice: Cody
+    voice: wit$Cartoon Baby
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: CONNOR
+  - SettingsId: WIT$CARTOON KID
     PrependedText: 
     AppendedText: 
-    voice: Connor
+    voice: wit$Cartoon Kid
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: COOPER
+  - SettingsId: WIT$CARTOON VILLAIN
     PrependedText: 
     AppendedText: 
-    voice: Cooper
+    voice: wit$Cartoon Villain
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: PROSPECTOR
+  - SettingsId: WIT$CHARLIE
     PrependedText: 
     AppendedText: 
-    voice: Prospector
+    voice: wit$Charlie
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: RAILEY
+  - SettingsId: WIT$COCKNEY ACCENT
     PrependedText: 
     AppendedText: 
-    voice: Railey
+    voice: wit$Cockney Accent
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: REBECCA
+  - SettingsId: WIT$CODY
     PrependedText: 
     AppendedText: 
-    voice: Rebecca
+    voice: wit$Cody
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: REMI
+  - SettingsId: WIT$COLIN
     PrependedText: 
     AppendedText: 
-    voice: Remi
+    voice: wit$Colin
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: RUBIE
+  - SettingsId: WIT$CONNOR
     PrependedText: 
     AppendedText: 
-    voice: Rubie
+    voice: wit$Connor
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: VAMPIRE
+  - SettingsId: WIT$COOPER
     PrependedText: 
     AppendedText: 
-    voice: Vampire
+    voice: wit$Cooper
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: COLIN
+  - SettingsId: WIT$DISAFFECTED
     PrependedText: 
     AppendedText: 
-    voice: Colin
+    voice: wit$Disaffected
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: ROSIE
+  - SettingsId: WIT$HOLLYWOOD
     PrependedText: 
     AppendedText: 
-    voice: Rosie
+    voice: wit$Hollywood
     style: default
     speed: 100
     pitch: 100
-  - SettingsId: HAROLD
+  - SettingsId: WIT$KENYAN ACCENT
+    PrependedText: 
+    AppendedText: 
+    voice: wit$Kenyan Accent
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$OVERCONFIDENT
     PrependedText: <speak><sfx character="chipmunk">
     AppendedText: </sfx></speak>
-    voice: Prospector
+    voice: wit$Overconfident
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$PIRATE
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Pirate
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$PROSPECTOR
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Prospector
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$RAILEY
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Railey
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$REBECCA
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Rebecca
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$REMI
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Remi
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$ROSIE
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Rosie
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$RUBIE
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Rubie
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$SOUTHERN ACCENT
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Southern Accent
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$SURFER
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Surfer
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$TRENDY
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Trendy
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$VAMPIRE
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Vampire
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$WHIMSICAL
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Whimsical
+    style: default
+    speed: 100
+    pitch: 100
+  - SettingsId: WIT$WIZARD
+    PrependedText: <speak><sfx character="chipmunk">
+    AppendedText: </sfx></speak>
+    voice: wit$Wizard
     style: default
     speed: 100
     pitch: 100

@@ -203,7 +203,7 @@ namespace Meta.WitAi
         /// <summary>
         /// Default audio type suggested for use
         /// </summary>
-        public const TTSWitAudioType TTS_TYPE_DEFAULT = TTSWitAudioType.OPUS;
+        public const TTSWitAudioType TTS_TYPE_DEFAULT = TTSWitAudioType.MPEG;
         #endregion TTS
 
         #region Response Body Runtime

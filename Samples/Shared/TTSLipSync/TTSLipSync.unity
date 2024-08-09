@@ -952,7 +952,7 @@ MonoBehaviour:
           m_Calls: []
   RequestSettings:
     _configuration: {fileID: 11400000, guid: a383f193a505b554496ca8f22be900f1, type: 2}
-    audioType: 3
+    audioType: 1
     audioStream: 1
     useEvents: 1
     audioStreamPreloadCount: 5
