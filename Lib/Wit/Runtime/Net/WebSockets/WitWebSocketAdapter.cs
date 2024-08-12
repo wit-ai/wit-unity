@@ -100,7 +100,7 @@ namespace Meta.Voice.Net.WebSockets
             string clientUserId,
             WitChunk responseChunk)
         {
-            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
+            if (!Settings.IsSubscribedTopicId(topicId))
             {
                 return false;
             }
@@ -109,7 +109,7 @@ namespace Meta.Voice.Net.WebSockets
         protected virtual void HandleRequestGenerated(string topicId,
             IWitWebSocketRequest request)
         {
-            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
+            if (!Settings.IsSubscribedTopicId(topicId))
             {
                 return;
             }
@@ -213,11 +213,8 @@ namespace Meta.Voice.Net.WebSockets
         public void SendRequest(IWitWebSocketRequest request)
         {
             // Append settings
-            if (Settings != null)
-            {
-                request.TopicId = Settings.PubSubTopicId;
-                request.PublishOptions = Settings.PublishOptions;
-            }
+            request.TopicId = Settings.PubSubTopicId;
+            request.PublishOptions = Settings.PublishOptions;
 
             // Send request
             WebSocketClient.SendRequest(request);
@@ -231,7 +228,7 @@ namespace Meta.Voice.Net.WebSockets
         public void SetSettings(PubSubSettings settings)
         {
             // Ensure spamming of subscriptions does not occur
-            if (string.Equals(settings?.PubSubTopicId, _settings?.PubSubTopicId))
+            if (Settings.Equals(settings))
             {
                 return;
             }
@@ -240,7 +237,7 @@ namespace Meta.Voice.Net.WebSockets
             Unsubscribe();
 
             // Set new topic
-            Logger.Verbose("PubSub Topic ID Set from {0} to {1}", Settings?.PubSubTopicId ?? "Null", settings?.PubSubTopicId ?? "Null");
+            Logger.Verbose("Topic set to {0}\nFrom: {1}", settings.PubSubTopicId ?? "Null", Settings.PubSubTopicId ?? "Null");
             _settings = settings;
 
             // Subscribe to new topic ids
@@ -253,13 +250,14 @@ namespace Meta.Voice.Net.WebSockets
         private void Unsubscribe()
         {
             // Ignore if null or not connected
-            if (string.IsNullOrEmpty(Settings?.PubSubTopicId) || !_connected)
+            var topicId = Settings.PubSubTopicId;
+            if (string.IsNullOrEmpty(topicId) || !_connected)
             {
                 return;
             }
 
             // Unsubscribe from topic id
-            Logger.Verbose("Unsubscribe from topic: {0}", Settings.PubSubTopicId);
+            Logger.Verbose("Unsubscribe from topic: {0}", topicId);
 
             // Iterate each subscription topic
             var topics = Settings.GetSubscribeTopics();
@@ -272,8 +270,7 @@ namespace Meta.Voice.Net.WebSockets
                 WebSocketClient.Unsubscribe(topicValue);
                 ApplySubscriptionPerTopic(topicValue, PubSubSubscriptionState.NotSubscribed);
             }
-
-            // Clear all
+            // Clear existing topic ids
             _subscriptionsPerTopic.Clear();
         }
 
@@ -283,13 +280,14 @@ namespace Meta.Voice.Net.WebSockets
         private void Subscribe()
         {
             // Ignore if null or not connected
-            if (string.IsNullOrEmpty(Settings?.PubSubTopicId) || !_connected)
+            var topicId = Settings.PubSubTopicId;
+            if (string.IsNullOrEmpty(topicId) || !_connected)
             {
                 return;
             }
 
             // Begin subscribing
-            Logger.Verbose("Subscribe to topic: {0}", Settings.PubSubTopicId);
+            Logger.Verbose("Subscribe to topic: {0}", topicId);
 
             // Iterate each subscription topic
             var topics = Settings.GetSubscribeTopics();
@@ -307,7 +305,7 @@ namespace Meta.Voice.Net.WebSockets
             PubSubSubscriptionState subscriptionState)
         {
             // Only check if currently subscribed
-            if (Settings == null || !Settings.IsSubscribedTopicId(topicId))
+            if (!Settings.IsSubscribedTopicId(topicId))
             {
                 return;
             }

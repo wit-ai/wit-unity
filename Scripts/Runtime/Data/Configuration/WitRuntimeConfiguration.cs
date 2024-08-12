@@ -81,7 +81,7 @@ namespace Meta.WitAi.Configuration
         [Tooltip("If enabled, only transcription requests will be made.")]
         public bool transcribeOnly = false;
         [Tooltip("Various publish and subscription options available for this specific service.")]
-        public PubSubSettings pubSubSettings = new PubSubSettings();
+        public PubSubSettings pubSubSettings = new PubSubSettings(string.Empty);
 
         /// <summary>
         /// An action to be invoked following any configuration data change.

@@ -18,16 +18,34 @@ namespace Meta.Voice.Net.PubSub
     /// This includes publish and subscription specific options.
     /// </summary>
     [Serializable]
-    public class PubSubSettings
+    public struct PubSubSettings
     {
         [Tooltip("The unique pubsub topic id to publish and/or subscribe to")]
         public string PubSubTopicId;
 
         [Tooltip("Toggles for publishing per response type.")]
-        public PubSubResponseOptions PublishOptions = GetDefaultOptions();
+        public PubSubResponseOptions PublishOptions;
 
         [Tooltip("Toggles for subscribing per response type.")]
-        public PubSubResponseOptions SubscribeOptions = GetDefaultOptions();
+        public PubSubResponseOptions SubscribeOptions;
+
+        /// <summary>
+        /// Default empty constructor
+        /// </summary>
+        public PubSubSettings(string pubSubTopicId = "")
+        {
+            PubSubTopicId = pubSubTopicId;
+            PublishOptions = GetDefaultOptions();
+            SubscribeOptions = GetDefaultOptions();
+        }
+
+        /// <summary>
+        /// Defined equal check for pubsub settings
+        /// </summary>
+        public bool Equals(PubSubSettings other)
+            => string.Equals(PubSubTopicId, other.PubSubTopicId)
+               && PublishOptions.Equals(other.PublishOptions)
+               && SubscribeOptions.Equals(other.SubscribeOptions);
 
         /// <summary>
         /// Gets all keys and topic ids for publishing
@@ -125,5 +143,11 @@ namespace Meta.Voice.Net.PubSub
 
         [Header("Responses returned from composer results.")]
         public bool composerResponses;
+
+        public bool Equals(PubSubResponseOptions other)
+        {
+            return transcriptionResponses == other.transcriptionResponses
+                   && composerResponses == other.composerResponses;
+        }
     }
 }

@@ -365,7 +365,7 @@ namespace Meta.WitAi
             var config = Configuration;
             bool useWebSockets = config != null && config.RequestType == WitRequestType.WebSocket;
             _webSocketAdapter.SetClientProvider(useWebSockets ? config : null);
-            _webSocketAdapter.SetSettings(useWebSockets ? RuntimeConfiguration.pubSubSettings : null);
+            _webSocketAdapter.SetSettings(useWebSockets ? RuntimeConfiguration.pubSubSettings : new PubSubSettings());
         }
 
         /// <summary>
