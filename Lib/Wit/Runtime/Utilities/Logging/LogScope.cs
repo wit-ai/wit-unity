@@ -7,7 +7,9 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using Meta.Voice.TelemetryUtilities.PerformanceTracing;
 
 namespace Meta.Voice.Logging
 {
@@ -18,6 +20,7 @@ namespace Meta.Voice.Logging
     {
         private readonly ICoreLogger _logger;
         private readonly int _sequenceId;
+        private ConcurrentDictionary<int, string> _activeSamples = new ConcurrentDictionary<int, string>();
 
         /// <summary>
         /// Constructs a logging scope to be used in "using" blocks.
@@ -168,18 +171,45 @@ namespace Meta.Voice.Logging
             params object[] parameters)
         {
             Correlate(correlationId, CorrelationID);
-            return _logger.Start(correlationId, verbosity, message, parameters);
+            var sequenceId = _logger.Start(correlationId, verbosity, message, parameters);
+            StartProfiling(sequenceId, message);
+            return sequenceId;
         }
 
         /// <inheritdoc/>
         public int Start(VLoggerVerbosity verbosity, string message, params object[] parameters)
         {
-            return _logger.Start(verbosity, message, parameters);
+            VsdkProfiler.BeginSample(message);
+            var sequenceId = _logger.Start(verbosity, message, parameters);
+            StartProfiling(sequenceId, message);
+            return sequenceId;
+        }
+
+        /// <summary>
+        /// If profiling is enabled starts profiling for the given sequence id
+        /// </summary>
+        /// <param name="sequenceId">The sequence ID to start sampling</param>
+        /// <param name="message">The message used by the profiler/logger to associate the sample</param>
+        private void StartProfiling(int sequenceId, string message)
+        {
+            if (VsdkProfiler.profilingEnabled)
+            {
+                VsdkProfiler.BeginSample(message);
+                _activeSamples[sequenceId] = message;
+            }
         }
 
         /// <inheritdoc/>
         public void End(int sequenceId)
         {
+            if (VsdkProfiler.profilingEnabled)
+            {
+                if (_activeSamples.TryRemove(sequenceId, out var message))
+                {
+                    VsdkProfiler.EndSample(message);
+                }
+            }
+
             _logger.End(sequenceId);
         }
 
