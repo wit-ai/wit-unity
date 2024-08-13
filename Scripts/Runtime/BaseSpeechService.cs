@@ -29,7 +29,7 @@ namespace Meta.WitAi
     public abstract class BaseSpeechService : MonoBehaviour
     {
         /// <inheritdoc/>
-        public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.SpeechService);
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.SpeechService);
 
         /// <summary>
         /// Whether this script should wrap all request event setups
@@ -122,7 +122,7 @@ namespace Meta.WitAi
             // Cannot send if internet is not reachable (Only works on Mobile)
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
-                _log.Error("Unable to reach the internet. Check your connection.");
+                Logger.Error("Unable to reach the internet. Check your connection.");
             }
             GetSpeechEvents()?.OnRequestInitialized.AddListener(OnRequestInit);
         }
@@ -141,7 +141,7 @@ namespace Meta.WitAi
         {
             foreach (var request in Requests.ToArray())
             {
-                request.DeactivateAudio();
+                Deactivate(request);
             }
         }
 
@@ -150,17 +150,21 @@ namespace Meta.WitAi
         /// </summary>
         public virtual void Deactivate(VoiceServiceRequest request)
         {
-            request?.DeactivateAudio();
+            if (request == null || !request.IsLocalRequest)
+            {
+                return;
+            }
+            request.DeactivateAudio();
         }
 
         /// <summary>
-        /// Deactivate and abort all requests
+        /// Deactivate and abort all locally originated requests
         /// </summary>
         public virtual void DeactivateAndAbortRequest()
         {
             foreach (var request in Requests.ToArray())
             {
-                request.Cancel();
+                DeactivateAndAbortRequest(request);
             }
         }
 
@@ -169,7 +173,11 @@ namespace Meta.WitAi
         /// </summary>
         public virtual void DeactivateAndAbortRequest(VoiceServiceRequest request)
         {
-            request?.Cancel();
+            if (request == null || !request.IsLocalRequest)
+            {
+                return;
+            }
+            request.Cancel();
         }
 
         /// <summary>
@@ -261,11 +269,11 @@ namespace Meta.WitAi
             }
             if (warn)
             {
-                _log.Error("{0}\nRequest Id: {1}", log, request?.Options?.RequestId);
+                Logger.Error("{0}\nRequest Id: {1}", log, request?.Options?.RequestId);
             }
             else
             {
-                _log.Info(log);
+                Logger.Info(log);
             }
         }
 
