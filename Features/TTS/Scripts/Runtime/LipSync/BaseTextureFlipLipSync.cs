@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Meta.Voice.Logging;
 using Meta.WitAi.TTS.Data;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -20,6 +21,8 @@ namespace Meta.WitAi.TTS.LipSync
     /// </summary>
     public abstract class BaseTextureFlipLipSync : MonoBehaviour, ILipsyncAnimator
     {
+        private readonly IVLogger _log = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);
+
         /// <summary>
         /// The material to be used for the texture flip
         /// </summary>
@@ -63,9 +66,13 @@ namespace Meta.WitAi.TTS.LipSync
         protected virtual void Awake()
         {
             RefreshTextureLookup();
+        }
+
+        private void Start()
+        {
             if (!Renderer)
             {
-                VLog.E(GetType().Name, "Texture Flip material unassigned");
+                _log.Warning("Texture Flip material unassigned on {0}", name);
             }
             SetViseme(Viseme.sil);
         }
