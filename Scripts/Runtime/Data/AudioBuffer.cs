@@ -12,9 +12,7 @@
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Meta.Voice;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
@@ -23,6 +21,7 @@ using Meta.WitAi.Interfaces;
 using Meta.WitAi.Lib;
 using UnityEngine;
 using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
 #if DEBUG_MIC
 using System.IO;
 #endif
@@ -51,10 +50,10 @@ namespace Meta.WitAi.Data
         {
             get
             {
-                if (!_instance && Application.isPlaying && !_isQuitting)
+                if (!_instance)
                 {
                     _instance = FindObjectOfType<AudioBuffer>();
-                    if (!_instance)
+                    if (CanInstantiate())
                     {
                         var audioBufferObject = new GameObject("AudioBuffer");
                         _instance = audioBufferObject.AddComponent<AudioBuffer>();
@@ -63,6 +62,11 @@ namespace Meta.WitAi.Data
                 return _instance;
             }
         }
+
+        /// <summary>
+        /// Whether or not a new buffer should be instantiated
+        /// </summary>
+        private static bool CanInstantiate() => !_instance && !_isQuitting && Application.isPlaying;
         #endregion Singleton
 
         #region Settings
@@ -99,41 +103,114 @@ namespace Meta.WitAi.Data
         /// </summary>
         public IAudioInputSource MicInput
         {
-            get
-            {
-                if (_micInput == null && Application.isPlaying)
-                {
-                    // Check this gameobject & it's children for audio input
-                    _micInput = gameObject.GetComponentInChildren<IAudioInputSource>();
-                    // Check all roots for Mic Input JIC
-                    if (_micInput == null)
-                    {
-                        foreach (var root in gameObject.scene.GetRootGameObjects())
-                        {
-                            _micInput = root.GetComponentInChildren<IAudioInputSource>();
-                            if (_micInput != null)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                    // Use default mic script
-                    if (_micInput == null)
-                    {
-                        _micInput = gameObject.AddComponent<Mic>();
-                    }
-                    // Set frequency interface if implemented
-                    if (_micInput is IAudioLevelRangeProvider micRange)
-                    {
-                        _micLevelRange = micRange;
-                    }
-                }
-                return _micInput;
-            }
+            get => _micInput as IAudioInputSource;
+            set => SetInputSource(value);
         }
         // The actual mic input being used
-        private IAudioInputSource _micInput;
+        [ObjectType(typeof(IAudioInputSource))]
+        [SerializeField] private Object _micInput;
         private IAudioLevelRangeProvider _micLevelRange;
+        private bool _active;
+
+        // Attempt to find input source
+        private IAudioInputSource FindOrCreateInputSource()
+        {
+            // Check this gameobject & it's children for audio input
+            var result = gameObject.GetComponentInChildren<IAudioInputSource>(true);
+            if (result != null)
+            {
+                return result;
+            }
+            // Check all root gameobjects for Mic input
+            foreach (var root in gameObject.scene.GetRootGameObjects())
+            {
+                result = root.GetComponentInChildren<IAudioInputSource>(true);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            // If can instantiate, do so
+            if (CanInstantiate())
+            {
+                result = gameObject.AddComponent<Mic>();
+            }
+            // Returns the result
+            return result;
+        }
+
+        // Set input source if possible
+        private void SetInputSource(IAudioInputSource newInput, bool force = false)
+        {
+            // Ignore if same as old
+            if (MicInput == newInput && !force)
+            {
+                return;
+            }
+
+            // Remove previous delegates
+            if (_active)
+            {
+                SetInputDelegates(false);
+            }
+
+            // Apply mic input
+            if (newInput is UnityEngine.Object newObj)
+            {
+                _micInput = newObj;
+                _log.Verbose("AudioBuffer set input of type: {0}", newInput.GetType().Name);
+            }
+            // Log warning if null
+            else if (newInput == null)
+            {
+                _log.Warning("AudioBuffer setting MicInput to null instead of {0}",
+                    nameof(IAudioInputSource));
+            }
+            // Log error if not UnityEngine.Object
+            else
+            {
+                _log.Error("AudioBuffer cannot set MicInput of type '{0}' since it does not inherit from {1}",
+                    newInput.GetType().Name,
+                    nameof(UnityEngine.Object));
+            }
+            // Set frequency interface if implemented
+            if (_micInput is IAudioLevelRangeProvider micRange)
+            {
+                _micLevelRange = micRange;
+            }
+
+            // Set new delegates
+            if (_active)
+            {
+                SetInputDelegates(true);
+            }
+        }
+
+        /// <summary>
+        /// Applies all required methods for input
+        /// </summary>
+        private void SetInputDelegates(bool add)
+        {
+            var mic = MicInput;
+            if (mic == null)
+            {
+                return;
+            }
+            if (add)
+            {
+                mic.OnStartRecording += OnMicRecordSuccess;
+                mic.OnStartRecordingFailed += OnMicRecordFailed;
+                mic.OnStopRecording += OnMicRecordStop;
+                mic.OnSampleReady += OnMicSampleReady;
+            }
+            else
+            {
+                mic.OnStartRecording -= OnMicRecordSuccess;
+                mic.OnStartRecordingFailed -= OnMicRecordFailed;
+                mic.OnStopRecording -= OnMicRecordStop;
+                mic.OnSampleReady -= OnMicSampleReady;
+            }
+        }
 
         /// <summary>
         /// The minimum unsigned frequency handled by the microphone
@@ -192,15 +269,30 @@ namespace Meta.WitAi.Data
         }
 
         /// <summary>
+        /// Remove instance reference
+        /// </summary>
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
+        /// <summary>
         /// Begin watching mic input
         /// </summary>
         private void OnEnable()
         {
+            // Attempt to find mic input if needed
+            if (MicInput == null)
+            {
+                MicInput = FindOrCreateInputSource();
+            }
+
             // Add delegates
-            MicInput.OnStartRecording += OnMicRecordSuccess;
-            MicInput.OnStartRecordingFailed += OnMicRecordFailed;
-            MicInput.OnStopRecording += OnMicRecordStop;
-            MicInput.OnSampleReady += OnMicSampleReady;
+            _active = true;
+            SetInputDelegates(true);
 
             // Begin recording
             if (alwaysRecording) StartRecording(this);
@@ -215,10 +307,8 @@ namespace Meta.WitAi.Data
             if (alwaysRecording) StopRecording(this);
 
             // Remove delegates
-            MicInput.OnStartRecording -= OnMicRecordSuccess;
-            MicInput.OnStartRecordingFailed -= OnMicRecordFailed;
-            MicInput.OnStopRecording -= OnMicRecordStop;
-            MicInput.OnSampleReady -= OnMicSampleReady;
+            _active = false;
+            SetInputDelegates(false);
         }
 
         /// <summary>
