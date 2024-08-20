@@ -53,7 +53,7 @@ namespace Meta.WitAi.Data
                 if (!_instance)
                 {
                     _instance = FindObjectOfType<AudioBuffer>();
-                    if (CanInstantiate())
+                    if (!_instance && CanInstantiate())
                     {
                         var audioBufferObject = new GameObject("AudioBuffer");
                         _instance = audioBufferObject.AddComponent<AudioBuffer>();
@@ -66,7 +66,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Whether or not a new buffer should be instantiated
         /// </summary>
-        private static bool CanInstantiate() => !_instance && !_isQuitting && Application.isPlaying;
+        private static bool CanInstantiate() => !_isQuitting && Application.isPlaying;
         #endregion Singleton
 
         #region Settings
@@ -140,19 +140,20 @@ namespace Meta.WitAi.Data
         }
 
         // Set input source if possible
-        private void SetInputSource(IAudioInputSource newInput, bool force = false)
+        private void SetInputSource(IAudioInputSource newInput)
         {
             // Ignore if same as old
-            if (MicInput == newInput && !force)
+            if (MicInput == newInput)
             {
                 return;
             }
 
+            // Stop previous recording
+            bool wasRecording = _recorders.Contains(this);
+            if (wasRecording) StopRecording(this);
+
             // Remove previous delegates
-            if (_active)
-            {
-                SetInputDelegates(false);
-            }
+            if (_active) SetInputDelegates(false);
 
             // Apply mic input
             if (newInput is UnityEngine.Object newObj)
@@ -180,10 +181,10 @@ namespace Meta.WitAi.Data
             }
 
             // Set new delegates
-            if (_active)
-            {
-                SetInputDelegates(true);
-            }
+            if (_active) SetInputDelegates(true);
+
+            // Start new recording
+            if (wasRecording) StartRecording(this);
         }
 
         /// <summary>
