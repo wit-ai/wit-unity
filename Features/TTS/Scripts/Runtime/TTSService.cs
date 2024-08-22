@@ -260,24 +260,27 @@ namespace Meta.WitAi.TTS
 
         private void LogState(TTSClipData clipData, string message, bool fromDisk, string error = null)
         {
+            const string log = "{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nRequest Id: {5}";
             if (!string.IsNullOrEmpty(error))
             {
-                Logger.Error("{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nError: {5}",
+                Logger.Error(log + "\nError: {6}",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
                     clipData?.voiceSettings?.SettingsId ?? "Null",
                     clipData?.readyDuration ?? 0f,
+                    clipData?.queryRequestId ?? "Null",
                     error);
             }
             else if (verboseLogging)
             {
-                Logger.Verbose("{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds",
+                Logger.Verbose(log,
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
                     clipData?.voiceSettings?.SettingsId ?? "Null",
-                    clipData?.readyDuration ?? 0f);
+                    clipData?.readyDuration ?? 0f,
+                    clipData?.queryRequestId ?? "Null");
             }
         }
         #endregion
