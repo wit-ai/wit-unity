@@ -47,6 +47,28 @@ namespace Meta.WitAi.Lib
         // Warning: Changes may not work
         public AudioEncoding AudioEncoding { get; set; } = new AudioEncoding();
 
+        #region Muting
+        /// <inheritdoc />
+        public virtual bool IsMuted { get; private set; } = false;
+
+        /// <inheritdoc />
+        public event Action OnMicMuted;
+
+        /// <inheritdoc />
+        public event Action OnMicUnmuted;
+
+        protected virtual void SetMuted(bool muted)
+        {
+            if (IsMuted != muted)
+            {
+                IsMuted = muted;
+                if(IsMuted) OnMicMuted?.Invoke();
+                else OnMicUnmuted?.Invoke();
+            }
+        }
+
+        #endregion
+
         // Used for reading
         private int _sampleCount = 0;
         private Coroutine _reader;

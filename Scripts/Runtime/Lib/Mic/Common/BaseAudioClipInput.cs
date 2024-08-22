@@ -76,6 +76,7 @@ namespace Meta.WitAi.Lib
                 return _audioEncoding;
             }
         }
+
         private AudioEncoding _audioEncoding;
 
         /// <summary>
@@ -117,6 +118,28 @@ namespace Meta.WitAi.Lib
             ActivationState = newActivationState;
             OnActivationStateChange?.Invoke(ActivationState);
         }
+
+        #region Muting
+
+        /// <inheritdoc />
+        public virtual bool IsMuted { get; private set; } = false;
+
+        /// <inheritdoc />
+        public event Action OnMicMuted;
+
+        /// <inheritdoc />
+        public event Action OnMicUnmuted;
+
+        protected virtual void SetMuted(bool muted)
+        {
+            if (IsMuted != muted)
+            {
+                IsMuted = muted;
+                if(IsMuted) OnMicMuted?.Invoke();
+                else OnMicUnmuted?.Invoke();
+            }
+        }
+        #endregion
 
         #region ACTIVATION
         // Audio activation coroutine

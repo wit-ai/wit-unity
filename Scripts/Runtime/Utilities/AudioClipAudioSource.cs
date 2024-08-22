@@ -33,6 +33,27 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
     /// <inheritdoc/>
     public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Audio);
 
+    #region Muting
+    /// <inheritdoc />
+    public virtual bool IsMuted { get; private set; } = false;
+
+    /// <inheritdoc />
+    public event Action OnMicMuted;
+
+    /// <inheritdoc />
+    public event Action OnMicUnmuted;
+
+    protected virtual void SetMuted(bool muted)
+    {
+        if (IsMuted != muted)
+        {
+            IsMuted = muted;
+            if(IsMuted) OnMicMuted?.Invoke();
+            else OnMicUnmuted?.Invoke();
+        }
+    }
+    #endregion
+
     private void Start()
     {
         foreach (var clip in _audioClips)

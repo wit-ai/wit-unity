@@ -59,5 +59,24 @@ namespace Meta.WitAi.Interfaces
         /// NOTE: Default values for AudioEncoding are server optimized to reduce latency.
         /// </summary>
         AudioEncoding AudioEncoding { get; }
+
+        #region Muting
+
+        /// <summary>
+        /// Returns true if the audio source is currently muted
+        /// </summary>
+        bool IsMuted { get; }
+
+        /// <summary>
+        /// Invoked when the user mutes their input to this audio source
+        /// </summary>
+        event Action OnMicMuted;
+
+        /// <summary>
+        /// Invoked when the user unmutes their input to this audio source
+        /// </summary>
+        event Action OnMicUnmuted;
+
+        #endregion
     }
 }

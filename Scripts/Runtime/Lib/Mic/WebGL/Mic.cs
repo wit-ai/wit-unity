@@ -39,6 +39,31 @@ namespace Meta.WitAi.Lib
         public bool IsRecording => false;
         public AudioEncoding AudioEncoding => new AudioEncoding();
         public bool IsInputAvailable => false;
+
+        #region Muting
+        /// <inheritdoc />
+        public virtual bool IsMuted { get; private set; } = false;
+
+#pragma warning disable 0067
+        /// <inheritdoc />
+        public event Action OnMicMuted;
+
+        /// <inheritdoc />
+        public event Action OnMicUnmuted;
+#pragma warning disable 0067
+
+        protected virtual void SetMuted(bool muted)
+        {
+            if (IsMuted != muted)
+            {
+                IsMuted = muted;
+                if(IsMuted) OnMicMuted?.Invoke();
+                else OnMicUnmuted?.Invoke();
+            }
+        }
+
+        #endregion
+
         public void CheckForInput()
         {
 
