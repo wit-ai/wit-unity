@@ -17,3 +17,4 @@ using System.Runtime.CompilerServices;
 [assembly:InternalsVisibleTo("Meta.WitAi.Tests.Conduit")]
 [assembly:InternalsVisibleTo("Meta.WitAi.Tests")]
 [assembly:InternalsVisibleTo("DynamicProxyGenAssembly2")]
+[assembly:InternalsVisibleTo("oculusvoicesdk_editor_1")]
