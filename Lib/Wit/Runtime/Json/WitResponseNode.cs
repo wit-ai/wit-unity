@@ -323,15 +323,82 @@ namespace Meta.WitAi.Json
 
         public override bool Equals(object obj)
         {
+            // Not same if different types
+            if (obj == null || obj.GetType() != GetType())
+            {
+                return false;
+            }
+            if (obj is WitResponseNode newNode)
+            {
+                return Equals(this, newNode);
+            }
             return System.Object.ReferenceEquals(this, obj);
+        }
+
+        public static bool Equals(WitResponseNode oldNode, WitResponseNode newNode)
+        {
+            // Same if both are null
+            if (oldNode == null && newNode == null)
+            {
+                return true;
+            }
+            // Not same if different types
+            if (oldNode == null
+                || newNode == null
+                || oldNode.GetType() != newNode.GetType())
+            {
+                return false;
+            }
+            // Not same if old value equals new value
+            if (newNode is WitResponseData)
+            {
+                if (!oldNode.Value.Equals(newNode.Value))
+                {
+                    return false;
+                }
+            }
+            // Not same if array is different
+            else if (newNode is WitResponseArray)
+            {
+                var oldArray = oldNode.AsArray;
+                var newArray = newNode.AsArray;
+                if (oldArray.Count != newArray.Count)
+                {
+                    return false;
+                }
+                for (int i = 0; i < newArray.Count; i++)
+                {
+                    if (!Equals(oldArray[i], newArray[i]))
+                    {
+                        return false;
+                    }
+                }
+            }
+            // Not same if object
+            else if (newNode is WitResponseClass)
+            {
+                var oldClass = oldNode.AsObject;
+                var newClass = newNode.AsObject;
+                if (oldClass.ChildNodeNames.Length != newClass.ChildNodeNames.Length)
+                {
+                    return false;
+                }
+                foreach (var nodeName in newClass.ChildNodeNames)
+                {
+                    if (!Equals(oldClass[nodeName], newClass[nodeName]))
+                    {
+                        return false;
+                    }
+                }
+            }
+            // Success
+            return true;
         }
 
         public override int GetHashCode()
         {
             return base.GetHashCode();
         }
-
-
         #endregion operators
 
         internal static string Escape(string aText)
