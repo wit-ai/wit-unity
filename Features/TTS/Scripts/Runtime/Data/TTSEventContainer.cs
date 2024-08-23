@@ -50,6 +50,15 @@ namespace Meta.WitAi.TTS.Data
         internal const string EVENT_PHONEME_TYPE_KEY = "PHONE";
 
         /// <summary>
+        /// Callback for each added event
+        /// </summary>
+        public event Action<WitResponseNode> OnEventJsonAdded;
+        /// <summary>
+        /// Callback for each added event
+        /// </summary>
+        public event Action<ITTSEvent> OnEventAdded;
+
+        /// <summary>
         /// Getters for a list of events based on keys
         /// </summary>
         /// <typeparam name="TEvent">The event type to be returned</typeparam>
@@ -88,6 +97,8 @@ namespace Meta.WitAi.TTS.Data
                 return false;
             }
             _events.Enqueue(ttsEvent);
+            OnEventJsonAdded?.Invoke(eventNode);
+            OnEventAdded?.Invoke(ttsEvent);
             return true;
         }
 

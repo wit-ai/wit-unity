@@ -107,7 +107,7 @@ namespace Meta.WitAi.TTS.Data
         public TTSEventContainer Events { get; } = new TTSEventContainer();
 
         /// <summary>
-        /// The file extension to be used for this specific file type
+        /// The file extension to be used for this specific file type.  Includes the period.
         /// </summary>
         public string extension;
 
