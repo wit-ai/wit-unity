@@ -8,9 +8,7 @@
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.WitAi.Json;
@@ -175,7 +173,7 @@ namespace Meta.WitAi.TTS.Utilities
 
         // Check if queued
         private bool _hasQueue = false;
-        private bool _willHaveQueue = false;
+        private bool _queueNotYetComplete = false;
 
         // Text processors
         private ISpeakerTextPreprocessor[] _textPreprocessors;
@@ -331,7 +329,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Refresh queue
         private void RefreshQueueEvents()
         {
-            bool newHasQueueStatus = IsActive || _willHaveQueue;
+            bool newHasQueueStatus = IsActive || _queueNotYetComplete;
             if (_hasQueue != newHasQueueStatus)
             {
                 _hasQueue = newHasQueueStatus;
@@ -1017,6 +1015,17 @@ namespace Meta.WitAi.TTS.Utilities
         }
 
         /// <summary>
+        /// Stops loading without calling queue completion callbacks
+        /// since additional request will be made immediately.
+        /// </summary>
+        private void StopLoadingButKeepQueue()
+        {
+            _queueNotYetComplete = true;
+            StopLoading();
+            _queueNotYetComplete = false;
+        }
+
+        /// <summary>
         /// Abort loading of all items in the load queue
         /// </summary>
         public virtual void StopLoading()
@@ -1088,7 +1097,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Generated tts clip request tracker</returns>
-        private TTSSpeakerRequestData CreateRequest(TTSSpeakerClipEvents playbackEvents, bool clearQueue)
+        private TTSSpeakerRequestData CreateRequest(TTSSpeakerClipEvents playbackEvents, bool clearQueue, bool add = true)
         {
             TTSSpeakerRequestData requestData = new TTSSpeakerRequestData();
             requestData.OnReady = (clip) => TryPlayLoadedClip(requestData);
@@ -1097,9 +1106,12 @@ namespace Meta.WitAi.TTS.Utilities
             requestData.PlaybackCompletion = new TaskCompletionSource<bool>();
             requestData.PlaybackEvents = playbackEvents ?? new TTSSpeakerClipEvents();
             requestData.StopPlaybackOnLoad = clearQueue;
-            lock (_queuedRequests)
+            if (add)
             {
-                _queuedRequests.Add(requestData);
+                lock (_queuedRequests)
+                {
+                    _queuedRequests.Add(requestData);
+                }
             }
             return requestData;
         }
@@ -1117,17 +1129,27 @@ namespace Meta.WitAi.TTS.Utilities
             TTSSpeakerClipEvents playbackEvents,
             bool clearQueue)
         {
-            // Decode voice settings async
+            // Cancel previous loading queue but dont call queue complete
+            if (clearQueue) StopLoadingButKeepQueue();
+
+            // Enqueue placeholder request
+            var requestData = CreateRequest(playbackEvents, clearQueue);
+
+            // Decode text to speak and voice settings
             string textToSpeak = null;
             TTSVoiceSettings voiceSettings = null;
-            await ThreadUtility.BackgroundAsync(Logger, () =>
+            await ThreadUtility.Background(Logger, () => DecodeTts(responseNode, out textToSpeak, out voiceSettings));
+
+            // Cancelled during decode
+            if (requestData.PlaybackCompletion.Task.IsCompleted)
             {
-                DecodeTts(responseNode, out textToSpeak, out voiceSettings);
-                return Task.FromResult(true);
-            });
+                Logger.Verbose("Canceled request during decode\nText: {0}", textToSpeak ?? "Null");
+                RemoveQueuedRequest(requestData);
+                return WitConstants.CANCEL_ERROR;
+            }
 
             // Perform speech with custom voice settings
-            return await Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, clearQueue);
+            return await Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, false, requestData);
         }
 
         /// <summary>
@@ -1143,8 +1165,9 @@ namespace Meta.WitAi.TTS.Utilities
             TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
-            bool clearQueue) =>
-            await Load(new [] { textToSpeak }, voiceSettings, diskCacheSettings, playbackEvents, clearQueue);
+            bool clearQueue,
+            TTSSpeakerRequestData requestPlaceholder = null) =>
+            await Load(new [] { textToSpeak }, voiceSettings, diskCacheSettings, playbackEvents, clearQueue, requestPlaceholder);
 
         /// <summary>
         /// Loads one or more tts clips, plays them and returns when complete
@@ -1159,7 +1182,8 @@ namespace Meta.WitAi.TTS.Utilities
             TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
-            bool clearQueue)
+            bool clearQueue,
+            TTSSpeakerRequestData requestPlaceholder = null)
         {
             // Ensure voice settings exist
             voiceSettings ??= VoiceSettings;
@@ -1167,6 +1191,7 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 var error = "No voice provided";
                 Logger.Error("{0}\nPreset: {1}", error, presetVoiceID);
+                RemoveQueuedRequest(requestPlaceholder);
                 return error;
             }
 
@@ -1184,24 +1209,39 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 var error = "No phrases provided";
                 Logger.Error(error);
+                RemoveQueuedRequest(requestPlaceholder);
                 return error;
             }
 
-            // Cancel previous loading queue
-            if (clearQueue)
-            {
-                _willHaveQueue = true;
-                StopLoading();
-                _willHaveQueue = false;
-            }
+            // Cancel previous loading queue but dont call queue complete
+            if (clearQueue) StopLoadingButKeepQueue();
 
             // Iterate voices
             var requests = new TTSSpeakerRequestData[phrases.Count];
             var tasks = new Task[phrases.Count];
             for (int i = 0; i < phrases.Count; i++)
             {
-                // Generate request data
-                var requestData = CreateRequest(playbackEvents, clearQueue);
+                // Generate request data using default method
+                TTSSpeakerRequestData requestData;
+                if (requestPlaceholder == null)
+                {
+                    requestData = CreateRequest(playbackEvents, clearQueue);
+                }
+                // If request queue placeholder was created while decoding json, use the original request queue position
+                else if (i == 0)
+                {
+                    requestData = requestPlaceholder;
+                }
+                // If text generated from json was split, insert newly generated phrases after first request queue position
+                else
+                {
+                    requestData = CreateRequest(playbackEvents, clearQueue, false);
+                    lock (_queuedRequests)
+                    {
+                        var index = _queuedRequests.IndexOf(requestPlaceholder);
+                        _queuedRequests.Insert(index + i, requestData);
+                    }
+                }
 
                 // Track requests and playback completion
                 requests[i] = requestData;
@@ -1593,6 +1633,22 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         private bool UnloadQueuedText(string textToSpeak)
             => FindAndUnloadRequests(RequestHasClipText, textToSpeak);
+
+        /// <summary>
+        /// Remove a specific queued request
+        /// </summary>
+        private void RemoveQueuedRequest(TTSSpeakerRequestData requestData)
+        {
+            if (_queuedRequests == null
+                || !_queuedRequests.Contains(requestData))
+            {
+                return;
+            }
+            lock (_queuedRequests)
+            {
+                _queuedRequests.Remove(requestData);
+            }
+        }
 
         /// <summary>
         /// Safely finds and unloads requests using the specified find method

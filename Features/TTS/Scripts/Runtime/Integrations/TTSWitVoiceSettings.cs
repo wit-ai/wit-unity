@@ -120,7 +120,7 @@ namespace Meta.WitAi.TTS.Integrations
         public static bool CanDecode(WitResponseNode responseNode)
         {
             var obj = responseNode?.AsObject;
-            return obj != null && obj.HasChild(WitConstants.ENDPOINT_TTS_PARAM) && obj.HasChild("voice");
+            return obj != null && obj.HasChild(WitConstants.ENDPOINT_TTS_PARAM) && obj.HasChild(WitConstants.TTS_VOICE);
         }
 
         /// <summary>

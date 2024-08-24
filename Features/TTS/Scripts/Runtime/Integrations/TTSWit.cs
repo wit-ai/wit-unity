@@ -255,13 +255,14 @@ namespace Meta.WitAi.TTS.Integrations
         /// <returns>True if decode was successful</returns>
         public bool DecodeTtsFromJson(WitResponseNode responseNode, out string textToSpeak, out TTSVoiceSettings voiceSettings)
         {
-            if (TTSWitVoiceSettings.CanDecode(responseNode))
+            var responseObj = responseNode?.AsObject;
+            if (responseObj != null && TTSWitVoiceSettings.CanDecode(responseObj))
             {
-                TTSWitVoiceSettings witVoice = JsonConvert.DeserializeObject<TTSWitVoiceSettings>(responseNode, null, true);
-                if (witVoice != null)
+                var witVoice = new TTSWitVoiceSettings();
+                if (witVoice.DeserializeObject(responseObj))
                 {
                     voiceSettings = witVoice;
-                    textToSpeak = responseNode[WitConstants.ENDPOINT_TTS_PARAM];
+                    textToSpeak = responseObj[WitConstants.ENDPOINT_TTS_PARAM].Value;
                     return true;
                 }
             }
