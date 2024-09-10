@@ -187,14 +187,14 @@ namespace Meta.WitAi
             var config = Configuration;
             var newOptions = WitRequestFactory.GetSetupOptions(config, requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
-            requestOptions.InputType = NLPRequestInputType.Text;
+            newOptions.InputType = NLPRequestInputType.Text;
             if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();
             }
             if (RequestProvider != null)
             {
-                var request = RequestProvider.CreateRequest(RuntimeConfiguration, requestOptions, newEvents);
+                var request = RequestProvider.CreateRequest(RuntimeConfiguration, newOptions, newEvents);
                 if (request != null)
                 {
                     return request;
@@ -204,7 +204,7 @@ namespace Meta.WitAi
             {
                 return WitSocketRequest.GetMessageRequest(config, _webSocketAdapter, newOptions, newEvents);
             }
-            return config.CreateMessageRequest(requestOptions, newEvents, _dynamicEntityProviders);
+            return config.CreateMessageRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace Meta.WitAi
             var config = Configuration;
             var newOptions = WitRequestFactory.GetSetupOptions(config, requestOptions, _dynamicEntityProviders);
             var newEvents = requestEvents ?? new VoiceServiceRequestEvents();
-            requestOptions.InputType = NLPRequestInputType.Audio;
+            newOptions.InputType = NLPRequestInputType.Audio;
             if (config != null && config.RequestType == WitRequestType.WebSocket)
             {
                 SetupWebSockets();

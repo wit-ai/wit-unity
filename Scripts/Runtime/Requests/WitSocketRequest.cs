@@ -263,7 +263,7 @@ namespace Meta.WitAi.Requests
             if (Options.InputType == NLPRequestInputType.Text)
             {
                 Options.QueryParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = Options.Text;
-                var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId);
+                var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId);
                 SetWebSocketRequest(request);
             }
             // Generate audio request
