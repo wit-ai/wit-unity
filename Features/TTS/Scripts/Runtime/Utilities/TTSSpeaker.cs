@@ -1040,7 +1040,10 @@ namespace Meta.WitAi.TTS.Utilities
             for (int r = 0; r < _queuedRequests.Count; r++)
             {
                 var request = _queuedRequests[r];
-                RaiseEvents(RaiseOnLoadAborted, request);
+                if (request != null)
+                {
+                    RaiseEvents(RaiseOnLoadAborted, request);
+                }
             }
 
             // Safely clear queue
@@ -1765,11 +1768,11 @@ namespace Meta.WitAi.TTS.Utilities
         }
         private void RaiseEvents<T>(Action<T> events, T parameter)
         {
-            RaiseEvents(() => events.Invoke(parameter));
+            RaiseEvents(() => events?.Invoke(parameter));
         }
         private void RaiseEvents<T1, T2>(Action<T1, T2> events, T1 parameter1, T2 parameter2)
         {
-            RaiseEvents(() => events.Invoke(parameter1, parameter2));
+            RaiseEvents(() => events?.Invoke(parameter1, parameter2));
         }
         // Perform start of playback queue
         protected virtual void RaiseOnPlaybackQueueBegin()
