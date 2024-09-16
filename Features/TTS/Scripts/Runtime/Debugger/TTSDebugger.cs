@@ -10,6 +10,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.WitAi.Json;
@@ -32,6 +33,14 @@ namespace Meta.WitAi.TTS.Debugger
         /// <inheritdoc/>
         public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Logging);
 
+        /// <summary>
+        /// Regex for cleaning file names
+        /// </summary>
+        private static Regex _fileCleanupRegex;
+
+        /// <summary>
+        /// Currently debugged stream data
+        /// </summary>
         private ConcurrentDictionary<string, TTSDebuggerFileStream> _streams = new ConcurrentDictionary<string, TTSDebuggerFileStream>();
 
         /// <summary>
@@ -46,10 +55,30 @@ namespace Meta.WitAi.TTS.Debugger
         }
 
         /// <summary>
+        /// Generate static regex if not yet done
+        /// </summary>
+        private static void SetupRegex()
+        {
+            // Ignore if already created
+            if (_fileCleanupRegex != null)
+            {
+                return;
+            }
+            // Generate regex
+            string invalid = new string(Path.GetInvalidFileNameChars());
+            string pattern = $"[{Regex.Escape(invalid)}]";
+            _fileCleanupRegex = new Regex(pattern);
+        }
+
+        /// <summary>
         /// Finds service and adds listeners
         /// </summary>
         private void OnEnable()
         {
+            if (!_service)
+            {
+                _service = gameObject.GetComponentInChildren<TTSService>();
+            }
             SetListeners(true);
         }
 
@@ -91,11 +120,17 @@ namespace Meta.WitAi.TTS.Debugger
             {
                 Directory.CreateDirectory(directory);
             }
+
+            // Remove invalid characters
+            SetupRegex();
+            var id = _fileCleanupRegex.Replace(clipData.clipID, string.Empty).ToLower();
+            Debug.LogFormat("[RFB DEBUG] Cleanup ID: {0}\nOriginal: {1}", id, clipData.clipID);
+
             // Delete file if needed
             var date = DateTime.Now;
             var filePath = string.Format("{0}/{1}_{2}_{3:0000}{4:00}{5:00}_{6:00}{7:00}",
                 directory,
-                clipData.clipID,
+                id,
                 clipData.extension.Substring(1),
                 date.Year,
                 date.Month,
@@ -105,11 +140,13 @@ namespace Meta.WitAi.TTS.Debugger
 
             // Log and begin debugging
             var stream = new TTSDebuggerFileStream(filePath);
-            Logger.Info("TTS Debugger - Begin\nText: {0}\nVoice: {1}\nFile Type: {2}\nPath: {3}",
+            Logger.Info("TTS Debugger - Begin\nId: {0}\nText: {1}\nVoice: {2}\nFile Type: {3}\nPath: {4}\n{5}{6}",
+                id,
                 clipData?.textToSpeak ?? "Null",
                 clipData?.voiceSettings?.UniqueId ?? "Null",
                 clipData?.extension ?? "Null",
                 stream.FilePath);
+
             clipData.clipStream.OnAddSamples += stream.AddSamples;
             clipData.Events.OnEventJsonAdded += stream.AddEvent;
             _streams[clipName] = stream;
