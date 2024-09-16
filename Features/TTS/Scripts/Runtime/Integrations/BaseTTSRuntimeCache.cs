@@ -7,12 +7,10 @@
  */
 
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Interfaces;
-using Meta.WitAi.TTS.Events;
 
 namespace Meta.WitAi.TTS.Integrations
 {

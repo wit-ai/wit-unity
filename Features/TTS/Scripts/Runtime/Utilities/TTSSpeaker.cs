@@ -1791,6 +1791,7 @@ namespace Meta.WitAi.TTS.Utilities
         {
             LogRequest("Speak Begin", requestData);
             Events?.OnInit?.Invoke(this, requestData.ClipData);
+            requestData.ClipData?.onRequestBegin?.Invoke(requestData.ClipData);
             requestData.PlaybackEvents?.OnInit?.Invoke(this, requestData.ClipData);
         }
         // Perform load begin events
@@ -1953,6 +1954,7 @@ namespace Meta.WitAi.TTS.Utilities
         {
             LogRequest("Speak Complete", requestData);
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
+            requestData.ClipData?.onRequestComplete?.Invoke(requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackCompletion?.TrySetResult(true);
         }

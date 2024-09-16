@@ -136,6 +136,15 @@ namespace Meta.WitAi.TTS.Data
         public Action<string> onDownloadComplete;
 
         /// <summary>
+        /// Called when a script has requested load and playback of this clip
+        /// </summary>
+        public Action<TTSClipData> onRequestBegin;
+        /// <summary>
+        /// Called when a script has completed load and playback of this clip
+        /// </summary>
+        public Action<TTSClipData> onRequestComplete;
+
+        /// <summary>
         /// Called when a script has queued playback with this clip
         /// </summary>
         public Action<TTSClipData> onPlaybackQueued;

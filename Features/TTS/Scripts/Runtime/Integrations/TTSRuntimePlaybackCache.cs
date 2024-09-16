@@ -7,7 +7,6 @@
  */
 
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using Meta.WitAi.TTS.Data;
 using UnityEngine;
 
@@ -19,46 +18,47 @@ namespace Meta.WitAi.TTS.Integrations
     public class TTSRuntimePlaybackCache : BaseTTSRuntimeCache
     {
         /// <summary>
-        /// The total number of playbacks requested per clip
+        /// The total number of clips requests loading and playing
         /// </summary>
-        private ConcurrentDictionary<string, int> _playbacks = new ConcurrentDictionary<string, int>();
+        private ConcurrentDictionary<string, int> _requests = new ConcurrentDictionary<string, int>();
 
         /// <summary>
         /// On setup, add delegates for playback
         /// </summary>
         protected override void SetupClip(TTSClipData clipData)
         {
-            _playbacks[clipData.clipID] = 0;
-            clipData.onPlaybackQueued += OnPlaybackBegin;
-            clipData.onPlaybackComplete += OnPlaybackComplete;
+            _requests[clipData.clipID] = 0;
+            clipData.onRequestBegin += OnRequestBegin;
+            clipData.onRequestComplete += OnRequestComplete;
             base.SetupClip(clipData);
         }
 
-        private int IncrementPlayback(string clipId, bool up)
+        /// <summary>
+        /// On request begin: increment count
+        /// </summary>
+        private void OnRequestBegin(TTSClipData clipData)
         {
-            if (!_playbacks.ContainsKey(clipId))
+            var clipId = clipData.clipID;
+            if (!_requests.TryGetValue(clipId, out int count))
             {
-                return 1;
+                count = 0;
             }
-            _playbacks[clipId] += up ? 1 : -1;
-            return _playbacks[clipId];
+            _requests[clipId] = count + 1;
         }
 
         /// <summary>
-        /// On playback begin, increment
+        /// On request complete due to load failure, cancellation or playback completion: decrement count
         /// </summary>
-        private void OnPlaybackBegin(TTSClipData clipData)
+        private void OnRequestComplete(TTSClipData clipData)
         {
-            IncrementPlayback(clipData.clipID, true);
-        }
-
-        /// <summary>
-        /// On playback complete, decrement and unload if applicable
-        /// </summary>
-        private void OnPlaybackComplete(TTSClipData clipData)
-        {
-            var playbacks = IncrementPlayback(clipData.clipID, false);
-            if (playbacks <= 0)
+            var clipId = clipData.clipID;
+            if (!_requests.TryGetValue(clipId, out int count))
+            {
+                return;
+            }
+            count = Mathf.Max(0, count - 1);
+            _requests[clipId] = count;
+            if (count == 0)
             {
                 RemoveClip(clipData.clipID);
             }
@@ -69,9 +69,9 @@ namespace Meta.WitAi.TTS.Integrations
         /// </summary>
         protected override void BreakdownClip(TTSClipData clipData)
         {
-            clipData.onPlaybackQueued -= OnPlaybackBegin;
-            clipData.onPlaybackComplete -= OnPlaybackComplete;
-            _playbacks.TryRemove(clipData.clipID, out var discard);
+            clipData.onRequestBegin -= OnRequestBegin;
+            clipData.onRequestComplete -= OnRequestComplete;
+            _requests.TryRemove(clipData.clipID, out var discard);
             base.BreakdownClip(clipData);
         }
     }
