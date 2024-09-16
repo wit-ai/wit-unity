@@ -36,10 +36,18 @@ namespace Meta.WitAi.Data
     public class AudioBuffer : MonoBehaviour
     {
         /// <inheritdoc/>
-        public IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Input);
+        public static IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Input);
+
+        private const string DEFAULT_OBJECT_NAME = nameof(AudioBuffer);
 
         #region Singleton
         private static bool _isQuitting = false;
+
+        /// <summary>
+        /// Determines if the AudioBuffer will attempt to automatically instantiate a mic object if it can't find one
+        /// when the AudioBuffer object is first enabled.
+        /// </summary>
+        public static bool instantiateMic = true;
         public void OnApplicationQuit() => _isQuitting = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -55,7 +63,8 @@ namespace Meta.WitAi.Data
                     _instance = FindObjectOfType<AudioBuffer>();
                     if (!_instance && CanInstantiate())
                     {
-                        var audioBufferObject = new GameObject("AudioBuffer");
+                        _log.Verbose("No {0} found, creating new {0}.", DEFAULT_OBJECT_NAME);
+                        var audioBufferObject = new GameObject(DEFAULT_OBJECT_NAME);
                         _instance = audioBufferObject.AddComponent<AudioBuffer>();
                     }
                 }
@@ -111,6 +120,7 @@ namespace Meta.WitAi.Data
         [SerializeField] private Object _micInput;
         private IAudioLevelRangeProvider _micLevelRange;
         private bool _active;
+        private Mic _instantiatedMic;
 
         // Attempt to find input source
         private IAudioInputSource FindOrCreateInputSource()
@@ -131,9 +141,11 @@ namespace Meta.WitAi.Data
                 }
             }
             // If can instantiate, do so
-            if (CanInstantiate())
+            if (instantiateMic && CanInstantiate())
             {
-                result = gameObject.AddComponent<Mic>();
+                _log.Verbose("No input assigned or found, {0} will use Unity Mic Input.", DEFAULT_OBJECT_NAME);
+                _instantiatedMic = gameObject.AddComponent<Mic>();
+                result = _instantiatedMic;
             }
             // Returns the result
             return result;
@@ -148,6 +160,13 @@ namespace Meta.WitAi.Data
                 return;
             }
 
+            if (_instantiatedMic && !Equals(_instantiatedMic, newInput))
+            {
+                _log.Verbose($"Replacing default mic.");
+                Destroy(_instantiatedMic);
+                _instantiatedMic = null;
+            }
+
             // Stop previous recording
             bool wasRecording = _recorders.Contains(this);
             if (wasRecording) StopRecording(this);
@@ -159,18 +178,20 @@ namespace Meta.WitAi.Data
             if (newInput is UnityEngine.Object newObj)
             {
                 _micInput = newObj;
-                _log.Verbose("AudioBuffer set input of type: {0}", newInput.GetType().Name);
+                _log.Verbose("{0} set input of type: {1}", DEFAULT_OBJECT_NAME, newInput.GetType().Name);
             }
             // Log warning if null
             else if (newInput == null)
             {
-                _log.Warning("AudioBuffer setting MicInput to null instead of {0}",
+                _log.Warning("{0} setting MicInput to null instead of {1}",
+                  DEFAULT_OBJECT_NAME,
                     nameof(IAudioInputSource));
             }
             // Log error if not UnityEngine.Object
             else
             {
-                _log.Error("AudioBuffer cannot set MicInput of type '{0}' since it does not inherit from {1}",
+                _log.Error("{0} cannot set MicInput of type '{1}' since it does not inherit from {2}",
+                  DEFAULT_OBJECT_NAME,
                     newInput.GetType().Name,
                     nameof(UnityEngine.Object));
             }
@@ -285,6 +306,17 @@ namespace Meta.WitAi.Data
         /// </summary>
         private void OnEnable()
         {
+            if (_instance && _instance != this)
+            {
+                _log.Error("Multiple {0} detected. This can lead to extra memory use and unexpected results. Duplicate was found on {1}",
+                  DEFAULT_OBJECT_NAME, name);
+            }
+
+            if (name != DEFAULT_OBJECT_NAME)
+            {
+                _log.Verbose("{0} active on {1}", DEFAULT_OBJECT_NAME, name);
+            }
+
             // Attempt to find mic input if needed
             if (MicInput == null)
             {

@@ -72,7 +72,7 @@ namespace Meta.Conduit
             }
 
             // Failed
-            VLog.E(GetType().Name, $"No Manifest found at Resources/{manifestLocalPath}");
+            VLog.W(GetType().Name, $"No Manifest found at Resources/{manifestLocalPath}, conduit will not be available.");
             return null;
         }
 
