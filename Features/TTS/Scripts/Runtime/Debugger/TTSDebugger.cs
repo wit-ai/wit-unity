@@ -124,7 +124,6 @@ namespace Meta.WitAi.TTS.Debugger
             // Remove invalid characters
             SetupRegex();
             var id = _fileCleanupRegex.Replace(clipData.clipID, string.Empty).ToLower();
-            Debug.LogFormat("[RFB DEBUG] Cleanup ID: {0}\nOriginal: {1}", id, clipData.clipID);
 
             // Delete file if needed
             var date = DateTime.Now;
