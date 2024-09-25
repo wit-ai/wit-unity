@@ -321,6 +321,7 @@ namespace Meta.WitAi.Requests
 
             // Obtain url and headers
             var uri = GetUri();
+            var url = uri.AbsoluteUri;
             var headers = GetHeaders();
             if (!string.IsNullOrEmpty(ContentType))
             {
@@ -330,7 +331,10 @@ namespace Meta.WitAi.Requests
             {
                 ContentType = contentType;
             }
-            Logger.Verbose("{0} Request<{1}>\nUrl: {2}", method, typeof(TValue).Name, uri);
+            Logger.Verbose("{0} Request\nUrl: {1}\nRequest Id: {2}",
+                method,
+                url,
+                (headers.ContainsKey(WitConstants.HEADER_REQUEST_ID) ? headers[WitConstants.HEADER_REQUEST_ID] : null) ?? "Null");
 
             // Await queue
             IsQueued = true;
@@ -352,7 +356,7 @@ namespace Meta.WitAi.Requests
                 {
                     return;
                 }
-                _request = CreateRequest(uri, method, headers);
+                _request = CreateRequest(url, method, headers);
                 var asyncOperation = _request.SendWebRequest();
                 if (asyncOperation.isDone || _request.isDone)
                 {
@@ -489,12 +493,12 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Generates UnityWebRequest
         /// </summary>
-        protected virtual UnityWebRequest CreateRequest(Uri uri,
+        protected virtual UnityWebRequest CreateRequest(string url,
             string method,
             Dictionary<string, string> headers)
         {
             // Generate request
-            var request = new UnityWebRequest(uri, method);
+            var request = new UnityWebRequest(url, method);
 
             // Apply all headers
             if (headers != null)
