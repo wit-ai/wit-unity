@@ -35,10 +35,12 @@ namespace Meta.WitAi.Requests
         /// Whether data has arrived
         /// </summary>
         public bool IsStarted { get; private set; }
-        /// <summary>
-        /// Callback for first response
-        /// </summary>
-        public event VRequestFirstResponseDelegate OnFirstResponse;
+
+        /// <inheritdoc />
+        public event VRequestResponseDelegate OnFirstResponse;
+
+        /// <inheritdoc />
+        public event VRequestResponseDelegate OnResponse;
 
         /// <summary>
         /// Current progress of the download
@@ -169,6 +171,9 @@ namespace Meta.WitAi.Requests
                 IsStarted = true;
                 OnFirstResponse?.Invoke();
             }
+
+            // Perform response callback
+            OnResponse?.Invoke();
 
             // Enqueue and then decode async
             if (WillDecodeInBackground)

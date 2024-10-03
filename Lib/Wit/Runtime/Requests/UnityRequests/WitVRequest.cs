@@ -60,7 +60,7 @@ namespace Meta.WitAi.Requests
         {
             Configuration = configuration;
             RequestId = requestId;
-            Timeout = Mathf.RoundToInt(configuration.RequestTimeoutMs / 1000f);
+            TimeoutMs = configuration.RequestTimeoutMs;
             if (string.IsNullOrEmpty(RequestId))
             {
                 RequestId = WitConstants.GetUniqueId();

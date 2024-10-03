@@ -59,7 +59,7 @@ namespace Meta.WitAi.Requests
             if (InputType == NLPRequestInputType.Text)
             {
                 _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
-                _request.Timeout = Mathf.CeilToInt(Configuration.RequestTimeoutMs / 1000f);
+                _request.TimeoutMs = Configuration.RequestTimeoutMs;
                 _request.OnDownloadProgress += SetDownloadProgress;
                 Endpoint = Configuration.GetEndpointInfo().Message;
                 ShouldPost = false;

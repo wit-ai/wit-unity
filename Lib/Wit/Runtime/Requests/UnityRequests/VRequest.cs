@@ -28,7 +28,7 @@ namespace Meta.WitAi.Requests
     /// <summary>
     /// Callback delegate for first server response
     /// </summary>
-    internal delegate void VRequestFirstResponseDelegate();
+    internal delegate void VRequestResponseDelegate();
     /// <summary>
     /// Delegate that performs decode
     /// </summary>
@@ -42,7 +42,12 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Callback for first response
         /// </summary>
-        event VRequestFirstResponseDelegate OnFirstResponse;
+        event VRequestResponseDelegate OnFirstResponse;
+
+        /// <summary>
+        /// Callback for every response, used for updating timeout
+        /// </summary>
+        event VRequestResponseDelegate OnResponse;
 
         /// <summary>
         /// Callback for download progress
@@ -196,12 +201,22 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Timeout in seconds
         /// </summary>
-        public int Timeout { get; set; } = 5;
+        [Obsolete("Use TimeoutMs instead")]
+        public int Timeout
+        {
+            get => Mathf.CeilToInt(TimeoutMs / 1000f);
+            set => TimeoutMs = value * 1000;
+        }
+
+        /// <summary>
+        /// Timeout in milliseconds
+        /// </summary>
+        public int TimeoutMs { get; set; } = 5_000;
 
         /// <summary>
         /// Callback on request first response
         /// </summary>
-        public event VRequestFirstResponseDelegate OnFirstResponse;
+        public event VRequestResponseDelegate OnFirstResponse;
 
         /// <summary>
         /// If request is currently queued to run
@@ -270,6 +285,11 @@ namespace Meta.WitAi.Requests
         /// Currently running task
         /// </summary>
         private Task _task;
+
+        /// <summary>
+        /// Datetime of last response received used for timeout
+        /// </summary>
+        private DateTime _lastResponseReceivedTime;
 
         /// <summary>
         /// Resets all data
@@ -346,7 +366,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform timeout
-            _ = PerformTimeout();
+            _ = WaitForTimeout();
 
             // Generate request on main thread and await completion
             IsRunning = true;
@@ -356,7 +376,11 @@ namespace Meta.WitAi.Requests
                 {
                     return;
                 }
+
+                // Create request
                 _request = CreateRequest(url, method, headers);
+
+                // Send request
                 var asyncOperation = _request.SendWebRequest();
                 if (asyncOperation.isDone || _request.isDone)
                 {
@@ -473,10 +497,11 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Safely performs a timeout
         /// </summary>
-        private async Task PerformTimeout()
+        private async Task WaitForTimeout()
         {
             // Awaits the timeout in ms
-            await Task.Delay(Timeout * 1000);
+            UpdateLastResponseTime();
+            await TaskUtility.WaitForTimeout(TimeoutMs, GetLastResponseTime, Completion.Task);
 
             // Ignore if complete
             if (IsComplete)
@@ -489,6 +514,17 @@ namespace Meta.WitAi.Requests
             ResponseError = WitConstants.ERROR_RESPONSE_TIMEOUT;
             Cancel();
         }
+
+        /// <summary>
+        /// Sets last response time
+        /// </summary>
+        private void UpdateLastResponseTime()
+            => _lastResponseReceivedTime = DateTime.UtcNow;
+
+        /// <summary>
+        /// Obtain last response using stored variable
+        /// </summary>
+        private DateTime GetLastResponseTime() => _lastResponseReceivedTime;
 
         /// <summary>
         /// Generates UnityWebRequest
@@ -524,6 +560,7 @@ namespace Meta.WitAi.Requests
                 if (Downloader is IVRequestDownloadDecoder downloadDecoder)
                 {
                     downloadDecoder.OnFirstResponse += RaiseFirstResponse;
+                    downloadDecoder.OnResponse += UpdateLastResponseTime;
                     downloadDecoder.OnProgress += UpdateDownloadProgress;
                 }
             }
