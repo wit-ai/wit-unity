@@ -104,6 +104,7 @@ namespace Meta.WitAi.TTS.Integrations
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
             audioType = WitConstants.TTS_TYPE_DEFAULT,
+            audioStreamTimeoutMs = WitConstants.DEFAULT_REQUEST_TIMEOUT,
             audioReadyDuration = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
             audioMaxDuration = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH,
             audioStreamPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD,
@@ -217,6 +218,7 @@ namespace Meta.WitAi.TTS.Integrations
         private WitTTSVRequest CreateHttpRequest(TTSClipData clipData)
         {
             var request = new WitTTSVRequest(Configuration, clipData.queryRequestId);
+            request.TimeoutMs = RequestSettings.audioStreamTimeoutMs;
             request.TextToSpeak = clipData.textToSpeak;
             request.TtsParameters = clipData.queryParameters;
             request.FileType = RequestSettings.audioType;
@@ -235,6 +237,7 @@ namespace Meta.WitAi.TTS.Integrations
                 RequestSettings.audioType,
                 clipData.useEvents,
                 downloadPath);
+            request.TimeoutMs = RequestSettings.audioStreamTimeoutMs;
             request.OnSamplesReceived = clipData.clipStream.AddSamples;
             request.OnEventsReceived = clipData.Events.AddEvents;
             _webSocketRequests[clipData.clipID] = request;
