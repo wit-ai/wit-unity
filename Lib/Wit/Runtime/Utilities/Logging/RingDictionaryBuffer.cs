@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Meta.Voice.Logging
@@ -21,13 +22,11 @@ namespace Meta.Voice.Logging
     internal class RingDictionaryBuffer<TKey, TValue>
     {
         private readonly int _capacity;
-        private readonly Dictionary<TKey, LinkedList<TValue>> _dictionary;
-        private readonly LinkedList<ValueTuple<TKey, TValue>> _order;
+        private readonly ConcurrentDictionary<TKey, LinkedList<TValue>> _dictionary = new();
+        private readonly ConcurrentDictionary<TKey, Object> _valueLocks = new();
         public RingDictionaryBuffer(int capacity)
         {
             _capacity = capacity;
-            _dictionary = new Dictionary<TKey, LinkedList<TValue>>();
-            _order = new LinkedList<ValueTuple<TKey, TValue>>();
         }
 
         public ICollection<TValue> this[TKey key] => _dictionary[key];
@@ -41,30 +40,36 @@ namespace Meta.Voice.Logging
         /// <returns>True if the key value was added. False otherwise.</returns>
         public bool Add(TKey key, TValue value, bool unique = false)
         {
-            if (!_dictionary.ContainsKey(key))
+            // Generate list & lock if needed
+            if (!_dictionary.TryGetValue(key, out var list))
             {
-                _dictionary[key] = new LinkedList<TValue>();
+                list = new LinkedList<TValue>();
+                _dictionary[key] = list;
+            }
+            if (!_valueLocks.TryGetValue(key, out var listLock))
+            {
+                listLock = new Object();
+                _valueLocks[key] = listLock;
             }
 
-            if (unique && _dictionary[key].Contains(value))
+            bool added = true;
+            lock (listLock)
             {
-                return false;
-            }
-
-            _dictionary[key].AddLast(value);
-            _order.AddLast(ValueTuple.Create(key, value));
-            if (_order.Count > _capacity)
-            {
-                var oldest = _order.First.Value;
-                _order.RemoveFirst();
-                _dictionary[oldest.Item1].RemoveFirst();
-                if (_dictionary[oldest.Item1].Count == 0)
+                // If unique, remove previous to resort to the start
+                if (unique && list.Contains(value))
                 {
-                    _dictionary.Remove(oldest.Item1);
+                    added = false;
+                    list.Remove(value);
+                }
+                // Add to beginning
+                list.AddFirst(value);
+                // Remove any extra
+                while (list.Count > UnityEngine.Mathf.Max(0, _capacity))
+                {
+                    list.RemoveLast();
                 }
             }
-
-            return true;
+            return added;
         }
 
         /// <summary>
@@ -84,26 +89,12 @@ namespace Meta.Voice.Logging
         /// <returns>All the entries in the buffer for that specific key.</returns>
         public IEnumerable<TValue> Extract(TKey key)
         {
-            if (_dictionary.ContainsKey(key))
+            _valueLocks.TryRemove(key, out var discard);
+            if (!_dictionary.TryRemove(key, out var list))
             {
-                var values = new List<TValue>(_dictionary[key]);
-                _dictionary.Remove(key);
-                var node = _order.First;
-                while (node != null)
-                {
-                    var nextNode = node.Next; // Save next node
-                    if (node.Value.Item1.Equals(key))
-                    {
-                        _order.Remove(node); // Remove current node
-                    }
-                    node = nextNode; // Move to next node
-                }
-                return values;
+                return new TValue[] {};
             }
-            else
-            {
-                return new List<TValue>();
-            }
+            return list;
         }
 
         /// <summary>
@@ -126,7 +117,7 @@ namespace Meta.Voice.Logging
         public void Clear()
         {
             _dictionary.Clear();
-            _order.Clear();
+            _valueLocks.Clear();
         }
     }
 }
