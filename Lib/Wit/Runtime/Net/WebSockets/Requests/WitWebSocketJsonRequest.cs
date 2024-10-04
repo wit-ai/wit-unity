@@ -105,12 +105,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// The method used to upload chunks
         /// </summary>
-        protected UploadChunkDelegate _uploader;
+        private UploadChunkDelegate _uploader;
 
         /// <summary>
         /// Start of the timeout
         /// </summary>
-        protected DateTime _lastResponseReceivedTime;
+        private DateTime _timeoutStart;
 
         /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
@@ -154,10 +154,19 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
 
             // Upload chunk
-            _uploader?.Invoke(RequestId, PostData, null);
+            UploadChunk(PostData, null);
 
             // Generate task to handle timeout error
             _ = WaitForTimeout();
+        }
+
+        /// <summary>
+        /// Upload data to the web socket
+        /// </summary>
+        protected void UploadChunk(WitResponseNode uploadJson, byte[] uploadBinary)
+        {
+            UpdateTimeoutStart();
+            _uploader?.Invoke(RequestId, uploadJson, uploadBinary);
         }
 
         /// <summary>
@@ -166,8 +175,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         protected async Task WaitForTimeout()
         {
             // Wait while not complete and not timed out
-            _lastResponseReceivedTime = DateTime.UtcNow;
-            await TaskUtility.WaitForTimeout(TimeoutMs, GetLastResponse, Completion.Task);
+            UpdateTimeoutStart();
+            await TaskUtility.WaitForTimeout(TimeoutMs, GetTimeoutStart, Completion.Task);
 
             // Ignore if completed
             if (IsComplete)
@@ -183,10 +192,16 @@ namespace Meta.Voice.Net.WebSockets.Requests
             Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
             HandleComplete();
         }
+
         /// <summary>
-        /// Getter for last response
+        /// Getter for timeout start
         /// </summary>
-        private DateTime GetLastResponse() => _lastResponseReceivedTime;
+        private DateTime GetTimeoutStart() => _timeoutStart;
+
+        /// <summary>
+        /// Refresh timeout start to current utc time
+        /// </summary>
+        protected void UpdateTimeoutStart() => _timeoutStart = DateTime.UtcNow;
 
         /// <summary>
         /// Cancel current request
@@ -271,7 +286,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="newResponseData">New response data received</param>
         protected virtual void SetResponseData(WitResponseNode newResponseData)
         {
-            _lastResponseReceivedTime = DateTime.UtcNow;
+            UpdateTimeoutStart();
             ResponseData = newResponseData;
             Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];

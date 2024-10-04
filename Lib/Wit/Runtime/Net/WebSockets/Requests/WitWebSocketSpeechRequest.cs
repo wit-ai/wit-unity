@@ -75,7 +75,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public void SendAudioData(byte[] buffer, int offset, int length)
         {
             // Ignore without upload handler
-            if (_uploader == null || !IsReadyForInput)
+            if (!IsUploading || !IsReadyForInput)
             {
                 return;
             }
@@ -87,7 +87,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 Array.Copy(buffer, offset, chunk, 0, length);
             }
             // Perform upload
-            _uploader.Invoke(RequestId, GetAdditionalPostJson(), chunk);
+            UploadChunk(GetAdditionalPostJson(), chunk);
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public virtual void CloseAudioStream()
         {
             // Ignore without upload handler
-            if (_uploader == null || !IsReadyForInput)
+            if (!IsUploading || !IsReadyForInput)
             {
                 return;
             }
@@ -106,7 +106,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             var data = new WitResponseClass();
             data[WitConstants.WIT_SOCKET_END_KEY] = new WitResponseClass();
             finalPostData[WitConstants.WIT_SOCKET_DATA_KEY] = data;
-            _uploader.Invoke(RequestId, finalPostData, null);
+            UploadChunk(finalPostData, null);
         }
 
         /// <summary>
