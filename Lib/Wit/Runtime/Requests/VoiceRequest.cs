@@ -53,9 +53,14 @@ namespace Meta.Voice
                                 || State == VoiceRequestState.Transmitting;
 
         /// <summary>
+        /// The completion source for the voice request
+        /// </summary>
+        public TaskCompletionSource<bool> Completion { get; private set; } = new();
+
+        /// <summary>
         /// Whether transmission should hold prior to send
         /// </summary>
-        public Task<bool>[] HoldTasks = null;
+        public Task HoldTask { get; set; }
 
         /// <summary>
         /// Download progress of the current request transmission
@@ -260,9 +265,9 @@ namespace Meta.Voice
         {
             _ = ThreadUtility.BackgroundAsync(Logger, async () =>
             {
-                if (HoldTasks != null)
+                if (HoldTask != null)
                 {
-                    await Task.WhenAll(HoldTasks);
+                    await HoldTask;
                 }
                 await ThreadUtility.CallOnMainThread(() =>
                 {
@@ -517,6 +522,7 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnComplete()
         {
+            Completion.SetResult(State != VoiceRequestState.Failed);
             RaiseEvent(Events?.OnComplete);
             switch (State)
             {

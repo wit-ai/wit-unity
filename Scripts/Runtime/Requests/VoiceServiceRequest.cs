@@ -40,9 +40,7 @@ namespace Meta.WitAi.Requests
 
         // Use a wit response decoder to obtain WitResponseNode from text
         protected override INLPRequestResponseDecoder<WitResponseNode> ResponseDecoder => _responseDecoder;
-        private static WitResponseDecoder _responseDecoder = new WitResponseDecoder();
-
-        public TaskCompletionSource<bool> PreparationTask => new TaskCompletionSource<bool>();
+        private static WitResponseDecoder _responseDecoder = new ();
 
         /// <summary>
         /// Check for ignored error status codes & messages.
