@@ -282,11 +282,6 @@ namespace Meta.WitAi.Requests
         private TaskCompletionSource<bool> _unityRequestComplete = new TaskCompletionSource<bool>();
 
         /// <summary>
-        /// Currently running task
-        /// </summary>
-        private Task _task;
-
-        /// <summary>
         /// Datetime of last response received used for timeout
         /// </summary>
         private DateTime _lastResponseReceivedTime;
@@ -746,7 +741,7 @@ namespace Meta.WitAi.Requests
             // Remove request from active list
             lock (_activeRequests)
             {
-                _activeRequests.Remove(_task);
+                _activeRequests.Remove(Completion.Task);
             }
 
             // Tasks waiting will immediately continue
