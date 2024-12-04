@@ -442,6 +442,7 @@ namespace Meta.WitAi.Json
 
         public static WitResponseNode Parse(string aJSON)
         {
+            if (string.IsNullOrEmpty(aJSON)) return new WitResponseClass();
             Stack<WitResponseNode> stack = new Stack<WitResponseNode>();
             WitResponseNode ctx = null;
             int i = 0;
