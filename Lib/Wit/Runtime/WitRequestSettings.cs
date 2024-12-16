@@ -202,7 +202,10 @@ namespace Meta.WitAi
             {
                 clientUserId = LocalClientUserId;
             }
-            headers[WitConstants.HEADER_CLIENT_USER_ID] = clientUserId;
+            if (!string.IsNullOrEmpty(clientUserId))
+            {
+                headers[WitConstants.HEADER_CLIENT_USER_ID] = clientUserId;
+            }
 
             #if UNITY_EDITOR || !UNITY_WEBGL
             // Set request id

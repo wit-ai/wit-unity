@@ -536,7 +536,12 @@ namespace Meta.WitAi.Requests
             {
                 foreach (var key in headers.Keys)
                 {
-                    request.SetRequestHeader(key, headers[key]);
+                    var val = headers[key];
+                    if (!string.IsNullOrEmpty(val))
+                    {
+                        request.SetRequestHeader(key, val);
+                    }
+                    else Logger.Warning("Failed to set null header value for '{0}'", key);
                 }
             }
 
