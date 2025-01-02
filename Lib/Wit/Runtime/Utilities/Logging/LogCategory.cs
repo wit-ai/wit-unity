@@ -35,6 +35,7 @@ namespace Meta.Voice.Logging
         Encoding,
         WebSockets,
         Editor,
-        Composer
+        Composer,
+        Telemetry
     }
 }

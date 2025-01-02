@@ -330,7 +330,7 @@ namespace Meta.WitAi
         private Dictionary<string, string> GetHeaders()
         {
             // Get default headers
-            Dictionary<string, string> headers = WitRequestSettings.GetHeaders(Configuration, Options?.RequestId, false);
+            Dictionary<string, string> headers = WitRequestSettings.GetHeaders(Configuration, Options, false);
 
             // Append additional headers
             if (onProvideCustomHeaders != null)
@@ -371,7 +371,7 @@ namespace Meta.WitAi
             #if UNITY_WEBGL && UNITY_EDITOR
             if (IsPost)
             {
-                Logger.Warning("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
+                _log.Warning("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
 

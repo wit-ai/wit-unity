@@ -8,6 +8,7 @@
 
 using System.Collections.Generic;
 using Meta.Voice;
+using Meta.Voice.TelemetryUtilities;
 
 namespace Meta.WitAi.Requests
 {
@@ -21,6 +22,12 @@ namespace Meta.WitAi.Requests
         /// Unique client user id used for tracking user that made specified request
         /// </summary>
         public string ClientUserId { get; private set; }
+
+        /// <summary>
+        /// Unique operation ID to assist with telemetry through communications
+        /// with other processes
+        /// </summary>
+        public string OperationId { get; set; }
 
         /// <summary>
         /// Additional request query parameters to be sent with the request
@@ -48,10 +55,11 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Setup with a specific request id and user id
         /// </summary>
-        public VoiceServiceRequestOptions(string newRequestId, string newClientUserId, params QueryParam[] newParams)
+        public VoiceServiceRequestOptions(string newRequestId, string newClientUserId, string opId, params QueryParam[] newParams)
         {
             RequestId = string.IsNullOrEmpty(newRequestId) ? WitConstants.GetUniqueId() : newRequestId;
             ClientUserId = string.IsNullOrEmpty(newClientUserId) ? WitRequestSettings.LocalClientUserId : newClientUserId;
+            OperationId = string.IsNullOrEmpty(opId) ? new OperationID(null) : opId;
             QueryParams = ConvertQueryParams(newParams);
         }
 
@@ -65,7 +73,7 @@ namespace Meta.WitAi.Requests
         /// Setup with a specific request guid
         /// </summary>
         public VoiceServiceRequestOptions(string newRequestId, params QueryParam[] newParams)
-            : this(newRequestId, null, newParams){}
+            : this(newRequestId, null, null, newParams){}
 
         /// <summary>
         /// Generates a dictionary of key/value strings from a query param array
@@ -73,14 +81,24 @@ namespace Meta.WitAi.Requests
         public static Dictionary<string, string> ConvertQueryParams(QueryParam[] newParams)
         {
             Dictionary<string, string> results = new Dictionary<string, string>();
-            foreach (var param in newParams)
-            {
+            if (newParams != null) {
+              foreach (var param in newParams)
+              {
                 if (!string.IsNullOrEmpty(param.key))
                 {
-                    results[param.key] = results[param.value];
+                  results[param.key] = results[param.value];
                 }
+              }
             }
             return results;
+        }
+
+        /// <summary>
+        /// Change the opId for options
+        /// Useful to track who's altering it rather than just making it's setter public
+        /// </summary>
+        public void SetOperationId(string opId) {
+          OperationId = opId;
         }
     }
 }

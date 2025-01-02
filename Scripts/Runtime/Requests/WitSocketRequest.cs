@@ -266,7 +266,7 @@ namespace Meta.WitAi.Requests
                 var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId);
                 SetWebSocketRequest(request);
             }
-            // Generate audio request
+            // Generate audio request if audio is still activated
             else if (Options.InputType == NLPRequestInputType.Audio)
             {
                 Options.QueryParams[WitConstants.WIT_SOCKET_CONTENT_KEY] = AudioEncoding.ToString();
@@ -436,11 +436,18 @@ namespace Meta.WitAi.Requests
         /// </summary>
         protected override void HandleAudioDeactivation()
         {
+            var abort = InputType == NLPRequestInputType.Audio && WebSocketRequest == null;
             if (WebSocketRequest is WitWebSocketSpeechRequest speechRequest)
             {
                 speechRequest.CloseAudioStream();
+                abort = !speechRequest.HasSentAudio && !speechRequest.IsComplete;
             }
             SetAudioInputState(VoiceAudioInputState.Off);
+            if (abort)
+            {
+                Logger.Verbose("Audio input disabled prior to transmission\nRequest Id: {0}\n", Options.RequestId);
+                Cancel(WitConstants.CANCEL_MESSAGE_PRE_SEND);
+            }
         }
         #endregion AUDIO
     }

@@ -221,21 +221,21 @@ namespace Meta.WitAi
             // Already complete, return
             if (request.State == VoiceRequestState.Canceled)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.RequestId, TerminationReason.Canceled);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Canceled);
                 OnRequestCancel(request);
                 OnRequestComplete(request);
                 return true;
             }
             if (request.State == VoiceRequestState.Failed)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.RequestId, TerminationReason.Failed);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Failed);
                 OnRequestFailed(request);
                 OnRequestComplete(request);
                 return true;
             }
             if (request.State == VoiceRequestState.Successful)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.RequestId, TerminationReason.Successful);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Successful);
                 OnRequestPartialResponse(request, request?.ResponseData);
                 OnRequestSuccess(request);
                 OnRequestComplete(request);
@@ -246,7 +246,6 @@ namespace Meta.WitAi
             if (ShouldWrap)
             {
                 // Call request initialized method
-                RuntimeTelemetry.Instance.StartEvent((OperationID)request.Options.RequestId, RuntimeTelemetryEventType.VoiceServiceRequest);
                 GetSpeechEvents()?.OnRequestInitialized?.Invoke(request);
 
                 // Send if desired
@@ -329,7 +328,8 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnPartialTranscription is returned with early ASR
         protected virtual void OnRequestPartialTranscription(VoiceServiceRequest request, string transcription)
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.PartialTranscriptionReceived);
+
+            Log(request, $"Request partial transcription received \nText: {transcription}");
             GetSpeechEvents()?.OnPartialTranscription?.Invoke(transcription);
             GetSpeechEvents()?.OnUserPartialTranscription?.Invoke(request.Options.ClientUserId, transcription);
         }
@@ -337,8 +337,8 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnFullTranscription is returned from request with final ASR
         protected virtual void OnRequestFullTranscription(VoiceServiceRequest request, string transcription)
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.FullTranscriptionReceived);
-            Log(request, $"Request Full Transcription\nText: {transcription}");
+
+            Log(request, $"Request Full Transcription received\nText: {transcription}");
             GetSpeechEvents()?.OnFullTranscription?.Invoke(transcription);
             GetSpeechEvents()?.OnUserFullTranscription?.Invoke(request.Options.ClientUserId, transcription);
         }
@@ -348,8 +348,6 @@ namespace Meta.WitAi
         {
             if (responseData != null)
             {
-                var requestId = request?.Options.RequestId;
-                RuntimeTelemetry.Instance.LogPoint((OperationID)requestId, RuntimeTelemetryPoint.PartialResponseReceived);
                 GetSpeechEvents()?.OnPartialResponse?.Invoke(responseData);
             }
         }

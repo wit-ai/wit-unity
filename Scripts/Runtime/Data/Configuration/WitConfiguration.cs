@@ -349,6 +349,20 @@ namespace Meta.WitAi.Data.Configuration
         {
             return _clientAccessToken;
         }
+
+
+        /// <summary>
+        /// Set application info
+        /// </summary>
+        public void SetApplicationInfo(WitAppInfo newInfo)
+        {
+            _appInfo = newInfo;
+            #if UNITY_EDITOR
+            RefreshLastUpdate();
+            SaveConfiguration();
+            #endif
+        }
+
         #if UNITY_EDITOR
         /// <summary>
         /// Returns server access token (Editor Only)
@@ -358,15 +372,6 @@ namespace Meta.WitAi.Data.Configuration
         public string GetServerAccessToken()
         {
             return WitAuthUtility.GetAppServerToken(GetApplicationId());
-        }
-        /// <summary>
-        /// Set application info
-        /// </summary>
-        public void SetApplicationInfo(WitAppInfo newInfo)
-        {
-            _appInfo = newInfo;
-            RefreshLastUpdate();
-            SaveConfiguration();
         }
 
         /// <summary>

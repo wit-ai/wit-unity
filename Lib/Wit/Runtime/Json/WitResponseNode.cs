@@ -59,6 +59,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -352,10 +353,7 @@ namespace Meta.WitAi.Json
             // Not same if old value equals new value
             if (newNode is WitResponseData)
             {
-                if (!oldNode.Value.Equals(newNode.Value))
-                {
-                    return false;
-                }
+                return string.Equals(oldNode.Value, newNode.Value);
             }
             // Not same if array is different
             else if (newNode is WitResponseArray)
@@ -442,7 +440,6 @@ namespace Meta.WitAi.Json
 
         public static WitResponseNode Parse(string aJSON)
         {
-            if (string.IsNullOrEmpty(aJSON)) return new WitResponseClass();
             Stack<WitResponseNode> stack = new Stack<WitResponseNode>();
             WitResponseNode ctx = null;
             int i = 0;
@@ -951,7 +948,7 @@ namespace Meta.WitAi.Json
 
     public class WitResponseClass : WitResponseNode, IEnumerable
     {
-        private Dictionary<string, WitResponseNode> m_Dict = new Dictionary<string, WitResponseNode>();
+        private ConcurrentDictionary<string, WitResponseNode> m_Dict = new ConcurrentDictionary<string, WitResponseNode>();
 
         public override string[] ChildNodeNames => m_Dict.Keys.ToArray();
 
@@ -968,10 +965,12 @@ namespace Meta.WitAi.Json
             }
             set
             {
+                if (string.IsNullOrEmpty(aKey))
+                    return;
                 if (m_Dict.ContainsKey(aKey))
                     m_Dict[aKey] = value;
                 else
-                    m_Dict.Add(aKey, value);
+                    m_Dict.TryAdd(aKey, value);
             }
         }
 
@@ -1004,18 +1003,17 @@ namespace Meta.WitAi.Json
                 if (m_Dict.ContainsKey(aKey))
                     m_Dict[aKey] = aItem;
                 else
-                    m_Dict.Add(aKey, aItem);
+                    m_Dict.TryAdd(aKey, aItem);
             }
             else
-                m_Dict.Add(Guid.NewGuid().ToString(), aItem);
+                m_Dict.TryAdd(Guid.NewGuid().ToString(), aItem);
         }
 
         public override WitResponseNode Remove(string aKey)
         {
             if (!m_Dict.ContainsKey(aKey))
                 return null;
-            WitResponseNode tmp = m_Dict[aKey];
-            m_Dict.Remove(aKey);
+            m_Dict.TryRemove(aKey, out var tmp);
             return tmp;
         }
 
@@ -1024,8 +1022,8 @@ namespace Meta.WitAi.Json
             if (aIndex < 0 || aIndex >= m_Dict.Count)
                 return null;
             var item = m_Dict.ElementAt(aIndex);
-            m_Dict.Remove(item.Key);
-            return item.Value;
+            m_Dict.TryRemove(item.Key, out var tmp);
+            return tmp;
         }
 
         public override WitResponseNode Remove(WitResponseNode aNode)
@@ -1033,7 +1031,7 @@ namespace Meta.WitAi.Json
             try
             {
                 var item = m_Dict.Where(k => k.Value == aNode).First();
-                m_Dict.Remove(item.Key);
+                m_Dict.TryRemove(item.Key, out var discard);
                 return aNode;
             }
             catch

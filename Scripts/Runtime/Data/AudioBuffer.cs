@@ -15,12 +15,14 @@ using System.Collections;
 using System.Collections.Generic;
 using Meta.Voice;
 using Meta.Voice.Logging;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Lib;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 #if DEBUG_MIC
 using System.IO;
@@ -63,14 +65,27 @@ namespace Meta.WitAi.Data
                     _instance = FindObjectOfType<AudioBuffer>();
                     if (!_instance && CanInstantiate())
                     {
-                        _log.Verbose("No {0} found, creating new {0}.", DEFAULT_OBJECT_NAME);
-                        var audioBufferObject = new GameObject(DEFAULT_OBJECT_NAME);
-                        _instance = audioBufferObject.AddComponent<AudioBuffer>();
+                        if (AudioBufferProvider != null)
+                        {
+                            _log.Verbose("No {0} found, creating using provider {1}.", DEFAULT_OBJECT_NAME, AudioBufferProvider.GetType().Name);
+                            _instance = AudioBufferProvider.InstantiateAudioBuffer();
+                        }
+                        if (!_instance)
+                        {
+                            _log.Verbose("No {0} found, creating using {0}.", DEFAULT_OBJECT_NAME);
+                            var audioBufferObject = new GameObject(DEFAULT_OBJECT_NAME);
+                            _instance = audioBufferObject.AddComponent<AudioBuffer>();
+                        }
                     }
                 }
                 return _instance;
             }
         }
+
+        /// <summary>
+        /// A script that will instantiate an audio buffer if needed
+        /// </summary>
+        public static IAudioBufferProvider AudioBufferProvider;
 
         /// <summary>
         /// Whether or not a new buffer should be instantiated
@@ -701,6 +716,19 @@ namespace Meta.WitAi.Data
         /// <returns>Returns the max level of the provided samples</returns>
         private float EncodeAndPush(float[] samples, int offset, int length)
         {
+            // Attempt to calculate sample rate if not determined
+            if (MicInput.AudioEncoding.samplerate <= 0
+                || (MicInput is IAudioVariableSampleRate check
+                    && check.NeedsSampleRateCalculation))
+            {
+                // Update sample rate if possible
+                UpdateSampleRate(length);
+                if (MicInput.AudioEncoding.samplerate <= 0)
+                {
+                    return 0;
+                }
+            }
+
             // Get mic encoding
             AudioEncoding micEncoding = MicInput.AudioEncoding;
             int micChannels = micEncoding.numChannels;
@@ -817,6 +845,150 @@ namespace Meta.WitAi.Data
             return _outputBuffer.CreateMarker(samples);
         }
         #endregion Marker
+
+        #region Variable Sample Rate
+        // Last sample time tracked by ticks
+        private long _lastSampleTime;
+        // First sample time of current calculation by ticks
+        private long _startSampleTime;
+        // The currently measured sample total
+        private long _measureSampleTotal;
+        // The current measurement index
+        private int _measuredSampleRateCount;
+        // The various measured sample rates
+        private readonly double[] _measuredSampleRates = new double[MEASURE_AVERAGE_COUNT];
+
+        // Timeout if no samples after interval (0.1 seconds)
+        private const int TIMEOUT_TICKS = 1_000_000;
+        // Perform calculation after interval (0.25 seconds)
+        private const int MEASURE_TICKS = 2_500_000;
+        // Total measurements to average out (2 seconds)
+        private const int MEASURE_AVERAGE_COUNT = 8;
+        // Sample rate options
+        private static readonly int[] ALLOWED_SAMPLE_RATES = new []
+        {
+            8000,
+            11025,
+            16000,
+            22050,
+            32000,
+            44100,
+            48000,
+            88200,
+            96000,
+            176400,
+            192000
+        };
+
+        /// <summary>
+        /// Calculates sample rate using the current length
+        /// </summary>
+        private void UpdateSampleRate(int sampleLength)
+        {
+            // Ignore invalid sample length
+            if (sampleLength <= 0)
+            {
+                return;
+            }
+
+            // Check if calculation restart is needed
+            var newSampleTime = DateTimeOffset.Now.Ticks;
+            var deltaSampleTime = newSampleTime - _lastSampleTime;
+            _lastSampleTime = newSampleTime;
+            if (deltaSampleTime > TIMEOUT_TICKS || _startSampleTime == 0)
+            {
+                _startSampleTime = newSampleTime;
+                _measureSampleTotal = 0;
+                return;
+            }
+
+            // Append sample length
+            int channels = MicInput.AudioEncoding.numChannels;
+            _measureSampleTotal += Mathf.FloorToInt((float)sampleLength / channels);
+
+            // Ignore until ready to calculate
+            var elapsedTicks = newSampleTime - _startSampleTime;
+            if (elapsedTicks < MEASURE_TICKS)
+            {
+                return;
+            }
+
+            // Perform calculation
+            var elapsedSeconds = elapsedTicks / 10_000_000d;
+            var samplesPerSecond = _measureSampleTotal / elapsedSeconds;
+
+            // Add to array and average out
+            var index = _measuredSampleRateCount % MEASURE_AVERAGE_COUNT;
+            _measuredSampleRates[index] = samplesPerSecond;
+            _measuredSampleRateCount++;
+            if (_measuredSampleRateCount == MEASURE_AVERAGE_COUNT * 2) _measuredSampleRateCount -= MEASURE_AVERAGE_COUNT;
+            var averageSampleRate = GetAverageSampleRate(_measuredSampleRates, _measuredSampleRateCount);
+
+            // Determine closest sample rate using averaged value
+            var closestSampleRate = GetClosestSampleRate(averageSampleRate);
+            if (MicInput.AudioEncoding.samplerate != closestSampleRate)
+            {
+                MicInput.AudioEncoding.samplerate = closestSampleRate;
+                _log.Info("Input SampleRate Set: {0}\nElapsed: {1:0.000} seconds\nAverage Samples per Second: {2}",
+                    closestSampleRate, elapsedSeconds, averageSampleRate);
+            }
+
+            // Restart calculation
+            _startSampleTime = newSampleTime;
+            _measureSampleTotal = 0;
+        }
+
+        /// <summary>
+        /// Return average sample rate
+        /// </summary>
+        private static double GetAverageSampleRate(double[] sampleRates, int sampleRateCount)
+        {
+            // Ignore if invalid total
+            var count = Mathf.Min(sampleRateCount, sampleRates.Length);
+            if (count <= 0)
+            {
+                return 0d;
+            }
+            // Iterate each sample
+            var result = 0d;
+            for (int i = 0; i < count; i++)
+            {
+                result += sampleRates[i];
+            }
+            // Return average
+            return result / count;
+        }
+
+        /// <summary>
+        /// Obtains the closest sample rate using the samples per second
+        /// </summary>
+        private static int GetClosestSampleRate(double samplesPerSecond)
+        {
+            // Iterate sample rates
+            var result = 0;
+            var diff = int.MaxValue;
+            var samplesPerSecondInt = (int)Math.Round(samplesPerSecond);
+            for (int i = 0; i < ALLOWED_SAMPLE_RATES.Length; i++)
+            {
+                // Determine difference between sample rates
+                var sampleRate = ALLOWED_SAMPLE_RATES[i];
+                var check = Mathf.Abs(sampleRate - samplesPerSecondInt);
+                // Closer, replace
+                if (check < diff)
+                {
+                    result = sampleRate;
+                    diff = check;
+                }
+                // More, return previous
+                else
+                {
+                    return result;
+                }
+            }
+            // Return result
+            return result;
+        }
+        #endregion Dynamic Sample Rate
 
 #if DEBUG_MIC
         /// <summary>

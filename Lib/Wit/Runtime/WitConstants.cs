@@ -28,6 +28,7 @@ namespace Meta.WitAi
 
         // Wit service header keys
         public const string HEADER_REQUEST_ID = "X-Wit-Client-Request-Id";
+        public const string HEADER_OP_ID = "X-Wit-Client-Operation-Id";
         public const string HEADER_CLIENT_USER_ID = "client-user-id";
         public const string HEADER_AUTH = "Authorization";
         public const string HEADER_USERAGENT = "User-Agent";
@@ -39,6 +40,7 @@ namespace Meta.WitAi
         // Wit service response keys
         public const string RESPONSE_REQUEST_ID = "client_request_id";
         public const string RESPONSE_CLIENT_USER_ID = "client_user_id";
+        public const string RESPONSE_OPERATION_ID = "operation_id";
 
         // Wit response types
         public const string RESPONSE_TYPE_KEY = "type";
@@ -60,6 +62,9 @@ namespace Meta.WitAi
         public const string ENDPOINT_MESSAGE_PARAM = "q";
         public const string ENDPOINT_JSON_DELIMITER = "\r\n";
         public const string ENDPOINT_ERROR_PARAM = "error";
+
+        /// <see cref="https://wit.ai/docs/http/20240304/#context_link"/>
+        public const string ENDPOINT_CONTEXT_PARAM = "context";
 
         // Errors
         public const string ERROR_REACHABILITY = "Endpoint not reachable";
@@ -283,6 +288,7 @@ namespace Meta.WitAi
         public const int WIT_SOCKET_RECONNECT_INTERVAL_MIN = 100; // Minimum interval in ms
         public const string WIT_SOCKET_REQUEST_ID_KEY = RESPONSE_REQUEST_ID;
         public const string WIT_SOCKET_CLIENT_USER_ID_KEY = RESPONSE_CLIENT_USER_ID;
+        public const string WIT_SOCKET_OPERATION_ID_KEY = RESPONSE_OPERATION_ID;
         public const string WIT_SOCKET_API_KEY = "api_version";
         public const string WIT_SOCKET_CONTENT_KEY = "content_type";
         // Authorization request constant keys & values
@@ -298,6 +304,9 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_TRANSCRIBE_KEY = "transcribe";
         public const string WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY = "multiple_segments";
         public const string WIT_SOCKET_TRANSCRIBE_IS_FINAL = "end_transcription";
+        public const char WIT_SOCKET_PARAM_START = '[';
+        public const char WIT_SOCKET_PARAM_END = ']';
+        public const char WIT_SOCKET_PARAM_DELIM = ',';
         // Pub/sub data keys
         public const string WIT_SOCKET_EXTERNAL_ENDPOINT_KEY = "external";
         public const string WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY = "unknown";
@@ -309,6 +318,12 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_PUBSUB_PUBLISH_KEY = "publish_topics";
         public const string WIT_SOCKET_PUBSUB_PUBLISH_TRANSCRIPTION_KEY = "1";//"TRANSCRIPTION";
         public const string WIT_SOCKET_PUBSUB_PUBLISH_COMPOSER_KEY = "2";//"COMPOSER_RESULT";
+
+        // Request Parameter Keys
+        public const string PARAM_OP_ID = "operationId";
+        public const string PARAM_REQUEST_ID = "requestID";
+        public const string PARAM_N_BEST_INTENTS = "nBestIntents";
+
         #endregion
     }
 }

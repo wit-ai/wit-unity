@@ -3,12 +3,14 @@
     "rootNamespace": "",
     "references": [
         "Meta.WitAi.Lib",
-        "Meta.WitAi.Conduit",
         "Meta.VoiceSDK.Mic.Common",
         "Meta.VoiceSDK.Mic.Other",
         "Meta.VoiceSDK.Mic.WebGL",
         "VoiceSDK.Telemetry",
-        "VoiceSDK.Telemetry.Runtime"
+        "VoiceSDK.Telemetry.Runtime",
+        "Meta.Voice.NLayer",
+        "Meta.Voice.Opus",
+        "Meta.Net.endel.nativewebsocket"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

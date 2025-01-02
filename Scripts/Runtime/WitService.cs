@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -401,7 +402,7 @@ namespace Meta.WitAi
                 return;
             }
             // Wrap web socket request
-            var options = new WitRequestOptions(webSocketRequest.RequestId, webSocketRequest.ClientUserId);
+            var options = new WitRequestOptions(webSocketRequest.RequestId, webSocketRequest.ClientUserId, webSocketRequest.OperationId);
             var voiceRequest = WitSocketRequest.GetExternalRequest(messageRequest, RuntimeConfiguration.witConfiguration, _webSocketAdapter, options);
             SetupRequest(voiceRequest);
         }
@@ -477,7 +478,6 @@ namespace Meta.WitAi
                     _minKeepAliveWasHit = false;
                     _isSoundWakeActive = true;
                     StartRecording();
-                    RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.RequestId, RuntimeTelemetryPoint.ListeningStarted);
                 }
                 else
                 {
@@ -534,6 +534,7 @@ namespace Meta.WitAi
                 ExecuteRequest(_recordingRequest);
             }
         }
+
         /// <summary>
         /// Setup recording request
         /// </summary>
@@ -580,11 +581,11 @@ namespace Meta.WitAi
             newRequest.Events.OnSuccess.AddListener(HandleResult);
             newRequest.Events.OnComplete.AddListener(HandleComplete);
 
-            // Consider initialized
-            RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.RequestId, RuntimeTelemetryEventType.VoiceServiceRequest);
-
             // Perform additional setup
             VoiceEvents?.OnRequestFinalize?.Invoke(newRequest);
+
+            // Consider initialized
+            RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.OperationId, RuntimeTelemetryEventType.VoiceServiceRequest);
 
             // Init callback
             _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
@@ -669,6 +670,8 @@ namespace Meta.WitAi
             {
                 return;
             }
+
+            RuntimeTelemetry.Instance.LogPoint(_recordingRequest.Options.OperationId, RuntimeTelemetryPoint.MicOn);
 
             // Start recording
             _buffer.StartRecording(this);
@@ -974,6 +977,7 @@ namespace Meta.WitAi
             if (request.InputType == NLPRequestInputType.Audio)
             {
                 request.Events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
+                RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.OperationId, RuntimeTelemetryPoint.FullResponseReceived);
             }
             request.Events.OnCancel.RemoveListener(HandleResult);
             request.Events.OnFailed.RemoveListener(HandleResult);

@@ -277,55 +277,56 @@ namespace Meta.Voice.Logging
         /// <param name="logEntry">The log entry.</param>
         private void Annotate(StringBuilder sb, LogEntry logEntry)
         {
-#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
+            // If cannot link to call site, only add category
             if (!Options.LinkToCallSite)
             {
-#endif
                 if (!string.IsNullOrEmpty(logEntry.Category))
                 {
-#if UNITY_EDITOR
-                    sb.Append($"[<b>{logEntry.Category}</b>] ");
-#else
                     sb.Append($"[{logEntry.Category}] ");
-#endif
                 }
-#if UNITY_EDITOR && UNITY_2021_2_OR_NEWER
-              return;
+                return;
             }
-#endif
+
+            // Get file name & file line number if applicable
             var (callSiteFileName, callSiteLineNumber) = logEntry.Context.GetCallSite();
+#if UNITY_STANDALONE_LINUX
+            // Fix for linux machines
+            callSiteFileName = callSiteFileName.Replace('\\', Path.DirectorySeparatorChar);
+#endif
             var fileName = Path.GetFileNameWithoutExtension(callSiteFileName);
-            if (fileName == logEntry.Category)
-            {
-                if (callSiteLineNumber != 0)
-                {
-#if UNITY_EDITOR
-                    sb.Append(
-                        $"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
 
-#else
-                sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
-#endif
-                }
-            }
-            else
+            // If not empty & not the file name, append category
+            if (!string.IsNullOrEmpty(logEntry.Category)
+                && !string.Equals(fileName, logEntry.Category))
             {
-#if UNITY_EDITOR
-                sb.Append($"[<b>{logEntry.Category}</b>] ");
-
-                if (callSiteLineNumber != 0)
-                {
-                    sb.Append(
-                        $"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">[{fileName}.cs:{callSiteLineNumber}]</a> ");
-                }
-#else
                 sb.Append($"[{logEntry.Category}] ");
-                if (callSiteLineNumber != 0)
-                {
-                sb.Append($"[{fileName}.cs:{callSiteLineNumber}] ");
-                }
-#endif
             }
+
+            // Ignore if file name is empty
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return;
+            }
+
+#if UNITY_EDITOR
+            // Append link in editor
+            sb.Append($"<a href=\"{callSiteFileName}\" line=\"{callSiteLineNumber}\">");
+#endif
+
+            // Add file name
+            sb.Append($"[{fileName}.cs");
+            // Add call site line number if found
+            if (callSiteLineNumber > 0) sb.Append($":{callSiteLineNumber}");
+            // Add ending
+            sb.Append("]");
+
+#if UNITY_EDITOR
+            // Add link ending
+            sb.Append("</a> ");
+#else
+            // Add ending
+            sb.Append(" ");
+#endif
         }
 
         public void WriteVerbose(string message)

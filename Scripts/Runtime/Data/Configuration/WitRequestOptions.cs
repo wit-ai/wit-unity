@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
 using Meta.WitAi.Interfaces;
@@ -48,25 +49,36 @@ namespace Meta.WitAi.Configuration
         /// <summary>
         /// Setup with a randomly generated guid
         /// </summary>
-        public WitRequestOptions(params QueryParam[] newParams) : base(newParams) {}
+        public WitRequestOptions(params QueryParam[] newParams) : base(newParams) {
+        }
 
         /// <summary>
         /// Setup with a specific guid
         /// </summary>
-        public WitRequestOptions(string newRequestId, string newClientUserId, params QueryParam[] newParams) : base(newRequestId, newClientUserId, newParams) {}
+        public WitRequestOptions(string newRequestId, string newClientUserId, string opId, params QueryParam[] newParams) : base(
+          newRequestId:newRequestId, newClientUserId:newClientUserId, opId:opId, newParams:newParams) {
+        }
 
         // Get json string. Used to get the payload for PI.
         // PI will reparse these parameters and construct it's own request.
         public string ToJsonString()
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            parameters["nBestIntents"] = nBestIntents.ToString();
-            parameters["requestID"] = RequestId;
+            parameters[WitConstants.PARAM_N_BEST_INTENTS] = nBestIntents.ToString();
+            parameters[WitConstants.PARAM_REQUEST_ID] = RequestId;
+            if (!string.IsNullOrEmpty(OperationId))
+            {
+                parameters[WitConstants.PARAM_OP_ID] = OperationId;
+                OpIdRegistry[RequestId] = OperationId;
+            }
+
             foreach (var key in QueryParams.Keys)
             {
                 parameters[key] = QueryParams[key];
             }
             return JsonConvert.SerializeObject(parameters);
         }
+
+        public static Dictionary<string, string> OpIdRegistry { get; set; } = new Dictionary<string, string>();
     }
 }

@@ -185,7 +185,7 @@ namespace Meta.WitAi
                 }
                 else
                 {
-                    logger.Error(e);
+                    logger.Error("{0}\n{1}", e.Message, e.StackTrace);
                 }
                 throw;
             }

@@ -101,6 +101,7 @@ namespace Meta.WitAi.Requests
             {
                 responseData[WitConstants.RESPONSE_REQUEST_ID] = Options?.RequestId;
                 responseData[WitConstants.RESPONSE_CLIENT_USER_ID] = Options?.ClientUserId;
+                responseData[WitConstants.RESPONSE_OPERATION_ID] = Options?.OperationId;
             }
             base.ApplyResponseData(responseData, isFinal);
         }

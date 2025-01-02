@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.Conduit;
 using Meta.Voice;
+using Meta.Voice.TelemetryUtilities;
 using Meta.WitAi.Configuration;
 using Meta.WitAi.Data;
 using Meta.WitAi.Data.Configuration;
@@ -222,6 +223,7 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
         protected override void OnRequestPartialResponse(VoiceServiceRequest request, WitResponseNode responseNode)
         {
+            RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.OperationId, RuntimeTelemetryPoint.PartialAudioFromServer);
             base.OnRequestPartialResponse(request, responseNode);
             OnValidateEarly(request, responseNode);
         }
