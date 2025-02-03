@@ -12,8 +12,9 @@ using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Logging;
 using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
-using UnityEngine;
 using Meta.WitAi.Attributes;
+using Meta.WitAi.Interfaces;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.Voice.Net.WebSockets
@@ -22,7 +23,7 @@ namespace Meta.Voice.Net.WebSockets
     /// A publish/subscribe MonoBehaviour adapter for WitWebSocketClients
     /// </summary>
     [LogCategory(LogCategory.Network, LogCategory.WebSockets)]
-    public class WitWebSocketAdapter : MonoBehaviour, IPubSubAdapter, ILogSource
+    public class WitWebSocketAdapter : MonoBehaviour, IPubSubAdapter, ILogSource, IWitInspectorTools
     {
         /// <inheritdoc/>
         public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.WebSockets);
@@ -87,6 +88,40 @@ namespace Meta.Voice.Net.WebSockets
         // Current subscriptions per topic
         private ConcurrentDictionary<string, PubSubSubscriptionState> _subscriptionsPerTopic =
             new ConcurrentDictionary<string, PubSubSubscriptionState>();
+
+        #if UNITY_EDITOR
+        // Settings
+        public bool _verboseJsonLogging = false;
+        public bool _simulateDisconnect = false;
+        public bool _simulateTimeout = false;
+        public bool _simulateError = false;
+
+        private void Update()
+        {
+            if (WebSocketClient is WitWebSocketClient wc)
+            {
+                if (_verboseJsonLogging != wc.Settings.VerboseJsonLogging)
+                {
+                    wc.Settings.VerboseJsonLogging = _verboseJsonLogging;
+                }
+                if (_simulateDisconnect)
+                {
+                    _simulateDisconnect = false;
+                    wc.SimulateDisconnect();
+                }
+                if (_simulateTimeout)
+                {
+                    _simulateTimeout = false;
+                    wc.SimulateTimeout();
+                }
+                if (_simulateError)
+                {
+                    _simulateError = false;
+                    wc.SimulateError();
+                }
+            }
+        }
+        #endif
 
         #region LIFECYCLE
         protected virtual void OnEnable()

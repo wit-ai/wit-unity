@@ -19,6 +19,7 @@ using Meta.WitAi.Json;
 using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
 using Meta.Voice.Net.WebSockets.Requests;
+using Meta.WitAi.Attributes;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -151,6 +152,48 @@ namespace Meta.Voice.Net.WebSockets
         /// Editor only option to get a custom web socket
         /// </summary>
         public Func<string, Dictionary<string, string>, IWebSocket> GetWebSocket;
+
+        /// <summary>
+        /// Requested id
+        /// </summary>
+        private const string SIMULATE_REQUESTED_ID = "REQUESTED";
+
+        /// <summary>
+        /// The request that will simulate a timeout
+        /// </summary>
+        private string _simulateTimeoutId;
+
+        /// <summary>
+        /// If true, the next request will fail
+        /// </summary>
+        private string _simulateErrorId;
+
+        /// <summary>
+        /// Simulates an abnormal disconnect on the WitWebSocketClient
+        /// </summary>
+        public void SimulateDisconnect()
+        {
+            Logger.Info("[DEBUG] Simulating Abnormal Disconnect");
+            HandleSocketDisconnect(WebSocketCloseCode.Abnormal);
+        }
+
+        /// <summary>
+        /// Simulates a timeout by ignoring all responses for the next request
+        /// </summary>
+        public void SimulateTimeout()
+        {
+            Logger.Info("[DEBUG] Simulating Request Timeout on next request");
+            _simulateTimeoutId = SIMULATE_REQUESTED_ID;
+        }
+
+        /// <summary>
+        /// Simulates an error by immediately calling an error for the next request
+        /// </summary>
+        public void SimulateError()
+        {
+            Logger.Info("[DEBUG] Simulating Request Error on next request");
+            _simulateErrorId = SIMULATE_REQUESTED_ID;
+        }
 #endif
 
         /// <summary>
@@ -822,6 +865,18 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
+            #if UNITY_EDITOR
+            // If timeout request, ignore all responses
+            if (string.Equals(_simulateTimeoutId, requestId)) return;
+
+            // If error request, throw a simulated error
+            if (string.Equals(_simulateErrorId, requestId))
+            {
+                chunk.jsonData[WitConstants.KEY_RESPONSE_CODE] = new WitResponseData(WitConstants.ERROR_CODE_GENERAL);
+                chunk.jsonData[WitConstants.KEY_RESPONSE_ERROR] = new WitResponseData("simulated error");
+            }
+            #endif
+
             // Handle download synchronously
             try
             {
@@ -932,6 +987,14 @@ namespace Meta.Voice.Net.WebSockets
             {
                 OnTopicRequestTracked?.Invoke(topicId, request);
             }
+
+            #if UNITY_EDITOR
+            // If simulate timeout selected, this request will receive no responses
+            if (string.Equals(_simulateTimeoutId, SIMULATE_REQUESTED_ID)) _simulateTimeoutId = request.RequestId;
+
+            // If simulate error request, first response throws an error
+            else if (string.Equals(_simulateErrorId, SIMULATE_REQUESTED_ID)) _simulateErrorId = request.RequestId;
+            #endif
 
             // Success
             return true;

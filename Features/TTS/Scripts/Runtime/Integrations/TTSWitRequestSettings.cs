@@ -45,12 +45,6 @@ namespace Meta.WitAi.TTS.Integrations
         public bool useEvents;
 
         /// <summary>
-        /// The amount of milliseconds required before stream times out
-        /// </summary>
-        [Tooltip("The amount of milliseconds required before stream times out")]
-        public int audioStreamTimeoutMs;
-
-        /// <summary>
         /// Number of audio clip streams to pool immediately on first enable.
         /// </summary>
         [Tooltip("Number of audio clip streams to pool immediately on first enable.")]

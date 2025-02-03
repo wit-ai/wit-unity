@@ -12,8 +12,9 @@ using System.IO;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.Voice.Audio.Decoding;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.Encoding.Wit;
-using Meta.WitAi.Requests;
+using Meta.Voice.TelemetryUtilities;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -65,6 +66,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
 
         // Re-used list for decoding
         private readonly List<WitResponseNode> _jsonDecoded = new List<WitResponseNode>();
+
+        // Counts
+        private int _sampleCount = 0;
+        private int _eventCount = 0;
+
+        /// <inheritdoc/>
+        private IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);
 
         /// <summary>
         /// Generates encoded chunk and applies reference data for all parameters
@@ -142,6 +150,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                     _jsonDecoded.AddRange(events.Childs);
                     if (_jsonDecoded.Count > 0)
                     {
+                        _eventCount += _jsonDecoded.Count;
                         OnEventsReceived.Invoke(_jsonDecoded);
                         _jsonDecoded.Clear();
                     }
@@ -150,6 +159,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 // Append binary audio data
                 if (binaryData != null && binaryData.Length > 0 && OnSamplesReceived != null && _audioDecoder != null)
                 {
+                    _sampleCount += binaryData.Length;
                     _audioDecoder.Decode(binaryData, 0, binaryData.Length, OnSamplesReceived);
                 }
 
@@ -176,7 +186,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
             catch (Exception e)
             {
-                VLog.E(GetType().Name, $"Decode Response Failed\n{ToString()}\n{e}");
+                Logger.Error("Decode Response Failed\n{0}\n\n{1}", this, e);
             }
 
             // Check for end of stream
@@ -205,7 +215,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             string downloadDirectory = Path.GetDirectoryName(DownloadPath);
             if (!Directory.Exists(downloadDirectory))
             {
-                VLog.E(nameof(WitWebSocketTtsRequest), $"Tts download file directory does not exist\nPath: {downloadDirectory}\n{ToString()}");
+                Logger.Error("Tts download file directory does not exist\nPath: {0}\n{1}", downloadDirectory, this);
                 return;
             }
             try
@@ -219,7 +229,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
             catch (Exception e)
             {
-                VLog.E(nameof(WitWebSocketTtsRequest), $"Tts download file stream generation failed\n{ToString()}\n{e}");
+                Logger.Error("Tts download file stream generation failed\n{0}\n{1}", this, e);
             }
         }
 
@@ -228,6 +238,19 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         protected override void HandleComplete()
         {
+            // No samples
+            if (_sampleCount == 0)
+            {
+                Logger.Error("No audio samples returned\n{0}", this);
+                RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioSamplesEmpty);
+            }
+            // No events
+            if (_eventCount == 0 && UseEvents)
+            {
+                Logger.Error("No audio events returned\n{0}", this);
+                RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
+            }
+
             // Close both file streams if they exist
             if (_fileStream != null)
             {

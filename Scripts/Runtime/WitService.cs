@@ -585,10 +585,12 @@ namespace Meta.WitAi
             VoiceEvents?.OnRequestFinalize?.Invoke(newRequest);
 
             // Consider initialized
-            RuntimeTelemetry.Instance.StartEvent((OperationID)newRequest.Options.OperationId, RuntimeTelemetryEventType.VoiceServiceRequest);
-
-            // Init callback
-            _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
+            var opId = (OperationID)newRequest.Options.OperationId;
+            _ = ThreadUtility.CallOnMainThread(
+                () => {
+                  RuntimeTelemetry.Instance.StartEvent(opId, RuntimeTelemetryEventType.VoiceServiceRequest);
+                  VoiceEvents?.OnRequestInitialized?.Invoke(newRequest);
+                });
         }
         /// <summary>
         /// Execute a wit request immediately
@@ -632,11 +634,18 @@ namespace Meta.WitAi
 
             // Generate request
             var request = GetTextRequest(requestOptions, requestEvents);
-            SetupRequest(request);
 
-            // Send & return
-            request.Send();
-            return Task.FromResult(request);
+            // Setup and send from background thread
+            return ThreadUtility.BackgroundAsync(
+                _log,
+                () =>
+                {
+                    SetupRequest(request);
+                    request.Send();
+                    return Task.FromResult(request);
+                }
+            );
+
         }
         #endregion TEXT REQUESTS
 
