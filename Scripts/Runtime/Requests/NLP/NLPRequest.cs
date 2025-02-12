@@ -311,7 +311,6 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnPartialResponse(TResponseData responseData)
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.OperationId, RuntimeTelemetryPoint.PartialResponseReceived);
             ThreadUtility.CallOnMainThread(() =>
             Events?.OnPartialResponse?.Invoke(responseData));
         }

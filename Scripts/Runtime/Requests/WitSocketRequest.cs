@@ -263,7 +263,7 @@ namespace Meta.WitAi.Requests
             if (Options.InputType == NLPRequestInputType.Text)
             {
                 Options.QueryParams[WitConstants.ENDPOINT_MESSAGE_PARAM] = Options.Text;
-                var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId);
+                var request = new WitWebSocketMessageRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, Options.OperationId);
                 SetWebSocketRequest(request);
             }
             // Generate audio request if audio is still activated
@@ -283,6 +283,9 @@ namespace Meta.WitAi.Requests
                 return;
             }
 
+            // Apply timeout
+            WebSocketRequest.TimeoutMs = Options.TimeoutMs;
+
             // Send request
             WebSocketAdapter.SendRequest(WebSocketRequest);
         }
@@ -295,11 +298,11 @@ namespace Meta.WitAi.Requests
             switch (AudioRequestOption)
             {
                 case WitAudioRequestOption.Speech:
-                    return new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId);
+                    return new WitWebSocketSpeechRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, Options.OperationId);
                 case WitAudioRequestOption.Transcribe:
-                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, false);
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, Options.OperationId, false);
                 case WitAudioRequestOption.Dictation:
-                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, true);
+                    return new WitWebSocketTranscribeRequest(Endpoint, Options.QueryParams, Options.RequestId, Options.ClientUserId, Options.OperationId, true);
             }
             return null;
         }

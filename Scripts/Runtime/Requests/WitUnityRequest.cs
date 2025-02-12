@@ -58,8 +58,7 @@ namespace Meta.WitAi.Requests
             // Generate a message WitVRequest
             if (InputType == NLPRequestInputType.Text)
             {
-                _request = new WitMessageVRequest(Configuration, newOptions.RequestId);
-                _request.TimeoutMs = Configuration.RequestTimeoutMs;
+                _request = new WitMessageVRequest(Configuration, newOptions.RequestId, newOptions.OperationId);
                 _request.OnDownloadProgress += SetDownloadProgress;
                 Endpoint = Configuration.GetEndpointInfo().Message;
                 ShouldPost = false;
@@ -112,6 +111,7 @@ namespace Meta.WitAi.Requests
             // Send message request
             if (_request is WitMessageVRequest messageRequest)
             {
+                _request.TimeoutMs = Options.TimeoutMs;
                 _ = ThreadUtility.BackgroundAsync(Logger,
                     async () => await SendMessageAsync(messageRequest));
             }

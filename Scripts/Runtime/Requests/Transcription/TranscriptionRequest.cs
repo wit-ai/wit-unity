@@ -163,7 +163,6 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnPartialTranscription()
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.OperationId, RuntimeTelemetryPoint.PartialTranscriptionReceivedByClient);
             ThreadUtility.CallOnMainThread(() =>
             {
                 Events?.OnPartialTranscription?.Invoke(Transcription);
@@ -176,7 +175,6 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnFullTranscription()
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.OperationId, RuntimeTelemetryPoint.FullTranscriptionReceivedByClient);
             ThreadUtility.CallOnMainThread(() =>
             {
                 Events?.OnFullTranscription?.Invoke(Transcription);
@@ -286,7 +284,6 @@ namespace Meta.Voice
         protected virtual void OnStopListening()
         {
             Log("Deactivate Audio Complete");
-            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.OperationId, RuntimeTelemetryPoint.ListeningStopped);
             RaiseEvent(Events?.OnStopListening);
 
             // Handle early cancellation

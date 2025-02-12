@@ -27,5 +27,10 @@ namespace Meta.Voice
         /// The unique operation ID for tracking the conversation from end to end
         /// </summary>
         string OperationId { get; }
+
+        /// <summary>
+        /// Request timeout is milliseconds
+        /// </summary>
+        int TimeoutMs { get; set; }
     }
 }

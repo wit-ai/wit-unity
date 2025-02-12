@@ -50,7 +50,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// The timeout in milliseconds from the initial upload to the response from the server.
         /// If no response in time, the request will fail.
         /// </summary>
-        public int TimeoutMs { get; set; } = WitConstants.DEFAULT_REQUEST_TIMEOUT;
+        public int TimeoutMs { get; set; }
 
         /// <summary>
         /// Whether or not uploading has begun
@@ -120,11 +120,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
         /// </summary>
-        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null, string clientUserId = null)
+        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null, string clientUserId = null, string operationId = null)
         {
             PostData = postData;
             RequestId = string.IsNullOrEmpty(requestId) ? WitConstants.GetUniqueId() : requestId;
             ClientUserId = string.IsNullOrEmpty(clientUserId) ? WitRequestSettings.LocalClientUserId : clientUserId;
+            OperationId = string.IsNullOrEmpty(operationId) ? WitConstants.GetUniqueId() : operationId;
         }
 
         /// <summary>
@@ -157,6 +158,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 PostData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY] = ClientUserId;
             }
+            // Set operation id
+            if (!string.IsNullOrEmpty(OperationId) && PostData != null)
+            {
+                PostData[WitConstants.WIT_SOCKET_OPERATION_ID_KEY] = OperationId;
+            }
 
             // Upload chunk
             UploadChunk(PostData, null);
@@ -170,7 +176,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         protected void UploadChunk(WitResponseNode uploadJson, byte[] uploadBinary)
         {
-            UpdateTimeoutStart();
             _uploader?.Invoke(RequestId, uploadJson, uploadBinary);
         }
 

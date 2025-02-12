@@ -20,7 +20,8 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Constructor that takes in configuration and request id
         /// </summary>
-        public WitMessageVRequest(IWitRequestConfiguration configuration, string requestId) : base(configuration, requestId)
+        public WitMessageVRequest(IWitRequestConfiguration configuration, string requestId, string operationId)
+            : base(configuration, requestId, operationId)
         {
 
         }

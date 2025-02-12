@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
@@ -173,6 +173,8 @@ namespace Meta.WitAi
         #endregion TEXT REQUESTS
 
         #region AUDIO REQUESTS
+        protected bool _waitingForFirstPartialAudio = true;
+
         /// <summary>
         /// Start listening for sound or speech from the user and start sending data to Wit.ai once sound or speech has been detected.
         /// </summary>
@@ -223,9 +225,18 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnPartialResponse is returned & tries to end early if possible
         protected override void OnRequestPartialResponse(VoiceServiceRequest request, WitResponseNode responseNode)
         {
-            RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.OperationId, RuntimeTelemetryPoint.PartialAudioFromServer);
+            if (_waitingForFirstPartialAudio) {
+              _waitingForFirstPartialAudio = false;
+              RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.OperationId, RuntimeTelemetryPoint.FirstPartialAudioFromServer);
+            }
             base.OnRequestPartialResponse(request, responseNode);
             OnValidateEarly(request, responseNode);
+        }
+
+        // Request send resets partial audio flag
+        protected override void OnRequestSend(VoiceServiceRequest request) {
+            _waitingForFirstPartialAudio = true;
+            base.OnRequestSend(request);
         }
 
         // Attempts to validate early if possible

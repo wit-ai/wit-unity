@@ -28,8 +28,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// Constructor for transcribe request
         /// </summary>
         public WitWebSocketTranscribeRequest(string endpoint, Dictionary<string, string> parameters,
-            string requestId = null, string clientUserId = null, bool multipleSegments = true)
-            : base(endpoint, parameters, requestId, clientUserId, !multipleSegments)
+            string requestId = null, string clientUserId = null, string operationId = null, bool multipleSegments = true)
+            : base(endpoint, parameters, requestId, clientUserId, operationId, !multipleSegments)
         {
             // Store multiple segments value
             MultipleSegments = multipleSegments;

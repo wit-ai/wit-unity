@@ -216,7 +216,7 @@ namespace Meta.WitAi.TTS.Integrations
         // Get tts request prior to transmission
         private WitTTSVRequest CreateHttpRequest(TTSClipData clipData)
         {
-            var request = new WitTTSVRequest(Configuration, clipData.queryRequestId);
+            var request = new WitTTSVRequest(Configuration, clipData.queryRequestId, clipData.queryOperationId);
             request.TimeoutMs = Configuration.RequestTimeoutMs;
             request.TextToSpeak = clipData.textToSpeak;
             request.TtsParameters = clipData.queryParameters;
@@ -235,7 +235,8 @@ namespace Meta.WitAi.TTS.Integrations
                 clipData.queryParameters,
                 RequestSettings.audioType,
                 clipData.useEvents,
-                downloadPath);
+                downloadPath,
+                clipData.queryOperationId);
             request.TimeoutMs = Configuration.RequestTimeoutMs;
             request.OnSamplesReceived = clipData.clipStream.AddSamples;
             request.OnEventsReceived = clipData.Events.AddEvents;

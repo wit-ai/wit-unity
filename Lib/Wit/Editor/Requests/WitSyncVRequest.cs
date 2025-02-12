@@ -21,7 +21,7 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
         public WitSyncVRequest(IWitRequestConfiguration configuration)
-            : base(configuration, null, true) {}
+            : base(configuration, null, null, true) {}
 
         /// <summary>
         /// Submits an intent to be added to the current wit app

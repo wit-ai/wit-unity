@@ -29,6 +29,9 @@ namespace Meta.WitAi.Requests
         /// </summary>
         public string OperationId { get; set; }
 
+        /// <inheritdoc/>
+        public int TimeoutMs { get; set; }
+
         /// <summary>
         /// Additional request query parameters to be sent with the request
         /// </summary>
@@ -55,11 +58,11 @@ namespace Meta.WitAi.Requests
         /// <summary>
         /// Setup with a specific request id and user id
         /// </summary>
-        public VoiceServiceRequestOptions(string newRequestId, string newClientUserId, string opId, params QueryParam[] newParams)
+        public VoiceServiceRequestOptions(string newRequestId, string newClientUserId, string newOperationId, params QueryParam[] newParams)
         {
             RequestId = string.IsNullOrEmpty(newRequestId) ? WitConstants.GetUniqueId() : newRequestId;
             ClientUserId = string.IsNullOrEmpty(newClientUserId) ? WitRequestSettings.LocalClientUserId : newClientUserId;
-            OperationId = string.IsNullOrEmpty(opId) ? new OperationID(null) : opId;
+            OperationId = string.IsNullOrEmpty(newOperationId) ? WitConstants.GetUniqueId() : newOperationId;
             QueryParams = ConvertQueryParams(newParams);
         }
 

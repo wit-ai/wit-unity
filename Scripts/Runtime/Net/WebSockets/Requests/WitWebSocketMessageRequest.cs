@@ -40,10 +40,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="externalPostData">The data used exernally for the request</param>
         /// <param name="requestId">A unique id to be used for the request</param>
         /// <param name="clientUserId">A unique id that can be used to determine the interacting client user</param>
+        /// <param name="operationId">A unique id used to trace the data through an entire set of transactions for a larger purpose (e.g. user to LLM conversation)</param>
         /// <param name="endWithFullTranscription">Whether or not this request should consider an end of transcription as the end of the request</param>
         public WitWebSocketMessageRequest(WitResponseNode externalPostData,
-            string requestId, string clientUserId, bool endWithFullTranscription = false)
-            : base(externalPostData, requestId, clientUserId)
+            string requestId, string clientUserId, string operationId, bool endWithFullTranscription = false)
+            : base(externalPostData, requestId, clientUserId, operationId)
         {
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
             EndWithFullTranscription = endWithFullTranscription;
@@ -60,8 +61,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <param name="clientUserId">A unique id that can be used to determine the interacting client user</param>
         /// <param name="endWithFullTranscription">Whether or not this request should consider an end of transcription as the end of the request</param>
         public WitWebSocketMessageRequest(string endpoint, Dictionary<string, string> parameters,
-            string requestId = null, string clientUserId = null, bool endWithFullTranscription = false)
-            : base(GetPostData(endpoint, parameters), requestId, clientUserId)
+            string requestId = null, string clientUserId = null, string operationId = null, bool endWithFullTranscription = false)
+            : base(GetPostData(endpoint, parameters), requestId, clientUserId, operationId)
         {
             Endpoint = endpoint;
             EndWithFullTranscription = endWithFullTranscription;

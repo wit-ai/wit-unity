@@ -43,6 +43,7 @@ namespace Meta.WitAi.TTS.Data
         /// Unique request id used for tracking & logging
         /// </summary>
         public string queryRequestId { get; } = WitConstants.GetUniqueId();
+        public string queryOperationId;
         // Whether service should stream audio or just provide all at once
         public bool queryStream;
         // Request data

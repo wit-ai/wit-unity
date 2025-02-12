@@ -22,7 +22,7 @@ namespace Meta.WitAi.Requests
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
         public WitInfoVRequest(IWitRequestConfiguration configuration, bool useServerToken = true)
-            : base(configuration, null, useServerToken) {}
+            : base(configuration, null, null, useServerToken) {}
 
         /// <summary>
         /// A request to obtain the current app id by grabbing multiple apps & using the app id

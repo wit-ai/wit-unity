@@ -1226,6 +1226,10 @@ namespace Meta.WitAi.TTS.Utilities
             // Cancel previous loading queue but dont call queue complete
             if (clearQueue) StopLoadingButKeepQueue();
 
+            // Operation id if applicable
+            var operationId = speechNode?[WitConstants.RESPONSE_OPERATION_ID].Value;
+            if (string.IsNullOrEmpty(operationId)) operationId = Guid.NewGuid().ToString();
+
             // Iterate voices
             var requests = new TTSSpeakerRequestData[phrases.Count];
             var tasks = new Task[phrases.Count];
@@ -1259,6 +1263,7 @@ namespace Meta.WitAi.TTS.Utilities
 
                 // Get & set clip data
                 var clipData = TTSService.GetClipData(phrases[i], voiceSettings, diskCacheSettings);
+                clipData.queryOperationId = operationId;
                 requestData.ClipData = clipData;
                 RaiseEvents(RaiseOnBegin, requestData);
                 RaiseEvents(RaiseOnLoadBegin, requestData);

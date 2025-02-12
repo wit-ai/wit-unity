@@ -78,8 +78,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// Generates encoded chunk and applies reference data for all parameters
         /// </summary>
         public WitWebSocketTtsRequest(string requestId, string textToSpeak, Dictionary<string, string> voiceSettings,
-            TTSWitAudioType audioType, bool useEvents, string downloadPath = null)
-            : base(GetTtsNode(textToSpeak, voiceSettings, audioType, useEvents), requestId)
+            TTSWitAudioType audioType, bool useEvents, string downloadPath = null, string opId = null)
+            : base(GetTtsNode(textToSpeak, voiceSettings, audioType, useEvents), requestId, null, opId)
         {
             TextToSpeak = textToSpeak;
             VoiceSettings = voiceSettings;

@@ -512,7 +512,6 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnCancel()
         {
-            RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.OperationId, TerminationReason.Canceled);
             // Log & callbacks
             RaiseEvent(Events?.OnCancel);
         }
@@ -523,8 +522,6 @@ namespace Meta.Voice
         protected virtual void OnComplete()
         {
             Completion.SetResult(State != VoiceRequestState.Failed);
-            RuntimeTelemetry.Instance.LogPoint((OperationID)Options.OperationId, RuntimeTelemetryPoint.FullResponseReceived);
-
             RaiseEvent(Events?.OnComplete);
             switch (State)
             {
@@ -532,7 +529,6 @@ namespace Meta.Voice
                     RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.OperationId, TerminationReason.Canceled);
                     break;
                 case VoiceRequestState.Successful:
-                    RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.OperationId, TerminationReason.Successful);
                     break;
                 case VoiceRequestState.Failed:
                     RuntimeTelemetry.Instance.LogEventTermination((OperationID)Options.OperationId, TerminationReason.Failed);

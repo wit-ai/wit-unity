@@ -55,8 +55,8 @@ namespace Meta.WitAi.Configuration
         /// <summary>
         /// Setup with a specific guid
         /// </summary>
-        public WitRequestOptions(string newRequestId, string newClientUserId, string opId, params QueryParam[] newParams) : base(
-          newRequestId:newRequestId, newClientUserId:newClientUserId, opId:opId, newParams:newParams) {
+        public WitRequestOptions(string newRequestId, string newClientUserId, string newOperationId, params QueryParam[] newParams) : base(
+          newRequestId, newClientUserId, newOperationId, newParams) {
         }
 
         // Get json string. Used to get the payload for PI.

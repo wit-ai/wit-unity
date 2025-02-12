@@ -44,8 +44,9 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="requestId">A unique identifier that can be used to track the request</param>
-        public WitTTSVRequest(IWitRequestConfiguration configuration,
-            string requestId) : base(configuration, requestId, false)
+        /// <param name="operationId">The operation id used to pass data between multiple requests</param>
+        public WitTTSVRequest(IWitRequestConfiguration configuration, string requestId, string operationId)
+            : base(configuration, requestId, operationId)
         {
         }
 

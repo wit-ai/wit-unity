@@ -49,6 +49,9 @@ namespace Meta.WitAi.Configuration
 
         protected virtual Vector2 RecordingTimeRange => new Vector2(0, 20);
 
+        [Tooltip("Overidde the current configuration timeout if greater than 0")]
+        public int overrideTimeoutMs = 0;
+
         [Header("Sound Activation")]
         [Tooltip("The minimum volume level needed to be heard to start collecting data from the audio source.")]
         [SerializeField] public float soundWakeThreshold = .0005f;

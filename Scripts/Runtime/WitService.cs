@@ -244,6 +244,14 @@ namespace Meta.WitAi
             return config.CreateSpeechRequest(newOptions, newEvents, _dynamicEntityProviders);
         }
 
+        /// <summary>
+        /// Accessor for timeout to be used for requests
+        /// </summary>
+        private int GetTimeoutMs() =>
+          RuntimeConfiguration.overrideTimeoutMs > 0
+            ? RuntimeConfiguration.overrideTimeoutMs
+            : RuntimeConfiguration.witConfiguration.RequestTimeoutMs;
+
         #region LIFECYCLE
         // Find transcription provider & Mic
         protected void Awake()
@@ -379,7 +387,8 @@ namespace Meta.WitAi
             string clientUserId,
             WitChunk responseChunk)
         {
-            var request = new WitWebSocketMessageRequest(responseChunk.jsonData, requestId, clientUserId, RuntimeConfiguration.transcribeOnly);
+            var request = new WitWebSocketMessageRequest(responseChunk.jsonData, requestId, clientUserId, null,  RuntimeConfiguration.transcribeOnly);
+            request.TimeoutMs = GetTimeoutMs();
             request.TopicId = topicId;
             _webSocketAdapter.WebSocketClient.TrackRequest(request);
             return true;
@@ -541,6 +550,9 @@ namespace Meta.WitAi
         /// <param name="recordingRequest"></param>
         protected void SetupRequest(VoiceServiceRequest newRequest)
         {
+            // Set request timeout
+            newRequest.Options.TimeoutMs = GetTimeoutMs();
+
             // Setup audio recording request
             if (newRequest.Options.InputType == NLPRequestInputType.Audio)
             {
@@ -584,13 +596,8 @@ namespace Meta.WitAi
             // Perform additional setup
             VoiceEvents?.OnRequestFinalize?.Invoke(newRequest);
 
-            // Consider initialized
-            var opId = (OperationID)newRequest.Options.OperationId;
-            _ = ThreadUtility.CallOnMainThread(
-                () => {
-                  RuntimeTelemetry.Instance.StartEvent(opId, RuntimeTelemetryEventType.VoiceServiceRequest);
-                  VoiceEvents?.OnRequestInitialized?.Invoke(newRequest);
-                });
+            // Init callback
+            _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
         }
         /// <summary>
         /// Execute a wit request immediately
@@ -679,8 +686,6 @@ namespace Meta.WitAi
             {
                 return;
             }
-
-            RuntimeTelemetry.Instance.LogPoint(_recordingRequest.Options.OperationId, RuntimeTelemetryPoint.MicOn);
 
             // Start recording
             _buffer.StartRecording(this);
@@ -986,7 +991,6 @@ namespace Meta.WitAi
             if (request.InputType == NLPRequestInputType.Audio)
             {
                 request.Events.OnPartialTranscription.RemoveListener(OnPartialTranscription);
-                RuntimeTelemetry.Instance.LogPoint((OperationID)request.Options.OperationId, RuntimeTelemetryPoint.FullResponseReceived);
             }
             request.Events.OnCancel.RemoveListener(HandleResult);
             request.Events.OnFailed.RemoveListener(HandleResult);

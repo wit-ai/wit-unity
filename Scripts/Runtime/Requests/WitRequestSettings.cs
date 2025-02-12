@@ -183,14 +183,11 @@ namespace Meta.WitAi
             // Set authorization
             headers[WitConstants.HEADER_AUTH] = GetAuthorizationHeader(configuration, useServerToken);
 
-            // Use local client user id if empty
+#if UNITY_EDITOR || !UNITY_WEBGL // If added in WebGl, http requests will fail
+            // Set request id, client user id and operation id if applicable
+            headers[WitConstants.HEADER_REQUEST_ID] = !string.IsNullOrEmpty(options.RequestId) ? options.RequestId : WitConstants.GetUniqueId();
+            headers[WitConstants.HEADER_OP_ID] = !string.IsNullOrEmpty(options.OperationId) ? options.OperationId : WitConstants.GetUniqueId();
             headers[WitConstants.HEADER_CLIENT_USER_ID] = !string.IsNullOrEmpty(options.ClientUserId) ? options.ClientUserId : LocalClientUserId;
-
-#if UNITY_EDITOR || !UNITY_WEBGL
-            // Set request id
-            var requestId = string.IsNullOrEmpty(options.RequestId) ? WitConstants.GetUniqueId() : options.RequestId;
-            headers[WitConstants.HEADER_REQUEST_ID] = requestId;
-            headers[WitConstants.HEADER_OP_ID] = options.OperationId;
 
             // Set User-Agent
             headers[WitConstants.HEADER_USERAGENT] = GetUserAgentHeader(configuration);

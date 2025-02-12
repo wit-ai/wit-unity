@@ -773,9 +773,6 @@ namespace Meta.Voice.Net.WebSockets
             // Sets request id
             requestJsonData[WitConstants.WIT_SOCKET_REQUEST_ID_KEY] = requestId;
 
-            // Sets operation id
-            requestJsonData[WitConstants.WIT_SOCKET_OPERATION_ID_KEY] = request.OperationId;
-
             // Get chunk
             var chunk = new WitChunk()
             {
@@ -977,7 +974,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Begin tracking
-            request.TimeoutMs = Settings.RequestTimeoutMs;
+            request.TimeoutMs = request.TimeoutMs > 0 ? request.TimeoutMs : Settings.RequestTimeoutMs;
             request.OnComplete += CompleteRequestTracking;
             Logger.Info($"Track Request\n{request}");
 

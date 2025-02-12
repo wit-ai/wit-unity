@@ -61,12 +61,12 @@ namespace Meta.WitAi.Requests
         /// </summary>
         /// <param name="configuration">The configuration interface to be used</param>
         /// <param name="requestId">A unique identifier that can be used to track the request</param>
+        /// <param name="operationId">The operation id used to pass data between multiple requests</param>
         /// <param name="useServerToken">Editor only option to use server token instead of client token</param>
-        public WitVRequest(IWitRequestConfiguration configuration, string requestId, bool useServerToken = false)
-            : base()
+        public WitVRequest(IWitRequestConfiguration configuration, string requestId, string operationId = null, bool useServerToken = false)
         {
             Configuration = configuration;
-            RequestOptions = new WitRequestOptions(requestId, WitRequestSettings.LocalClientUserId, null);
+            RequestOptions = new WitRequestOptions(requestId, WitRequestSettings.LocalClientUserId, operationId);
             TimeoutMs = configuration.RequestTimeoutMs;
             _useServerToken = useServerToken;
         }
@@ -92,9 +92,7 @@ namespace Meta.WitAi.Requests
             {
                 return base.GetHeaders();
             }
-
-            var options = new WitRequestOptions(RequestOptions.RequestId, newClientUserId:null, opId:null);
-            return WitRequestSettings.GetHeaders(Configuration, options, _useServerToken);
+            return WitRequestSettings.GetHeaders(Configuration, RequestOptions, _useServerToken);
         }
 
         /// <summary>
