@@ -1,5 +1,17 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8243129682282075502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f23565a6e584061b45b8bba0c7cee1c, type: 3}
+  m_Name: WitAiTaskData
+  m_EditorClassIdentifier: 
 --- !u!114 &-686823477692163689
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26,6 +38,8 @@ MonoBehaviour:
   m_Name: TTS Voices - WitConfiguration
   m_EditorClassIdentifier: 
   _clientAccessToken: HOKEABS7HPIQVSRSVWRPTTV75TQJ5QBP
+  editorVersionTag: 
+  buildVersionTag: 
   _appInfo:
     name: Built-in Models
     id: voiceSDK_en
@@ -313,6 +327,142 @@ MonoBehaviour:
         value: true
     versionTags: []
     voices:
+    - name: en_NZ.1
+      locale: en_NZ
+      gender: male
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.3
+      locale: en_US
+      gender: male
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.44
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.45
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.46
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.47
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.48
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
+    - name: en_US.49
+      locale: en_US
+      gender: unkown
+      styles:
+      - default
+      - soft
+      - projected
+      - fast
+      - formal
+      supported_features:
+      - style
+      - pitch
+      - speed
+      - sfx
+      - viseme_events
+      - phoneme_events
+      - word_events
     - name: Maria
       locale: es_ES
       gender: female
@@ -853,10 +1003,12 @@ MonoBehaviour:
       - phoneme_events
       - word_events
   _configData:
-  - {fileID: 3830768548505132771}
   - {fileID: -686823477692163689}
+  - {fileID: -8243129682282075502}
+  - {fileID: 3830768548505132771}
   _configurationId: d53421ff-aaf8-437f-b97e-262af416342e
-  timeoutMS: 10000
+  _requestType: 0
+  _requestTimeoutMs: 10000
   endpointConfiguration:
     _uriScheme: 
     _authority: 
@@ -869,13 +1021,13 @@ MonoBehaviour:
     _event: 
     _converse: 
   isDemoOnly: 1
+  useIntentAttributes: 1
   useConduit: 0
   _manifestLocalPath: ConduitManifest-c1726bc0-a27c-4902-985d-93548a4a5a51.json
   excludedAssemblies:
   - Oculus.Voice.Demo, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   - Meta.WitAi.Samples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   relaxedResolution: 0
-  _lastRefreshSeconds: 1704738508.7472956
 --- !u!114 &3830768548505132771
 MonoBehaviour:
   m_ObjectHideFlags: 0
