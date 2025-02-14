@@ -10,7 +10,8 @@
         "VoiceSDK.Telemetry.Runtime",
         "Meta.Voice.NLayer",
         "Meta.Voice.Opus",
-        "Meta.Net.endel.nativewebsocket"
+        "Meta.Net.endel.nativewebsocket",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
