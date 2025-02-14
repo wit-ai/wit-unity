@@ -32,12 +32,12 @@ namespace Meta.WitAi.CallbackHandlers
 
         private void OnValidate()
         {
-            if (!Voice) Voice = FindObjectOfType<VoiceService>();
+            if (!Voice) Voice = FindAnyObjectByType<VoiceService>();
         }
 
         protected virtual void OnEnable()
         {
-            if (!Voice) Voice = FindObjectOfType<VoiceService>();
+            if (!Voice) Voice = FindAnyObjectByType<VoiceService>();
             if (!Voice)
             {
                 VLog.E($"VoiceService not found in scene.\nDisabling {GetType().Name} on {gameObject.name}");

@@ -28,7 +28,7 @@ namespace Meta.Voice.Samples.WitResponseDebugger
 
         private void OnValidate()
         {
-            if (!wit) wit = FindObjectOfType<Wit>();
+            if (!wit) wit = FindAnyObjectByType<Wit>();
         }
 
         private void Update()

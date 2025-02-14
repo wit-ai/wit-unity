@@ -32,7 +32,7 @@ namespace Meta.Voice.Samples.TTSVoices
         {
             if (_service == null)
             {
-                _service = GameObject.FindObjectOfType<TTSWit>();
+                _service = GameObject.FindAnyObjectByType<TTSWit>();
             }
             _button.onClick.AddListener(Toggle);
         }

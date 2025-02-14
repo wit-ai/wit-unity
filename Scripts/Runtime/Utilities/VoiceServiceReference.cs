@@ -52,7 +52,7 @@ namespace Meta.WitAi.Utilities
         {
             var refProp = property.FindPropertyRelative("voiceService");
             var reference = refProp.objectReferenceValue as VoiceService;
-            var voiceServices = GameObject.FindObjectsOfType<VoiceService>();
+            var voiceServices = GameObject.FindObjectsByType<VoiceService>(FindObjectsSortMode.None);
             var voiceServiceNames = new string[voiceServices.Length + 1];
             int index = 0;
             voiceServiceNames[0] = "Autodetect";

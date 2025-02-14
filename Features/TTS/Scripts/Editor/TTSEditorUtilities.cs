@@ -49,7 +49,7 @@ namespace Meta.WitAi.TTS
                 }
             }
             // Ignore if found
-            TTSService instance = GameObject.FindObjectOfType<TTSService>();
+            TTSService instance = GameObject.FindAnyObjectByType<TTSService>();
             if (instance != null)
             {
                 // Log
@@ -236,7 +236,7 @@ namespace Meta.WitAi.TTS
         private static void RefreshEmptySpeakers(TTSService service)
         {
             string defaultVoiceID = service.VoiceProvider.VoiceDefaultSettings?.SettingsId;
-            foreach (var speaker in GameObject.FindObjectsOfType<TTSSpeaker>())
+            foreach (var speaker in GameObject.FindObjectsByType<TTSSpeaker>(FindObjectsSortMode.None))
             {
                 if (string.IsNullOrEmpty(speaker.VoiceID))
                 {

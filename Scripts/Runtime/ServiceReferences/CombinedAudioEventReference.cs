@@ -9,6 +9,7 @@
 using Meta.WitAi.Events;
 using Meta.WitAi.Events.UnityEventListeners;
 using Meta.WitAi.Interfaces;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.WitAi.ServiceReferences
@@ -31,9 +32,9 @@ namespace Meta.WitAi.ServiceReferences
         private void Awake()
         {
             #if UNITY_2020_1_OR_NEWER
-            _sourceListeners = FindObjectsOfType<AudioEventListener>(true);
+            _sourceListeners = FindObjectsByType<AudioEventListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             #else
-            _sourceListeners = FindObjectsOfType<AudioEventListener>();
+   f         _sourceListeners = FindObjectsOfType<AudioEventListener>();
             #endif
         }
 

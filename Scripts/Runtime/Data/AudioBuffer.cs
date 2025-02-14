@@ -62,7 +62,7 @@ namespace Meta.WitAi.Data
             {
                 if (!_instance)
                 {
-                    _instance = FindObjectOfType<AudioBuffer>();
+                    _instance = FindAnyObjectByType<AudioBuffer>();
                     if (!_instance && CanInstantiate())
                     {
                         if (AudioBufferProvider != null)

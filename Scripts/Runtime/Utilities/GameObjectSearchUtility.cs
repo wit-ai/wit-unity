@@ -37,7 +37,7 @@ namespace Meta.WitAi.Utilities
             // Use default functionality
             if (!includeInactive)
             {
-                return GameObject.FindObjectsOfType<T>();
+                return GameObject.FindObjectsByType<T>(FindObjectsSortMode.None);
             }
 
             // Get results

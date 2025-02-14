@@ -287,7 +287,7 @@ namespace Meta.WitAi
         /// <returns>Objects of the specified type.</returns>
         public IEnumerable<object> GetObjectsOfType(Type type)
         {
-            return FindObjectsOfType(type);
+            return FindObjectsByType(type, FindObjectsSortMode.None);
         }
 
         protected virtual void Awake()

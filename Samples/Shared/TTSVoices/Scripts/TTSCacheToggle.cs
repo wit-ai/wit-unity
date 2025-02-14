@@ -30,7 +30,7 @@ namespace Meta.Voice.Samples.TTSVoices
             // Obtain disk cache if possible
             if (_diskCache == null)
             {
-                _diskCache = GameObject.FindObjectOfType<TTSDiskCache>();
+                _diskCache = GameObject.FindAnyObjectByType<TTSDiskCache>();
             }
             // Reset location text
             RefreshLocation();

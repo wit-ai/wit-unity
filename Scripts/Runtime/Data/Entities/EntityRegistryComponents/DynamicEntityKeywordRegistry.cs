@@ -33,7 +33,7 @@ namespace Meta.WitAi.Data.Entities
             {
                 if (!instance)
                 {
-                    instance = FindObjectOfType<DynamicEntityKeywordRegistry>();
+                    instance = FindAnyObjectByType<DynamicEntityKeywordRegistry>();
                 }
 
                 return instance;

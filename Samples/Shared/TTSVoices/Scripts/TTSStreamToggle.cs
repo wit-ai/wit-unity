@@ -28,7 +28,7 @@ namespace Meta.WitAi.TTS.Samples
             // Obtain disk cache if possible
             if (_service == null)
             {
-                _service = GameObject.FindObjectOfType<TTSWit>();
+                _service = GameObject.FindAnyObjectByType<TTSWit>();
             }
             // Log for missing service
             if (_service == null)
