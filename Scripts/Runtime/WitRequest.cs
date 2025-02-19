@@ -43,7 +43,7 @@ namespace Meta.WitAi
         /// <summary>
         /// The request timeout in ms
         /// </summary>
-        public int TimeoutMs { get; private set; } = 1000;
+        public int TimeoutMs => Options.TimeoutMs;
         /// <summary>
         /// Encoding settings for audio based requests
         /// </summary>
@@ -251,9 +251,6 @@ namespace Meta.WitAi
         /// </summary>
         protected override void OnInit()
         {
-            // Determine configuration setting
-            TimeoutMs = Configuration == null ? TimeoutMs : Configuration.RequestTimeoutMs;
-
             // Set request settings
             Command = Path.Split('/').First();
             IsPost = WitEndpointConfig.GetEndpointConfig(Configuration).Speech == this.Command
