@@ -443,7 +443,7 @@ namespace Meta.WitAi.TTS
             Action<TTSClipData, string> onStreamComplete = null)
         {
             var clip = GetClipData(textToSpeak, voiceSettings, diskCacheSettings);
-            _ = LoadAsync(clip, onStreamReady, onStreamComplete);
+            LoadAsync(clip, onStreamReady, onStreamComplete).WrapErrors();
             return clip;
         }
 
@@ -752,7 +752,7 @@ namespace Meta.WitAi.TTS
             TTSDiskCacheSettings diskCacheSettings = null, Action<TTSClipData, string, string> onDownloadComplete = null)
         {
             var clipData = GetClipData(textToSpeak, voiceSettings, diskCacheSettings);
-            _ = DownloadAsync(clipData, onDownloadComplete);
+            DownloadAsync(clipData, onDownloadComplete).WrapErrors();
             return clipData;
         }
 
@@ -1100,7 +1100,7 @@ namespace Meta.WitAi.TTS
         // Calls all events on the main thread
         private void RaiseEvents(Action events)
         {
-            _ = ThreadUtility.CallOnMainThread(events);
+            ThreadUtility.CallOnMainThread(events).WrapErrors();
         }
         #endregion CALLBACKS
     }

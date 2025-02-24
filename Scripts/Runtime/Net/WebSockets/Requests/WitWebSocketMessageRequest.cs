@@ -49,7 +49,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             Endpoint = WitConstants.WIT_SOCKET_EXTERNAL_ENDPOINT_KEY;
             EndWithFullTranscription = endWithFullTranscription;
             SetResponseData(externalPostData);
-            _ = WaitForTimeout();
+            WaitForTimeout().WrapErrors();
         }
 
         /// <summary>

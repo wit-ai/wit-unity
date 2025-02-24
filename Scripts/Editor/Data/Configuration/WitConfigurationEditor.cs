@@ -199,7 +199,7 @@ namespace Meta.WitAi.Windows
                         {
                             if (WitEditorUI.LayoutTextButton(WitTexts.Texts.ConfigurationConduitAutoTrainLabel) && _conduitManifestGenerationManager.ManifestAvailable )
                             {
-                                SyncEntities(() => _ = AutoTrainOnWitAi(Configuration));
+                                SyncEntities(() => AutoTrainOnWitAi(Configuration).WrapErrors());
                             }
                         }
                     }
@@ -515,7 +515,7 @@ namespace Meta.WitAi.Windows
             Configuration.UpdateDataAssets();
             if (Configuration.useConduit)
             {
-                _ = ThreadUtility.BackgroundAsync(Logger, async () => await CheckAutoTrainAvailabilityIfNeeded());
+                ThreadUtility.BackgroundAsync(Logger, async () => await CheckAutoTrainAvailabilityIfNeeded()).WrapErrors();
             }
         }
 

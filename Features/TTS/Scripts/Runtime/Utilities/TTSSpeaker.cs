@@ -444,7 +444,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public void Speak(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
-            => _ = Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, true);
+            => Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, true).WrapErrors();
 
         /// <summary>
         /// Load a tts clip using the specified text and playback events.  Cancels all previous clips
@@ -489,8 +489,11 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public IEnumerator SpeakAsync(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
         {
-            yield return ThreadUtility.CoroutineAwait(()
-                => _ = Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, true));
+            yield return ThreadUtility.CoroutineAwait(() =>
+            {
+                Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, true).WrapErrors();
+                return Task.CompletedTask;
+            });
         }
 
         /// <summary>
@@ -585,7 +588,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="diskCacheSettings">Specific tts load caching settings</param>
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public void SpeakQueued(string textToSpeak, TTSDiskCacheSettings diskCacheSettings, TTSSpeakerClipEvents playbackEvents)
-            => _ = Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, false);
+            => Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, false).WrapErrors();
 
         /// <summary>
         /// Load a tts clip using the specified text and playback events.  Adds clip to playback queue and will
@@ -742,7 +745,7 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 return false;
             }
-            _ = Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, true);
+            Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, true).WrapErrors();
             return true;
         }
 
@@ -834,7 +837,7 @@ namespace Meta.WitAi.TTS.Utilities
                 return false;
             }
             // Speak queued
-            _ = Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, false);
+            Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, false).WrapErrors();
             return true;
         }
 
@@ -1270,7 +1273,7 @@ namespace Meta.WitAi.TTS.Utilities
                 RefreshQueueEvents();
 
                 // Load clip async
-                _ = LoadClip(requestData);
+                LoadClip(requestData).WrapErrors();
                 clearQueue = false;
             }
 
@@ -1533,7 +1536,7 @@ namespace Meta.WitAi.TTS.Utilities
             RaisePlaybackSampleUpdated(0);
 
             // Stop audio source playback
-            _ = ThreadUtility.CallOnMainThread(() => AudioPlayer.Stop());
+            ThreadUtility.CallOnMainThread(() => AudioPlayer.Stop()).WrapErrors();
 
             // Stopped
             if (stopped)
@@ -1776,7 +1779,7 @@ namespace Meta.WitAi.TTS.Utilities
         // Call events via main thread
         private void RaiseEvents(Action events)
         {
-            _ = ThreadUtility.CallOnMainThread(Logger, events.Invoke);
+            ThreadUtility.CallOnMainThread(Logger, events.Invoke).WrapErrors();
         }
         private void RaiseEvents<T>(Action<T> events, T parameter)
         {

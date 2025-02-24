@@ -273,10 +273,10 @@ namespace Meta.Voice.Net.WebSockets
             SetConnectionState(WitWebSocketConnectionState.Connecting);
 
             // Begin a timeout check
-            _ = WaitForConnectionTimeout();
+            WaitForConnectionTimeout().WrapErrors();
 
             // Attempt connect
-            _ = ThreadUtility.BackgroundAsync(Logger, ConnectAsync);
+            ThreadUtility.BackgroundAsync(Logger, ConnectAsync).WrapErrors();
         }
         /// <summary>
         /// Performs connection asynchronously
@@ -398,7 +398,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Perform final setup
-            _ = ThreadUtility.BackgroundAsync(Logger, SetupAsync);
+            ThreadUtility.BackgroundAsync(Logger, SetupAsync).WrapErrors();
         }
 
         /// <summary>
@@ -536,7 +536,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Perform disconnection
-            _ = DisconnectAsync();
+            DisconnectAsync().WrapErrors();
         }
 
         /// <summary>
@@ -663,7 +663,7 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             // Wait and reconnect on background thread
-            _ = ThreadUtility.BackgroundAsync(Logger, WaitAndConnect);
+            ThreadUtility.BackgroundAsync(Logger, WaitAndConnect).WrapErrors();
         }
         /// <summary>
         /// Wait and attempt to connect
@@ -716,7 +716,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Begin upload and send method for chunks when ready to be sent
-            _ = ThreadUtility.Background(Logger, () => request.HandleUpload(SendChunk));
+            ThreadUtility.Background(Logger, () => request.HandleUpload(SendChunk)).WrapErrors();
 
             // Await completion
             await request.Completion.Task;
@@ -1226,7 +1226,7 @@ namespace Meta.Voice.Net.WebSockets
                 SetTopicSubscriptionState(subscription, topicId, errorType, request.Error);
 
                 // Retry after frame
-                _ = WaitAndRetry(subscribing, topicId);
+                WaitAndRetry(subscribing, topicId).WrapErrors();
                 return;
             }
 

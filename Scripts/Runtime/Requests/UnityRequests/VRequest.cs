@@ -361,7 +361,7 @@ namespace Meta.WitAi.Requests
             }
 
             // Perform timeout
-            _ = WaitForTimeout();
+            WaitForTimeout().WrapErrors();
 
             // Generate request on main thread and await completion
             IsRunning = true;

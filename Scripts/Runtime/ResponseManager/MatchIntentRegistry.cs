@@ -53,7 +53,7 @@ namespace Meta.WitAi
         {
             if (null != registeredMethods) return;
             registeredMethods = new DictionaryList<string, RegisteredMatchIntent>();
-            _ = ThreadUtility.Background(Logger, RefreshAssemblies);
+            ThreadUtility.Background(Logger, RefreshAssemblies).WrapErrors();
         }
 
         internal static void RefreshAssemblies()

@@ -91,7 +91,7 @@ public class AudioClipAudioSource : MonoBehaviour, IAudioInputSource
             VLog.D($"Playing {_audioClips[clipIndex].name}");
             _audioSource.PlayOneShot(_audioClips[clipIndex]);
             OnStartRecording?.Invoke();
-            _ = TransmitAudio(clipData[clipIndex]);
+            TransmitAudio(clipData[clipIndex]).WrapErrors();
         }
         else
         {

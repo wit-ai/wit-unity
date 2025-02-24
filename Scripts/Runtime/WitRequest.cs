@@ -446,7 +446,7 @@ namespace Meta.WitAi
             }
 
             // Handle timeout on background thread
-            _ = ThreadUtility.BackgroundAsync(Logger, WaitForTimeout);
+            ThreadUtility.BackgroundAsync(Logger, WaitForTimeout).WrapErrors();
             _request.Timeout = -1;
 
             // If post or put, get post stream & wait for completion

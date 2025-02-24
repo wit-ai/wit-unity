@@ -43,7 +43,7 @@ namespace Meta.WitAi
         #region SETUP
         // Setup with server token and return on complete method
         internal static void GetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
-            => _ = WaitForGetAppInfo(serverToken, onComplete);
+            => WaitForGetAppInfo(serverToken, onComplete).WrapErrors();
 
         // Wait for update & return app info if possible
         private static async Task WaitForGetAppInfo(string serverToken, Action<string, WitAppInfo, string> onComplete)
@@ -58,7 +58,7 @@ namespace Meta.WitAi
         {
             var tempConfig = new WitServerRequestConfiguration(serverToken);
             var request = new WitInfoVRequest(tempConfig, true);
-            _ = WaitForCheckServerToken(request, onComplete);
+            WaitForCheckServerToken(request, onComplete).WrapErrors();
             return request;
         }
         // Perform id lookup

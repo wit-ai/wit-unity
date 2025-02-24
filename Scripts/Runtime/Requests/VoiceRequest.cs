@@ -263,7 +263,7 @@ namespace Meta.Voice
         // Wait for hold to complete and then perform an action on the background thread
         protected void WaitForHold(Action onReady)
         {
-            _ = ThreadUtility.BackgroundAsync(Logger, async () =>
+            ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 if (HoldTask != null)
                 {
@@ -273,7 +273,7 @@ namespace Meta.Voice
                 {
                     onReady?.Invoke();
                 });
-            });
+            }).WrapErrors();
         }
 
         // Once hold is complete, begin send process

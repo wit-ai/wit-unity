@@ -148,7 +148,7 @@ namespace Meta.WitAi
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
         /// <param name="text">Text to be used for NLU processing</param>
-        public void Activate(string text) => _ = ThreadUtility.BackgroundAsync(Logger, async () => await Activate(text, new WitRequestOptions()));
+        public void Activate(string text) => ThreadUtility.BackgroundAsync(Logger, async () => await Activate(text, new WitRequestOptions())).WrapErrors();
         /// <summary>
         /// Send text data for NLU processing. Results will return the same way a voice based activation would.
         /// </summary>
@@ -315,7 +315,7 @@ namespace Meta.WitAi
             base.OnEnable();
             if (UseConduit)
             {
-                _ = InitializeConduit();
+                InitializeConduit().WrapErrors();
             }
             else if (UseIntentAttributes)
             {

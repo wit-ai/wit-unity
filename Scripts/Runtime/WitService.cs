@@ -597,7 +597,7 @@ namespace Meta.WitAi
             VoiceEvents?.OnRequestFinalize?.Invoke(newRequest);
 
             // Init callback
-            _ = ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest));
+            ThreadUtility.CallOnMainThread(() => VoiceEvents?.OnRequestInitialized?.Invoke(newRequest)).WrapErrors();
         }
         /// <summary>
         /// Execute a wit request immediately
@@ -621,7 +621,7 @@ namespace Meta.WitAi
         /// Activate the microphone and send data to Wit for NLU processing.
         /// </summary>
         public void Activate(string text) => Activate(text, new WitRequestOptions());
-        public void Activate(string text, WitRequestOptions requestOptions) => _ = Activate(text, requestOptions, new VoiceServiceRequestEvents());
+        public void Activate(string text, WitRequestOptions requestOptions) => Activate(text, requestOptions, new VoiceServiceRequestEvents()).WrapErrors();
         public Task<VoiceServiceRequest> Activate(string text, WitRequestOptions requestOptions, VoiceServiceRequestEvents requestEvents)
         {
             // Not valid

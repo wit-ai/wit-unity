@@ -247,7 +247,7 @@ namespace Meta.WitAi.Requests
             if (IsError)
             {
                 _decodedBytes = _receivedBytes;
-                _ = ThreadUtility.CallOnMainThread(TryToFinalize);
+                ThreadUtility.CallOnMainThread(TryToFinalize).WrapErrors();
                 return;
             }
 
@@ -294,7 +294,7 @@ namespace Meta.WitAi.Requests
             // Try to finalize on main thread
             if (_decodeComplete)
             {
-                _ = ThreadUtility.CallOnMainThread(TryToFinalize);
+                ThreadUtility.CallOnMainThread(TryToFinalize).WrapErrors();
             }
         }
 

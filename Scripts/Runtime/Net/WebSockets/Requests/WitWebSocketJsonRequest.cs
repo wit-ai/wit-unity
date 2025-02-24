@@ -168,7 +168,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             UploadChunk(PostData, null);
 
             // Generate task to handle timeout error
-            _ = WaitForTimeout();
+            WaitForTimeout().WrapErrors();
         }
 
         /// <summary>

@@ -25,7 +25,7 @@ namespace Meta.Voice.Logging
 
         static LogSink()
         {
-            _ = ThreadUtility.CallOnMainThread(() => mainThread = Thread.CurrentThread);
+            ThreadUtility.CallOnMainThread(() => mainThread = Thread.CurrentThread).WrapErrors();
         }
 
         private static IErrorMitigator _errorMitigator;
@@ -337,7 +337,7 @@ namespace Meta.Voice.Logging
             }
             else
             {
-                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteVerbose(message));
+                ThreadUtility.CallOnMainThread(() => LogWriter.WriteVerbose(message)).WrapErrors();
             }
         }
 
@@ -349,7 +349,7 @@ namespace Meta.Voice.Logging
             }
             else
             {
-                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteDebug(message));
+                ThreadUtility.CallOnMainThread(() => LogWriter.WriteDebug(message)).WrapErrors();
             }
         }
 
@@ -361,7 +361,7 @@ namespace Meta.Voice.Logging
             }
             else
             {
-                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteInfo(message));
+                ThreadUtility.CallOnMainThread(() => LogWriter.WriteInfo(message)).WrapErrors();
             }
         }
 
@@ -373,7 +373,7 @@ namespace Meta.Voice.Logging
             }
             else
             {
-                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteWarning(message));
+                ThreadUtility.CallOnMainThread(() => LogWriter.WriteWarning(message)).WrapErrors();
             }
         }
 
@@ -385,7 +385,7 @@ namespace Meta.Voice.Logging
             }
             else
             {
-                _ = ThreadUtility.CallOnMainThread(() => LogWriter.WriteError(message));
+                ThreadUtility.CallOnMainThread(() => LogWriter.WriteError(message)).WrapErrors();
             }
         }
 
