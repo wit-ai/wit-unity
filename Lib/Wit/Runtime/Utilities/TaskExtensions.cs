@@ -19,6 +19,17 @@ namespace Meta.WitAi
     /// </summary>
     public static class TaskExtensions
     {
+        public static void WrapErrors(this Task task)
+        {
+            task.ContinueWith((t, state) =>
+            {
+                if (t.Exception != null)
+                {
+                    VLog.E(t.Exception);
+                }
+            }, null);
+        }
+
         /// <summary>
         /// A task that completes when less than the specified max tasks are running
         /// </summary>
