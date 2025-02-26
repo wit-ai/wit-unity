@@ -858,12 +858,12 @@ namespace Meta.WitAi.Data
         // The various measured sample rates
         private readonly double[] _measuredSampleRates = new double[MEASURE_AVERAGE_COUNT];
 
-        // Timeout if no samples after interval (0.1 seconds)
-        private const int TIMEOUT_TICKS = 1_000_000;
+        // Timeout if no samples after interval (0.05 seconds)
+        private const int TIMEOUT_TICKS = 500_000;
         // Perform calculation after interval (0.25 seconds)
         private const int MEASURE_TICKS = 2_500_000;
-        // Total measurements to average out (2 seconds)
-        private const int MEASURE_AVERAGE_COUNT = 8;
+        // Total measurements to average out (5 seconds)
+        private const int MEASURE_AVERAGE_COUNT = 20;
         // Sample rate options
         private static readonly int[] ALLOWED_SAMPLE_RATES = new []
         {
