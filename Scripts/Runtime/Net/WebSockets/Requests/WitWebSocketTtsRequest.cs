@@ -71,9 +71,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
         private int _sampleCount = 0;
         private int _eventCount = 0;
 
-        /// <inheritdoc/>
-        private IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);
-
         /// <summary>
         /// Generates encoded chunk and applies reference data for all parameters
         /// </summary>

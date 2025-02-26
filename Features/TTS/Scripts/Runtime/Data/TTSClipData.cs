@@ -115,6 +115,10 @@ namespace Meta.WitAi.TTS.Data
         /// <summary>
         /// Any error that occurs during the load process
         /// </summary>
+        public int LoadStatusCode { get; set; }
+        /// <summary>
+        /// Any error that occurs during the load process
+        /// </summary>
         public string LoadError { get; set; }
         /// <summary>
         /// Task that returns when ready for playback

@@ -379,10 +379,8 @@ namespace Meta.WitAi.Requests
             // Error
             else
             {
-                if (!int.TryParse(request.Code, out var errorCode))
-                {
-                    errorCode = WitConstants.ERROR_CODE_GENERAL;
-                }
+                var errorCode = request.Code;
+                if (errorCode == 0) errorCode = WitConstants.ERROR_CODE_GENERAL;
                 HandleFailure(errorCode, request.Error);
             }
         }

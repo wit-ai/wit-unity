@@ -563,7 +563,7 @@ namespace Meta.WitAi.TTS
             if (!string.IsNullOrEmpty(error))
             {
                 RaiseDiskStreamBegin(clipData);
-                RaiseDiskStreamError(clipData, error);
+                RaiseDiskStreamError(clipData, WitConstants.ERROR_CODE_GENERAL, error);
                 return error;
             }
 
@@ -591,7 +591,7 @@ namespace Meta.WitAi.TTS
             string webErrors = WebHandler == null ? "No web handler found" : WebHandler.GetWebErrors(clipData);
             if (!string.IsNullOrEmpty(webErrors))
             {
-                RaiseWebStreamError(clipData, webErrors);
+                RaiseWebStreamError(clipData, WitConstants.ERROR_CODE_GENERAL, webErrors);
                 return clipData.LoadError;
             }
 
@@ -601,7 +601,7 @@ namespace Meta.WitAi.TTS
             // Throw error
             if (!string.IsNullOrEmpty(error))
             {
-                RaiseWebStreamError(clipData, error);
+                RaiseWebStreamError(clipData, clipData.LoadStatusCode != 0 ? clipData.LoadStatusCode : WitConstants.ERROR_CODE_GENERAL, error);
                 return clipData.LoadError;
             }
 
@@ -634,7 +634,7 @@ namespace Meta.WitAi.TTS
             // Throw error
             if (!string.IsNullOrEmpty(error))
             {
-                RaiseDiskStreamError(clipData, error);
+                RaiseDiskStreamError(clipData, WitConstants.ERROR_CODE_GENERAL, error);
                 return clipData.LoadError;
             }
 
@@ -916,6 +916,7 @@ namespace Meta.WitAi.TTS
             clipData.clipStream = null;
             if (clipData.loadState == TTSClipLoadState.Preparing)
             {
+                clipData.LoadStatusCode = WitConstants.ERROR_CODE_ABORTED;
                 clipData.LoadError = WitConstants.CANCEL_ERROR;
             }
             if (clipData.loadState != TTSClipLoadState.Error)
@@ -941,9 +942,11 @@ namespace Meta.WitAi.TTS
             });
         }
         // Log and call all events related to stream error for playback
-        private void RaiseDiskStreamError(TTSClipData clipData, string error) => RaiseStreamError(clipData, error, true);
-        private void RaiseWebStreamError(TTSClipData clipData, string error) => RaiseStreamError(clipData, error, false);
-        private void RaiseStreamError(TTSClipData clipData, string error, bool fromDisk)
+        private void RaiseDiskStreamError(TTSClipData clipData, int errorCode, string error)
+          => RaiseStreamError(clipData, errorCode, error, true);
+        private void RaiseWebStreamError(TTSClipData clipData, int errorCode, string error)
+          => RaiseStreamError(clipData, errorCode, error, false);
+        private void RaiseStreamError(TTSClipData clipData, int errorCode, string error, bool fromDisk)
         {
             // Cancelled
             if (error.Equals(WitConstants.CANCEL_ERROR))
@@ -951,6 +954,7 @@ namespace Meta.WitAi.TTS
                 RaiseStreamCancel(clipData, fromDisk);
                 return;
             }
+            clipData.LoadStatusCode = errorCode;
             clipData.LoadError = error;
             SetClipLoadState(clipData, TTSClipLoadState.Error);
             RaiseEvents(() =>
@@ -972,6 +976,7 @@ namespace Meta.WitAi.TTS
         private void RaiseWebStreamCancel(TTSClipData clipData) => RaiseStreamCancel(clipData, false);
         private void RaiseStreamCancel(TTSClipData clipData, bool fromDisk)
         {
+            clipData.LoadStatusCode = WitConstants.ERROR_CODE_ABORTED;
             clipData.LoadError = WitConstants.CANCEL_ERROR;
             SetClipLoadState(clipData, TTSClipLoadState.Error);
             RaiseEvents(() =>
@@ -1005,7 +1010,7 @@ namespace Meta.WitAi.TTS
                 // Handle fail directly
                 if (failed)
                 {
-                    RaiseStreamError(clipData, "Removed from runtime cache due to file size", fromDisk);
+                    RaiseStreamError(clipData, WitConstants.ERROR_CODE_GENERAL, "Removed from runtime cache due to file size", fromDisk);
                     OnRuntimeClipRemoved(clipData);
                     return;
                 }

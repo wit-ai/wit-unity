@@ -369,11 +369,12 @@ namespace Meta.WitAi
         {
             string code = $"HTTP Error {request.Results.StatusCode}";
             string message = request?.Results?.Message;
-            if (string.Equals(message, WitConstants.ERROR_RESPONSE_TIMEOUT))
+            string debugMessage = message;
+            if (string.Equals(debugMessage, WitConstants.ERROR_RESPONSE_TIMEOUT))
             {
-                message += $"\nTimeout Ms: {request.Options.TimeoutMs}";
+              debugMessage += $"\nTimeout Ms: {request.Options.TimeoutMs}";
             }
-            Log(request, $"Request Failed\n{code}: {message}", true);
+            Log(request, $"Request Failed\n{code}: {debugMessage}", true);
             GetSpeechEvents()?.OnError?.Invoke(code, message);
             GetSpeechEvents()?.OnRequestCompleted?.Invoke();
         }

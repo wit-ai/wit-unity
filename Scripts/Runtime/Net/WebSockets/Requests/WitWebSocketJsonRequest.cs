@@ -8,8 +8,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
+using Lib.Wit.Runtime.Utilities.Logging;
+using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
 using Meta.WitAi;
 using Meta.WitAi.Json;
@@ -19,8 +20,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
     /// <summary>
     /// Web socket request that encodes a single json request
     /// </summary>
-    public class WitWebSocketJsonRequest : IWitWebSocketRequest
+    [LogCategory(LogCategory.Requests)]
+    public class WitWebSocketJsonRequest : IWitWebSocketRequest, ILogSource
     {
+        /// <inheritdoc/>
+        public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Requests);
+
         /// <summary>
         /// Unique request id generated on init
         /// </summary>
@@ -75,7 +80,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// A response code if applicable
         /// </summary>
-        public string Code { get; protected set; }
+        public int Code { get; protected set; }
 
         /// <summary>
         /// An error if applicable
@@ -198,7 +203,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             SendAbort(WitConstants.ERROR_RESPONSE_TIMEOUT);
 
             // Set code, error and callback for completion
-            Code = WitConstants.ERROR_CODE_TIMEOUT.ToString();
+            Code = WitConstants.ERROR_CODE_TIMEOUT;
             Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
             HandleComplete();
         }
@@ -227,7 +232,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             SendAbort(WitConstants.CANCEL_ERROR);
 
             // Handle completion
-            Code = WitConstants.ERROR_CODE_ABORTED.ToString();
+            Code = WitConstants.ERROR_CODE_ABORTED;
             Error = WitConstants.CANCEL_ERROR;
             HandleComplete();
         }
@@ -298,7 +303,15 @@ namespace Meta.Voice.Net.WebSockets.Requests
         {
             UpdateTimeoutStart();
             ResponseData = newResponseData;
-            Code = ResponseData[WitConstants.KEY_RESPONSE_CODE];
+            Code = ResponseData[WitConstants.KEY_RESPONSE_CODE].AsInt;
+            if (Code == 0)
+            {
+                var codeString = ResponseData[WitConstants.KEY_RESPONSE_CODE].Value;
+                if (!string.IsNullOrEmpty(codeString))
+                {
+                    Logger.Warning("{0} Response Code is not an integer: {1}\n{2}", GetType().Name, codeString, this);
+                }
+            }
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];
             var topicId = ResponseData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY]?.Value;
             if (!string.IsNullOrEmpty(topicId))

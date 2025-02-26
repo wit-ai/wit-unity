@@ -340,7 +340,6 @@ namespace Meta.WitAi.TTS.Integrations
             var wsRequest = CreateWebSocketRequest(clipData, null);
 
             // Set all web socket request callbacks
-            // TODO: T192757334 Update to async once added in WebSockets
             var completion = new TaskCompletionSource<bool>();
             wsRequest.OnComplete = (r) =>
             {
@@ -352,7 +351,9 @@ namespace Meta.WitAi.TTS.Integrations
             _webSocketAdapter.SendRequest(wsRequest);
             await completion.Task;
 
-            // Return any error
+            // Set status code and error
+            clipData.LoadStatusCode = wsRequest.Code;
+            clipData.LoadError = wsRequest.Error;
             return wsRequest.Error;
         }
 
@@ -367,6 +368,8 @@ namespace Meta.WitAi.TTS.Integrations
             return ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 var results = await request.RequestStream(clipData.clipStream.AddSamples, clipData.Events.AddEvents);
+                clipData.LoadStatusCode = results.Code;
+                clipData.LoadError = results.Error;
                 _httpRequests.TryRemove(clipId, out var discard);
                 return results.Error;
             });
