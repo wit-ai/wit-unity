@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Generic;
 using Meta.Voice.Logging;
 using UnityEngine;
 using Meta.WitAi.Attributes;
@@ -64,6 +63,9 @@ namespace Meta.WitAi.TTS.Integrations
         /// The current TTS event container
         /// </summary>
         public TTSEventContainer EventContainer { get; private set; }
+
+        public bool sendMinEvent = true;
+        public bool sendMaxEvent = true;
 
         // Local sample counter
         private int _sample = -1;
@@ -131,6 +133,8 @@ namespace Meta.WitAi.TTS.Integrations
             var events = Player?.CurrentEvents;
             if (sample < 0 || events?.Events == null)
             {
+                if (!sendMinEvent) return;
+
                 LerpEvent(_minEvent, _minEvent, 0);
                 return;
             }
@@ -149,6 +153,8 @@ namespace Meta.WitAi.TTS.Integrations
             // Determine percentage from 0 to 1
             float percentage = GetSampleEventProgress(sample, previousEvent.SampleOffset, nextEvent.SampleOffset);
 
+            if (nextEvent == _minEvent && !sendMinEvent) return;
+            if (nextEvent == _maxEvent && !sendMaxEvent) return;
             // Lerp
             LerpEvent(previousEvent, nextEvent, percentage);
         }

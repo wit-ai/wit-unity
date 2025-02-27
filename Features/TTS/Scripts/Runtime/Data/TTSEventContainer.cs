@@ -48,6 +48,8 @@ namespace Meta.WitAi.TTS.Data
         internal const string EVENT_WORD_TYPE_KEY = "WORD";
         internal const string EVENT_VISEME_TYPE_KEY = "VISEME";
         internal const string EVENT_PHONEME_TYPE_KEY = "PHONE";
+        internal const string EVENT_EMOTE_TYPE_KEY = "EMOTE";
+        internal const string EVENT_ACTION_TYPE_KEY = "ACTION";
 
         /// <summary>
         /// Callback for each added event
@@ -115,6 +117,10 @@ namespace Meta.WitAi.TTS.Data
                         return JsonConvert.DeserializeObject<TTSVisemeEvent>(eventNode);
                     case EVENT_PHONEME_TYPE_KEY:
                         return JsonConvert.DeserializeObject<TTSPhonemeEvent>(eventNode);
+                    case EVENT_EMOTE_TYPE_KEY:
+                        return JsonConvert.DeserializeObject<TTSEmoteEvent>(eventNode);
+                    case EVENT_ACTION_TYPE_KEY:
+                        return JsonConvert.DeserializeObject<TTSActionEvent>(eventNode);
                     default:
                         return JsonConvert.DeserializeObject<TTSStringEvent>(eventNode);
                 }
