@@ -935,6 +935,18 @@ namespace Meta.WitAi.TTS.Utilities
             => Load(responseNode, diskCacheSettings, playbackEvents, false);
 
         /// <summary>
+        /// Load a tts clip using the specified text phrases, disk cache settings and playback events and then
+        /// waits for the files to load and play.  Adds clip to playback queue and will speak once queue has
+        /// completed all playback.
+        /// </summary>
+        /// <param name="textToSpeak">The text that will be spoken by TTS</param>
+        /// <param name="diskCacheSettings">Specific tts load caching settings</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public Task SpeakQueuedTask(string textToSpeak, TTSDiskCacheSettings diskCacheSettings,
+            TTSSpeakerClipEvents playbackEvents)
+            => Load(textToSpeak, null, diskCacheSettings, playbackEvents, null, false);
+
+        /// <summary>
         /// Load a tts clip using the specified text phrases and playback events and then waits for the files to load &
         /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
         /// </summary>
@@ -942,6 +954,15 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         public Task SpeakQueuedTask(WitResponseNode responseNode, TTSSpeakerClipEvents playbackEvents)
             => SpeakQueuedTask(responseNode, null, playbackEvents);
+
+        /// <summary>
+        /// Load a tts clip using the specified text phrases and playback events and then waits for the files to load &
+        /// play.  Adds clip to playback queue and will speak once queue has completed all playback.
+        /// </summary>
+        /// <param name="textToSpeak">The text that will be spoken by TTS</param>
+        /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
+        public Task SpeakQueuedTask(string textToSpeak, TTSSpeakerClipEvents playbackEvents)
+            => SpeakQueuedTask(textToSpeak, null, playbackEvents);
 
         /// <summary>
         /// Load a tts clip using the specified text phrases and disk cache settings and then waits for the files to
@@ -1230,7 +1251,7 @@ namespace Meta.WitAi.TTS.Utilities
             if (clearQueue) StopLoadingButKeepQueue();
 
             // Operation id if applicable
-            var operationId = speechNode?[WitConstants.RESPONSE_OPERATION_ID].Value;
+            var operationId = speechNode?[WitConstants.RESPONSE_OPERATION_ID]?.Value;
             if (string.IsNullOrEmpty(operationId)) operationId = Guid.NewGuid().ToString();
 
             // Iterate voices

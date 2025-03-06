@@ -87,7 +87,14 @@ namespace Meta.WitAi
         /// </summary>
         public void Dispose()
         {
-            _available.Clear();
+            try
+            {
+                _available?.Clear();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Ignore, object is already disposed or was not initialized and doesn't need to be dealt with
+            }
         }
     }
 }
