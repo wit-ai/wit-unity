@@ -31,6 +31,30 @@ namespace Meta.WitAi
         }
 
         /// <summary>
+        /// Causes a task to timeout after a given amount of time in ms. The task's result will be an error message
+        /// </summary>
+        /// <param name="task">The task to wait for</param>
+        /// <param name="ms">The amount of time to wait</param>
+        /// <returns>Returns true if this task ran to completion without timing out</returns>
+        /// <exception cref="AggregateException"></exception>
+        public static async Task<bool> TimeoutAfter(this Task task, int ms)
+        {
+            var timedOut = false;
+            var completedTask = await Task.WhenAny(task, Task.Delay(ms));
+
+            if (task != completedTask)
+            {
+                timedOut = true;
+            }
+            else if (null != task.Exception)
+            {
+                VLog.E($"Task threw an exception while waiting for timeout: {task.Exception.Message}", task.Exception);
+                throw task.Exception;
+            }
+            return !timedOut;
+        }
+
+        /// <summary>
         /// A task that completes when less than the specified max tasks are running
         /// </summary>
         public static Task WhenLessThan(this ICollection<Task> tasks, int max)
