@@ -36,6 +36,7 @@ namespace Meta.WitAi
         public const string HEADER_POST_CONTENT = "Content-Type";
         public const string HEADER_GET_CONTENT = "Accept";
         public const string HEADER_TAG_ID = "tag";
+        public const string HEADER_DEBUG = "is_debug";
 
         // Wit service response keys
         public const string RESPONSE_REQUEST_ID = "client_request_id";

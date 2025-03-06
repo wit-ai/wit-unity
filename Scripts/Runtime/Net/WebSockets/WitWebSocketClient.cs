@@ -416,7 +416,7 @@ namespace Meta.Voice.Net.WebSockets
 
             // Make authentication request and return any encountered error
             var versionTag = Settings?.Configuration?.GetVersionTag();
-            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag);
+            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag, Settings.Debug);
             var authError = await SendRequestAsync(authRequest);
 
             // Auth error
@@ -524,7 +524,17 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         /// <summary>
-        /// Forces a disconnect independent from reference count
+        /// Does not clear the reference to this socket client so once disconnection is complete the socket will
+        /// reconnect.
+        /// </summary>
+        public void DisconnectAndReconnect() {
+          // Perform disconnection
+          _ = DisconnectAsync();
+        }
+
+        /// <summary>
+        /// Forces a disconnect independent from reference count.
+        /// to reconnect.
         /// </summary>
         private void ForceDisconnect()
         {

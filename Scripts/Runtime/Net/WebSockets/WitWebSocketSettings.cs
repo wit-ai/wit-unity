@@ -43,6 +43,11 @@ namespace Meta.Voice.Net.WebSockets
         public float ReconnectInterval { get; set; } = WitConstants.WIT_SOCKET_RECONNECT_INTERVAL;
 
         /// <summary>
+        /// Determines if additional debug data is included in responses
+        /// </summary>
+        public bool Debug { get; set; } = false;
+
+        /// <summary>
         /// The configuration used for wit web socket communication
         /// </summary>
         public IWitRequestConfiguration Configuration { get; }
