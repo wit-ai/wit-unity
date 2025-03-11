@@ -235,17 +235,21 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         protected override void HandleComplete()
         {
-            // No samples
-            if (_sampleCount == 0)
+            // Check for errors if not aborted and no error thrown
+            if (string.IsNullOrEmpty(Error))
             {
-                Logger.Error("No audio samples returned\n{0}", this);
-                RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioSamplesEmpty);
-            }
-            // No events
-            if (_eventCount == 0 && UseEvents)
-            {
-                Logger.Error("No audio events returned\n{0}", this);
-                RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
+                // No samples
+                if (_sampleCount == 0)
+                {
+                    Error = "No audio samples returned";
+                    RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioSamplesEmpty);
+                }
+                // No events despite requesting them
+                else if (_eventCount == 0 && UseEvents)
+                {
+                    Error = "No audio events returned";
+                    RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
+                }
             }
 
             // Close both file streams if they exist
