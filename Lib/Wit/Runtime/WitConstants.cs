@@ -292,6 +292,9 @@ namespace Meta.WitAi
         public const string WIT_SOCKET_OPERATION_ID_KEY = RESPONSE_OPERATION_ID;
         public const string WIT_SOCKET_API_KEY = "api_version";
         public const string WIT_SOCKET_CONTENT_KEY = "content_type";
+        // Error handling
+        public const int WIT_SOCKET_DISCONNECT_CODE = 499;
+        public const string WIT_SOCKET_DISCONNECT_ERROR = "WebSocket disconnected";
         // Authorization request constant keys & values
         public const string WIT_SOCKET_AUTH_TOKEN = "wit_auth_token";
         public const string WIT_SOCKET_AUTH_RESPONSE_KEY = "success";

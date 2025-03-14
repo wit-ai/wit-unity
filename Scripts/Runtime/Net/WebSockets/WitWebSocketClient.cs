@@ -1061,7 +1061,19 @@ namespace Meta.Voice.Net.WebSockets
             request.OnComplete -= CompleteRequestTracking;
             if (!request.IsComplete)
             {
-                request.Cancel();
+                if (ConnectionState == WitWebSocketConnectionState.Disconnecting
+                    || ConnectionState == WitWebSocketConnectionState.Disconnected)
+                {
+                    var jsonData = new WitResponseClass();
+                    jsonData[WitConstants.WIT_SOCKET_REQUEST_ID_KEY] = new WitResponseData(request.RequestId);
+                    jsonData[WitConstants.KEY_RESPONSE_CODE] = new WitResponseData(WitConstants.WIT_SOCKET_DISCONNECT_CODE);
+                    jsonData[WitConstants.KEY_RESPONSE_ERROR] = new WitResponseData(WitConstants.WIT_SOCKET_DISCONNECT_ERROR);
+                    request.HandleDownload(jsonData.ToString(), jsonData, null);
+                }
+                else
+                {
+                    request.Cancel();
+                }
             }
             Logger.Info($"Untrack Request\n{request}");
             return true;
