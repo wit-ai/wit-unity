@@ -14,6 +14,7 @@ using Meta.Voice.Logging;
 using Meta.Voice.Net.PubSub;
 using Meta.WitAi;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -86,6 +87,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// An error if applicable
         /// </summary>
         public string Error { get; protected set; }
+
+        /// <summary>
+        /// Simulated error type
+        /// </summary>
+        public VoiceErrorSimulationType SimulatedErrorType { get; internal set; } = (VoiceErrorSimulationType)(-1);
 
         /// <summary>
         /// Initial json data to be uploaded

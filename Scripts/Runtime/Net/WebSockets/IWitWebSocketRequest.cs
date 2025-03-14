@@ -10,6 +10,7 @@ using System;
 using System.Threading.Tasks;
 using Meta.Voice.Net.PubSub;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -100,6 +101,11 @@ namespace Meta.Voice.Net.WebSockets
         /// Error that occured during upload and/or download
         /// </summary>
         string Error { get; }
+
+        /// <summary>
+        /// Simulated error type
+        /// </summary>
+        VoiceErrorSimulationType SimulatedErrorType { get; }
 
         /// <summary>
         /// Method that can be used to perform a cancellation on a request

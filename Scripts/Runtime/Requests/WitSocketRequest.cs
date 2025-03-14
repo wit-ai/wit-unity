@@ -327,6 +327,10 @@ namespace Meta.WitAi.Requests
                 WebSocketRequest.OnDecodedResponse += ReturnDecodedResponse;
                 WebSocketRequest.OnComplete += ReturnSuccessOrError;
             }
+            if (_simulatedErrorType != (VoiceErrorSimulationType)(-1))
+            {
+                WebSocketRequest.SimulatedErrorType = _simulatedErrorType;
+            }
         }
 
         /// <summary>
@@ -456,5 +460,22 @@ namespace Meta.WitAi.Requests
             }
         }
         #endregion AUDIO
+
+        #region Error Simulation
+        /// <summary>
+        /// The simulated error to be used for this request
+        /// </summary>
+        internal VoiceErrorSimulationType _simulatedErrorType = (VoiceErrorSimulationType)(-1);
+
+        /// <summary>
+        /// Simulates a specific error
+        /// </summary>
+        internal override void SimulateError(VoiceErrorSimulationType errorType)
+        {
+            _simulatedErrorType = errorType;
+            if (WebSocketRequest != null) WebSocketRequest.SimulatedErrorType = _simulatedErrorType;
+        }
+        #endregion Error Simulation
+
     }
 }

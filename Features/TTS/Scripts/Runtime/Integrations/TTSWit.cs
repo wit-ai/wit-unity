@@ -240,6 +240,11 @@ namespace Meta.WitAi.TTS.Integrations
             request.TimeoutMs = Configuration.RequestTimeoutMs;
             request.OnSamplesReceived = clipData.clipStream.AddSamples;
             request.OnEventsReceived = clipData.Events.AddEvents;
+            if (SimulatedErrorType != (VoiceErrorSimulationType)(-1))
+            {
+                request.SimulatedErrorType = SimulatedErrorType;
+                SimulatedErrorType = (VoiceErrorSimulationType)(-1);
+            }
             _webSocketRequests[clipData.clipID] = request;
             return request;
         }

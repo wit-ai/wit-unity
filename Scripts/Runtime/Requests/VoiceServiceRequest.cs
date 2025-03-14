@@ -93,6 +93,14 @@ namespace Meta.WitAi.Requests
         }
         #endregion
 
+        #region Error Simulation
+        /// <summary>
+        /// Simulates a specific error
+        /// </summary>
+        internal virtual void SimulateError(VoiceErrorSimulationType errorType)
+            => throw new NotImplementedException();
+        #endregion Error Simulation
+
         // Sets request id
         protected override void ApplyResponseData(WitResponseNode responseData, bool isFinal)
         {

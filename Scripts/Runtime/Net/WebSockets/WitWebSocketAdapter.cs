@@ -89,40 +89,6 @@ namespace Meta.Voice.Net.WebSockets
         private ConcurrentDictionary<string, PubSubSubscriptionState> _subscriptionsPerTopic =
             new ConcurrentDictionary<string, PubSubSubscriptionState>();
 
-        #if UNITY_EDITOR
-        // Settings
-        public bool _verboseJsonLogging = false;
-        public bool _simulateDisconnect = false;
-        public bool _simulateTimeout = false;
-        public bool _simulateError = false;
-
-        private void Update()
-        {
-            if (WebSocketClient is WitWebSocketClient wc)
-            {
-                if (_verboseJsonLogging != wc.Settings.VerboseJsonLogging)
-                {
-                    wc.Settings.VerboseJsonLogging = _verboseJsonLogging;
-                }
-                if (_simulateDisconnect)
-                {
-                    _simulateDisconnect = false;
-                    wc.SimulateDisconnect();
-                }
-                if (_simulateTimeout)
-                {
-                    _simulateTimeout = false;
-                    wc.SimulateTimeout();
-                }
-                if (_simulateError)
-                {
-                    _simulateError = false;
-                    wc.SimulateError();
-                }
-            }
-        }
-        #endif
-
         #region LIFECYCLE
         protected virtual void OnEnable()
         {

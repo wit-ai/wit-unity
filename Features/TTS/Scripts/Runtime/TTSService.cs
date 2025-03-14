@@ -14,6 +14,7 @@ using Meta.Voice.Audio;
 using Meta.Voice.Logging;
 using Meta.WitAi.Attributes;
 using Meta.WitAi.Json;
+using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
@@ -1108,5 +1109,12 @@ namespace Meta.WitAi.TTS
             ThreadUtility.CallOnMainThread(events).WrapErrors();
         }
         #endregion CALLBACKS
+
+        #region ERROR SIMULATION
+        /// <summary>
+        /// When set, the next request made will throw the specified error
+        /// </summary>
+        public VoiceErrorSimulationType SimulatedErrorType { get; set; } = (VoiceErrorSimulationType)(-1);
+        #endregion ERROR SIMULATION
     }
 }
