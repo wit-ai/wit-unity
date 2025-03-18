@@ -309,16 +309,20 @@ namespace Meta.Voice.Net.WebSockets.Requests
         {
             UpdateTimeoutStart();
             ResponseData = newResponseData;
-            Code = ResponseData[WitConstants.KEY_RESPONSE_CODE].AsInt;
-            if (Code == 0)
+            var codeString = ResponseData[WitConstants.KEY_RESPONSE_CODE].Value;
+            if (!string.IsNullOrEmpty(codeString))
             {
-                var codeString = ResponseData[WitConstants.KEY_RESPONSE_CODE].Value;
-                if (!string.IsNullOrEmpty(codeString))
+                if (int.TryParse(codeString, out var statusCode))
                 {
+                    Code = statusCode;
+                }
+                else
+                {
+                    Code = WitConstants.ERROR_CODE_GENERAL;
                     Logger.Warning("{0} Response Code is not an integer: {1}\n{2}", GetType().Name, codeString, this);
                 }
             }
-            Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR];
+            Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR].Value;
             var topicId = ResponseData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY]?.Value;
             if (!string.IsNullOrEmpty(topicId))
             {

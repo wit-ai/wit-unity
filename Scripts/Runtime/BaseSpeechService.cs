@@ -268,7 +268,7 @@ namespace Meta.WitAi
             }
             if (warn)
             {
-                Logger.Error("{0}\nRequest Id: {1}", log, request?.Options?.RequestId);
+                Logger.Warning("{0}\nRequest Id: {1}", log, request?.Options?.RequestId);
             }
             else
             {

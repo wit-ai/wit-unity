@@ -264,7 +264,7 @@ namespace Meta.WitAi.TTS
             const string log = "{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nRequest Id: {5}";
             if (!string.IsNullOrEmpty(error))
             {
-                Logger.Error(log + "\nError: {6}",
+                Logger.Warning(log + "\nError: {6}",
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
