@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
 using Meta.WitAi;
 
 namespace Meta.Voice.Net.WebSockets
@@ -46,6 +47,11 @@ namespace Meta.Voice.Net.WebSockets
         /// Determines if additional debug data is included in responses
         /// </summary>
         public bool Debug { get; set; } = false;
+
+        /// <summary>
+        /// Used for adding in custom authentication parameters
+        /// </summary>
+        public Dictionary<string, string> AdditionalAuthParameters { get; } = new();
 
         /// <summary>
         /// The configuration used for wit web socket communication

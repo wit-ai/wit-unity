@@ -110,6 +110,12 @@ namespace Meta.Voice.Net.WebSockets
         void Disconnect();
 
         /// <summary>
+        /// Disconnects without checking connection count.
+        /// Reconnects following disconnect if specified in settings.
+        /// </summary>
+        void ForceDisconnect();
+
+        /// <summary>
         /// Send a request via this client if possible
         /// </summary>
         bool SendRequest(IWitWebSocketRequest request);

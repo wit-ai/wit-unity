@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System.Collections.Generic;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 
@@ -19,12 +20,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Generates request with client access token
         /// </summary>
-        public WitWebSocketAuthRequest(string clientAccessToken, string versionTag, bool debug) : base(GetAuthNode(clientAccessToken, versionTag, debug)) { }
+        public WitWebSocketAuthRequest(string clientAccessToken, string versionTag, Dictionary<string, string> parameters)
+          : base(GetAuthNode(clientAccessToken, versionTag, parameters)) { }
 
         /// <summary>
         /// Gets a static response node from the client access token
         /// </summary>
-        private static WitResponseNode GetAuthNode(string clientAccessToken, string versionTag, bool debug)
+        private static WitResponseNode GetAuthNode(string clientAccessToken, string versionTag, Dictionary<string, string> parameters)
         {
             WitResponseClass authNode = new WitResponseClass();
             authNode[WitConstants.WIT_SOCKET_AUTH_TOKEN] = new WitResponseData(clientAccessToken);
@@ -33,9 +35,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 authNode[WitConstants.HEADER_TAG_ID] = new WitResponseData(versionTag);
             }
-            if (debug)
+            if (parameters != null)
             {
-                authNode[WitConstants.HEADER_DEBUG] = new WitResponseData(true);
+                foreach (var keyVal in parameters)
+                {
+                    authNode[keyVal.Key] = new WitResponseData(keyVal.Value);
+                }
             }
             return authNode;
         }

@@ -373,9 +373,12 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
-            // Make authentication request and return any encountered error
+            // Get parameters
             var versionTag = Settings?.Configuration?.GetVersionTag();
-            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag, Settings.Debug);
+            var parameters = Settings?.AdditionalAuthParameters;
+
+            // Make authentication request and return any encountered error
+            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag, parameters);
             var authError = await SendRequestAsync(authRequest);
 
             // Auth error
