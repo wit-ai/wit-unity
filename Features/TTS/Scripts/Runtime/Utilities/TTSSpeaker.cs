@@ -1154,7 +1154,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="playbackEvents">Events to be called for this specific tts playback request</param>
         /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Returns load errors if applicable</returns>
-        private async Task<string> Load(WitResponseNode responseNode,
+        private async Task Load(WitResponseNode responseNode,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
             bool clearQueue)
@@ -1175,11 +1175,11 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 Logger.Verbose("Canceled request during decode\nText: {0}", textToSpeak ?? "Null");
                 RemoveQueuedRequest(requestData);
-                return WitConstants.CANCEL_ERROR;
+                throw new Exception(WitConstants.CANCEL_ERROR);
             }
 
             // Perform speech with custom voice settings
-            return await Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, false, requestData);
+            await Load(textToSpeak, voiceSettings, diskCacheSettings, playbackEvents, responseNode, false, requestData);
         }
 
         /// <summary>
@@ -1192,7 +1192,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="speechNode">Wit response node containin originating speech data</param>
         /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Returns load errors if applicable</returns>
-        private async Task<string> Load(string textToSpeak,
+        private async Task Load(string textToSpeak,
             TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
@@ -1211,7 +1211,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="speechNode">Wit response node containin originating speech data</param>
         /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Returns load errors if applicable</returns>
-        private async Task<string> Load(string[] textsToSpeak,
+        private async Task Load(string[] textsToSpeak,
             TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
@@ -1226,7 +1226,7 @@ namespace Meta.WitAi.TTS.Utilities
                 var error = "No voice provided";
                 Logger.Error("{0}\nPreset: {1}", error, presetVoiceID);
                 RemoveQueuedRequest(requestPlaceholder);
-                return error;
+                throw new Exception(error);
             }
 
             // Get final text phrases to be spoken
@@ -1244,7 +1244,7 @@ namespace Meta.WitAi.TTS.Utilities
                 var error = "No phrases provided";
                 Logger.Error(error);
                 RemoveQueuedRequest(requestPlaceholder);
-                return error;
+                throw new Exception(error);
             }
 
             // Cancel previous loading queue but dont call queue complete
@@ -1255,7 +1255,6 @@ namespace Meta.WitAi.TTS.Utilities
             if (string.IsNullOrEmpty(operationId)) operationId = Guid.NewGuid().ToString();
 
             // Iterate voices
-            var requests = new TTSSpeakerRequestData[phrases.Count];
             var tasks = new Task[phrases.Count];
             for (int i = 0; i < phrases.Count; i++)
             {
@@ -1281,10 +1280,6 @@ namespace Meta.WitAi.TTS.Utilities
                     }
                 }
 
-                // Track requests and playback completion
-                requests[i] = requestData;
-                tasks[i] = requestData.PlaybackCompletion.Task;
-
                 // Get & set clip data
                 var clipData = TTSService.GetClipData(phrases[i], voiceSettings, diskCacheSettings);
                 clipData.queryOperationId = operationId;
@@ -1294,33 +1289,22 @@ namespace Meta.WitAi.TTS.Utilities
                 RefreshQueueEvents();
 
                 // Load clip async
-                LoadClip(requestData).WrapErrors();
+                tasks[i] = LoadClip(requestData);
                 clearQueue = false;
             }
 
             // Await all tasks
             await Task.WhenAll(tasks);
 
-            // Add errors
-            var errors = string.Empty;
-            for (int i = 0; i < requests.Length; i++)
+            // Iterate tasks for errors
+            for (int i = 0; i < tasks.Length; i++)
             {
-                var clipData = requests[i]?.ClipData;
-                var tts = clipData?.textToSpeak;
-                var loadError = clipData?.LoadError;
-                if (!string.IsNullOrEmpty(loadError)
-                    && !string.Equals(WitConstants.CANCEL_ERROR, loadError))
+                var ttsTask = tasks[i];
+                if (ttsTask.Exception != null && ttsTask.Exception.InnerException != null)
                 {
-                    errors += $"\nLoad Error: {loadError}\n\tText: {tts}";
+                    throw ttsTask.Exception.InnerException;
                 }
             }
-            if (!string.IsNullOrEmpty(errors))
-            {
-                errors = "TTSSpeaker Load Errors" + errors;
-            }
-
-            // Return errors if applicable
-            return errors;
         }
 
         /// <summary>
@@ -1333,6 +1317,19 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Call errors if needed
             FinalizeLoadedClip(requestData, errors);
+
+            // Await playback completion
+            await requestData.PlaybackCompletion.Task;
+
+            // Throw errors
+            if (!string.IsNullOrEmpty(errors))
+            {
+                throw new Exception(errors);
+            }
+            if (!string.IsNullOrEmpty(requestData?.ClipData?.LoadError))
+            {
+                throw new Exception(requestData?.ClipData?.LoadError);
+            }
         }
 
         /// <summary>

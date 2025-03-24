@@ -273,6 +273,12 @@ namespace Meta.WitAi
         public const string ERROR_RESPONSE_TIMEOUT = "timeout";
 
         /// <summary>
+        /// Simulated error values
+        /// </summary>
+        public const int ERROR_CODE_SIMULATED = 500;
+        public const string ERROR_RESPONSE_SIMULATED = "Simulated Server Error";
+
+        /// <summary>
         /// Returns a unique identifier using the current unix timestamp
         /// and a randomized guid
         /// </summary>

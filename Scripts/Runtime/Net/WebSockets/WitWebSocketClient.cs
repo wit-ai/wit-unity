@@ -710,7 +710,7 @@ namespace Meta.Voice.Net.WebSockets
         private async Task SendChunkAsync(string requestId, WitResponseNode requestJsonData, byte[] requestBinaryData)
         {
             // If not authorization chunk, wait while connecting or reconnecting
-            bool isAuth = _requests.TryGetValue(requestId, out var request) && request is Requests.WitWebSocketAuthRequest;
+            bool isAuth = _requests.TryGetValue(requestId, out var checkRequest) && checkRequest is Requests.WitWebSocketAuthRequest;
             if (!isAuth)
             {
                 // Wait while connecting
@@ -727,7 +727,7 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             // If request was cancelled, do not send
-            if (!_requests.ContainsKey(requestId))
+            if (!_requests.TryGetValue(requestId, out var request))
             {
                 return;
             }
@@ -760,8 +760,37 @@ namespace Meta.Voice.Net.WebSockets
                 await _socket.Send(rawData);
             }
 
+            // Simulate immediate error if desired
+            TrySimulateError(request);
+
             // Decrement upload count
             _uploadCount--;
+        }
+
+        /// <summary>
+        /// Simulate errors when possible
+        /// </summary>
+        private void TrySimulateError(IWitWebSocketRequest request)
+        {
+            // If disconnect, do so now
+            if (request.SimulatedErrorType == VoiceErrorSimulationType.Disconnect)
+            {
+                Logger.Info("[DEBUG] Simulating Abnormal Disconnect\nState: {0}\nRequest: {1}",
+                    ConnectionState, request.RequestId);
+                HandleSocketDisconnect(WebSocketCloseCode.Abnormal);
+                return;
+            }
+
+            // Simulate error
+            if (request.SimulatedErrorType != VoiceErrorSimulationType.Server) return;
+            Logger.Info("[DEBUG] Simulating Server Error\nRequest: {0}", request.RequestId);
+            var jsonData = new WitResponseClass();
+            jsonData[WitConstants.WIT_SOCKET_REQUEST_ID_KEY] = new WitResponseData(request.RequestId);
+            jsonData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY] = new WitResponseData(request.ClientUserId);
+            jsonData[WitConstants.WIT_SOCKET_OPERATION_ID_KEY] = new WitResponseData(request.OperationId);
+            jsonData[WitConstants.KEY_RESPONSE_CODE] = new WitResponseData(WitConstants.ERROR_CODE_SIMULATED);
+            jsonData[WitConstants.KEY_RESPONSE_ERROR] = new WitResponseData(WitConstants.ERROR_RESPONSE_SIMULATED);
+            request.HandleDownload(jsonData.ToString(), jsonData, null);
         }
 
         /// <summary>
@@ -831,23 +860,10 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-
-            // If timeout request, ignore all responses
-            if (request.SimulatedErrorType == VoiceErrorSimulationType.Timeout) return;
-
-            // If disconnect, do so now
-            if (request.SimulatedErrorType == VoiceErrorSimulationType.Disconnect)
+            // If simulated error, ignore incoming data
+            if (request.SimulatedErrorType != (VoiceErrorSimulationType)(-1))
             {
-                Logger.Info("[DEBUG] Simulating Abnormal Disconnect\nState: {0}", ConnectionState);
-                HandleSocketDisconnect(WebSocketCloseCode.Abnormal);
                 return;
-            }
-
-            // If error request, throw a simulated error
-            if (request.SimulatedErrorType == VoiceErrorSimulationType.Server)
-            {
-                chunk.jsonData[WitConstants.KEY_RESPONSE_CODE] = new WitResponseData(500);
-                chunk.jsonData[WitConstants.KEY_RESPONSE_ERROR] = new WitResponseData("Simulated Server Error");
             }
 
             // Handle download synchronously
