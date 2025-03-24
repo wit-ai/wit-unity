@@ -1192,14 +1192,14 @@ namespace Meta.WitAi.TTS.Utilities
         /// <param name="speechNode">Wit response node containin originating speech data</param>
         /// <param name="clearQueue">If true, queue is cleared prior to load.  Otherwise, clip is queued as expected.</param>
         /// <returns>Returns load errors if applicable</returns>
-        private async Task Load(string textToSpeak,
+        private Task Load(string textToSpeak,
             TTSVoiceSettings voiceSettings,
             TTSDiskCacheSettings diskCacheSettings,
             TTSSpeakerClipEvents playbackEvents,
             WitResponseNode speechNode,
             bool clearQueue,
             TTSSpeakerRequestData requestPlaceholder = null) =>
-            await Load(new [] { textToSpeak }, voiceSettings, diskCacheSettings, playbackEvents, speechNode, clearQueue, requestPlaceholder);
+            Load(new [] { textToSpeak }, voiceSettings, diskCacheSettings, playbackEvents, speechNode, clearQueue, requestPlaceholder);
 
         /// <summary>
         /// Loads one or more tts clips, plays them and returns when complete
