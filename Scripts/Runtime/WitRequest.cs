@@ -368,7 +368,7 @@ namespace Meta.WitAi
             #if UNITY_WEBGL && UNITY_EDITOR
             if (IsPost)
             {
-                _log.Warning("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
+                Logger.Warning("Voice input is not supported in WebGL this functionality is fully enabled at edit time, but may not work at runtime.");
             }
             #endif
 
