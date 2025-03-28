@@ -59,6 +59,11 @@ namespace Meta.Voice.Net.WebSockets
         public IWitRequestConfiguration Configuration { get; }
 
         /// <summary>
+        /// Option for custom web socket implementation
+        /// </summary>
+        public IWebSocketProvider WebSocketProvider { get; set; }
+
+        /// <summary>
         /// Request timeout in milliseconds
         /// </summary>
         public int RequestTimeoutMs => Configuration.RequestTimeoutMs;

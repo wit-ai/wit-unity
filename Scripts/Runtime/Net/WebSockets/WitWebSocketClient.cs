@@ -148,13 +148,6 @@ namespace Meta.Voice.Net.WebSockets
         // Script used for decoding server responses
         private readonly WitChunkConverter _decoder = new WitChunkConverter();
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// Editor only option to get a custom web socket
-        /// </summary>
-        public Func<string, Dictionary<string, string>, IWebSocket> GetWebSocket;
-#endif
-
         /// <summary>
         /// Constructor with settings data
         /// </summary>
@@ -299,16 +292,14 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private IWebSocket GenerateWebSocket(string url, Dictionary<string, string> headers)
         {
-            #if UNITY_EDITOR
-            if (GetWebSocket != null)
+            if (Settings.WebSocketProvider != null)
             {
-                var socket = GetWebSocket.Invoke(url, headers);
+                var socket = Settings.WebSocketProvider.GetWebSocket(url, headers);
                 if (socket != null)
                 {
                     return socket;
                 }
             }
-            #endif
             return new NativeWebSocketWrapper(url, headers);
         }
 
