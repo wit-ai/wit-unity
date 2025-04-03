@@ -84,7 +84,7 @@ namespace Meta.WitAi.TTS.UX
                 {
                     RefreshLabel();
                 }
-                yield return new WaitForEndOfFrame();
+                yield return null;
             }
         }
 

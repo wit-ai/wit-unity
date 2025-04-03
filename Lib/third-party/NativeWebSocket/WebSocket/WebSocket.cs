@@ -27,6 +27,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+
 #if WEBGL_JSLIB
 using AOT;
 using System.Runtime.InteropServices;
@@ -777,8 +778,15 @@ namespace Meta.Net.NativeWebSocket
 
         public static void Run(IEnumerator waitForUpdate)
         {
-            synchronizationContext.Post(_ => Instance.StartCoroutine(
-                waitForUpdate), null);
+            if (!Instance)
+            {
+                Debug.LogWarning("Attempting to run on main thread after shutdown.");
+                throw new Exception("Attempting to run on main thread after shutdown.");
+            }
+
+            synchronizationContext.Post(
+                _ => Instance.StartCoroutine(waitForUpdate),
+                null);
         }
     }
 

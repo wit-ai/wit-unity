@@ -1175,6 +1175,7 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 Logger.Verbose("Canceled request during decode\nText: {0}", textToSpeak ?? "Null");
                 RemoveQueuedRequest(requestData);
+                // TODO: T219594456 - return false or something else to indicate Cancellation.
                 throw new Exception(WitConstants.CANCEL_ERROR);
             }
 
@@ -1485,7 +1486,7 @@ namespace Meta.WitAi.TTS.Utilities
             while (!IsPlaybackComplete())
             {
                 // Wait a frame
-                yield return new WaitForEndOfFrame();
+                yield return null;
 
                 // Append delta time for elapsed play time
                 if (!IsPaused)
