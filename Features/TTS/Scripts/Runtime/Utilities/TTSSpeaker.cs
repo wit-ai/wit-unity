@@ -1218,8 +1218,8 @@ namespace Meta.WitAi.TTS.Utilities
             TTSSpeakerClipEvents playbackEvents,
             WitResponseNode speechNode,
             bool clearQueue,
-            TTSSpeakerRequestData requestPlaceholder = null)
-        {
+            TTSSpeakerRequestData requestPlaceholder = null) {
+
             // Ensure voice settings exist
             voiceSettings ??= VoiceSettings;
             if (voiceSettings == null)
