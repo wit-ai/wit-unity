@@ -19,6 +19,9 @@ namespace Meta.WitAi
     /// </summary>
     public static class TaskExtensions
     {
+        /// <summary>
+        /// Method for wrapping and logging any thrown task exceptions
+        /// </summary>
         public static void WrapErrors(this Task task)
         {
             task.ContinueWith((t, state) =>
@@ -28,6 +31,26 @@ namespace Meta.WitAi
                     VLog.E(t.Exception);
                 }
             }, null);
+        }
+
+        /// <summary>
+        /// Method for throwing any task exceptions even hidden cancellations
+        /// </summary>
+        /// <param name="preThrow">Optional action that calls prior to throwing an exception</param>
+        public static void ThrowCaughtExceptions(this Task task, Action preThrow = null)
+        {
+            // Throw the exception itself
+            if (task.Exception?.InnerException != null)
+            {
+                preThrow?.Invoke();
+                throw task.Exception.InnerException;
+            }
+            // Throw cancellation exceptions
+            if (task.IsCanceled)
+            {
+                preThrow?.Invoke();
+                throw new TaskCanceledException(WitConstants.CANCEL_ERROR);
+            }
         }
 
         /// <summary>

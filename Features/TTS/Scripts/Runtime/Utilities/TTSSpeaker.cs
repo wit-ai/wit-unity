@@ -1175,8 +1175,7 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 Logger.Verbose("Canceled request during decode\nText: {0}", textToSpeak ?? "Null");
                 RemoveQueuedRequest(requestData);
-                // TODO: T219594456 - return false or something else to indicate Cancellation.
-                throw new Exception(WitConstants.CANCEL_ERROR);
+                throw new TaskCanceledException(WitConstants.CANCEL_ERROR);
             }
 
             // Perform speech with custom voice settings
@@ -1297,14 +1296,10 @@ namespace Meta.WitAi.TTS.Utilities
             // Await all tasks
             await Task.WhenAll(tasks);
 
-            // Iterate tasks for errors
-            for (int i = 0; i < tasks.Length; i++)
+            // Throw any exceptions
+            foreach (var task in tasks)
             {
-                var ttsTask = tasks[i];
-                if (ttsTask.Exception != null && ttsTask.Exception.InnerException != null)
-                {
-                    throw ttsTask.Exception.InnerException;
-                }
+                task.ThrowCaughtExceptions();
             }
         }
 
@@ -1330,6 +1325,10 @@ namespace Meta.WitAi.TTS.Utilities
             if (!string.IsNullOrEmpty(requestData?.ClipData?.LoadError))
             {
                 throw new Exception(requestData?.ClipData?.LoadError);
+            }
+            if (!requestData.PlaybackCompletion.Task.Result)
+            {
+                throw new TaskCanceledException(WitConstants.CANCEL_ERROR);
             }
         }
 
@@ -1442,6 +1441,10 @@ namespace Meta.WitAi.TTS.Utilities
             // Raise events
             _speakingRequest = nextRequest;
             RaiseEvents(RaiseOnPlaybackBegin, _speakingRequest);
+            if (_speakingRequest == null)
+            {
+                return;
+            }
 
             // Resume prior to playback
             if (_speakingRequest.StopPlaybackOnLoad && IsPaused)
@@ -1466,16 +1469,12 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Start audio player speaking
             _ = ThreadUtility.CallOnMainThread(
-                () => AudioPlayer.Play(_speakingRequest.ClipData.clipStream, 0, _speakingRequest.SpeechNode));
+                () => {
+                    AudioPlayer.Play(_speakingRequest.ClipData.clipStream, 0, _speakingRequest.SpeechNode);
 
-            // TODO: Move async
-            // Wait for completion
-            if (_waitForCompletion != null)
-            {
-                StopCoroutine(_waitForCompletion);
-                _waitForCompletion = null;
-            }
-            _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
+                    if (_waitForCompletion != null) StopCoroutine(_waitForCompletion);
+                    _waitForCompletion = StartCoroutine(WaitForPlaybackComplete());
+                });
         }
         // Wait for clip completion
         private IEnumerator WaitForPlaybackComplete()
@@ -1981,16 +1980,16 @@ namespace Meta.WitAi.TTS.Utilities
             requestData.PlaybackEvents?.OnPlaybackComplete?.Invoke(this, requestData.ClipData);
 
             // Complete
-            RaiseOnComplete(requestData);
+            RaiseOnComplete(requestData, true);
         }
         // Final call for a 'Speak' request that is called following a load failure, load abort, playback cancellation or playback completion
-        private void RaiseOnComplete(TTSSpeakerRequestData requestData)
+        private void RaiseOnComplete(TTSSpeakerRequestData requestData, bool playbackComplete = false)
         {
             LogRequest("Speak Complete", requestData);
             Events?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.ClipData?.onRequestComplete?.Invoke(requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
-            requestData.PlaybackCompletion?.TrySetResult(true);
+            requestData.PlaybackCompletion?.TrySetResult(playbackComplete);
         }
         #endregion Callbacks
 

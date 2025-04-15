@@ -322,7 +322,7 @@ namespace Meta.WitAi
             // Obtain buffer
             if (_buffer == null)
             {
-                _buffer = AudioBuffer.Instance;
+                if (add) _buffer = AudioBuffer.Instance;
                 _bufferDelegates = false;
             }
             // Get events if possible

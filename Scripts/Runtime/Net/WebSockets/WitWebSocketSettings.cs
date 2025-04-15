@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-using System.Collections.Generic;
 using Meta.WitAi;
+using Meta.WitAi.Json;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -51,7 +51,7 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Used for adding in custom authentication parameters
         /// </summary>
-        public Dictionary<string, string> AdditionalAuthParameters { get; } = new();
+        public WitResponseClass AdditionalAuthParameters { get; } = new();
 
         /// <summary>
         /// The configuration used for wit web socket communication

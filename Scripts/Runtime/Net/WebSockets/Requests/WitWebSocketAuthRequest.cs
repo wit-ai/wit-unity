@@ -20,13 +20,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Generates request with client access token
         /// </summary>
-        public WitWebSocketAuthRequest(string clientAccessToken, string versionTag, Dictionary<string, string> parameters)
+        public WitWebSocketAuthRequest(string clientAccessToken, string versionTag, WitResponseNode parameters)
           : base(GetAuthNode(clientAccessToken, versionTag, parameters)) { }
 
         /// <summary>
         /// Gets a static response node from the client access token
         /// </summary>
-        private static WitResponseNode GetAuthNode(string clientAccessToken, string versionTag, Dictionary<string, string> parameters)
+        private static WitResponseNode GetAuthNode(string clientAccessToken, string versionTag, WitResponseNode parameters)
         {
             WitResponseClass authNode = new WitResponseClass();
             authNode[WitConstants.WIT_SOCKET_AUTH_TOKEN] = new WitResponseData(clientAccessToken);
@@ -37,9 +37,9 @@ namespace Meta.Voice.Net.WebSockets.Requests
             }
             if (parameters != null)
             {
-                foreach (var keyVal in parameters)
+                foreach (var childName in parameters.ChildNodeNames)
                 {
-                    authNode[keyVal.Key] = new WitResponseData(keyVal.Value);
+                  authNode[childName] = parameters[childName];
                 }
             }
             return authNode;
