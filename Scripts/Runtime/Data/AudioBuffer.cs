@@ -125,7 +125,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// The current audio input source
         /// </summary>
-        public virtual IAudioInputSource MicInput
+        public IAudioInputSource MicInput
         {
             get => _micInput as IAudioInputSource;
             set => SetInputSource(value);
@@ -270,7 +270,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Returns true if an input audio source (for example Mic) is available
         /// </summary>
-        public virtual bool IsInputAvailable => MicInput != null;
+        public bool IsInputAvailable => MicInput != null;
 
         /// <summary>
         /// Returns true if a component has requested audio but

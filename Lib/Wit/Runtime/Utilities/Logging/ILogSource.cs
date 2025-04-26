@@ -15,6 +15,6 @@ namespace Lib.Wit.Runtime.Utilities.Logging
     /// </summary>
     public interface ILogSource
     {
-        public IVLogger Logger { get; }
+        IVLogger Logger { get; }
     }
 }
