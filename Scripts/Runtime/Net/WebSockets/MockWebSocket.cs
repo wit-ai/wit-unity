@@ -1,10 +1,14 @@
-// (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 using System;
-using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Meta.Voice.Net.Encoding.Wit;
-using Meta.Voice.Net.WebSockets;
 using Meta.WitAi.Json;
 
 namespace Meta.Voice.Net.WebSockets
@@ -44,7 +48,9 @@ namespace Meta.Voice.Net.WebSockets
         }
 
         // Simulate error
+        #pragma warning disable 0067
         public event Action<string> OnError;
+        #pragma warning restore 0067
         public void SimulateError(string error)
         {
             OnError?.Invoke(error);

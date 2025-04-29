@@ -1015,7 +1015,7 @@ namespace Meta.WitAi
 
     public interface IVoiceEventProvider
     {
-        VoiceEvents VoiceEvents { get; }
+        public VoiceEvents VoiceEvents { get; }
     }
 
     public interface ITelemetryEventsProvider
