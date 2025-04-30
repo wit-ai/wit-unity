@@ -912,9 +912,6 @@ namespace Meta.WitAi
 
             // No longer active
             _isActive = false;
-
-            // Stop recording
-            StopRecording();
             FinalizeAudioDurationTracker();
 
             // Deactivate transcription provider
@@ -923,6 +920,7 @@ namespace Meta.WitAi
             // Deactivate recording request
             var previousRequest = _recordingRequest;
             _recordingRequest = null;
+            StopRecording(); // Must be after recording request instance is removed
             DeactivateWitRequest(previousRequest, abort);
 
             // Abort transmitting requests
