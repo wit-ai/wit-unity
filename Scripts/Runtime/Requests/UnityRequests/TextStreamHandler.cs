@@ -255,7 +255,7 @@ namespace Meta.WitAi.Requests
         public static string[] SplitText(string source, string delimiter)
         {
             #if UNITY_2021_1_OR_NEWER
-            return source.Split(delimiter);
+            return source?.Split(delimiter);
             #else
             var results = new System.Collections.Generic.List<string>();
             var temp = source;
