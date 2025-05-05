@@ -336,7 +336,8 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
             // Ensure socket is open
-            if (_socket.State != WitWebSocketConnectionState.Connected)
+            if (_socket.State != WitWebSocketConnectionState.Connected
+                && _socket.State != WitWebSocketConnectionState.Connecting)
             {
                 HandleSetupFailed($"Socket is {_socket.State}");
                 return;
@@ -411,25 +412,20 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
-                Logger.Error("Connection Failed\nConnection Request Id: {0}\nMessage: {1}",
-                    Options.RequestId,
-                    error);
                 FailedConnectionAttempts++;
-                // Error if hit max attempts
                 if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
                 {
-                    Logger.Error("Connection Refused\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
+                    Logger.Error("Connection Failed\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
                         Options.RequestId,
                         error,
                         FailedConnectionAttempts);
                 }
-                // Warn if retrying
                 else
                 {
-                    Logger.Warning("Connection Refused - Will Retry\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
-                        Options.RequestId,
-                        error,
-                        FailedConnectionAttempts);
+                    Logger.Warning("Connection Disrupted & Reconnecting\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
+                      Options.RequestId,
+                      error,
+                      FailedConnectionAttempts);
                 }
                 ForceDisconnect();
             }
@@ -573,7 +569,7 @@ namespace Meta.Voice.Net.WebSockets
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("Close Socket Failed\n{0}", e);
+                    Logger.Warning("Close Socket Failed\n\n{0}\n", e);
                 }
                 _socket = null;
             }
