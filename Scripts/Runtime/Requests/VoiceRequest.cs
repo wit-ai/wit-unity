@@ -263,6 +263,11 @@ namespace Meta.Voice
         // Wait for hold to complete and then perform an action on the background thread
         protected void WaitForHold(Action onReady)
         {
+            if (HoldTask == null)
+            {
+                ThreadUtility.CallOnMainThread(() => onReady?.Invoke()).WrapErrors();
+                return;
+            }
             ThreadUtility.BackgroundAsync(Logger, async () =>
             {
                 if (HoldTask != null)
