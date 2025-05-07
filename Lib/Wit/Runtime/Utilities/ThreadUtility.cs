@@ -167,6 +167,18 @@ namespace Meta.WitAi
             return Task.FromResult(SafeAction(logger, callback));
         }
 
+        private static void LogE(IVLogger logger, Exception e)
+        {
+            if (logger == null)
+            {
+                VLog.E("ThreadUtility Caught Error", e);
+            }
+            else
+            {
+                logger.Error("ThreadUtility Caught {0}\n{1}\n", e.GetType().Name, e);
+            }
+        }
+
         /// <summary>
         /// Calls and awaits an action within a try/catch
         /// </summary>
@@ -179,14 +191,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                if (logger == null)
-                {
-                    VLog.E(e);
-                }
-                else
-                {
-                    logger.Error("{0}\n{1}", e.Message, e.StackTrace);
-                }
+                LogE(logger, e);
                 throw;
             }
         }
@@ -203,14 +208,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                if (logger == null)
-                {
-                    VLog.E(e);
-                }
-                else
-                {
-                    logger.Error(e);
-                }
+                LogE(logger, e);
                 throw;
             }
         }
@@ -226,7 +224,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                logger.Error(e);
+                LogE(logger, e);
                 throw;
             }
         }
@@ -242,7 +240,7 @@ namespace Meta.WitAi
             }
             catch (Exception e)
             {
-                logger.Error(e);
+                LogE(logger, e);
                 throw;
             }
         }

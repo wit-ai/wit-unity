@@ -36,7 +36,7 @@ namespace Meta.Voice.Net.WebSockets
     /// used to find the appropriate IWitWebSocketSubscriber which then will generate a request to handle the response.
     /// </summary>
     [LogCategory(LogCategory.Network)]
-    public sealed class WitWebSocketClient : IWitWebSocketClient, ILogSource
+    public sealed class WitWebSocketClient : IWitWebSocketClient, ILogSource, IDisposable
     {
         /// <summary>
         /// The settings required to connect, authenticate and drive server/client communication.
@@ -589,15 +589,29 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void DisconnectIfExitingPlayMode(UnityEditor.PlayModeStateChange playModeState)
         {
-            if (playModeState == UnityEditor.PlayModeStateChange.ExitingPlayMode
-                && (ConnectionState == WitWebSocketConnectionState.Connecting
-                    || ConnectionState == WitWebSocketConnectionState.Connected))
+            if (playModeState == UnityEditor.PlayModeStateChange.ExitingPlayMode)
             {
-                ReferenceCount = 0;
-                ForceDisconnect();
+                Dispose();
             }
         }
         #endif
+
+        /// <summary>
+        /// Remove all references
+        /// </summary>
+        public void Dispose()
+        {
+            // Clear reference count and ensure reconnects do not occur
+            ReferenceCount = 0;
+            Settings.ReconnectAttempts = 0;
+
+            // Force disconnect if needed
+            if (ConnectionState == WitWebSocketConnectionState.Connecting
+                || ConnectionState == WitWebSocketConnectionState.Connected)
+            {
+                ForceDisconnect();
+            }
+        }
         #endregion DISCONNECT
 
         #region RECONNECT
@@ -687,8 +701,13 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private void SendChunk(string requestId, WitResponseNode requestJsonData, byte[] requestBinaryData)
         {
-            _ = ThreadUtility.BackgroundAsync(Logger,
-                () => SendChunkAsync(requestId, requestJsonData, requestBinaryData));
+            // If logger is null, this script is most likely disposed
+            if (Logger == null)
+            {
+                return;
+            }
+            ThreadUtility.BackgroundAsync(Logger,
+                  () => SendChunkAsync(requestId, requestJsonData, requestBinaryData)).WrapErrors();
         }
 
         /// <summary>
