@@ -83,7 +83,7 @@ namespace Meta.Voice.Net.WebSockets
 
         // Whether or not connection to server has been requested
         private bool _connected = false;
-        // Whether or not currently active in heirarchy
+        // Whether or not currently active in hierarchy
         private bool _active = false;
         // Current subscriptions per topic
         private ConcurrentDictionary<string, PubSubSubscriptionState> _subscriptionsPerTopic =
