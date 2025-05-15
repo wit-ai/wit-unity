@@ -1061,20 +1061,26 @@ namespace Meta.WitAi.TTS.Utilities
                 return;
             }
 
-            // Cancel each clip from loading
-            for (int r = 0; r < _queuedRequests.Count; r++)
-            {
-                var request = _queuedRequests[r];
-                if (request != null)
-                {
-                    RaiseEvents(RaiseOnLoadAborted, request);
-                }
-            }
-
-            // Safely clear queue
+            // Safely clear queue prior to callbacks
+            TTSSpeakerRequestData[] queue;
             lock (_queuedRequests)
             {
+                queue = _queuedRequests.ToArray();
                 _queuedRequests.Clear();
+            }
+
+            // Cancel each clip from loading
+            for (int r = 0; r < queue.Length; r++)
+            {
+                var request = queue[r];
+                if (request != null)
+                {
+                    if (string.IsNullOrEmpty(request.Error))
+                    {
+                        request.Error = WitConstants.CANCEL_ERROR;
+                    }
+                    RaiseUnloadEvents(request);
+                }
             }
 
             // Refresh in queue check

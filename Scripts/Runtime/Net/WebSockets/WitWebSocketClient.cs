@@ -357,6 +357,17 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         private async Task SetupAsync()
         {
+            // Additional wait
+            if (_socket.State == WitWebSocketConnectionState.Connecting)
+            {
+                await Task.Delay(Settings.ServerConnectionTimeoutMs);
+                if (_socket.State != WitWebSocketConnectionState.Connected)
+                {
+                    HandleSetupFailed($"Socket still not connected after {Settings.ServerConnectionTimeoutMs}ms");
+                    return;
+                }
+            }
+
             // Get client access token
             string clientAccessToken = Settings?.Configuration?.GetClientAccessToken();
             if (string.IsNullOrEmpty(clientAccessToken))
@@ -377,7 +388,6 @@ namespace Meta.Voice.Net.WebSockets
             IsAuthenticated = string.IsNullOrEmpty(authError);
             if (!IsAuthenticated)
             {
-                Settings.ReconnectAttempts = 0; // Don't retry
                 HandleSetupFailed(authError);
                 return;
             }
@@ -763,7 +773,16 @@ namespace Meta.Voice.Net.WebSockets
             if (rawData != null)
             {
                 if (Settings.VerboseJsonLogging) Logger.Verbose("Upload Chunk:\n{0}\n", chunk.jsonString);
-                await _socket.Send(rawData);
+                try
+                {
+                    await _socket.Send(rawData);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Exception During WebSocket.Send:\n{0}\n", e);
+                    HandleSocketDisconnect(WebSocketCloseCode.Abnormal);
+                    return;
+                }
             }
 
             // Simulate immediate error if desired

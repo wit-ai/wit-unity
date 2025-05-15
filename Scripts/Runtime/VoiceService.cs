@@ -53,7 +53,7 @@ namespace Meta.WitAi
         {
             get
             {
-                if (_witConfiguration == null)
+                if (_witConfiguration == null && isActiveAndEnabled)
                 {
                     _witConfiguration = GetComponent<IWitConfigurationProvider>()?.Configuration;
                 }
