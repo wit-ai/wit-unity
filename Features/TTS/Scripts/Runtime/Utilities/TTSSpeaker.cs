@@ -24,7 +24,7 @@ using Meta.WitAi.TTS.Interfaces;
 namespace Meta.WitAi.TTS.Utilities
 {
     [LogCategory(Voice.Logging.LogCategory.TextToSpeech)]
-    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer, ILogSource
+    public class TTSSpeaker : MonoBehaviour, ISpeechEventProvider, ISpeaker, ITTSEventPlayer, ILogSource, IAudioPlayerProvider
     {
         /// <inheritdoc/>
         public IVLogger Logger { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.TextToSpeech);

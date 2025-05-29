@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using UnityEngine;
 using Meta.WitAi;
 using Meta.Voice.Logging;
@@ -74,9 +75,9 @@ namespace Meta.Voice.Audio
         /// </summary>
         protected virtual TAudioClipStream GenerateClip()
         {
-            if (typeof(TAudioClipStream) == typeof(RawAudioClipStream))
+            if (typeof(TAudioClipStream).IsSubclassOf(typeof(BaseAudioClipStream)))
             {
-                object streamRef = new RawAudioClipStream(ClipSettings.Channels, ClipSettings.SampleRate,
+                object streamRef = Activator.CreateInstance(typeof(TAudioClipStream), ClipSettings.Channels, ClipSettings.SampleRate,
                     ClipSettings.ReadyDuration, ClipSettings.MaxDuration);
                 return (TAudioClipStream)streamRef;
             }
@@ -90,7 +91,7 @@ namespace Meta.Voice.Audio
         /// </summary>
         protected virtual void OnDestroy()
         {
-            _pool.Dispose();
+            _pool?.Dispose();
             _pool = null;
         }
 

@@ -44,11 +44,15 @@ namespace Meta.WitAi.TTS.LipSync
                 return;
             }
             _lipSyncAnimator.OnVisemeStarted?.AddListener(OnVisemeStarted);
+            _lipSyncAnimator.OnVisemeFinished?.AddListener(OnVisemeFinished);
+            _lipSyncAnimator.OnVisemeUpdate?.AddListener(OnVisemeUpdate);
         }
 
         protected virtual void OnDisable()
         {
             _lipSyncAnimator.OnVisemeStarted?.RemoveListener(OnVisemeStarted);
+            _lipSyncAnimator.OnVisemeFinished?.RemoveListener(OnVisemeFinished);
+            _lipSyncAnimator.OnVisemeUpdate?.RemoveListener(OnVisemeUpdate);
         }
     }
 }

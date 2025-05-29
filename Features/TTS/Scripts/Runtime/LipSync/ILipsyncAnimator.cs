@@ -29,5 +29,12 @@ namespace Meta.WitAi.TTS.LipSync
         /// <param name="newViseme">The viseme that is being transitioned to</param>
         /// <param name="percentage">The percentage of the progress of transitioning</param>
         void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage);
+
+        /// <summary>
+        /// Called when a viseme is updated to a specific value
+        /// </summary>
+        /// <param name="viseme">The viseme changing</param>
+        /// <param name="percentage">The percentage of the active viseme.</param>
+        void OnVisemeUpdate(Viseme viseme, float percentage);
     }
 }

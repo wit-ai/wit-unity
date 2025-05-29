@@ -12,6 +12,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.meta.witai.lib.ovrlipsync",
+            "expression": "",
+            "define": "VSDK_OVRLIPSYINC_LIBS"
+        }
+    ],
     "noEngineReferences": false
 }

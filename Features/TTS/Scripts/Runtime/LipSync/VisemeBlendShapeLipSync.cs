@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using Meta.WitAi.TTS.Data;
 using UnityEngine;
 
 namespace Meta.WitAi.TTS.LipSync
@@ -36,11 +37,13 @@ namespace Meta.WitAi.TTS.LipSync
         protected virtual void OnEnable()
         {
             _lipsyncAnimator.OnVisemeLerp.AddListener(OnVisemeLerp);
+            _lipsyncAnimator.OnVisemeUpdate.AddListener(OnVisemeUpdate);
         }
 
         protected void OnDisable()
         {
             _lipsyncAnimator.OnVisemeLerp.RemoveListener(OnVisemeLerp);
+            _lipsyncAnimator.OnVisemeUpdate.RemoveListener(OnVisemeUpdate);
         }
     }
 }

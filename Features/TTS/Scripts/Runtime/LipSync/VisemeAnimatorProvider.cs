@@ -32,5 +32,10 @@ namespace Meta.WitAi.TTS.LipSync
         /// a percentage of the current frame in between each viseme.
         /// </summary>
         VisemeLerpEvent OnVisemeLerp { get; }
+
+        /// <summary>
+        /// Fired when a viseme is updated to a specific value
+        /// </summary>
+        VisemeUpdateEvent OnVisemeUpdate { get; }
     }
 }

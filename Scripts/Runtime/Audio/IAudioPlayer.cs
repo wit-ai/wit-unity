@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Json;
 
 namespace Meta.Voice.Audio
@@ -15,6 +16,11 @@ namespace Meta.Voice.Audio
     /// </summary>
     public interface IAudioPlayer
     {
+        /// <summary>
+        /// Triggered when the audio player plays back a set of samples.
+        /// </summary>
+        public Action<float[]> OnPlaySamples { get; set; }
+
         /// <summary>
         /// The currently playing clip stream
         /// </summary>

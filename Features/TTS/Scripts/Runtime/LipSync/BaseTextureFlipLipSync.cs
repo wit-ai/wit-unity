@@ -172,5 +172,9 @@ namespace Meta.WitAi.TTS.LipSync
 
         public void OnVisemeFinished(Viseme viseme){}
         public void OnVisemeLerp(Viseme oldVieseme, Viseme newViseme, float percentage){}
+        public void OnVisemeUpdate(Viseme viseme, float percentage)
+        {
+
+        }
     }
 }

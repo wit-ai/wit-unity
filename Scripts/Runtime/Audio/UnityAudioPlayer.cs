@@ -141,6 +141,13 @@ namespace Meta.Voice.Audio
                     OnReadRawSamples, OnSetRawPosition);
                 _local = true;
             }
+            else if (ClipStream is RingBufferRawAudioClipStream ringBufferStream)
+            {
+                newClip = AudioClip.Create("CustomClip", ringBufferStream.BufferLength,
+                    ringBufferStream.Channels, ringBufferStream.SampleRate, true,
+                    OnReadRawSamples, OnSetRawPosition);
+                _local = true;
+            }
 
             // Null clip
             if (newClip == null)
@@ -169,7 +176,11 @@ namespace Meta.Voice.Audio
             var length = 0;
 
             // Copy as many samples as possible from the raw sample buffer
-            if (ClipStream is RawAudioClipStream rawAudioClipStream)
+            if (ClipStream is RingBufferRawAudioClipStream stream)
+            {
+                length = stream.ReadSamples(samples);
+            }
+            else if (ClipStream is RawAudioClipStream rawAudioClipStream)
             {
                 var start = _offset;
                 var available = Mathf.Max(0, rawAudioClipStream.AddedSamples - start);
@@ -188,6 +199,8 @@ namespace Meta.Voice.Audio
                 Array.Clear(samples, length, dif);
                 _offset += dif;
             }
+
+            OnPlaySamples?.Invoke(samples);
         }
 
         /// <summary>

@@ -4,6 +4,11 @@
   "version": "77.0.0",
   "samples": [
     {
+      "displayName": "OVR Lipsync Library",
+      "description": "Installs a package that includes the OVR Lipsync dlls for use with TTS and other voice based services where lipsync is needed, but not provided server side.",
+      "path": "Samples~/OvrLipsyncLib"
+    },
+    {
       "displayName": "Response Debugger",
       "description": "A scene with simple text UI to show Wit responses.",
       "path": "Samples/ResponseDebugger"

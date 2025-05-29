@@ -610,8 +610,9 @@ namespace Meta.Net.NativeWebSocket
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Debug.LogError(e.Message);
                 m_TokenSource.Cancel();
             }
             finally

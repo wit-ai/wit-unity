@@ -33,10 +33,16 @@ namespace Meta.WitAi.TTS.LipSync
         [SerializeField] [FormerlySerializedAs("onVisemeLerp")]
         private VisemeLerpEvent _onVisemeLerp = new VisemeLerpEvent();
 
+        [TooltipBox("Fired when a viseme is updated to a specific value")]
+        [SerializeField]
+        private VisemeUpdateEvent _onVisemeUpdate = new VisemeUpdateEvent();
+
         public Viseme LastViseme { get; private set; }
         public VisemeChangedEvent OnVisemeStarted => _onVisemeStarted;
         public VisemeChangedEvent OnVisemeFinished => _onVisemeFinished;
         public VisemeLerpEvent OnVisemeLerp => _onVisemeLerp;
+        public VisemeUpdateEvent OnVisemeUpdate => _onVisemeUpdate;
+
         [Obsolete("Use OnVisemeStarted, OnVisemeLerp or OnVisemeFinished instead.")]
         public VisemeChangedEvent OnVisemeChanged => OnVisemeStarted;
 

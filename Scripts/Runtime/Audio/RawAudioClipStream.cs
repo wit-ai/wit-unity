@@ -38,7 +38,7 @@ namespace Meta.Voice.Audio
         public RawAudioClipStream(int newChannels, int newSampleRate,
             float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
             float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
-            : base(newChannels, newSampleRate, newReadyLength)
+            : base(newChannels, newSampleRate, newReadyLength, newMaxLength)
         {
             SampleBuffer = new float[Mathf.CeilToInt(newChannels * newSampleRate * newMaxLength)];
         }

@@ -31,6 +31,10 @@ namespace Meta.Voice.Audio
         /// A getter for the minimum length in seconds required before the OnStreamReady method is called
         /// </summary>
         public float StreamReadyLength { get; }
+        /// <summary>
+        /// A getter for the maximum length in seconds allowed for the clip stream.  If unlimited, -1 will be returned
+        /// </summary>
+        public float StreamMaxLength { get; }
 
         /// <summary>
         /// Whether or not the stream is ready for playback
@@ -94,12 +98,31 @@ namespace Meta.Voice.Audio
         /// </summary>
         /// <param name="newChannels">The channels to be used for streaming</param>
         /// <param name="newSampleRate">The new sample rate</param>
+        protected BaseAudioClipStream(int newChannels, int newSampleRate)
+            : this(newChannels, newSampleRate, WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH) {}
+
+        /// <summary>
+        /// The constructor that takes in a total channel, sample rate & ready length
+        /// </summary>
+        /// <param name="newChannels">The channels to be used for streaming</param>
+        /// <param name="newSampleRate">The new sample rate</param>
         /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
-        protected BaseAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH)
+        protected BaseAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength)
+            : this(newChannels, newSampleRate, newStreamReadyLength, -1f) {}
+
+        /// <summary>
+        /// The constructor that takes in a total channel, sample rate, ready length and max length
+        /// </summary>
+        /// <param name="newChannels">The channels to be used for streaming</param>
+        /// <param name="newSampleRate">The new sample rate</param>
+        /// <param name="newStreamReadyLength">The minimum length in seconds required before the OnStreamReady method is called</param>
+        /// <param name="newStreamMaxLength">If applicable, The maximum length in seconds allowed before this clip audio will be cut off</param>
+        protected BaseAudioClipStream(int newChannels, int newSampleRate, float newStreamReadyLength, float newStreamMaxLength)
         {
             Channels = newChannels;
             SampleRate = newSampleRate;
             StreamReadyLength = newStreamReadyLength;
+            StreamMaxLength = newStreamMaxLength;
         }
 
         /// <summary>

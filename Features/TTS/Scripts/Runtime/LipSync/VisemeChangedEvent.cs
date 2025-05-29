@@ -18,15 +18,22 @@ namespace Meta.WitAi.TTS.LipSync
     [Serializable]
     public class VisemeLerpEvent : UnityEvent<Viseme, Viseme, float>
     {
-        
+
     }
-    
+
     /// <summary>
     /// Event that triggers when a viseme has fully changed to a new viseme
     /// </summary>
     [Serializable]
     public class VisemeChangedEvent : UnityEvent<Viseme>
     {
-        
+
+    }
+
+    /// <summary>
+    /// Triggers when a viseme is updated to a specific value
+    /// </summary>
+    public class VisemeUpdateEvent : UnityEvent<Viseme, float>
+    {
     }
 }

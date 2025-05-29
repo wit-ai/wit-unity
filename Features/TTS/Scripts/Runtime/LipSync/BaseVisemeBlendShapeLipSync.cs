@@ -142,6 +142,23 @@ namespace Meta.WitAi.TTS.LipSync
         public void OnVisemeStarted(Viseme viseme){}
         public void OnVisemeFinished(Viseme viseme){}
 
+        public virtual void OnVisemeUpdate(Viseme viseme, float percentage)
+        {
+            var blendShapeIndex = _visemeLookup[viseme];
+            if (blendShapeIndex == -1) return;
+
+            var blendShape = VisemeBlendShapes[blendShapeIndex];
+            for (int i = 0; i < blendShape.weights.Length; i++)
+            {
+                var weightIndex = _blendShapeLookup[blendShape.weights[i].blendShapeId];
+                if (weightIndex >= 0)
+                {
+                    // Set blend shape weight
+                    SkinnedMeshRenderer.SetBlendShapeWeight(weightIndex, percentage * blendShapeWeightScale);
+                }
+            }
+        }
+
         // Simply sets to the previous unless equal to the next
         public virtual void OnVisemeLerp(Viseme fromEvent, Viseme toEvent, float percentage)
         {
@@ -240,9 +257,19 @@ namespace Meta.WitAi.TTS.LipSync
             base.OnInspectorGUI();
 
             GUILayout.Space(EditorGUIUtility.singleLineHeight);
-            debug = EditorGUILayout.Foldout(debug, "Debug", true);
-            if (debug)
+            var debugFoldout = EditorGUILayout.Foldout(debug, "Debug", true);
+            if (!debugFoldout && debug)
             {
+                EditorApplication.update -= Repaint;
+                debug = false;
+            }
+            if (debugFoldout)
+            {
+                if (!debug)
+                {
+                    debug = debugFoldout;
+                    EditorApplication.update += Repaint;
+                }
                 if (!EditorApplication.isPlaying)
                 {
                     GUILayout.Label("Enter play mode to view the current state of the blend shapes.");
@@ -252,7 +279,18 @@ namespace Meta.WitAi.TTS.LipSync
                 for (int i = 0; i < lipsync.VisemeBlendShapes.Length; i++)
                 {
                     var data = lipsync.VisemeBlendShapes[i];
-                    GUILayout.Label($"{data.viseme}");
+                    if (data.weights.Length > 0)
+                    {
+                        var firstWeight = data.weights.FirstOrDefault();
+                        var index = lipsync.SkinnedMeshRenderer.sharedMesh.GetBlendShapeIndex(firstWeight.blendShapeId);
+
+                        GUILayout.Label($"{data.viseme} - {index} - {firstWeight.blendShapeId}");
+                    }
+                    else
+                    {
+                        GUILayout.Label($"{data.viseme}");
+                    }
+
                     EditorGUI.indentLevel++;
                     for (int j = 0; lipsync.SkinnedMeshRenderer && j < data.weights.Length; j++)
                     {

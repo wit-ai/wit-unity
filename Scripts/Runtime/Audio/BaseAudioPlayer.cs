@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+using System;
 using Meta.WitAi.Json;
 using UnityEngine;
 
@@ -16,13 +17,15 @@ namespace Meta.Voice.Audio
     /// </summary>
     public abstract class BaseAudioPlayer : MonoBehaviour, IAudioPlayer
     {
+        public Action<float[]> OnPlaySamples { get; set; }
+
         /// <summary>
         /// The currently playing clip stream
         /// </summary>
         public IAudioClipStream ClipStream { get; private set; }
 
         /// <summary>
-        /// Wit response node containin originating speech data
+        /// Wit response node containing originating speech data
         /// of currently playing clip stream.
         /// </summary>
         public WitResponseNode SpeechNode { get; private set; }
