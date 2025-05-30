@@ -173,15 +173,16 @@ namespace Meta.WitAi.TTS.LipSync.OvrLipSyncIntegration
         #endif
 
 #if VSDK_OVRLIPSYINC_LIBS
+
         // * * * * * * * * * * * * *
         // Public members
+
+        // interface through this static member.
+        public static OvrLipSyncEngine sInstance = null;
 
         // * * * * * * * * * * * * *
         // Static members
         private static Result sInitialized = Result.Unknown;
-
-        // interface through this static member.
-        public static OvrLipSyncEngine sInstance = null;
 
         // * * * * * * * * * * * * *
         // MonoBehaviour overrides
