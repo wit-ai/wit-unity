@@ -169,37 +169,10 @@ namespace Meta.Voice.Audio
             _offset = offset;
         }
 
-        // Read raw sample
+        // Read raw samples
         private void OnReadRawSamples(float[] samples)
         {
-            // Length of copied samples
-            var length = 0;
-
-            // Copy as many samples as possible from the raw sample buffer
-            if (ClipStream is RingBufferRawAudioClipStream stream)
-            {
-                length = stream.ReadSamples(samples);
-            }
-            else if (ClipStream is RawAudioClipStream rawAudioClipStream)
-            {
-                var start = _offset;
-                var available = Mathf.Max(0, rawAudioClipStream.AddedSamples - start);
-                length = Mathf.Min(samples.Length, available);
-                if (length > 0)
-                {
-                    Array.Copy(rawAudioClipStream.SampleBuffer, start, samples, 0, length);
-                    _offset += length;
-                }
-            }
-
-            // Clear unavailable samples
-            if (length < samples.Length)
-            {
-                int dif = samples.Length - length;
-                Array.Clear(samples, length, dif);
-                _offset += dif;
-            }
-
+            _offset += ClipStream.ReadSamples(_offset, samples);
             OnPlaySamples?.Invoke(samples);
         }
 

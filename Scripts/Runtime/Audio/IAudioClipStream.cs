@@ -118,6 +118,23 @@ namespace Meta.Voice.Audio
         void SetExpectedSamples(int expectedSamples);
 
         /// <summary>
+        /// Reads as many samples as possible from the specified read offset into the destination with the specified offset
+        /// </summary>
+        /// <param name="readOffset">The index from the start of the stream to begin reading</param>
+        /// <param name="destinationSamples">A buffer that samples will be copied to</param>
+        /// <param name="destinationOffset">The offset to be used for the destination array</param>
+        /// <returns>The total samples read during this method.</returns>
+        int ReadSamples(int readOffset, float[] destinationSamples, int destinationOffset = 0);
+
+        /// <summary>
+        /// Reads as many samples as possible from the specified read offset
+        /// </summary>
+        /// <param name="readOffset">The index from the start of the stream to begin reading</param>
+        /// <param name="onReadSamples">The callback that will occur one or more times with samples</param>
+        /// <returns>The total samples read during this method.</returns>
+        int ReadSamples(int readOffset, AudioClipStreamSampleDelegate onReadSamples);
+
+        /// <summary>
         /// Called when clip stream should be completely removed from RAM
         /// </summary>
         void Unload();

@@ -141,13 +141,14 @@ namespace Meta.Voice.Audio
             OnStreamUnloaded = null;
         }
 
-        /// <summary>
-        /// Adds a sample buffer to the current stream in its entirety.
-        /// </summary>
-        /// <param name="samples">A buffer of decoded floats that were decoded</param>
-        /// <param name="offset">The offset of the buffer to be used</param>
-        /// <param name="length">The total samples to be used</param>
+        /// <inheritdoc/>
         public abstract void AddSamples(float[] samples, int offset, int length);
+
+        /// <inheritdoc/>
+        public abstract int ReadSamples(int readOffset, float[] destinationSamples, int destinationOffset = 0);
+
+        /// <inheritdoc/>
+        public abstract int ReadSamples(int readOffset, AudioClipStreamSampleDelegate onReadSamples);
 
         /// <summary>
         /// Calls on occassions where the total samples are known.  Either prior to a disk load or

@@ -16,14 +16,9 @@ namespace Meta.Voice.Audio
 {
     public class RingBufferRawAudioClipStream : BaseAudioClipStream
     {
-        private RingBuffer<float> _buffer;
+        private readonly RingBuffer<float> _buffer;
+        private RingBuffer<float>.Marker _marker;
         public Action OnCompletedBufferPlayback;
-        private readonly RingBuffer<float>.Marker _marker;
-
-        public RingBufferRawAudioClipStream(float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
-            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
-            : this(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, newReadyLength,
-                newMaxLength) {}
 
         public RingBufferRawAudioClipStream(int newChannels, int newSampleRate,
             float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
@@ -36,6 +31,7 @@ namespace Meta.Voice.Audio
 
         public int BufferLength => _buffer.Capacity;
 
+        /// <inheritdoc/>
         public override void AddSamples(float[] buffer, int bufferOffset, int bufferLength)
         {
             _buffer.Push(buffer, bufferOffset, bufferLength);
@@ -44,16 +40,40 @@ namespace Meta.Voice.Audio
             UpdateState();
         }
 
-        public int ReadSamples(float[] samples)
+        /// <summary>
+        /// Reads as many samples as possible into the destination with the specified offset
+        /// </summary>
+        /// <param name="destinationSamples">A buffer that samples will be copied to</param>
+        public int ReadSamples(float[] destinationSamples)
+            => ReadSamples(0, destinationSamples, 0);
+
+        /// <inheritdoc/>
+        public override int ReadSamples(int readOffset, float[] destinationSamples, int destinationOffset = 0)
         {
-            var length = _marker.Read(samples, 0, samples.Length);
-            if (length < samples.Length)
+            var length = !_marker.IsValid ? 0 : _marker.Read(destinationSamples, destinationOffset, destinationSamples.Length - destinationOffset);
+            int end = destinationOffset + length;
+            if (end < destinationSamples.Length)
             {
-                int dif = samples.Length - length;
-                Array.Clear(samples, length, dif);
+                int remainder = destinationSamples.Length - end;
+                Array.Clear(destinationSamples, end, remainder);
             }
-            if(length > 0 && _marker.AvailableByteCount == 0) OnCompletedBufferPlayback?.Invoke();
+            if (length > 0 && _marker.AvailableByteCount == 0) OnCompletedBufferPlayback?.Invoke();
             return length;
+        }
+
+        /// <inheritdoc/>
+        public override int ReadSamples(int readOffset, AudioClipStreamSampleDelegate onRead)
+        {
+            // TODO: Fix in D75885934
+            return 0;
+        }
+
+        /// <inheritdoc/>
+        public override void Unload()
+        {
+            base.Unload();
+            _buffer.Clear();
+            _marker = _buffer.CreateMarker();
         }
     }
 }

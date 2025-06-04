@@ -69,5 +69,34 @@ namespace Meta.Voice.Audio
             // Update state
             UpdateState();
         }
+
+        /// <inheritdoc/>
+        public override int ReadSamples(int readOffset, float[] destinationSamples, int destinationOffset = 0)
+        {
+            var sampleOffset = readOffset;
+            var destinationLength = destinationSamples.Length - destinationOffset;
+            var sampleLength = Mathf.Min(AddedSamples - sampleOffset, destinationLength);
+            if (sampleLength > 0)
+            {
+                Array.Copy(SampleBuffer, sampleOffset, destinationSamples, destinationOffset, sampleLength);
+                if (sampleLength < destinationLength)
+                {
+                    Array.Clear(destinationSamples, sampleLength, destinationLength - sampleLength);
+                }
+            }
+            return sampleLength;
+        }
+
+        /// <inheritdoc/>
+        public override int ReadSamples(int readOffset, AudioClipStreamSampleDelegate onReadSamples)
+        {
+            var sampleOffset = readOffset;
+            var sampleLength = AddedSamples - sampleOffset;
+            if (sampleLength > 0)
+            {
+                onReadSamples?.Invoke(SampleBuffer, sampleOffset, sampleLength);
+            }
+            return sampleLength;
+        }
     }
 }
