@@ -15,7 +15,7 @@ using Lib.Wit.Runtime.Utilities.Logging;
 namespace Meta.Voice.Audio
 {
     /// <summary>
-    /// An abstract audio system class that defaults to use RawAudioClipStream and
+    /// An abstract audio system class that has basic audio clip and player setup based on provided generic types
     /// </summary>
     [LogCategory(LogCategory.Audio)]
     public abstract class BaseAudioSystem<TAudioClipStream, TAudioPlayer>
@@ -57,6 +57,7 @@ namespace Meta.Voice.Audio
 
         // Clip stream pool
         private ObjectPool<TAudioClipStream> _pool;
+        private bool _bufferPool = false;
 
         /// <summary>
         /// Generate pool if missing
@@ -68,6 +69,11 @@ namespace Meta.Voice.Audio
                 return;
             }
             _pool = new ObjectPool<TAudioClipStream>(GenerateClip);
+            if (!_bufferPool && typeof(TAudioClipStream) == typeof(BufferPoolAudioClipStream))
+            {
+                _bufferPool = true;
+                BufferPoolAudioClipStream.IncrementPool();
+            }
         }
 
         /// <summary>
@@ -91,6 +97,11 @@ namespace Meta.Voice.Audio
         /// </summary>
         protected virtual void OnDestroy()
         {
+            if (_bufferPool && typeof(TAudioClipStream) == typeof(BufferPoolAudioClipStream))
+            {
+                BufferPoolAudioClipStream.DecrementPool();
+                _bufferPool = false;
+            }
             _pool?.Dispose();
             _pool = null;
         }
