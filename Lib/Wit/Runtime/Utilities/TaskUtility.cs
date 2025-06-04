@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -86,6 +87,36 @@ namespace Meta.WitAi
                 var lastUpdate = getLastUpdate != null ? getLastUpdate.Invoke() : now;
                 var elapsed = (now - lastUpdate).TotalMilliseconds;
                 currentTimeout = Mathf.Max(0, timeoutMs - (int)elapsed);
+            }
+        }
+
+        /// <summary>
+        /// Wait until it is the current task's turn then perform the task
+        /// </summary>
+        public static async Task WaitForTurn(List<Task> allTasks, int maxConcurrentTasks, Func<Task> performTask)
+        {
+            TaskCompletionSource<bool> completion = new();
+            Task[] waitList;
+            lock (allTasks)
+            {
+                waitList = allTasks.ToArray();
+                allTasks.Add(completion.Task);
+            }
+            if (maxConcurrentTasks > 0
+                && maxConcurrentTasks <= waitList.Length)
+            {
+                await waitList.WhenLessThan(maxConcurrentTasks);
+            }
+
+            try
+            {
+                await performTask.Invoke();
+                completion.SetResult(true);
+            }
+            catch (Exception e)
+            {
+                completion.SetResult(false);
+                throw e;
             }
         }
     }

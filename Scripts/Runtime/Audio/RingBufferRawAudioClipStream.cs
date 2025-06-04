@@ -19,6 +19,7 @@ namespace Meta.Voice.Audio
         private readonly RingBuffer<float> _buffer;
         private RingBuffer<float>.Marker _marker;
         public Action OnCompletedBufferPlayback;
+        public int BufferLength => _buffer.Capacity;
 
         public RingBufferRawAudioClipStream(int newChannels, int newSampleRate,
             float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
@@ -29,14 +30,19 @@ namespace Meta.Voice.Audio
             _marker = _buffer.CreateMarker();
         }
 
-        public int BufferLength => _buffer.Capacity;
-
         /// <inheritdoc/>
         public override void AddSamples(float[] buffer, int bufferOffset, int bufferLength)
         {
-            _buffer.Push(buffer, bufferOffset, bufferLength);
-            AddedSamples += bufferLength;
-            OnAddSamples?.Invoke(buffer, bufferOffset, bufferLength);
+            // Ensure length added does not surpass buffer
+            var writeAvailable = (int)(_buffer.Capacity - _marker.AvailableByteCount);
+            var sampleLength = Mathf.Min(bufferLength, writeAvailable);
+            if (sampleLength <= 0)
+            {
+                return;
+            }
+            _buffer.Push(buffer, bufferOffset, sampleLength);
+            AddedSamples += sampleLength;
+            OnAddSamples?.Invoke(buffer, bufferOffset, sampleLength);
             UpdateState();
         }
 

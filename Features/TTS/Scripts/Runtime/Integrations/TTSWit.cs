@@ -104,9 +104,10 @@ namespace Meta.WitAi.TTS.Integrations
         public TTSWitRequestSettings RequestSettings = new TTSWitRequestSettings
         {
             audioType = WitConstants.TTS_TYPE_DEFAULT,
+            maxConcurrentRequests = -1,
+            audioStreamPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD,
             audioReadyDuration = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
             audioMaxDuration = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH,
-            audioStreamPreloadCount = WitConstants.ENDPOINT_TTS_DEFAULT_PRELOAD,
             audioStream = true,
             useEvents = true
         };
@@ -278,6 +279,11 @@ namespace Meta.WitAi.TTS.Integrations
             voiceSettings = null;
             return false;
         }
+
+        /// <summary>
+        /// Use max concurrent requests setting
+        /// </summary>
+        public override int GetMaxConcurrentRequests() => RequestSettings.maxConcurrentRequests;
 
         /// <summary>
         /// Method for streaming audio from a back-end service.

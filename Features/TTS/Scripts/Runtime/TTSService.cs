@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
@@ -126,6 +127,11 @@ namespace Meta.WitAi.TTS
             return string.Empty;
         }
 
+        /// <summary>
+        /// Maximum concurrent requests allowed.  If <= 0, no limit is used
+        /// </summary>
+        public virtual int GetMaxConcurrentRequests() => -1;
+
         // Set instance
         protected virtual void Awake()
         {
@@ -174,7 +180,6 @@ namespace Meta.WitAi.TTS
             if (add)
             {
                 AudioSystem = GetOrCreateInterface<IAudioSystem, UnityAudioSystem>(AudioSystem);
-                RuntimeCacheHandler = GetOrCreateInterface<ITTSRuntimeCacheHandler, TTSRuntimeLRUCache>(RuntimeCacheHandler);
                 DiskCacheHandler = GetInterface(DiskCacheHandler);
             }
 
@@ -913,7 +918,6 @@ namespace Meta.WitAi.TTS
             WebHandler?.CancelRequests(clipData);
 
             // Unloads clip stream
-            clipData.clipStream?.Unload();
             clipData.clipStream = null;
             if (clipData.loadState == TTSClipLoadState.Preparing)
             {

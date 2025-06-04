@@ -45,6 +45,12 @@ namespace Meta.WitAi.TTS.Integrations
         public bool useEvents;
 
         /// <summary>
+        /// Number of audio clip streams to load concurrently.
+        /// </summary>
+        [Tooltip("Number of audio clip streams to load concurrently.")]
+        public int maxConcurrentRequests;
+
+        /// <summary>
         /// Number of audio clip streams to pool immediately on first enable.
         /// </summary>
         [Tooltip("Number of audio clip streams to pool immediately on first enable.")]

@@ -176,6 +176,9 @@ namespace Meta.WitAi.TTS.Utilities
         private bool _hasQueue = false;
         private bool _queueNotYetComplete = false;
 
+        // Request list for queueing requests
+        private List<Task> _requestTasks = new();
+
         // Text processors
         private ISpeakerTextPreprocessor[] _textPreprocessors;
         private ISpeakerTextPostprocessor[] _textPostprocessors;
@@ -1293,9 +1296,10 @@ namespace Meta.WitAi.TTS.Utilities
                 RaiseEvents(RaiseOnBegin, requestData);
                 RaiseEvents(RaiseOnLoadBegin, requestData);
                 RefreshQueueEvents();
-
-                // Load clip async
-                tasks[i] = LoadClip(requestData);
+                tasks[i] = TaskUtility.WaitForTurn(_requestTasks, TTSService.GetMaxConcurrentRequests(), async () =>
+                {
+                    await LoadAndPlayClip(requestData);
+                });
                 clearQueue = false;
             }
 
@@ -1312,7 +1316,7 @@ namespace Meta.WitAi.TTS.Utilities
         /// <summary>
         /// Loads audio async and returns once complete
         /// </summary>
-        private async Task LoadClip(TTSSpeakerRequestData requestData)
+        private async Task LoadAndPlayClip(TTSSpeakerRequestData requestData)
         {
             // Load
             var errors = await TTSService.LoadAsync(requestData.ClipData, requestData.OnReady);
@@ -1996,6 +2000,12 @@ namespace Meta.WitAi.TTS.Utilities
             requestData.ClipData?.onRequestComplete?.Invoke(requestData.ClipData);
             requestData.PlaybackEvents?.OnComplete?.Invoke(this, requestData.ClipData);
             requestData.PlaybackCompletion?.TrySetResult(playbackComplete);
+
+            // Unload if no runtime cache
+            if (TTSService.RuntimeCacheHandler == null)
+            {
+                TTSService.Unload(requestData.ClipData);
+            }
         }
         #endregion Callbacks
 
