@@ -72,11 +72,7 @@ namespace Meta.WitAi
         /// </summary>
         public void Preload(int total)
         {
-            if (total <= 0)
-            {
-                return;
-            }
-            for (int i = 0; i < total; i++)
+            for (int i = _available.Count; i < total; i++)
             {
                 Return(_generator());
             }
