@@ -40,18 +40,21 @@ namespace Meta.Voice.Audio
         public override bool IsPlaying => AudioSource != null && AudioSource.isPlaying;
 
         /// <summary>
-        /// Elapsed samples can be used for animation progress
+        /// Elapsed samples can be used if not using a clip buffer
         /// </summary>
-        public override bool CanSetElapsedSamples => true;
+        public override bool CanSetElapsedSamples => AudioSource != null && _clipBuffer == null;
 
         /// <summary>
-        /// The currently elapsed sample count
+        /// Use time samples directly if possible, otherwise leave it to TTS to determine elapsed samples
         /// </summary>
-        public override int ElapsedSamples => AudioSource != null ? AudioSource.timeSamples : 0;
+        public override int ElapsedSamples => CanSetElapsedSamples ? AudioSource.timeSamples : 0;
 
-        // Local clip adjustments
-        private bool _local = false;
-        private int _offset = 0;
+        // Small locally generated audio clip that is used to buffer audio to the Unity AudioSource
+        private AudioClip _clipBuffer;
+        private int _clipBufferOffset;
+        private int _clipBufferLoops;
+        private int _clipBufferMaxLength;
+        private int ReadAbsoluteOffset => _clipBufferOffset + _clipBufferLoops * _clipBufferMaxLength;
 
         private void Awake()
         {
@@ -122,6 +125,37 @@ namespace Meta.Voice.Audio
         }
 
         /// <summary>
+        /// Get local audio clip
+        /// </summary>
+        protected virtual AudioClip CreateStreamedClip(int offset, int channels, int sampleRate)
+        {
+            // Get buffer offset to be used prior to audio clip creation
+            _clipBufferMaxLength = channels * sampleRate; // 1 second
+            _clipBufferLoops = Mathf.FloorToInt(offset / (float)_clipBufferMaxLength);
+            _clipBufferOffset = offset - (_clipBufferLoops * _clipBufferMaxLength);
+
+            // Only generate new clip buffer if the previous has changed
+            if (_clipBuffer == null
+                || channels != _clipBuffer.channels
+                || sampleRate != _clipBuffer.samples)
+            {
+                // Destroy previous if applicable
+                if (_clipBuffer != null)
+                {
+                    Destroy(_clipBuffer);
+                    _clipBuffer = null;
+                }
+
+                // Create new buffer
+                _clipBuffer = AudioClip.Create("StreamedAudioClip", _clipBufferMaxLength, channels, sampleRate,
+                    true, OnReadRawSamples, OnSetRawPosition);
+            }
+
+            // Return clip buffer
+            return _clipBuffer;
+        }
+
+        /// <summary>
         /// Sets audio clip via an IAudioClipProvider or generates one if using a
         /// RawAudioClipStream.  Then begins playback at a specified offset.
         /// </summary>
@@ -134,19 +168,9 @@ namespace Meta.Voice.Audio
             {
                 newClip = uacs.Clip;
             }
-            else if (ClipStream is RawAudioClipStream rawAudioClipStream)
+            else if (ClipStream is BaseAudioClipStream)
             {
-                newClip = AudioClip.Create("CustomClip", rawAudioClipStream.SampleBuffer.Length,
-                    rawAudioClipStream.Channels, rawAudioClipStream.SampleRate, true,
-                    OnReadRawSamples, OnSetRawPosition);
-                _local = true;
-            }
-            else if (ClipStream is RingBufferRawAudioClipStream ringBufferStream)
-            {
-                newClip = AudioClip.Create("CustomClip", ringBufferStream.BufferLength,
-                    ringBufferStream.Channels, ringBufferStream.SampleRate, true,
-                    OnReadRawSamples, OnSetRawPosition);
-                _local = true;
+                newClip = CreateStreamedClip(offsetSamples, ClipStream.Channels, ClipStream.SampleRate);
             }
 
             // Null clip
@@ -157,23 +181,24 @@ namespace Meta.Voice.Audio
             }
 
             // Play audio clip
-            AudioSource.loop = false;
             AudioSource.clip = newClip;
-            AudioSource.timeSamples = offsetSamples;
+            AudioSource.loop = _clipBuffer != null;
+            AudioSource.timeSamples = _clipBuffer != null ? 0 : offsetSamples;
             AudioSource.Play();
         }
 
-        // Set offset position
-        private void OnSetRawPosition(int offset)
-        {
-            _offset = offset;
-        }
+        // Ignore set offset position
+        private void OnSetRawPosition(int offset) {}
 
         // Read raw samples
         private void OnReadRawSamples(float[] samples)
         {
-            _offset += ClipStream.ReadSamples(_offset, samples);
-            OnPlaySamples?.Invoke(samples);
+            _clipBufferOffset += ClipStream.ReadSamples(ReadAbsoluteOffset, samples);
+            if (_clipBufferOffset >= _clipBufferMaxLength)
+            {
+                _clipBufferOffset -= _clipBufferMaxLength;
+                _clipBufferLoops++;
+            }
         }
 
         /// <summary>
@@ -207,16 +232,20 @@ namespace Meta.Voice.Audio
             {
                 AudioSource.Stop();
             }
-            if (_local)
-            {
-                if (AudioSource.clip != null)
-                {
-                    Destroy(AudioSource.clip);
-                }
-                _local = false;
-            }
             AudioSource.clip = null;
             base.Stop();
+        }
+
+        /// <summary>
+        /// Destroy clip if applicable
+        /// </summary>
+        protected virtual void OnDestroy()
+        {
+            if (_clipBuffer != null)
+            {
+                Destroy(_clipBuffer);
+                _clipBuffer = null;
+            }
         }
     }
 }
