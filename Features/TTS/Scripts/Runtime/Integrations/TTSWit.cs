@@ -538,13 +538,13 @@ namespace Meta.WitAi.TTS.Integrations
         public bool CancelRequests(TTSClipData clipData)
         {
             // Cancel http v request if found
-            if (_httpRequests.TryGetValue(clipData.clipID, out var vRequest))
+            if (_httpRequests != null && _httpRequests.TryGetValue(clipData.clipID, out var vRequest))
             {
                 vRequest?.Cancel();
                 return true;
             }
             // Cancel web socket request if found
-            if (_webSocketRequests.TryGetValue(clipData.clipID, out var wsRequest))
+            if (_webSocketRequests != null && _webSocketRequests.TryGetValue(clipData.clipID, out var wsRequest))
             {
                 wsRequest?.Cancel();
                 return true;
