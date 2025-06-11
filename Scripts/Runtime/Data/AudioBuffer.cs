@@ -20,6 +20,7 @@ using Meta.WitAi.Attributes;
 using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using Meta.WitAi.Lib;
+using Meta.WitAi.Utilities;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.UI;
@@ -703,7 +704,9 @@ namespace Meta.WitAi.Data
         private void StopUpdateVolume()
         {
             MicMaxLevel = -1f;
-            if (_volumeUpdate != null)
+
+            // Note: self null check for when this gets called during app stop
+            if (_volumeUpdate != null && !this.IsDestroyedOrNull())
             {
                 StopCoroutine(_volumeUpdate);
                 _volumeUpdate = null;
