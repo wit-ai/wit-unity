@@ -267,9 +267,11 @@ namespace Meta.WitAi.TTS
         private void LogState(TTSClipData clipData, string message, bool fromDisk, string error = null)
         {
             const string log = "{0} {1}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nRequest Id: {5}";
+            const string logWithError = "{0} {1}: {6}\nText: {2}\nVoice: {3}\nReady: {4:0.00} seconds\nRequest Id: {5}";
+
             if (!string.IsNullOrEmpty(error))
             {
-                Logger.Warning(log + "\nError: {6}",
+                Logger.Warning(logWithError,
                     fromDisk ? "Disk" : "Web",
                     message,
                     clipData?.textToSpeak ?? "Null",
