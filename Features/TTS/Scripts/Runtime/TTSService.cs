@@ -679,6 +679,10 @@ namespace Meta.WitAi.TTS
         /// </summary>
         public void Unload(TTSClipData clipData)
         {
+            if (clipData == null)
+            {
+                return;
+            }
             if (RuntimeCacheHandler != null)
             {
                 RuntimeCacheHandler.RemoveClip(clipData.clipID);

@@ -2002,7 +2002,7 @@ namespace Meta.WitAi.TTS.Utilities
             requestData.PlaybackCompletion?.TrySetResult(playbackComplete);
 
             // Unload if no runtime cache
-            if (TTSService.RuntimeCacheHandler == null)
+            if (TTSService.RuntimeCacheHandler == null && requestData.ClipData != null)
             {
                 TTSService.Unload(requestData.ClipData);
             }
