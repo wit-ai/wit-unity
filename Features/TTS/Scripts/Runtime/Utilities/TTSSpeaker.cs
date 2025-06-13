@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.WitAi.Json;
@@ -1296,10 +1297,7 @@ namespace Meta.WitAi.TTS.Utilities
                 RaiseEvents(RaiseOnBegin, requestData);
                 RaiseEvents(RaiseOnLoadBegin, requestData);
                 RefreshQueueEvents();
-                tasks[i] = TaskUtility.WaitForTurn(_requestTasks, TTSService.GetMaxConcurrentRequests(), async () =>
-                {
-                    await LoadAndPlayClip(requestData);
-                });
+                tasks[i] = LoadAndPlayClip(requestData);
                 clearQueue = false;
             }
 
@@ -1318,6 +1316,18 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         private async Task LoadAndPlayClip(TTSSpeakerRequestData requestData)
         {
+            // Get previous completion tasks
+            var max = TTSService.GetMaxConcurrentRequests();
+            if (max > 0)
+            {
+                var index = _queuedRequests.IndexOf(requestData);
+                if (index >= max)
+                {
+                    var previousTasks = _queuedRequests.GetRange(0, index).Select(r => r.PlaybackCompletion.Task).ToArray();
+                    await previousTasks.WhenLessThan(max);
+                }
+            }
+
             // Load
             var errors = await TTSService.LoadAsync(requestData.ClipData, requestData.OnReady);
 
