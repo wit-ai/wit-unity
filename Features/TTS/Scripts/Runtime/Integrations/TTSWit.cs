@@ -326,14 +326,8 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Set complete duration
             clipData.completeDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
-            // No samples added
-            if (string.IsNullOrEmpty(error) &&
-                (clipData?.clipStream == null || clipData.clipStream.AddedSamples == 0))
-            {
-                error = "No audio samples added during stream";
-            }
             // Set expected samples
-            if (string.IsNullOrEmpty(error))
+            if (string.IsNullOrEmpty(error) && clipData.clipStream != null)
             {
                 clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
             }
@@ -350,17 +344,10 @@ namespace Meta.WitAi.TTS.Integrations
             // Generate tts request and store it in request
             var wsRequest = CreateWebSocketRequest(clipData, null);
 
-            // Set all web socket request callbacks
-            var completion = new TaskCompletionSource<bool>();
-            wsRequest.OnComplete = (r) =>
-            {
-                completion.SetResult(true);
-            };
-
             // Send request and await completion
             RefreshWebSocketSettings();
             _webSocketAdapter.SendRequest(wsRequest);
-            await completion.Task;
+            await wsRequest.Completion.Task;
 
             // Set status code and error
             clipData.LoadStatusCode = wsRequest.Code;
@@ -497,14 +484,8 @@ namespace Meta.WitAi.TTS.Integrations
 
             // Set complete duration
             clipData.completeDuration = (float)(DateTime.UtcNow - startTime).TotalSeconds;
-            // No samples added
-            if (string.IsNullOrEmpty(error) &&
-                (clipData?.clipStream == null || clipData.clipStream.AddedSamples == 0))
-            {
-                error = "No audio samples added during stream";
-            }
             // Set expected samples
-            if (string.IsNullOrEmpty(error))
+            if (string.IsNullOrEmpty(error) && clipData.clipStream != null)
             {
                 clipData.clipStream.SetExpectedSamples(clipData.clipStream.AddedSamples);
             }

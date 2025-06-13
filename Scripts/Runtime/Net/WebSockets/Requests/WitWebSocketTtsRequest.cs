@@ -241,13 +241,13 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 // No samples
                 if (_sampleCount == 0)
                 {
-                    Error = "No audio samples returned";
+                    Error = WitConstants.ERROR_TTS_NO_SAMPLES;
                     RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioSamplesEmpty);
                 }
                 // No events despite requesting them
                 else if (_eventCount == 0 && UseEvents)
                 {
-                    Error = "No audio events returned";
+                    Error = WitConstants.ERROR_TTS_NO_EVENTS;
                     RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
                 }
             }

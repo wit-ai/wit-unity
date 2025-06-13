@@ -26,7 +26,9 @@ namespace Meta.WitAi
         {
             task.ContinueWith((t, state) =>
             {
-                if (t.Exception != null)
+                if (t.Exception != null
+                    && !(t.Exception.InnerException != null
+                         && t.Exception.InnerException.Message.Equals(WitConstants.CANCEL_ERROR)))
                 {
                     VLog.E(t.Exception);
                 }

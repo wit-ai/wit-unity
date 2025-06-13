@@ -92,6 +92,8 @@ namespace Meta.WitAi
             + " The file will be streamed instead."
             + " If you wish to download this file at runtime, use the temporary or permanent cache.";
         public const string ERROR_TTS_DECODE = "Data failed to encode";
+        public const string ERROR_TTS_NO_SAMPLES = "No audio samples returned";
+        public const string ERROR_TTS_NO_EVENTS = "No audio events returned";
 
         // Dictation Endpoint
         public const string ENDPOINT_DICTATION = "dictation";
