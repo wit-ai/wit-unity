@@ -21,6 +21,10 @@ namespace Meta.Voice.Audio
         public Action OnCompletedBufferPlayback;
         public int BufferLength => _buffer.Capacity;
 
+        public RingBufferRawAudioClipStream(float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
+            float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
+            : this(WitConstants.ENDPOINT_TTS_CHANNELS, WitConstants.ENDPOINT_TTS_SAMPLE_RATE, newReadyLength, newMaxLength) {}
+
         public RingBufferRawAudioClipStream(int newChannels, int newSampleRate,
             float newReadyLength = WitConstants.ENDPOINT_TTS_DEFAULT_READY_LENGTH,
             float newMaxLength = WitConstants.ENDPOINT_TTS_DEFAULT_MAX_LENGTH)
