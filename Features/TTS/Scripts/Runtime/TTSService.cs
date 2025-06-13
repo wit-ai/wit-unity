@@ -7,7 +7,6 @@
  */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lib.Wit.Runtime.Utilities.Logging;
@@ -19,7 +18,6 @@ using Meta.WitAi.Requests;
 using UnityEngine;
 using Meta.WitAi.TTS.Data;
 using Meta.WitAi.TTS.Events;
-using Meta.WitAi.TTS.Integrations;
 using Meta.WitAi.TTS.Interfaces;
 using Meta.WitAi.Utilities;
 
@@ -333,6 +331,11 @@ namespace Meta.WitAi.TTS
             if (string.IsNullOrEmpty(formattedText))
             {
                 return WitConstants.TTS_EMPTY_ID;
+            }
+            // Without runtime cache handler, use randomized guid
+            if (RuntimeCacheHandler == null)
+            {
+                return $"{formattedText}-{Guid.NewGuid()}";
             }
 
             // Use hash code for text
