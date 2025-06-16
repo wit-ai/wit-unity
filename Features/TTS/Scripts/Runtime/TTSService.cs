@@ -178,6 +178,7 @@ namespace Meta.WitAi.TTS
             if (add)
             {
                 AudioSystem = GetOrCreateInterface<IAudioSystem, UnityAudioSystem>(AudioSystem);
+                RuntimeCacheHandler = GetInterface(RuntimeCacheHandler);
                 DiskCacheHandler = GetInterface(DiskCacheHandler);
             }
 
