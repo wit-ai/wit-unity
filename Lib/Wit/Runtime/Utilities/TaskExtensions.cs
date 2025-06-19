@@ -39,18 +39,18 @@ namespace Meta.WitAi
         /// Method for throwing any task exceptions even hidden cancellations
         /// </summary>
         /// <param name="preThrow">Optional action that calls prior to throwing an exception</param>
-        public static void ThrowCaughtExceptions(this Task task, Action preThrow = null)
+        public static void ThrowCaughtExceptions(this Task task, Action<string> preThrow = null)
         {
             // Throw the exception itself
             if (task.Exception?.InnerException != null)
             {
-                preThrow?.Invoke();
+                preThrow?.Invoke(task.Exception.InnerException.Message);
                 throw task.Exception.InnerException;
             }
             // Throw cancellation exceptions
             if (task.IsCanceled)
             {
-                preThrow?.Invoke();
+                preThrow?.Invoke(WitConstants.CANCEL_ERROR);
                 throw new TaskCanceledException(WitConstants.CANCEL_ERROR);
             }
         }

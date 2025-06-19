@@ -83,6 +83,7 @@ namespace Meta.WitAi
         public const int ENDPOINT_TTS_SAMPLE_RATE = 24_000;
         public const float ENDPOINT_TTS_DEFAULT_READY_LENGTH = 1.5f;
         public const float ENDPOINT_TTS_DEFAULT_MAX_LENGTH = 15f;
+        public const int ENDPOINT_TTS_QUEUE_PLAYBACK_TIMEOUT = 180_000; // 3 minutes to queue and playback
         public const int ENDPOINT_TTS_DEFAULT_PRELOAD = 5;
         public const int ENDPOINT_TTS_BUFFER_LENGTH = ENDPOINT_TTS_CHANNELS * ENDPOINT_TTS_SAMPLE_RATE; // Buffer rate is a single second of audio
         public const int ENDPOINT_TTS_DEFAULT_SAMPLE_LENGTH = (ENDPOINT_TTS_CHANNELS * ENDPOINT_TTS_SAMPLE_RATE) / 1000 * 30; // Each sample returns max 30ms of audio

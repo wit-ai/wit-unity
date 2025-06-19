@@ -64,6 +64,7 @@ namespace Meta.WitAi
             Task completionTask = null)
         {
             // Use the timeout provided as the current timeout
+            var start = DateTime.UtcNow;
             var currentTimeout = timeoutMs;
             while (currentTimeout > 0)
             {
@@ -84,7 +85,7 @@ namespace Meta.WitAi
 
                 // Check if a new timeout is required due to an update since we began
                 var now = DateTime.UtcNow;
-                var lastUpdate = getLastUpdate != null ? getLastUpdate.Invoke() : now;
+                var lastUpdate = getLastUpdate != null ? getLastUpdate.Invoke() : start;
                 var elapsed = (now - lastUpdate).TotalMilliseconds;
                 currentTimeout = Mathf.Max(0, timeoutMs - (int)elapsed);
             }

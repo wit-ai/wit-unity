@@ -1316,6 +1316,9 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         private async Task LoadAndPlayClip(TTSSpeakerRequestData requestData)
         {
+            // Timeout if playback queue takes to long
+            var playbackTimeout = Task.Delay(WitConstants.ENDPOINT_TTS_QUEUE_PLAYBACK_TIMEOUT);
+
             // Get previous completion tasks
             var max = TTSService.GetMaxConcurrentRequests();
             if (max > 0)
@@ -1324,18 +1327,28 @@ namespace Meta.WitAi.TTS.Utilities
                 if (index >= max)
                 {
                     var previousTasks = _queuedRequests.GetRange(0, index).Select(r => r.PlaybackCompletion.Task).ToArray();
-                    await previousTasks.WhenLessThan(max);
+                    await Task.WhenAny(playbackTimeout, previousTasks.WhenLessThan(max));
                 }
             }
 
             // Load
-            var errors = await TTSService.LoadAsync(requestData.ClipData, requestData.OnReady);
+            var loadTask = TTSService.LoadAsync(requestData.ClipData, requestData.OnReady);
+            var firstCompleted = await Task.WhenAny(playbackTimeout, loadTask);
+            var errors = playbackTimeout == firstCompleted ? WitConstants.ERROR_RESPONSE_TIMEOUT : loadTask.Result;
 
             // Call errors if needed
             FinalizeLoadedClip(requestData, errors);
 
             // Await playback completion
-            await requestData.PlaybackCompletion.Task;
+            firstCompleted = await Task.WhenAny(playbackTimeout, requestData.PlaybackCompletion.Task);
+            if (firstCompleted == playbackTimeout)
+            {
+                errors = WitConstants.ERROR_RESPONSE_TIMEOUT;
+                if (_speakingRequest == requestData)
+                {
+                    StopSpeaking();
+                }
+            }
 
             // Throw errors
             if (!string.IsNullOrEmpty(errors))
