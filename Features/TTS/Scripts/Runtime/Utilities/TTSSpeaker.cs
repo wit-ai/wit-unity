@@ -1294,9 +1294,6 @@ namespace Meta.WitAi.TTS.Utilities
                 var clipData = TTSService.GetClipData(phrases[i], voiceSettings, diskCacheSettings);
                 clipData.queryOperationId = operationId;
                 requestData.ClipData = clipData;
-                RaiseEvents(RaiseOnBegin, requestData);
-                RaiseEvents(RaiseOnLoadBegin, requestData);
-                RefreshQueueEvents();
                 tasks[i] = LoadAndPlayClip(requestData);
                 clearQueue = false;
             }
@@ -1319,20 +1316,13 @@ namespace Meta.WitAi.TTS.Utilities
             // Timeout if playback queue takes to long
             var playbackTimeout = Task.Delay(WitConstants.ENDPOINT_TTS_QUEUE_PLAYBACK_TIMEOUT);
 
-            // Get previous completion tasks
-            var max = TTSService.GetMaxConcurrentRequests();
-            if (max > 0)
-            {
-                var index = _queuedRequests.IndexOf(requestData);
-                if (index >= max)
-                {
-                    var previousTasks = _queuedRequests.GetRange(0, index).Select(r => r.PlaybackCompletion.Task).ToArray();
-                    await Task.WhenAny(playbackTimeout, previousTasks.WhenLessThan(max));
-                }
-            }
-
-            // Load
+            // Load and raise load events
             var loadTask = TTSService.LoadAsync(requestData.ClipData, requestData.OnReady);
+            RaiseEvents(RaiseOnBegin, requestData);
+            RaiseEvents(RaiseOnLoadBegin, requestData);
+            RefreshQueueEvents();
+
+            // Await load completion
             var firstCompleted = await Task.WhenAny(playbackTimeout, loadTask);
             var errors = playbackTimeout == firstCompleted ? WitConstants.ERROR_RESPONSE_TIMEOUT : loadTask.Result;
 
