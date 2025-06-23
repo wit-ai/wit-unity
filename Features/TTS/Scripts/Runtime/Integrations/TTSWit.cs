@@ -13,6 +13,7 @@ using Lib.Wit.Runtime.Utilities.Logging;
 using Meta.Voice.Audio;
 using Meta.Voice.Net.WebSockets;
 using Meta.Voice.Net.WebSockets.Requests;
+using Meta.WitAi.Attributes;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Meta.WitAi.Interfaces;
@@ -541,6 +542,9 @@ namespace Meta.WitAi.TTS.Integrations
         #if UNITY_2021_3_2 || UNITY_2021_3_3 || UNITY_2021_3_4 || UNITY_2021_3_5
         [NonReorderable]
         #endif
+        [TooltipBox("List of enabled voice presets.  Use the dropdown and Add Preset button below to " +
+                    "add more options from those available in WitConfiguration.  The currently active " +
+                    "voice can be set via the Voice Preset option on TTSSpeaker")]
         [SerializeField] private TTSWitVoiceSettings[] _presetVoiceSettings;
         public TTSWitVoiceSettings[] PresetWitVoiceSettings => _presetVoiceSettings;
 
