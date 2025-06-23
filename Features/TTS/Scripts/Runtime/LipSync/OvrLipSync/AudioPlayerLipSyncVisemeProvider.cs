@@ -103,7 +103,6 @@ namespace Meta.WitAi.TTS.LipSync.OvrLipSyncIntegration
         /// </summary>
         void SetVisemeToMorphTarget(OvrLipSyncEngine.Frame frame)
         {
-
             for (int i = 0; i < frame.Visemes.Length; i++)
             {
                 OnVisemeUpdate?.Invoke(ovrVisemeMap[i], frame.Visemes[i]);

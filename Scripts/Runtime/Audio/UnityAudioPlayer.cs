@@ -56,6 +56,11 @@ namespace Meta.Voice.Audio
         private int _clipBufferMaxLength;
         private int ReadAbsoluteOffset => _clipBufferOffset + _clipBufferLoops * _clipBufferMaxLength;
 
+        /// <summary>
+        /// True if the developer has requested playback. This is independent of the AudioSource's playing status
+        /// </summary>
+        private bool _isPlaying;
+
         private void Awake()
         {
             // Find base audio source if possible
@@ -185,6 +190,7 @@ namespace Meta.Voice.Audio
             AudioSource.loop = _clipBuffer != null;
             AudioSource.timeSamples = _clipBuffer != null ? 0 : offsetSamples;
             AudioSource.Play();
+            _isPlaying = true;
         }
 
         // Ignore set offset position
@@ -201,6 +207,13 @@ namespace Meta.Voice.Audio
             }
         }
 
+        private void OnAudioFilterRead(float[] data, int channels)
+        {
+            if (!_isPlaying) return;
+
+            OnPlaySamples?.Invoke(data);
+        }
+
         /// <summary>
         /// Performs a pause if the current clip is playing
         /// </summary>
@@ -209,6 +222,7 @@ namespace Meta.Voice.Audio
             if (IsPlaying)
             {
                 AudioSource.Pause();
+                _isPlaying = false;
             }
         }
 
@@ -220,6 +234,7 @@ namespace Meta.Voice.Audio
             if (!IsPlaying)
             {
                 AudioSource.UnPause();
+                _isPlaying = true;
             }
         }
 
@@ -231,6 +246,7 @@ namespace Meta.Voice.Audio
             if (IsPlaying)
             {
                 AudioSource.Stop();
+                _isPlaying = false;
             }
             AudioSource.clip = null;
             base.Stop();
@@ -241,6 +257,7 @@ namespace Meta.Voice.Audio
         /// </summary>
         protected virtual void OnDestroy()
         {
+            _isPlaying = false;
             if (_clipBuffer != null)
             {
                 Destroy(_clipBuffer);

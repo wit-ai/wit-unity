@@ -156,6 +156,7 @@ namespace Meta.WitAi.TTS.LipSync.OvrLipSyncIntegration
         public void ProcessAudioSamples(float[] data)
         {
             if (!_isEnabled) return;
+            if (null == _iAudioPlayer?.ClipStream) return;
 
             // Do not process if we are not initialized, or if there is no
             // audio source attached to game object

@@ -137,6 +137,12 @@ namespace Meta.WitAi.TTS.LipSync
             {
                 VLog.E(GetType().Name, $"Setup Warnings:\n{log}");
             }
+
+            if (_visemeLookup.Count == 0)
+            {
+                VLog.E(GetType().Name, $"No visemes found in Viseme lookup on {name}.");
+                enabled = false;
+            }
         }
 
         public void OnVisemeStarted(Viseme viseme){}
@@ -144,13 +150,14 @@ namespace Meta.WitAi.TTS.LipSync
 
         public virtual void OnVisemeUpdate(Viseme viseme, float percentage)
         {
-            var blendShapeIndex = _visemeLookup[viseme];
+            if (!_visemeLookup.TryGetValue(viseme, out var blendShapeIndex)) return;
             if (blendShapeIndex == -1) return;
 
             var blendShape = VisemeBlendShapes[blendShapeIndex];
             for (int i = 0; i < blendShape.weights.Length; i++)
             {
-                var weightIndex = _blendShapeLookup[blendShape.weights[i].blendShapeId];
+                var key = blendShape.weights[i].blendShapeId;
+                if (!_blendShapeLookup.TryGetValue(key, out var weightIndex)) continue;
                 if (weightIndex >= 0)
                 {
                     // Set blend shape weight
