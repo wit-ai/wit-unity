@@ -119,11 +119,13 @@ namespace Meta.WitAi
         /// </summary>
         protected virtual void OnEnable()
         {
+#if !UNITY_EDITOR
             // Cannot send if internet is not reachable (Only works on Mobile)
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
                 Logger.Error("Unable to reach the internet. Check your connection.");
             }
+#endif
             GetSpeechEvents()?.OnRequestInitialized.AddListener(OnRequestInit);
         }
         /// <summary>
