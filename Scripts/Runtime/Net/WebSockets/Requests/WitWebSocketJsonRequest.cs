@@ -40,7 +40,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// A unique operation ID to track between services for telemetry
         /// </summary>
-        public string OperationId { get;  }
+        public string OperationId { get; }
 
         /// <summary>
         /// The specific topic id that is being published to or received via subscription, if applicable.
@@ -88,6 +88,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public string Error { get; protected set; }
 
+        public ResponseErrorCode ResponseError { get; protected set; }
+
         /// <summary>
         /// Simulated error type
         /// </summary>
@@ -131,7 +133,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// <summary>
         /// Constructor which accepts a WitResponseNode as post data and applies request id
         /// </summary>
-        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null, string clientUserId = null, string operationId = null)
+        public WitWebSocketJsonRequest(WitResponseNode postData, string requestId = null, string clientUserId = null,
+            string operationId = null)
         {
             PostData = postData;
             RequestId = string.IsNullOrEmpty(requestId) ? WitConstants.GetUniqueId() : requestId;
@@ -149,6 +152,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
+
             IsUploading = true;
             _uploader = uploadChunk;
 
@@ -162,13 +166,16 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 {
                     publish[topic.Key] = topic.Value;
                 }
+
                 PostData[WitConstants.WIT_SOCKET_PUBSUB_PUBLISH_KEY] = publish;
             }
+
             // Set client user id
             if (!string.IsNullOrEmpty(ClientUserId) && PostData != null)
             {
                 PostData[WitConstants.WIT_SOCKET_CLIENT_USER_ID_KEY] = ClientUserId;
             }
+
             // Set operation id
             if (!string.IsNullOrEmpty(OperationId) && PostData != null)
             {
@@ -298,6 +305,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
+
             ThreadUtility.CallOnMainThread(() => OnRawResponse.Invoke(jsonString));
         }
 
@@ -309,19 +317,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         {
             UpdateTimeoutStart();
             ResponseData = newResponseData;
-            var codeString = ResponseData[WitConstants.KEY_RESPONSE_CODE].Value;
-            if (!string.IsNullOrEmpty(codeString))
-            {
-                if (int.TryParse(codeString, out var statusCode))
-                {
-                    Code = statusCode;
-                }
-                else
-                {
-                    Code = WitConstants.ERROR_CODE_GENERAL;
-                    Logger.Warning("{0} Response Code is not an integer: {1}\n{2}", GetType().Name, codeString, this);
-                }
-            }
+            Code = WitResultUtilities.GetStatusCode(ResponseData);
             Error = ResponseData[WitConstants.KEY_RESPONSE_ERROR].Value;
             var topicId = ResponseData[WitConstants.WIT_SOCKET_PUBSUB_TOPIC_KEY]?.Value;
             if (!string.IsNullOrEmpty(topicId))
@@ -340,6 +336,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
+
             IsDownloading = true;
             ThreadUtility.CallOnMainThread(RaiseFirstResponse);
         }
@@ -361,6 +358,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 return;
             }
+
             IsUploading = false;
             _uploader = null;
             IsDownloading = false;
@@ -369,6 +367,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             {
                 Completion.SetResult(string.IsNullOrEmpty(Error));
             }
+
             ThreadUtility.CallOnMainThread(RaiseComplete);
         }
 

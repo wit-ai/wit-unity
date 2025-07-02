@@ -37,15 +37,36 @@ namespace Meta.WitAi
         public const string WIT_ERROR = WitConstants.KEY_RESPONSE_ERROR;
 
         #region Base Response methods
+
         /// <summary>
         /// Returns if any status code is returned
         /// </summary>
-        public static int GetStatusCode(this WitResponseNode witResponse) =>
-            null != witResponse
-            && witResponse.AsObject != null
-            && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_CODE)
-                ? witResponse[WitConstants.KEY_RESPONSE_CODE].AsInt
-                : (int)HttpStatusCode.OK;
+        public static int GetStatusCode(this WitResponseNode witResponse)
+        {
+            int code = (int)HttpStatusCode.OK;
+            if (witResponse.AsObject != null && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_CODE))
+            {
+                var codeString = witResponse[WitConstants.KEY_RESPONSE_CODE].Value;
+                if (!string.IsNullOrEmpty(codeString))
+                {
+                    if (int.TryParse(codeString, out var statusCode))
+                    {
+                        code = statusCode;
+                    }
+                    else
+                    {
+                        var responseError = WitConstants.GetResponseErrorCode(codeString);
+                        code = responseError.code;
+                        if (responseError == WitConstants.GENERAL_RESPONSE_ERROR_CODE)
+                        {
+                            VLog.W("Response Handling", $"Response Code is not an integer: {codeString}");
+                        }
+                    }
+                }
+            }
+
+            return code;
+        }
 
         /// <summary>
         /// Returns if any errors are contained in the response
@@ -64,8 +85,8 @@ namespace Meta.WitAi
             null != witResponse
             && witResponse.AsObject != null
             && witResponse.AsObject.HasChild(WitConstants.KEY_RESPONSE_TRANSCRIPTION)
-            ? witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION].Value
-            : string.Empty;
+                ? witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION].Value
+                : string.Empty;
 
         /// <summary>
         /// Get whether this response is for transcriptions only
@@ -94,6 +115,7 @@ namespace Meta.WitAi
             {
                 return WitConstants.WIT_SOCKET_EXTERNAL_UNKNOWN_CLIENT_USER_KEY;
             }
+
             return result;
         }
 
@@ -179,16 +201,18 @@ namespace Meta.WitAi
         {
             var responseType = witResponse?.GetResponseType();
             return (string.Equals(responseType, WitConstants.RESPONSE_TYPE_PARTIAL_TRANSCRIPTION)
-                   || string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_TRANSCRIPTION))
+                    || string.Equals(responseType, WitConstants.RESPONSE_TYPE_FINAL_TRANSCRIPTION))
                    && !string.IsNullOrEmpty(witResponse[WitConstants.KEY_RESPONSE_TRANSCRIPTION]);
         }
 
         // Used for multiple lookups
         private static WitResponseArray GetArray(WitResponseNode witResponse, string key) =>
             witResponse?.SafeGet(key)?.AsArray;
+
         #endregion
 
         #region Entity methods
+
         /// <summary>
         /// Converts wit response node into a wit entity
         /// </summary>
@@ -197,12 +221,14 @@ namespace Meta.WitAi
         /// <summary>
         /// Converts wit response node into a float entity
         /// </summary>
-        public static WitEntityFloatData AsWitFloatEntity(this WitResponseNode witResponse) => new WitEntityFloatData(witResponse);
+        public static WitEntityFloatData AsWitFloatEntity(this WitResponseNode witResponse) =>
+            new WitEntityFloatData(witResponse);
 
         /// <summary>
         /// Converts wit response node into an int entity
         /// </summary>
-        public static WitEntityIntData AsWitIntEntity(this WitResponseNode witResponse) => new WitEntityIntData(witResponse);
+        public static WitEntityIntData AsWitIntEntity(this WitResponseNode witResponse) =>
+            new WitEntityIntData(witResponse);
 
         /// <summary>
         /// Gets the string value of the first entity
@@ -229,6 +255,7 @@ namespace Meta.WitAi
             {
                 values[i] = witResponse?[WitConstants.KEY_RESPONSE_NLP_ENTITIES]?[name]?[i]?["value"]?.Value;
             }
+
             return values;
         }
 
@@ -372,9 +399,11 @@ namespace Meta.WitAi
 
             return entities;
         }
+
         #endregion
 
         #region Intent methods
+
         /// <summary>
         /// Converts wit response node into wit intent data
         /// </summary>
@@ -425,11 +454,14 @@ namespace Meta.WitAi
             {
                 intents[i] = array[i].AsWitIntent();
             }
+
             return intents;
         }
+
         #endregion
 
         #region Misc. Helper Methods
+
         public static string GetPathValue(this WitResponseNode response, string path)
         {
 
@@ -450,6 +482,7 @@ namespace Meta.WitAi
 
             return node.Value;
         }
+
         public static void SetString(this WitResponseNode response, string path, string value)
         {
 
@@ -458,7 +491,7 @@ namespace Meta.WitAi
             var node = response;
             int nodeIndex;
 
-            for(nodeIndex = 0; nodeIndex < nodes.Length - 1; nodeIndex++)
+            for (nodeIndex = 0; nodeIndex < nodes.Length - 1; nodeIndex++)
             {
                 var nodeName = nodes[nodeIndex];
                 string[] arrayElements = SplitArrays(nodeName);
@@ -473,6 +506,7 @@ namespace Meta.WitAi
 
             node[nodes[nodeIndex]] = value;
         }
+
         public static void RemovePath(this WitResponseNode response, string path)
         {
             string[] nodes = path.Trim('.').Split('.');
@@ -561,9 +595,11 @@ namespace Meta.WitAi
 
             return nodes;
         }
+
         #endregion
 
         #region Trait Methods
+
         /// <summary>
         /// Gets the string value of the first trait
         /// </summary>
@@ -574,10 +610,12 @@ namespace Meta.WitAi
         {
             return witResponse?[WitConstants.KEY_RESPONSE_NLP_TRAITS]?[name]?[0]?["value"]?.Value;
         }
+
         #endregion
     }
 
     #region WitResponseReference Child Classes
+
     public class WitResponseReference
     {
         public WitResponseReference child;
@@ -668,5 +706,6 @@ namespace Meta.WitAi
             return response[key].AsFloat;
         }
     }
+
     #endregion
 }

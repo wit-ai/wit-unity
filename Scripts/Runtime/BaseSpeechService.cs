@@ -90,6 +90,7 @@ namespace Meta.WitAi
             {
                 return "Audio input is already being performed for this service.";
             }
+
             // No error
             return string.Empty;
         }
@@ -128,6 +129,7 @@ namespace Meta.WitAi
 #endif
             GetSpeechEvents()?.OnRequestInitialized.AddListener(OnRequestInit);
         }
+
         /// <summary>
         /// On enable, stop watching for request initialized callbacks
         /// </summary>
@@ -156,6 +158,7 @@ namespace Meta.WitAi
             {
                 return;
             }
+
             request.DeactivateAudio();
         }
 
@@ -179,6 +182,7 @@ namespace Meta.WitAi
             {
                 return;
             }
+
             request.Cancel();
         }
 
@@ -193,6 +197,7 @@ namespace Meta.WitAi
             {
                 options = new WitRequestOptions();
             }
+
             if (events == null)
             {
                 events = new VoiceServiceRequestEvents();
@@ -223,21 +228,26 @@ namespace Meta.WitAi
             // Already complete, return
             if (request.State == VoiceRequestState.Canceled)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Canceled);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId,
+                    TerminationReason.Canceled);
                 OnRequestCancel(request);
                 OnRequestComplete(request);
                 return true;
             }
+
             if (request.State == VoiceRequestState.Failed)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Failed);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId,
+                    TerminationReason.Failed);
                 OnRequestFailed(request);
                 OnRequestComplete(request);
                 return true;
             }
+
             if (request.State == VoiceRequestState.Successful)
             {
-                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId, TerminationReason.Successful);
+                RuntimeTelemetry.Instance.LogEventTermination((OperationID)request.Options.OperationId,
+                    TerminationReason.Successful);
                 OnRequestPartialResponse(request, request?.ResponseData);
                 OnRequestSuccess(request);
                 OnRequestComplete(request);
@@ -268,6 +278,7 @@ namespace Meta.WitAi
             {
                 return;
             }
+
             if (warn)
             {
                 Logger.Warning("{0}\nRequest Id: {1}", log, request?.Options?.RequestId);
@@ -369,13 +380,22 @@ namespace Meta.WitAi
         // Called when VoiceServiceRequest OnFailed is returned
         protected virtual void OnRequestFailed(VoiceServiceRequest request)
         {
-            string code = $"HTTP Error {request.Results.StatusCode}";
+            int errorCode = request.Results.StatusCode;
+            string code = $"Request Error: {errorCode}";
+            var responseErrorCode = WitConstants.GetResponseErrorCode(errorCode);
+
+            if (responseErrorCode != WitConstants.GENERAL_RESPONSE_ERROR_CODE)
+            {
+                code = responseErrorCode.codeString;
+            }
+
             string message = request?.Results?.Message;
             string debugMessage = message;
             if (string.Equals(debugMessage, WitConstants.ERROR_RESPONSE_TIMEOUT))
             {
-              debugMessage += $"\nTimeout Ms: {request.Options.TimeoutMs}";
+                debugMessage += $"\nTimeout Ms: {request.Options.TimeoutMs}";
             }
+
             Log(request, $"Request Failed\n{code}: {debugMessage}", true);
             GetSpeechEvents()?.OnError?.Invoke(code, message);
             GetSpeechEvents()?.OnRequestCompleted?.Invoke();
@@ -425,7 +445,8 @@ namespace Meta.WitAi
 
             // Add/Remove custom actions
             SetRequestEventListener(events.OnRawResponse, request, OnRequestRawResponse, addListeners);
-            SetRequestEventListener(events.OnPartialTranscription, request, OnRequestPartialTranscription, addListeners);
+            SetRequestEventListener(events.OnPartialTranscription, request, OnRequestPartialTranscription,
+                addListeners);
             SetRequestEventListener(events.OnFullTranscription, request, OnRequestFullTranscription, addListeners);
             SetRequestEventListener(events.OnPartialResponse, request, OnRequestPartialResponse, addListeners);
         }
