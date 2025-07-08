@@ -300,6 +300,26 @@ namespace Meta.WitAi.Data
 
         // Coroutine for volume update
         private Coroutine _volumeUpdate;
+
+        // Silence gap skipping settings
+        public float SecondsToSkipSilence
+        {
+            get => _secondsBeforeSkip;
+            set
+            {
+                _secondsBeforeSkip = value;
+                _samplesBeforeSkip = Mathf.RoundToInt(AudioEncoding.samplerate * _secondsBeforeSkip);
+                if (_samplesBeforeSkip <= 0) {
+                    _skipping = false;
+                }
+            }
+        }
+
+        private float _secondsBeforeSkip;
+        private int _samplesBeforeSkip;
+        private bool _skipping;
+        private int _silentSamplesHit;
+
         #endregion Settings
 
         #region Lifecycle
@@ -615,7 +635,8 @@ namespace Meta.WitAi.Data
 
             // Resample on main thread to use sample buffer while it still includes audio data
             Profiler.BeginSample("AudioBuffer - Resample, Encode and Push");
-            float levelMax = EncodeAndPush(samples, offset, length);
+            float levelMax = EncodeAndPush(samples, offset, length, !_skipping);
+            UpdateSilenceSkipping(samples, offset, length, levelMax);
             Profiler.EndSample();
 
             // Set max level for frame and perform sample received callback
@@ -631,6 +652,7 @@ namespace Meta.WitAi.Data
                 _sampleReadyMaxLevel = levelMax;
             }
         }
+
         /// <summary>
         /// Waits a single frame and then returns the marker
         /// </summary>
@@ -723,7 +745,7 @@ namespace Meta.WitAi.Data
         /// Resample and encode into bytes that are passed into a setByte method.
         /// </summary>
         /// <returns>Returns the max level of the provided samples</returns>
-        private float EncodeAndPush(float[] samples, int offset, int length)
+        private float EncodeAndPush(float[] samples, int offset, int length, bool push)
         {
             // Attempt to calculate sample rate if not determined
             if (MicInput.AudioEncoding.samplerate <= 0
@@ -775,6 +797,13 @@ namespace Meta.WitAi.Data
                 if (sample > levelMax)
                 {
                     levelMax = sample;
+                }
+
+                // If we're skipping silence, then the sample will initially not be pushed,
+                // then will be pushed as a second pass once it qualifies
+                if (!push)
+                {
+                    continue;
                 }
 
                 // Encode from unsigned long (auto clamps)
@@ -829,6 +858,37 @@ namespace Meta.WitAi.Data
                     encodingMin = signed ? short.MinValue : ushort.MinValue;
                     encodingMax = signed ? short.MaxValue : ushort.MaxValue;
                     break;
+            }
+        }
+
+        /// <summary>
+        /// If silence skipping is enabled (the SecondsToSkipSilence property), then update
+        /// the state of that based on the levelMax returned from EncodeAndPush
+        /// </summary>
+        private void UpdateSilenceSkipping(float[] samples, int offset, int length, float levelMax)
+        {
+            if (_samplesBeforeSkip <= 0)
+            {
+                return;
+            }
+
+            if (_skipping && levelMax > Mathf.Epsilon)
+            {
+                _skipping = false;
+                EncodeAndPush(samples, offset, length, true);
+            }
+            else if (!_skipping && levelMax <= Mathf.Epsilon)
+            {
+                _silentSamplesHit += length;
+                if (_silentSamplesHit >= _samplesBeforeSkip)
+                {
+                    _silentSamplesHit = 0;
+                    _skipping = true;
+                }
+            }
+            else if (!_skipping)
+            {
+                _silentSamplesHit = 0;
             }
         }
         #endregion Buffer
