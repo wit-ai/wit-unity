@@ -84,6 +84,12 @@ namespace Meta.WitAi.Data
         }
 
         /// <summary>
+        /// Check if an instance currently exists, for situations where it wouldn't be
+        /// appropriate to create a new one.
+        /// </summary>
+        public static bool HasInstance => (bool)_instance;
+
+        /// <summary>
         /// A script that will instantiate an audio buffer if needed
         /// </summary>
         public static IAudioBufferProvider AudioBufferProvider;
