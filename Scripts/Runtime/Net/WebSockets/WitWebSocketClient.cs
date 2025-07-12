@@ -149,6 +149,16 @@ namespace Meta.Voice.Net.WebSockets
         private readonly WitChunkConverter _decoder = new WitChunkConverter();
 
         /// <summary>
+        /// An event that is called whenever a request begins being tracked by a WitWebSocketClient
+        /// </summary>
+        public static event Action<WitWebSocketClient, IWitWebSocketRequest> OnRequestTracked;
+
+        /// <summary>
+        /// An event that is called whenever a request stops being tracked by a WitWebSocketClient
+        /// </summary>
+        public static event Action<WitWebSocketClient, IWitWebSocketRequest> OnRequestUntracked;
+
+        /// <summary>
         /// Constructor with settings data
         /// </summary>
         public WitWebSocketClient(WitWebSocketSettings settings)
@@ -1003,6 +1013,7 @@ namespace Meta.Voice.Net.WebSockets
             }
 
             // Success
+            OnRequestTracked?.Invoke(this, request);
             return true;
         }
 
@@ -1075,6 +1086,7 @@ namespace Meta.Voice.Net.WebSockets
                 }
             }
             Logger.Info($"Untrack Request\n{request}");
+            OnRequestUntracked?.Invoke(this, request);
             return true;
         }
         #endregion REQUESTS
