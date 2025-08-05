@@ -70,6 +70,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         // Counts
         private int _sampleCount = 0;
         private int _eventCount = 0;
+        private bool _noEventWarningShown;
 
         /// <summary>
         /// Generates encoded chunk and applies reference data for all parameters
@@ -247,8 +248,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 // No events despite requesting them
                 else if (_eventCount == 0 && UseEvents)
                 {
-                    Error = WitConstants.ERROR_TTS_NO_EVENTS;
-                    RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
+                  if (!_noEventWarningShown)
+                  {
+                      _noEventWarningShown = true;
+                      Logger.Warning(WitConstants.ERROR_TTS_NO_EVENTS);
+                  }
+                  RuntimeTelemetry.Instance.LogPoint(OperationId, RuntimeTelemetryPoint.FinalAudioEventsEmpty);
                 }
             }
 
