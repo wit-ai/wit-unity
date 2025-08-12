@@ -1326,6 +1326,7 @@ namespace Meta.WitAi.TTS.Utilities
             var firstCompleted = await Task.WhenAny(playbackTimeout, loadTask);
             var errors = playbackTimeout == firstCompleted ? WitConstants.ERROR_RESPONSE_TIMEOUT : loadTask.Result;
 
+            RaiseEvents(RaiseOnFirstSample, requestData);
             // Call errors if needed
             FinalizeLoadedClip(requestData, errors);
 
@@ -1865,6 +1866,12 @@ namespace Meta.WitAi.TTS.Utilities
             // Speaker clip events
             Events?.OnLoadBegin?.Invoke(this, requestData.ClipData);
             requestData.PlaybackEvents?.OnLoadBegin?.Invoke(this, requestData.ClipData);
+        }
+
+        private void RaiseOnFirstSample(TTSSpeakerRequestData requestData)
+        {
+            Events?.OnFirstSampleReady?.Invoke(this, requestData.ClipData);
+            requestData.PlaybackEvents?.OnFirstSampleReady?.Invoke(this, requestData.ClipData);
         }
         // Perform load begin abort events
         private void RaiseOnLoadAborted(TTSSpeakerRequestData requestData)

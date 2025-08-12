@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Meta.WitAi;
 
@@ -37,7 +38,7 @@ namespace Meta.Voice.Audio
         /// <summary>
         /// Whether the player is currently playing back audio
         /// </summary>
-        public override bool IsPlaying => AudioSource != null && AudioSource.isPlaying;
+        public override bool IsPlaying => AudioSource != null && AudioSource.isPlaying && _isPlaying;
 
         /// <summary>
         /// Elapsed samples can be used if not using a clip buffer
@@ -196,10 +197,19 @@ namespace Meta.Voice.Audio
         // Ignore set offset position
         private void OnSetRawPosition(int offset) {}
 
+        private int _readSamples;
+
         // Read raw samples
         private void OnReadRawSamples(float[] samples)
         {
-            _clipBufferOffset += ClipStream.ReadSamples(ReadAbsoluteOffset, samples);
+
+            var sampleCount = ClipStream.ReadSamples(ReadAbsoluteOffset, samples);
+            if (sampleCount > 0)
+            {
+                if (_readSamples < 0) _readSamples = 0;
+                _readSamples += sampleCount;
+            }
+            _clipBufferOffset += sampleCount;
             if (_clipBufferOffset >= _clipBufferMaxLength)
             {
                 _clipBufferOffset -= _clipBufferMaxLength;
@@ -211,7 +221,11 @@ namespace Meta.Voice.Audio
         {
             if (!_isPlaying) return;
 
-            OnPlaySamples?.Invoke(data);
+            if (_readSamples > 0)
+            {
+                _readSamples -= data.Length;
+                OnPlaySamples?.Invoke(data);
+            }
         }
 
         /// <summary>

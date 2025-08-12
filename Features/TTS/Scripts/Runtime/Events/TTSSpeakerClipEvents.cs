@@ -78,6 +78,14 @@ namespace Meta.WitAi.TTS.Utilities
         /// </summary>
         public TTSSpeakerClipEvent OnLoadSuccess => _onLoadSuccess;
 
+
+        [SerializeField] [Tooltip("Called when TTS audio receives the first audio sample from an active request")]
+        private TTSSpeakerClipEvent _onFirstSampleReady = new TTSSpeakerClipEvent();
+        /// <summary>
+        /// Called when TTS audio receives the first audio sample from an active request
+        /// </summary>
+        public TTSSpeakerClipEvent OnFirstSampleReady => _onFirstSampleReady;
+
         [Header("Speaker Playback Events")]
         [SerializeField] [Tooltip("Called when TTS audio clip playback is ready")]
         private TTSSpeakerClipEvent _onPlaybackReady = new TTSSpeakerClipEvent();
