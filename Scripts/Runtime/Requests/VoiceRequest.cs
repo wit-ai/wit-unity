@@ -526,7 +526,11 @@ namespace Meta.Voice
         /// </summary>
         protected virtual void OnComplete()
         {
-            Completion.SetResult(State != VoiceRequestState.Failed);
+            if (!Completion.Task.IsCompleted)
+            {
+                Completion.SetResult(State != VoiceRequestState.Failed);
+            }
+
             RaiseEvent(Events?.OnComplete);
             switch (State)
             {

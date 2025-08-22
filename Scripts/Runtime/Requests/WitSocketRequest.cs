@@ -372,12 +372,23 @@ namespace Meta.WitAi.Requests
             // Ignore if already complete
             if (!IsActive)
             {
+                // Set error states so we can react if needed to the error that may
+                // have prevented activation.
+                if (!string.IsNullOrEmpty(request.Error)) {
+                  var errorCode = request.Code;
+                  if (errorCode == 0) errorCode = WitConstants.ERROR_CODE_GENERAL;
+                  // Apply results with error
+                  Results.SetError(errorCode, request.Error);
+
+                  // Set failure state
+                  SetState(VoiceRequestState.Failed);
+                }
+
                 return;
             }
 
             // Success
-            if (string.IsNullOrEmpty(request.Error))
-            {
+            if (string.IsNullOrEmpty(request.Error)) {
                 ApplyResponseData(ResponseData, true);
             }
             // Error
