@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
+using Meta.WitAi.Events;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -98,6 +99,11 @@ namespace Meta.Voice.Net.WebSockets
         /// on a different client with a topic this client has subscribed to.
         /// </summary>
         event WitWebSocketResponseProcessor OnProcessForwardedResponse;
+
+        /// <summary>
+        /// Triggered when there was an error in setup or with websocket communications
+        /// </summary>
+        public WitErrorEvent OnError { get; }
 
         /// <summary>
         /// Attempts to connect to the specified

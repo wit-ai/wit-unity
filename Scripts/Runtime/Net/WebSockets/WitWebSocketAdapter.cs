@@ -13,6 +13,7 @@ using Meta.Voice.Logging;
 using Meta.Voice.Net.Encoding.Wit;
 using Meta.Voice.Net.PubSub;
 using Meta.WitAi.Attributes;
+using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
@@ -71,6 +72,11 @@ namespace Meta.Voice.Net.WebSockets
         public UnityEvent OnUnsubscribed { get; } = new UnityEvent();
 
         /// <summary>
+        /// Triggered when there was an error in setup or with websocket communications
+        /// </summary>
+        public WitErrorEvent OnError { get; } = new();
+
+        /// <summary>
         /// An event callback for processing a response for a request originating
         /// on a different client with a topic this client adapter has subscribed to.
         /// </summary>
@@ -123,7 +129,12 @@ namespace Meta.Voice.Net.WebSockets
         }
         protected virtual void OnDestroy()
         {
-            WebSocketClient = null;
+            if (null != WebSocketClient)
+            {
+                WebSocketClient.OnError.RemoveListener(OnError.Invoke);
+                WebSocketClient = null;
+            }
+
             Disconnect();
         }
         #endregion LIFECYCLE
@@ -141,6 +152,11 @@ namespace Meta.Voice.Net.WebSockets
                 return;
             }
 
+            if (null != WebSocketClient)
+            {
+                WebSocketClient.OnError.RemoveListener(OnError.Invoke);
+            }
+
             // Disconnect previous web socket client if active
             if (_active)
             {
@@ -150,6 +166,11 @@ namespace Meta.Voice.Net.WebSockets
             // Apply new providers if possible
             _webSocketProvider = clientProvider as UnityEngine.Object;
             WebSocketClient = newClient;
+
+            if (null != WebSocketClient)
+            {
+                WebSocketClient.OnError.AddListener(OnError.Invoke);
+            }
 
             // Log warning for non UnityEngine.Objects
             if (clientProvider != null && _webSocketProvider == null)

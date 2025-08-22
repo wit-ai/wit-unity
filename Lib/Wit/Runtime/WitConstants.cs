@@ -73,6 +73,7 @@ namespace Meta.WitAi
     public const string ERROR_REACHABILITY = "Endpoint not reachable";
     public const string ERROR_NO_CONFIG = "No WitConfiguration Set";
     public const string ERROR_NO_CONFIG_TOKEN = "No WitConfiguration Client Token";
+    public const string ERROR_AUTHENTICATION_DENIED = "Authentication denied";
 
     // TTS Endpoint
     public const string ENDPOINT_TTS = "synthesize";
