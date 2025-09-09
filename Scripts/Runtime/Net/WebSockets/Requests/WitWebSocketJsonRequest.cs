@@ -15,6 +15,7 @@ using Meta.Voice.Net.PubSub;
 using Meta.WitAi;
 using Meta.WitAi.Json;
 using Meta.WitAi.Requests;
+using UnityEngine;
 
 namespace Meta.Voice.Net.WebSockets.Requests
 {
@@ -236,6 +237,10 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public virtual void Cancel()
         {
+            // Handle completion
+            Code = WitConstants.ERROR_CODE_ABORTED;
+            Error = WitConstants.CANCEL_ERROR;
+
             if (IsComplete)
             {
                 return;
@@ -243,10 +248,6 @@ namespace Meta.Voice.Net.WebSockets.Requests
 
             // Send abort method if possible
             SendAbort(WitConstants.CANCEL_ERROR);
-
-            // Handle completion
-            Code = WitConstants.ERROR_CODE_ABORTED;
-            Error = WitConstants.CANCEL_ERROR;
             HandleComplete();
         }
 
@@ -365,7 +366,19 @@ namespace Meta.Voice.Net.WebSockets.Requests
             IsComplete = true;
             if (!Completion.Task.IsCompleted)
             {
-                Completion.SetResult(string.IsNullOrEmpty(Error));
+                // We will return success if there was no error or if this was cancelled.
+                // A cancelled request was technically successful, it just had no outcome.
+                if (Code == WitConstants.ERROR_CODE_ABORTED)
+                {
+                        Logger.Info("Request was cancelled.");
+                        Completion.SetResult(true);
+                        // Reset the error so it doesn't trigger error events. We will keep the code.
+                        Error = "";
+                }
+                else
+                {
+                    Completion.SetResult(string.IsNullOrEmpty(Error));
+                }
             }
 
             ThreadUtility.CallOnMainThread(RaiseComplete);
