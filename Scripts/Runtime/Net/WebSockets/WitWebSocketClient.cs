@@ -275,12 +275,12 @@ namespace Meta.Voice.Net.WebSockets
             // Timeout handling
             catch (OperationCanceledException)
             {
-                await HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
+                HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
             }
             // Additional exception handling
             catch (Exception e)
             {
-                await HandleSetupFailed($"Connection connect error caught\n{e}");
+                HandleSetupFailed($"Connection connect error caught\n{e}");
             }
         }
 
@@ -290,21 +290,27 @@ namespace Meta.Voice.Net.WebSockets
         private async Task WaitForConnectionTimeout()
         {
             // Wait for either connection timeout or connection complete
-            await Task.WhenAny(ConnectionCompletion.Task,
-                Task.Delay(Settings.ServerConnectionTimeoutMs));
+            await TaskUtility.WaitForTimeout(Settings.ServerConnectionTimeoutMs, null, ConnectionCompletion.Task);
 
-            // Invalid socket or connected
+            // Invalid socket or no longer connecting, ignore
             if (_socket == null || _socket.State != WitWebSocketConnectionState.Connecting)
             {
                 return;
             }
-
-            if (ConnectionCompletion.Task.IsFaulted) {
-              await HandleSetupFailed(ConnectionCompletion.Task.Exception.ToString());
-            } else {
-              // Consider a timeout
-              await HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
+            // Completion threw an error
+            if (ConnectionCompletion.Task.IsFaulted)
+            {
+                HandleSetupFailed(ConnectionCompletion.Task.Exception.ToString());
+                return;
             }
+            // Return successfully if complete
+            if (ConnectionCompletion.Task.IsCompleted)
+            {
+                return;
+            }
+
+            // Timed out
+            HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
         }
 
         /// <summary>
@@ -330,7 +336,7 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
-                HandleSetupFailed(errorMessage).WrapErrors();
+                HandleSetupFailed(errorMessage);
             }
             else
             {
@@ -346,20 +352,20 @@ namespace Meta.Voice.Net.WebSockets
             // Ensure not disconnected
             if (ConnectionState != WitWebSocketConnectionState.Connecting)
             {
-                HandleSetupFailed($"State changed to {ConnectionState} during connection.").WrapErrors();;
+                HandleSetupFailed($"State changed to {ConnectionState} during connection.");
                 return;
             }
             // Ensure socket exists
             if (_socket == null)
             {
-                HandleSetupFailed("WebSocket client no longer exists.").WrapErrors();;
+                HandleSetupFailed("WebSocket client no longer exists.");
                 return;
             }
             // Ensure socket is open
             if (_socket.State != WitWebSocketConnectionState.Connected
                 && _socket.State != WitWebSocketConnectionState.Connecting)
             {
-                HandleSetupFailed($"Socket is {_socket.State}").WrapErrors();;
+                HandleSetupFailed($"Socket is {_socket.State}");
                 return;
             }
             // Already connected
@@ -383,7 +389,7 @@ namespace Meta.Voice.Net.WebSockets
                 await Task.Delay(Settings.ServerConnectionTimeoutMs);
                 if (_socket.State != WitWebSocketConnectionState.Connected)
                 {
-                    HandleSetupFailed($"Socket still not connected after {Settings.ServerConnectionTimeoutMs}ms").WrapErrors();;
+                    HandleSetupFailed($"Socket still not connected after {Settings.ServerConnectionTimeoutMs}ms");
                     return;
                 }
             }
@@ -392,29 +398,26 @@ namespace Meta.Voice.Net.WebSockets
             string clientAccessToken = Settings?.Configuration?.GetClientAccessToken();
             if (string.IsNullOrEmpty(clientAccessToken))
             {
-                HandleSetupFailed("Cannot connect to Wit server without client access token").WrapErrors();;
+                HandleSetupFailed("Cannot connect to Wit server without client access token");
                 return;
             }
 
-            // Get parameters
-            var versionTag = Settings?.Configuration?.GetVersionTag();
-            var parameters = Settings?.AdditionalAuthParameters;
-
             // Make authentication request and return any encountered error
-            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag, parameters);
+            var versionTag = Settings?.Configuration?.GetVersionTag();
+            var authRequest = new WitWebSocketAuthRequest(clientAccessToken, versionTag);
             var authError = await SendRequestAsync(authRequest);
 
             // Auth error
             IsAuthenticated = string.IsNullOrEmpty(authError);
             if (!IsAuthenticated)
             {
-                HandleSetupFailed(authError).WrapErrors();;
+                HandleSetupFailed(authError);
                 return;
             }
             // Cancelled elsewhere
             if (ConnectionState != WitWebSocketConnectionState.Connecting)
             {
-                HandleSetupFailed($"State changed to {ConnectionState} during authentication.").WrapErrors();;
+                HandleSetupFailed($"State changed to {ConnectionState} during authentication.");
                 return;
             }
 
@@ -438,9 +441,9 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Disconnect if connection failed, warn otherwise
         /// </summary>
-        private async Task HandleSetupFailed(string error)
+        private void HandleSetupFailed(string error)
         {
-            await ThreadUtility.CallOnMainThread(() => OnError?.Invoke(error, $"Setup failed after {FailedConnectionAttempts} attempts."));
+            RaiseError(error, $"Setup failed after {FailedConnectionAttempts} attempts.");
             if (error == WitConstants.ERROR_AUTHENTICATION_DENIED)
             {
                 var exception = new AuthenticationException(error);
@@ -478,6 +481,16 @@ namespace Meta.Voice.Net.WebSockets
                     error);
             }
         }
+
+        /// <summary>
+        /// Raise error on main thread
+        /// </summary>
+        private void RaiseError(string errorType, string errorMessage)
+        {
+            Logger.Warning("Error: {0}\nMessage: {1}\nConnection Request Id: {2}",
+              errorType, errorMessage, Options?.RequestId ?? "Null");
+            ThreadUtility.CallOnMainThread(() => OnError?.Invoke(errorType, errorMessage)).WrapErrors();
+        }
         #endregion CONNECT
 
         #region DISCONNECT
@@ -488,9 +501,7 @@ namespace Meta.Voice.Net.WebSockets
         {
             if (ConnectionState == WitWebSocketConnectionState.Connected)
             {
-                Logger.Warning("Socket Closed\nConnection Request Id: {0}\nReason: {1}",
-                  Options.RequestId,
-                    closeCode);
+                RaiseError($"Socket Disconnect: {closeCode}",  IsReferenced ? "Attempting Reconnect" : "Disconnecting");
                 ForceDisconnect();
             }
         }

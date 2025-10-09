@@ -49,11 +49,6 @@ namespace Meta.Voice.Net.WebSockets
         public bool Debug { get; set; } = false;
 
         /// <summary>
-        /// Used for adding in custom authentication parameters
-        /// </summary>
-        public WitResponseClass AdditionalAuthParameters { get; } = new();
-
-        /// <summary>
         /// The configuration used for wit web socket communication
         /// </summary>
         public IWitRequestConfiguration Configuration { get; }
