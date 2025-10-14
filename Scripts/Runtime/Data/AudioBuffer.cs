@@ -584,7 +584,7 @@ namespace Meta.WitAi.Data
             }
 
             // Buffer length in ms
-            var bufferLength = Mathf.Max(10f, audioBufferConfiguration.micBufferLengthInSeconds * 1000f);
+            var bufferLength = Mathf.Max(10f, audioBufferConfiguration.micBufferLengthInSeconds) * 1000f;
 
             // Get output buffer
             if (_outputBuffer == null)
