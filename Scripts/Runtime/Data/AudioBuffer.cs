@@ -230,6 +230,44 @@ namespace Meta.WitAi.Data
             if (wasRecording) StartRecording(this);
         }
 
+        // Time tracking for buffer staleness detection
+        private float _lastMuteTime;
+        private const float STALE_BUFFER_THRESHOLD_SECONDS = 2f;
+
+        /// <summary>
+        /// Handles when microphone is muted to track mute time
+        /// </summary>
+        private void OnInputMuted()
+        {
+            _lastMuteTime = Time.realtimeSinceStartup;
+            _log.Debug("Mic muted at time {0}", _lastMuteTime);
+        }
+
+        /// <summary>
+        /// Handles when microphone is unmuted to clear stale buffer
+        /// </summary>
+        private void OnInputUnmuted()
+        {
+            // If buffer has stale data from before muting, clear it
+            if (_lastMuteTime > 0 && _outputBuffer != null)
+            {
+                float timeSinceMute = Time.realtimeSinceStartup - _lastMuteTime;
+                if (timeSinceMute >= STALE_BUFFER_THRESHOLD_SECONDS)
+                {
+                    _outputBuffer.Clear(true);
+                    _log.Debug("Cleared stale mic buffer on unmute (was muted for {0:F2} seconds)", timeSinceMute);
+                }
+                else
+                {
+                    _log.Debug("Mic unmuted after {0:F2} seconds - keeping buffer", timeSinceMute);
+                }
+            }
+            else
+            {
+                _log.Debug("Mic unmuted");
+            }
+        }
+
         /// <summary>
         /// Applies all required methods for input
         /// </summary>
@@ -246,6 +284,8 @@ namespace Meta.WitAi.Data
                 mic.OnStartRecordingFailed += OnMicRecordFailed;
                 mic.OnStopRecording += OnMicRecordStop;
                 mic.OnSampleReady += OnMicSampleReady;
+                mic.OnMicMuted += OnInputMuted;
+                mic.OnMicUnmuted += OnInputUnmuted;
             }
             else
             {
@@ -253,6 +293,8 @@ namespace Meta.WitAi.Data
                 mic.OnStartRecordingFailed -= OnMicRecordFailed;
                 mic.OnStopRecording -= OnMicRecordStop;
                 mic.OnSampleReady -= OnMicSampleReady;
+                mic.OnMicMuted -= OnInputMuted;
+                mic.OnMicUnmuted -= OnInputUnmuted;
             }
         }
 
