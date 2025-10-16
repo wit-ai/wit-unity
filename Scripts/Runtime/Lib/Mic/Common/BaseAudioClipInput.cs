@@ -393,7 +393,10 @@ namespace Meta.WitAi.Lib
                     if (isNewDataAvailable && micClip.GetData(samples, readAbsPosition % micClip.samples))
                     {
                         // Return newly decoded sample
-                        OnSampleReady?.Invoke(0, samples, 0f); // TODO: Adjust delegate
+                        if (!IsMuted)
+                        {
+                            OnSampleReady?.Invoke(0, samples, 0f);
+                        }
                         // Increase total read samples to previously desired destination
                         readAbsPosition = desReadAbsPosition;
                     }

@@ -273,16 +273,7 @@ namespace Meta.WitAi.Data
                 markerPosition = 0;
             }
 
-            int bufIndex = bufferIndex + offset;
-            if (bufIndex < 0)
-            {
-                bufIndex = buffer.Length + bufIndex;
-            }
-
-            if (bufIndex > buffer.Length)
-            {
-                bufIndex -= buffer.Length;
-            }
+            int bufIndex = GetBufferArrayIndex(markerPosition);
 
             var marker = new Marker(this, markerPosition, bufIndex);
 
