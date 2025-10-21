@@ -59,8 +59,12 @@ namespace Meta.WitAi.Data
                 CalculateSampleRate(fromEncoding, length, variableSampleRate?.SkipInitialSamplesInMs ?? 10);
                 if (fromEncoding.samplerate <= 0)
                 {
+                    // Cache samples until sample rate is determined
+                    LoadCache(samples, offset, length);
                     return Vector2.zero;
                 }
+                // Resample cached samples
+                UnloadCache(fromEncoding, fromMinLevel, fromMaxLevel, toEncoding);
             }
 
             // Get input encoding
@@ -193,7 +197,7 @@ namespace Meta.WitAi.Data
             88200,
             96000,
             176400,
-            192000
+            MAX_SAMPLERATE//192000
         };
 
         /// <summary>
@@ -313,5 +317,85 @@ namespace Meta.WitAi.Data
             return result;
         }
         #endregion Sample Rate Determination
+
+        #region Cache Samples
+        /// <summary>
+        /// Cached samples to be resampled following samplerate determination
+        /// </summary>
+        private readonly float[] _cachedSamples;
+        /// <summary>
+        /// The current index of stored cached samples
+        /// </summary>
+        private int _cachedSamplesLength;
+        /// <summary>
+        /// Maximum sample rate that can be used
+        /// </summary>
+        private const int MAX_SAMPLERATE = 192000;
+        /// <summary>
+        /// The total time in seconds cached at max samplerate before samples get skipped.  Add one more use
+        /// </summary>
+        private const int MAX_CACHE_LENGTH = MAX_SAMPLERATE * MEASURE_INTERVAL_MS / 1000 * (MEASURE_USE_COUNT + 1);
+
+        public AudioResampler()
+        {
+            _cachedSamples = new float[MAX_CACHE_LENGTH];
+            _cachedSamplesLength = 0;
+        }
+
+        /// <summary>
+        /// Load cache using provided samples
+        /// </summary>
+        private void LoadCache(float[] samples, int offset, int length)
+        {
+            // Ignore if length is empty
+            if (length <= 0)
+            {
+                return;
+            }
+
+            // Clamp to max cache size
+            length = Mathf.Min(length, _cachedSamples.Length);
+
+            // Handle overflow by pushing back rest of array
+            if (_cachedSamplesLength + length >= _cachedSamples.Length)
+            {
+                // Move up as many up samples as possible
+                var keepLength = _cachedSamples.Length - length;
+                var removeLength = _cachedSamplesLength - keepLength;
+                for (int i = 0; i < keepLength; i++)
+                {
+                    _cachedSamples[i] = _cachedSamples[i + removeLength];
+                }
+
+                // Now will have enough space
+                _cachedSamplesLength = keepLength;
+            }
+
+            // Copy array
+            Array.Copy(samples, offset, _cachedSamples, _cachedSamplesLength, length);
+            _cachedSamplesLength += length;
+        }
+
+        /// <summary>
+        /// Resample all samples in the cache
+        /// </summary>
+        private void UnloadCache(AudioEncoding fromEncoding, float fromMinLevel, float fromMaxLevel,
+            AudioEncoding toEncoding)
+        {
+            // Ignore if cache is empty
+            if (_cachedSamplesLength <= 0)
+            {
+                return;
+            }
+
+            // Resample using cache
+            Resample(fromEncoding, fromMinLevel, fromMaxLevel, toEncoding, _cachedSamples, 0,
+                    _cachedSamplesLength, false);
+
+            // Clear cache
+            Array.Clear(_cachedSamples, 0, _cachedSamplesLength);
+            _cachedSamplesLength = 0;
+        }
+        #endregion Cache Samples
     }
 }
