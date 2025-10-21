@@ -275,6 +275,7 @@ namespace Meta.WitAi.Data
             }
             if (add)
             {
+                _resampler.OnByteResampled += PushResampledByte;
                 mic.OnStartRecording += OnMicRecordSuccess;
                 mic.OnStartRecordingFailed += OnMicRecordFailed;
                 mic.OnStopRecording += OnMicRecordStop;
@@ -284,6 +285,7 @@ namespace Meta.WitAi.Data
             }
             else
             {
+                _resampler.OnByteResampled -= PushResampledByte;
                 mic.OnStartRecording -= OnMicRecordSuccess;
                 mic.OnStartRecordingFailed -= OnMicRecordFailed;
                 mic.OnStopRecording -= OnMicRecordStop;
@@ -790,126 +792,6 @@ namespace Meta.WitAi.Data
         }
 
         /// <summary>
-        /// Resample and encode into bytes that are passed into a setByte method.
-        /// </summary>
-        /// <returns>Returns the max level of the provided samples</returns>
-        private float EncodeAndPush(float[] samples, int offset, int length, bool push)
-        {
-            // Attempt to calculate sample rate if not determined
-            if (MicInput.AudioEncoding.samplerate <= 0
-                || (MicInput is IAudioVariableSampleRate check
-                    && check.NeedsSampleRateCalculation))
-            {
-                // Update sample rate if possible
-                UpdateSampleRate(length);
-                if (MicInput.AudioEncoding.samplerate <= 0)
-                {
-                    return 0;
-                }
-            }
-
-            // Get mic encoding
-            AudioEncoding micEncoding = MicInput.AudioEncoding;
-            int micChannels = micEncoding.numChannels;
-            int micSampleRate = micEncoding.samplerate;
-            bool micSigned = string.Equals(micEncoding.encoding, Data.AudioEncoding.ENCODING_SIGNED);
-
-            // Get output encoding
-            AudioEncoding outEncoding = AudioEncoding;
-            int outSampleRate = outEncoding.samplerate;
-            int bytesPerSample = Mathf.CeilToInt(outEncoding.bits / 8f);
-            GetEncodingMinMax(outEncoding.bits, string.Equals(outEncoding.encoding, AudioEncoding.ENCODING_SIGNED),
-                out long encodingMin, out long encodingMax);
-            long encodingDif = encodingMax - encodingMin;
-
-            // Determine resize factor & total samples
-            float resizeFactor = micSampleRate == outSampleRate ? 1f : (float)micSampleRate / outSampleRate;
-            resizeFactor *= micChannels; // Skip all additional channels
-            int totalSamples = (int)(length / resizeFactor);
-
-            // Resample
-            float levelMax = 0f;
-            for (int i = 0; i < totalSamples; i++)
-            {
-                // Get sample
-                var micIndex = offset +  (int)(i * resizeFactor);
-                var sample = samples[micIndex];
-
-                // If signed from source (-1 to 1), convert to unsigned (0 to 1)
-                if (micSigned)
-                {
-                    sample = sample / 2f + 0.5f;
-                }
-
-                // Get largest unsigned sample
-                if (sample > levelMax)
-                {
-                    levelMax = sample;
-                }
-
-                // If we're skipping silence, then the sample will initially not be pushed,
-                // then will be pushed as a second pass once it qualifies
-                if (!push)
-                {
-                    continue;
-                }
-
-                // Encode from unsigned long (auto clamps)
-                var data = (long)(encodingMin + sample * encodingDif);
-                for (int b = 0; b < bytesPerSample; b++)
-                {
-                    var outByte = (byte)(data >> (b * 8));
-                    _outputBuffer.Push(outByte);
-#if DEBUG_MIC
-                    // Editor only
-                    DebugWrite(outByte);
-#endif
-                }
-            }
-
-
-
-            // Scale based on min/max audio levels
-            float min = MicMinAudioLevel;
-            float max = MicMaxAudioLevel;
-            if ((!min.Equals(0f) || !max.Equals(1f)) && max > min)
-            {
-                levelMax = (levelMax - min) / (max - min);
-            }
-
-            // Clamp result 0 to 1
-            return Mathf.Clamp01(levelMax);
-        }
-        // Encoding options
-        private void GetEncodingMinMax(int bits, bool signed, out long encodingMin, out long encodingMax)
-        {
-            switch (bits)
-            {
-                // Always unsigned
-                case AudioEncoding.BITS_BYTE:
-                    encodingMin = byte.MinValue;
-                    encodingMax = byte.MaxValue;
-                    break;
-                // Always signed
-                case AudioEncoding.BITS_LONG:
-                    encodingMin = long.MinValue;
-                    encodingMax = long.MaxValue;
-                    break;
-                // Signed/Unsigned
-                case AudioEncoding.BITS_INT:
-                    encodingMin = signed ? int.MinValue : uint.MinValue;
-                    encodingMax = signed ? int.MaxValue : uint.MaxValue;
-                    break;
-                // Signed/Unsigned
-                case AudioEncoding.BITS_SHORT:
-                default:
-                    encodingMin = signed ? short.MinValue : ushort.MinValue;
-                    encodingMax = signed ? short.MaxValue : ushort.MaxValue;
-                    break;
-            }
-        }
-
-        /// <summary>
         /// If silence skipping is enabled (the SecondsToSkipSilence property), then update
         /// the state of that based on the levelMax returned from EncodeAndPush
         /// </summary>
@@ -963,149 +845,25 @@ namespace Meta.WitAi.Data
         }
         #endregion Marker
 
-        #region Variable Sample Rate
-        // Last sample time tracked by ticks
-        private long _lastSampleTime;
-        // First sample time of current calculation by ticks
-        private long _startSampleTime;
-        // The currently measured sample total
-        private long _measureSampleTotal;
-        // The current measurement index
-        private int _measuredSampleRateCount;
-        // The various measured sample rates
-        private readonly double[] _measuredSampleRates = new double[MEASURE_AVERAGE_COUNT];
-
-        // Timeout if no samples after interval (0.05 seconds)
-        private const int TIMEOUT_TICKS = 500_000;
-        // Perform calculation after interval (0.25 seconds)
-        private const int MEASURE_TICKS = 2_500_000;
-        // Total measurements to average out (5 seconds)
-        private const int MEASURE_AVERAGE_COUNT = 20;
-        // Sample rate options
-        private static readonly int[] ALLOWED_SAMPLE_RATES = new []
-        {
-            8000,
-            11025,
-            16000,
-            22050,
-            32000,
-            44100,
-            48000,
-            88200,
-            96000,
-            176400,
-            192000
-        };
+        #region Resampling
+        // Script used for resampling input
+        private AudioResampler _resampler = new AudioResampler();
 
         /// <summary>
-        /// Calculates sample rate using the current length
+        /// Resample and encode into bytes that are passed into a setByte method.
         /// </summary>
-        private void UpdateSampleRate(int sampleLength)
+        private float EncodeAndPush(float[] samples, int offset, int length, bool push)
         {
-            // Ignore invalid sample length
-            if (sampleLength <= 0)
-            {
-                return;
-            }
-
-            // Check if calculation restart is needed
-            var newSampleTime = DateTimeOffset.Now.Ticks;
-            var deltaSampleTime = newSampleTime - _lastSampleTime;
-            _lastSampleTime = newSampleTime;
-            if (deltaSampleTime > TIMEOUT_TICKS || _startSampleTime == 0)
-            {
-                _startSampleTime = newSampleTime;
-                _measureSampleTotal = 0;
-                return;
-            }
-
-            // Append sample length
-            int channels = MicInput.AudioEncoding.numChannels;
-            _measureSampleTotal += Mathf.FloorToInt((float)sampleLength / channels);
-
-            // Ignore until ready to calculate
-            var elapsedTicks = newSampleTime - _startSampleTime;
-            if (elapsedTicks < MEASURE_TICKS)
-            {
-                return;
-            }
-
-            // Perform calculation
-            var elapsedSeconds = elapsedTicks / 10_000_000d;
-            var samplesPerSecond = _measureSampleTotal / elapsedSeconds;
-
-            // Add to array and average out
-            var index = _measuredSampleRateCount % MEASURE_AVERAGE_COUNT;
-            _measuredSampleRates[index] = samplesPerSecond;
-            _measuredSampleRateCount++;
-            if (_measuredSampleRateCount == MEASURE_AVERAGE_COUNT * 2) _measuredSampleRateCount -= MEASURE_AVERAGE_COUNT;
-            var averageSampleRate = GetAverageSampleRate(_measuredSampleRates, _measuredSampleRateCount);
-
-            // Determine closest sample rate using averaged value
-            var closestSampleRate = GetClosestSampleRate(averageSampleRate);
-            if (MicInput.AudioEncoding.samplerate != closestSampleRate)
-            {
-                MicInput.AudioEncoding.samplerate = closestSampleRate;
-                _log.Info("Input SampleRate Set: {0}\nElapsed: {1:0.000} seconds\nAverage Samples per Second: {2}",
-                    closestSampleRate, elapsedSeconds, averageSampleRate);
-            }
-
-            // Restart calculation
-            _startSampleTime = newSampleTime;
-            _measureSampleTotal = 0;
+            return _resampler.Resample(MicInput.AudioEncoding, MicMinAudioLevel, MicMaxAudioLevel,
+                AudioEncoding, samples, offset, length,
+                push, MicInput as IAudioVariableSampleRate).y;
         }
 
         /// <summary>
-        /// Return average sample rate
+        /// Pushes any resampled byte into the ring buffer
         /// </summary>
-        private static double GetAverageSampleRate(double[] sampleRates, int sampleRateCount)
-        {
-            // Ignore if invalid total
-            var count = Mathf.Min(sampleRateCount, sampleRates.Length);
-            if (count <= 0)
-            {
-                return 0d;
-            }
-            // Iterate each sample
-            var result = 0d;
-            for (int i = 0; i < count; i++)
-            {
-                result += sampleRates[i];
-            }
-            // Return average
-            return result / count;
-        }
-
-        /// <summary>
-        /// Obtains the closest sample rate using the samples per second
-        /// </summary>
-        private static int GetClosestSampleRate(double samplesPerSecond)
-        {
-            // Iterate sample rates
-            var result = 0;
-            var diff = int.MaxValue;
-            var samplesPerSecondInt = (int)Math.Round(samplesPerSecond);
-            for (int i = 0; i < ALLOWED_SAMPLE_RATES.Length; i++)
-            {
-                // Determine difference between sample rates
-                var sampleRate = ALLOWED_SAMPLE_RATES[i];
-                var check = Mathf.Abs(sampleRate - samplesPerSecondInt);
-                // Closer, replace
-                if (check < diff)
-                {
-                    result = sampleRate;
-                    diff = check;
-                }
-                // More, return previous
-                else
-                {
-                    return result;
-                }
-            }
-            // Return result
-            return result;
-        }
-        #endregion Dynamic Sample Rate
+        private void PushResampledByte(byte sampleByte) => _outputBuffer.Push(sampleByte);
+        #endregion Resampling
 
 #if DEBUG_MIC
         /// <summary>
