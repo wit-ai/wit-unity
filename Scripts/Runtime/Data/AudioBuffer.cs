@@ -191,7 +191,7 @@ namespace Meta.WitAi.Data
 
             // Stop previous recording
             bool wasRecording = _recorders.Contains(this);
-            if (wasRecording) StopRecording(this);
+            if (wasRecording && !alwaysRecording) StopRecording(this);
 
             // Remove previous delegates
             if (_active) SetInputDelegates(false);
@@ -541,6 +541,12 @@ namespace Meta.WitAi.Data
             {
                 return;
             }
+            // Removing component will still have listening components, simply remove
+            if (_recorders.Count - 1 > 0)
+            {
+                _recorders.Remove(component);
+                return;
+            }
 
             // Try to deactivate mic audio
             if (AudioState == VoiceAudioInputState.On || AudioState == VoiceAudioInputState.Activating)
@@ -625,18 +631,23 @@ namespace Meta.WitAi.Data
                 AudioEncoding.bits = AudioEncoding.BITS_SHORT;
             }
 
-            // Buffer length in ms
-            var bufferLength = Mathf.Max(10f, audioBufferConfiguration.micBufferLengthInSeconds * 1000f);
-
             // Get output buffer
             if (_outputBuffer == null)
             {
                 // Size using output encoding
-                var bufferSize = AudioEncoding.numChannels * AudioEncoding.samplerate * Mathf.CeilToInt((AudioEncoding.bits / 8f) * bufferLength);
+                var bufferLengthInSeconds = Mathf.Clamp(audioBufferConfiguration.micBufferLengthInSeconds, 1f, 5f);
+                var bufferSize = GetByteLengthBySeconds(bufferLengthInSeconds);
                 // Generate
                 _outputBuffer = new RingBuffer<byte>(bufferSize);
             }
         }
+
+        /// <summary>
+        /// Get total bytes for a length of time in seconds
+        /// </summary>
+        private int GetByteLengthBySeconds(float lengthInSeconds)
+            => AudioEncoding.numChannels * AudioEncoding.samplerate *
+               Mathf.CeilToInt((AudioEncoding.bits / 8f) * lengthInSeconds);
 
         /// <summary>
         /// Called when a new mic sample is ready to be processed as sent by the audio input source
@@ -949,11 +960,11 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Creates a marker with an offset
         /// </summary>
-        /// <param name="offset">Number of seconds to offset the marker by</param>
-        public RingBuffer<byte>.Marker CreateMarker(float offset)
+        /// <param name="offsetInSeconds">Number of seconds to offset the marker by</param>
+        public RingBuffer<byte>.Marker CreateMarker(float offsetInSeconds)
         {
-            var samples = (int) (AudioEncoding.numChannels * AudioEncoding.samplerate * offset);
-            return _outputBuffer.CreateMarker(samples);
+            var offsetBytes = GetByteLengthBySeconds(offsetInSeconds);
+            return _outputBuffer.CreateMarker(offsetBytes);
         }
         #endregion Marker
 

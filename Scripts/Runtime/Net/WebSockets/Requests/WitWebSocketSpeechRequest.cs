@@ -80,7 +80,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
         public void SendAudioData(byte[] buffer, int offset, int length)
         {
             // Ignore without upload handler
-            if (!IsUploading || !IsReadyForInput)
+            if (!IsUploading || !IsReadyForInput || length <= 0)
             {
                 return;
             }

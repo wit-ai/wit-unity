@@ -815,7 +815,7 @@ namespace Meta.Voice.Net.WebSockets
             // Perform send
             if (rawData != null)
             {
-                if (Settings.VerboseJsonLogging) Logger.Verbose("Upload Chunk:\n{0}\n", chunk.jsonString);
+                if (Settings.VerboseJsonLogging) Logger.Verbose("Upload Chunk:\nBinary Length: {0}\nJson: {1}\n", chunk.binaryData?.Length ?? 0, chunk.jsonString);
                 try
                 {
                     await _socket.Send(rawData);
@@ -890,7 +890,7 @@ namespace Meta.Voice.Net.WebSockets
         private void ApplyDecodedChunk(WitChunk chunk)
         {
             // Log if desired
-            if (Settings.VerboseJsonLogging) Logger.Verbose("Downloaded Chunk:\n{0}\n", chunk.jsonString);
+            if (Settings.VerboseJsonLogging) Logger.Verbose("Downloaded Chunk:\nBinary Length: {0}\nJson: {1}\n", chunk.binaryData?.Length ?? 0, chunk.jsonString);
 
             // Iterate safely due to background thread
             var requestId = chunk.jsonData?[WitConstants.WIT_SOCKET_REQUEST_ID_KEY];
