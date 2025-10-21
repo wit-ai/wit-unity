@@ -232,7 +232,6 @@ namespace Meta.WitAi.Data
 
         // Time tracking for buffer staleness detection
         private float _lastMuteTime;
-        private const float STALE_BUFFER_THRESHOLD_SECONDS = 2f;
 
         /// <summary>
         /// Handles when microphone is muted to track mute time
@@ -240,7 +239,7 @@ namespace Meta.WitAi.Data
         private void OnInputMuted()
         {
             _lastMuteTime = Time.realtimeSinceStartup;
-            _log.Debug("Mic muted at time {0}", _lastMuteTime);
+            _log.Verbose("Mic muted at time {0}", _lastMuteTime);
         }
 
         /// <summary>
@@ -248,23 +247,19 @@ namespace Meta.WitAi.Data
         /// </summary>
         private void OnInputUnmuted()
         {
-            // If buffer has stale data from before muting, clear it
-            if (_lastMuteTime > 0 && _outputBuffer != null)
+            if (_lastMuteTime <= 0 || _outputBuffer == null)
             {
-                float timeSinceMute = Time.realtimeSinceStartup - _lastMuteTime;
-                if (timeSinceMute >= STALE_BUFFER_THRESHOLD_SECONDS)
-                {
-                    _outputBuffer.Clear(true);
-                    _log.Debug("Cleared stale mic buffer on unmute (was muted for {0:F2} seconds)", timeSinceMute);
-                }
-                else
-                {
-                    _log.Debug("Mic unmuted after {0:F2} seconds - keeping buffer", timeSinceMute);
-                }
+                return;
+            }
+            float timeSinceMute = Time.realtimeSinceStartup - _lastMuteTime;
+            if (timeSinceMute >= audioBufferConfiguration.micMuteStaleThresholdInSeconds)
+            {
+                _outputBuffer.Clear(true);
+                _log.Verbose("Cleared stale mic buffer on unmute (was muted for {0:F2} seconds)", timeSinceMute);
             }
             else
             {
-                _log.Debug("Mic unmuted");
+                _log.Verbose("Mic unmuted after {0:F2} seconds - keeping buffer", timeSinceMute);
             }
         }
 

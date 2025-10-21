@@ -24,6 +24,9 @@ namespace Meta.WitAi.Data
         [SerializeField]
         public float micBufferLengthInSeconds = 1;
 
+        [Tooltip("The amount of seconds mic must be muted before the buffer is cleared.")]
+        public float micMuteStaleThresholdInSeconds = 2f;
+
         [Tooltip("The audio encoding to be used for transmission of audio data, should keep as default in almost all scenarios.  Adjust encoding directly on IAudioInput script such as Mic to capture at different rates.")]
         [SerializeField]
         public AudioEncoding encoding = new AudioEncoding();

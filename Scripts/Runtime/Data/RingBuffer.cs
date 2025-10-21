@@ -44,10 +44,7 @@ namespace Meta.WitAi.Data
 
             if (eraseData)
             {
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    buffer[i] = default;
-                }
+                Array.Clear(buffer, 0, buffer.Length);
             }
         }
 
