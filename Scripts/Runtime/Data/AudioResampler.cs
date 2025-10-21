@@ -56,7 +56,7 @@ namespace Meta.WitAi.Data
             if (fromEncoding.samplerate <= 0
                 || (variableSampleRate != null && variableSampleRate.NeedsSampleRateCalculation))
             {
-                CalculateSampleRate(fromEncoding, length);
+                CalculateSampleRate(fromEncoding, length, variableSampleRate?.SkipInitialSamplesInMs ?? 10);
                 if (fromEncoding.samplerate <= 0)
                 {
                     return Vector2.zero;
@@ -159,23 +159,27 @@ namespace Meta.WitAi.Data
         }
 
         #region Sample Rate Determination
-        // Last sample time tracked by ticks
+        // Last sample time tracked in unix ms
         private long _lastSampleTime;
-        // First sample time of current calculation by ticks
+        // First sample time of current calculation in unix ms
         private long _startSampleTime;
         // The currently measured sample total
         private long _measureSampleTotal;
+        // Whether currently skipping initial recovery
+        private bool _timeoutThrottle;
         // The current measurement index
         private int _measuredSampleRateCount;
         // The various measured sample rates
         private readonly double[] _measuredSampleRates = new double[MEASURE_AVERAGE_COUNT];
 
-        // Timeout if no samples after interval (0.05 seconds)
-        private const int TIMEOUT_TICKS = 500_000;
-        // Perform calculation after interval (0.25 seconds)
-        private const int MEASURE_TICKS = 2_500_000;
-        // Total measurements to average out (5 seconds)
-        private const int MEASURE_AVERAGE_COUNT = 20;
+        // Timeout if no samples after specified interval
+        private const int RESTART_INTERVAL_MS = 50;
+        // Perform calculation after specified interval
+        private const int MEASURE_INTERVAL_MS = 250;
+        // Don't set until measured this many times
+        private const int MEASURE_USE_COUNT = 2;
+        // Total measurements to average out (3 seconds)
+        private const int MEASURE_AVERAGE_COUNT = 12;
         // Sample rate options
         private static readonly int[] ALLOWED_SAMPLE_RATES = new []
         {
@@ -195,7 +199,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Calculates sample rate using the current length
         /// </summary>
-        private void CalculateSampleRate(AudioEncoding fromEncoding, int sampleLength)
+        private void CalculateSampleRate(AudioEncoding fromEncoding, int sampleLength, int skipInitialSamplesInMs)
         {
             // Ignore invalid sample length
             if (sampleLength <= 0)
@@ -204,13 +208,21 @@ namespace Meta.WitAi.Data
             }
 
             // Check if calculation restart is needed
-            var newSampleTime = DateTimeOffset.Now.Ticks;
+            var newSampleTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             var deltaSampleTime = newSampleTime - _lastSampleTime;
             _lastSampleTime = newSampleTime;
-            if (deltaSampleTime > TIMEOUT_TICKS || _startSampleTime == 0)
+            if (deltaSampleTime >= RESTART_INTERVAL_MS || _startSampleTime == 0)
             {
                 _startSampleTime = newSampleTime;
                 _measureSampleTotal = 0;
+                _timeoutThrottle = true;
+                return;
+            }
+
+            // Don't count until after timeout skip
+            var elapsedMs = newSampleTime - _startSampleTime;
+            if (elapsedMs < skipInitialSamplesInMs && _timeoutThrottle)
+            {
                 return;
             }
 
@@ -219,26 +231,26 @@ namespace Meta.WitAi.Data
             _measureSampleTotal += Mathf.FloorToInt((float)sampleLength / channels);
 
             // Ignore until ready to calculate
-            var elapsedTicks = newSampleTime - _startSampleTime;
-            if (elapsedTicks < MEASURE_TICKS)
+            if (elapsedMs < MEASURE_INTERVAL_MS)
             {
                 return;
             }
 
             // Perform calculation
-            var elapsedSeconds = elapsedTicks / 10_000_000d;
+            var elapsedSeconds = elapsedMs / 1000d;
             var samplesPerSecond = _measureSampleTotal / elapsedSeconds;
 
             // Add to array and average out
             var index = _measuredSampleRateCount % MEASURE_AVERAGE_COUNT;
             _measuredSampleRates[index] = samplesPerSecond;
             _measuredSampleRateCount++;
+            _timeoutThrottle = false;
             if (_measuredSampleRateCount == MEASURE_AVERAGE_COUNT * 2) _measuredSampleRateCount -= MEASURE_AVERAGE_COUNT;
             var averageSampleRate = GetAverageSampleRate(_measuredSampleRates, _measuredSampleRateCount);
 
             // Determine closest sample rate using averaged value
             var closestSampleRate = GetClosestSampleRate(averageSampleRate);
-            if (!fromEncoding.samplerate.Equals(closestSampleRate))
+            if (_measuredSampleRateCount >= MEASURE_USE_COUNT && !fromEncoding.samplerate.Equals(closestSampleRate))
             {
                 fromEncoding.samplerate = closestSampleRate;
                 _log.Info("Input SampleRate Set: {0}\nElapsed: {1:0.000} seconds\nAverage Samples per Second: {2}",

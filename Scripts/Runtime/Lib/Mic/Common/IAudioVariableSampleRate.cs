@@ -17,5 +17,10 @@ namespace Meta.WitAi.Interfaces
         /// When true, sample rate will attempt to be determined
         /// </summary>
         bool NeedsSampleRateCalculation { get; }
+
+        /// <summary>
+        /// Total ms to skip due to throttling during initial samplerate calculation
+        /// </summary>
+        int SkipInitialSamplesInMs { get; }
     }
 }
