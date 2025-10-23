@@ -179,11 +179,11 @@ namespace Meta.WitAi.Data
         // Timeout if no samples after specified interval
         private const int RESTART_INTERVAL_MS = 50;
         // Perform calculation after specified interval
-        private const int MEASURE_INTERVAL_MS = 250;
+        private const int MEASURE_INTERVAL_MS = 200;
         // Don't set until measured this many times
-        private const int MEASURE_USE_COUNT = 2;
-        // Total measurements to average out (3 seconds)
-        private const int MEASURE_AVERAGE_COUNT = 12;
+        private const int MEASURE_USE_COUNT = 5;
+        // Total measurements for average determination (5 seconds)
+        private const int MEASURE_AVERAGE_COUNT = 25;
         // Sample rate options
         private static readonly int[] ALLOWED_SAMPLE_RATES = new []
         {
@@ -257,8 +257,8 @@ namespace Meta.WitAi.Data
             if (_measuredSampleRateCount >= MEASURE_USE_COUNT && !fromEncoding.samplerate.Equals(closestSampleRate))
             {
                 fromEncoding.samplerate = closestSampleRate;
-                _log.Info("Input SampleRate Set: {0}\nElapsed: {1:0.000} seconds\nAverage Samples per Second: {2}",
-                    closestSampleRate, elapsedSeconds, averageSampleRate);
+                _log.Info("Input SampleRate Set: {0}\nAverage Samples per Second: {1}\nMeasured Samples per Second: {2}\nMeasured Samples: {3}\nElapsed: {4} ms",
+                    closestSampleRate, averageSampleRate, samplesPerSecond, _measureSampleTotal, elapsedMs);
             }
 
             // Restart calculation

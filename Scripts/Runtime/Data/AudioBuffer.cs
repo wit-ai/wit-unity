@@ -852,6 +852,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Resample and encode into bytes that are passed into a setByte method.
         /// </summary>
+        /// <returns>Returns the maximum normalized audio level within the samples provided.</returns>
         private float EncodeAndPush(float[] samples, int offset, int length, bool push)
         {
             return _resampler.Resample(MicInput.AudioEncoding, MicMinAudioLevel, MicMaxAudioLevel,
