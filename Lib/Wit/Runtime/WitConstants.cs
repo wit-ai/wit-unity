@@ -430,6 +430,7 @@ namespace Meta.WitAi
     public const string WIT_SOCKET_ABORT_KEY = "abort";
     public const string WIT_SOCKET_TRANSCRIBE_KEY = "transcribe";
     public const string WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY = "multiple_segments";
+    public const string WIT_SOCKET_TRANSCRIBE_USE_AUDIO_PROCESSOR = "use_audio_processor";
     public const string WIT_SOCKET_TRANSCRIBE_IS_FINAL = "end_transcription";
     public const char WIT_SOCKET_PARAM_START = '[';
     public const char WIT_SOCKET_PARAM_END = ']';

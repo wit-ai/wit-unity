@@ -31,6 +31,10 @@ namespace Meta.WitAi.Data
         /// Event callback for min/max level change
         /// </summary>
         public event Action<float, float> OnLevelChanged;
+        /// <summary>
+        /// Callback for samplerate change
+        /// </summary>
+        public event Action<int> OnSampleRateChanged;
 
         // Used to log sample rate calculation
         private static IVLogger _log { get; } = LoggerRegistry.Instance.GetLogger(LogCategory.Input);
@@ -179,11 +183,11 @@ namespace Meta.WitAi.Data
         // Timeout if no samples after specified interval
         private const int RESTART_INTERVAL_MS = 50;
         // Perform calculation after specified interval
-        private const int MEASURE_INTERVAL_MS = 200;
+        private const int MEASURE_INTERVAL_MS = 1000;
         // Don't set until measured this many times
-        private const int MEASURE_USE_COUNT = 5;
-        // Total measurements for average determination (5 seconds)
-        private const int MEASURE_AVERAGE_COUNT = 25;
+        private const int MEASURE_USE_COUNT = 1;
+        // Total measurements for average determination (3 seconds)
+        private const int MEASURE_AVERAGE_COUNT = 3;
         // Sample rate options
         private static readonly int[] ALLOWED_SAMPLE_RATES = new []
         {
@@ -225,9 +229,15 @@ namespace Meta.WitAi.Data
 
             // Don't count until after timeout skip
             var elapsedMs = newSampleTime - _startSampleTime;
-            if (elapsedMs < skipInitialSamplesInMs && _timeoutThrottle)
+            if (_timeoutThrottle)
             {
-                return;
+                if (elapsedMs < skipInitialSamplesInMs)
+                {
+                    return;
+                }
+                _startSampleTime = newSampleTime;
+                _measureSampleTotal = 0;
+                _timeoutThrottle = false;
             }
 
             // Append sample length
@@ -248,7 +258,6 @@ namespace Meta.WitAi.Data
             var index = _measuredSampleRateCount % MEASURE_AVERAGE_COUNT;
             _measuredSampleRates[index] = samplesPerSecond;
             _measuredSampleRateCount++;
-            _timeoutThrottle = false;
             if (_measuredSampleRateCount == MEASURE_AVERAGE_COUNT * 2) _measuredSampleRateCount -= MEASURE_AVERAGE_COUNT;
             var averageSampleRate = GetAverageSampleRate(_measuredSampleRates, _measuredSampleRateCount);
 
@@ -257,6 +266,7 @@ namespace Meta.WitAi.Data
             if (_measuredSampleRateCount >= MEASURE_USE_COUNT && !fromEncoding.samplerate.Equals(closestSampleRate))
             {
                 fromEncoding.samplerate = closestSampleRate;
+                OnSampleRateChanged?.Invoke(closestSampleRate);
                 _log.Info("Input SampleRate Set: {0}\nAverage Samples per Second: {1}\nMeasured Samples per Second: {2}\nMeasured Samples: {3}\nElapsed: {4} ms",
                     closestSampleRate, averageSampleRate, samplesPerSecond, _measureSampleTotal, elapsedMs);
             }

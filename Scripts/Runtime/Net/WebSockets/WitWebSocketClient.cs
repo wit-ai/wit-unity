@@ -444,16 +444,22 @@ namespace Meta.Voice.Net.WebSockets
         private void HandleSetupFailed(string error)
         {
             RaiseError(error, $"Setup failed after {FailedConnectionAttempts} attempts.");
-            if (error == WitConstants.ERROR_AUTHENTICATION_DENIED)
+            if (string.Equals(WitConstants.ERROR_AUTHENTICATION_DENIED, error))
             {
                 var exception = new AuthenticationException(error);
-                ConnectionCompletion.SetException(exception);
                 FailedConnectionAttempts = Settings.ReconnectAttempts + 1;
                 foreach (var request in _requests) {
-                  request.Value.Completion.SetException(exception);
+                    var nullOrComplete = request.Value?.Completion?.Task?.IsCompleted ?? true;
+                    if (!nullOrComplete)
+                    {
+                        request.Value.Completion.SetException(exception);
+                        UntrackRequest(request.Value);
+                    }
                 }
-                _requests.Clear();
-                return;
+                if (!ConnectionCompletion.Task.IsCompleted)
+                {
+                    ConnectionCompletion.SetException(exception);
+                }
             }
             if (ConnectionState == WitWebSocketConnectionState.Connecting)
             {
@@ -773,7 +779,14 @@ namespace Meta.Voice.Net.WebSockets
             if (!isAuth)
             {
                 // Wait while connecting
-                await ConnectionCompletion.Task;
+                try
+                {
+                    await ConnectionCompletion.Task;
+                }
+                catch
+                {
+                    return;
+                }
                 // No longer connected or reconnecting
                 if (ConnectionState != WitWebSocketConnectionState.Connected)
                 {

@@ -268,6 +268,8 @@ namespace Meta.WitAi.Data
         /// </summary>
         private void SetInputDelegates(bool add)
         {
+            if (add) _resampler.OnSampleRateChanged += RaiseSampleRateChanged;
+            else _resampler.OnSampleRateChanged -= RaiseSampleRateChanged;
             var mic = MicInput;
             if (mic == null)
             {
@@ -848,6 +850,12 @@ namespace Meta.WitAi.Data
         #region Resampling
         // Script used for resampling input
         private AudioResampler _resampler = new AudioResampler();
+
+        /// <summary>
+        /// Samplerate callback
+        /// </summary>
+        public event Action<int> OnSampleRateChanged;
+        public void RaiseSampleRateChanged(int sampleRate) => OnSampleRateChanged?.Invoke(sampleRate);
 
         /// <summary>
         /// Resample and encode into bytes that are passed into a setByte method.

@@ -81,6 +81,9 @@ namespace Meta.WitAi.TTS.Integrations
         }
         private Dictionary<string, string> _encoded = new Dictionary<string, string>();
 
+        // Additional data provided in decode
+        private Dictionary<string, string> _additional = new();
+
         /// <summary>
         /// Encodes all setting parameters into a dictionary for transmission
         /// </summary>
@@ -104,6 +107,12 @@ namespace Meta.WitAi.TTS.Integrations
             if (val != WitConstants.TTS_PITCH_DEFAULT)
             {
                 _encoded[WitConstants.TTS_PITCH] = val.ToString();
+            }
+
+            // Encode additional data
+            foreach (var keyval in _additional)
+            {
+                _encoded[keyval.Key] = keyval.Value;
             }
         }
 
@@ -150,6 +159,7 @@ namespace Meta.WitAi.TTS.Integrations
             style = DecodeString(jsonObject, WitConstants.TTS_STYLE, WitConstants.TTS_STYLE_DEFAULT);
             speed = DecodeInt(jsonObject, WitConstants.TTS_SPEED, WitConstants.TTS_SPEED_DEFAULT, WitConstants.TTS_SPEED_MIN, WitConstants.TTS_SPEED_MAX);
             pitch = DecodeInt(jsonObject, WitConstants.TTS_PITCH, WitConstants.TTS_PITCH_DEFAULT, WitConstants.TTS_PITCH_MIN, WitConstants.TTS_PITCH_MAX);
+            DecodeAdditionalData(jsonObject);
             RefreshUniqueId();
             RefreshEncodedValues();
             SettingsId = UniqueId;
@@ -174,6 +184,28 @@ namespace Meta.WitAi.TTS.Integrations
                 return Mathf.Clamp(responseClass[id].AsInt, minValue, maxValue);
             }
             return defaultValue;
+        }
+
+        // Decodes all additional provided string data
+        private void DecodeAdditionalData(WitResponseClass responseClass)
+        {
+            foreach (var childKey in responseClass.ChildNodeNames)
+            {
+                if (childKey.Equals(WitConstants.TTS_VOICE)
+                    || childKey.Equals(WitConstants.TTS_STYLE)
+                    || childKey.Equals(WitConstants.TTS_PITCH)
+                    || childKey.Equals(WitConstants.TTS_SPEED)
+                    || childKey.Equals(WitConstants.ENDPOINT_TTS_PARAM))
+                {
+                    continue;
+                }
+                var childVal = responseClass[childKey].Value;
+                if (string.IsNullOrEmpty(childVal))
+                {
+                    continue;
+                }
+                _additional[childKey] = childVal;
+            }
         }
     }
 }

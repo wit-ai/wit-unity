@@ -28,7 +28,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// Constructor for transcribe request
         /// </summary>
         public WitWebSocketTranscribeRequest(string endpoint, Dictionary<string, string> parameters,
-            string requestId = null, string clientUserId = null, string operationId = null, bool multipleSegments = true)
+            string requestId = null, string clientUserId = null, string operationId = null, bool multipleSegments = true,
+            bool useAudioProcessor = true)
             : base(endpoint, parameters, requestId, clientUserId, operationId, !multipleSegments)
         {
             // Store multiple segments value
@@ -39,7 +40,11 @@ namespace Meta.Voice.Net.WebSockets.Requests
                 PostData[WitConstants.WIT_SOCKET_DATA_KEY][endpoint][WitConstants.WIT_SOCKET_TRANSCRIBE_MULTIPLE_KEY] =
                     true.ToString();
             }
-        }
+
+            // Declare if we require usage of the audio processor for our transcriptions
+            PostData[WitConstants.WIT_SOCKET_DATA_KEY][endpoint][WitConstants.WIT_SOCKET_TRANSCRIBE_USE_AUDIO_PROCESSOR] =
+                useAudioProcessor.ToString();
+    }
 
         /// <summary>
         /// If multiple segments, close when audio stops uploading
