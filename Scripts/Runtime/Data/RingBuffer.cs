@@ -84,7 +84,6 @@ namespace Meta.WitAi.Data
                     if (index > buffer.Length) index -= buffer.Length;
                 }
 
-
                 return read;
             }
 
@@ -250,13 +249,12 @@ namespace Meta.WitAi.Data
                 int read = (int) (Math.Min(bufferDataIndex + length, bufferDataLength) -
                                   bufferDataIndex);
 
-                int bufferIndex = this.bufferIndex - (int) (bufferDataLength - bufferDataIndex);
-                if (bufferIndex < 0)
+                int bIndex = bufferIndex - (int) (bufferDataLength - bufferDataIndex);
+                if (bIndex < 0)
                 {
-                    bufferIndex = buffer.Length + bufferIndex;
+                    bIndex += buffer.Length;
                 }
-
-                CopyFromBuffer(data, offset, length, bufferIndex);
+                CopyFromBuffer(data, offset, length, bIndex);
 
                 return read;
             }

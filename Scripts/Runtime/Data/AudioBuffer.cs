@@ -130,6 +130,20 @@ namespace Meta.WitAi.Data
         public AudioBufferEvents Events => events;
 
         /// <summary>
+        /// The amount of seconds mic must be muted before the buffer is cleared.
+        /// </summary>
+        public float MicMuteStaleThresholdInSeconds
+        {
+            get => audioBufferConfiguration.micMuteStaleThresholdInSeconds;
+            set => audioBufferConfiguration.micMuteStaleThresholdInSeconds = value;
+        }
+
+        /// <summary>
+        /// If mic input is recording or sample ready coroutine is awaiting a callback, return true
+        /// </summary>
+        public bool IsProcessing => MicInput is { IsRecording: true } || _sampleReadyCoroutine != null;
+
+        /// <summary>
         /// The current audio input source
         /// </summary>
         public virtual IAudioInputSource MicInput
@@ -252,7 +266,7 @@ namespace Meta.WitAi.Data
                 return;
             }
             float timeSinceMute = Time.realtimeSinceStartup - _lastMuteTime;
-            if (timeSinceMute >= audioBufferConfiguration.micMuteStaleThresholdInSeconds)
+            if (timeSinceMute >= MicMuteStaleThresholdInSeconds)
             {
                 _outputBuffer.Clear(true);
                 _log.Verbose("Cleared stale mic buffer on unmute (was muted for {0:F2} seconds)", timeSinceMute);
@@ -645,8 +659,8 @@ namespace Meta.WitAi.Data
         /// Get total bytes for a length of time in seconds
         /// </summary>
         private int GetByteLengthBySeconds(float lengthInSeconds)
-            => AudioEncoding.numChannels * AudioEncoding.samplerate *
-               Mathf.CeilToInt((AudioEncoding.bits / 8f) * lengthInSeconds);
+            => Mathf.CeilToInt(AudioEncoding.numChannels * AudioEncoding.samplerate *
+                               (AudioEncoding.bits / 8f) * lengthInSeconds);
 
         /// <summary>
         /// Called when a new mic sample is ready to be processed as sent by the audio input source
@@ -673,6 +687,9 @@ namespace Meta.WitAi.Data
         /// <param name="length">The length of samples to be taken</param>
         private void OnAudioSampleReady(float[] samples, int offset, int length)
         {
+            // Ignore empty samples
+            if (length == 0) return;
+
             // Begin a coroutine for OnSampleReady callback
             if (_sampleReadyCoroutine == null)
             {
@@ -725,7 +742,7 @@ namespace Meta.WitAi.Data
                 }
 
                 // Perform on sample change callback
-                if (_sampleReadyMarker != null)
+                if (_sampleReadyMarker != null && !MicInput.IsMuted)
                 {
                     var marker = _sampleReadyMarker;
                     _sampleReadyMarker = null;
