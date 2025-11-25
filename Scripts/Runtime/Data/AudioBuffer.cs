@@ -87,7 +87,7 @@ namespace Meta.WitAi.Data
         /// Check if an instance currently exists, for situations where it wouldn't be
         /// appropriate to create a new one.
         /// </summary>
-        public static bool HasInstance => (bool)_instance;
+        public static bool HasInstance => !_instance.IsDestroyedOrNull();
 
         /// <summary>
         /// A script that will instantiate an audio buffer if needed
@@ -871,7 +871,7 @@ namespace Meta.WitAi.Data
         /// <summary>
         /// Samplerate callback
         /// </summary>
-        public event Action<int> OnSampleRateChanged;
+        public static event Action<int> OnSampleRateChanged;
         public void RaiseSampleRateChanged(int sampleRate) => OnSampleRateChanged?.Invoke(sampleRate);
 
         /// <summary>
