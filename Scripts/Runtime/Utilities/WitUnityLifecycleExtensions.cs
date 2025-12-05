@@ -24,9 +24,14 @@ namespace Meta.WitAi.Utilities
         /// Checks if an AudioBuffer is null or destroyed
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsDestroyedOrNull([NotNullWhen(false)] this UnityEngine.MonoBehaviour? obj)
+        public static bool IsDestroyedOrNull([NotNullWhen(returnValue: false)] this object? o)
         {
-            return obj == null;
+            if (o is UnityEngine.Object uo)
+            {
+                return uo == null;
+            }
+
+            return o == null;
         }
     }
 }

@@ -17,6 +17,7 @@ using Meta.WitAi.Events;
 using Meta.WitAi.Interfaces;
 using UnityEngine;
 using UnityEngine.Events;
+using Meta.WitAi.Utilities;
 
 namespace Meta.Voice.Net.WebSockets
 {
@@ -129,7 +130,7 @@ namespace Meta.Voice.Net.WebSockets
         }
         protected virtual void OnDestroy()
         {
-            if (null != WebSocketClient)
+            if (!WebSocketClient.IsDestroyedOrNull())
             {
                 WebSocketClient.OnError.RemoveListener(OnError.Invoke);
                 WebSocketClient = null;
@@ -167,7 +168,7 @@ namespace Meta.Voice.Net.WebSockets
             _webSocketProvider = clientProvider as UnityEngine.Object;
             WebSocketClient = newClient;
 
-            if (null != WebSocketClient)
+            if (!WebSocketClient.IsDestroyedOrNull())
             {
                 WebSocketClient.OnError.AddListener(OnError.Invoke);
             }
