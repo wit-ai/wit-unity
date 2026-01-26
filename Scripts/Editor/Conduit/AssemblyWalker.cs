@@ -62,7 +62,8 @@ namespace Meta.Conduit.Editor
 
             foreach (var conduitAssembly in conduitAssemblies)
             {
-                _assemblies.Add(conduitAssembly.FullName.Split(',').First(), conduitAssembly);
+                var assemblyKey = conduitAssembly.FullName.Split(',').First();
+                _assemblies[assemblyKey] = conduitAssembly;
             }
 
             if (compilationAssemblies != null)
