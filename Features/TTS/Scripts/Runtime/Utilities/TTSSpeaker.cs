@@ -1723,6 +1723,7 @@ namespace Meta.WitAi.TTS.Utilities
 
             // Iterate queued requests
             bool found = false;
+            bool first = false;
             int index = 0;
             while (index < _queuedRequests.Count)
             {
@@ -1731,6 +1732,7 @@ namespace Meta.WitAi.TTS.Utilities
                     || findMethod.Invoke(checkRequest, findParameter))
                 {
                     found = true;
+                    if (index == 0) first = true;
                     lock (_queuedRequests)
                     {
                         _queuedRequests.RemoveAt(index);
@@ -1748,8 +1750,12 @@ namespace Meta.WitAi.TTS.Utilities
             {
                 return false;
             }
-            // Found so refresh queue
+
+            // Refresh in queue check
             RefreshQueueEvents();
+
+            // Attempt to play next in queue if current front of queue was removed
+            if (first) RefreshPlayback();
             return true;
         }
 

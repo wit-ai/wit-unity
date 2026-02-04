@@ -86,6 +86,7 @@ namespace Meta.Voice.Net.WebSockets
         /// </summary>
         public bool IsReconnecting => IsReferenced
                                       && ConnectionState == WitWebSocketConnectionState.Disconnected
+                                      && FailedConnectionAttempts <= WitConstants.WIT_SOCKET_MAX_FAILED_ATTEMPTS
                                       && (Settings.ReconnectAttempts < 0
                                           || FailedConnectionAttempts <= Settings.ReconnectAttempts);
 
@@ -97,9 +98,18 @@ namespace Meta.Voice.Net.WebSockets
         public int ReferenceCount { get; private set; }
 
         /// <summary>
+        /// Backing field for FailedConnectionAttempts to allow thread-safe increments
+        /// </summary>
+        private int _failedConnectionAttempts;
+
+        /// <summary>
         /// Total amount of failed connection attempts made
         /// </summary>
-        public int FailedConnectionAttempts { get; private set; }
+        public int FailedConnectionAttempts
+        {
+            get => _failedConnectionAttempts;
+            private set => _failedConnectionAttempts = value;
+        }
 
         /// <summary>
         /// The utc time of the last response from the server
@@ -275,12 +285,12 @@ namespace Meta.Voice.Net.WebSockets
             // Timeout handling
             catch (OperationCanceledException)
             {
-                HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
+                HandleSetupFailed(new TimeoutException(WitConstants.ERROR_RESPONSE_TIMEOUT));
             }
             // Additional exception handling
             catch (Exception e)
             {
-                HandleSetupFailed($"Connection connect error caught\n{e}");
+                HandleSetupFailed(e);
             }
         }
 
@@ -297,20 +307,15 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-            // Completion threw an error
-            if (ConnectionCompletion.Task.IsFaulted)
-            {
-                HandleSetupFailed(ConnectionCompletion.Task.Exception.ToString());
-                return;
-            }
-            // Return successfully if complete
-            if (ConnectionCompletion.Task.IsCompleted)
+            // Return if faulted or complete
+            if (ConnectionCompletion.Task.IsFaulted
+                || ConnectionCompletion.Task.IsCompleted)
             {
                 return;
             }
 
             // Timed out
-            HandleSetupFailed(WitConstants.ERROR_RESPONSE_TIMEOUT);
+            HandleSetupFailed(new TimeoutException(WitConstants.ERROR_RESPONSE_TIMEOUT));
         }
 
         /// <summary>
@@ -398,7 +403,7 @@ namespace Meta.Voice.Net.WebSockets
             string clientAccessToken = Settings?.Configuration?.GetClientAccessToken();
             if (string.IsNullOrEmpty(clientAccessToken))
             {
-                HandleSetupFailed("Cannot connect to Wit server without client access token");
+                HandleSetupFailed(new AuthenticationException("Cannot connect to Wit server without client access token"));
                 return;
             }
 
@@ -411,7 +416,7 @@ namespace Meta.Voice.Net.WebSockets
             IsAuthenticated = string.IsNullOrEmpty(authError);
             if (!IsAuthenticated)
             {
-                HandleSetupFailed(authError);
+                HandleSetupFailed(new AuthenticationException(authError));
                 return;
             }
             // Cancelled elsewhere
@@ -441,52 +446,55 @@ namespace Meta.Voice.Net.WebSockets
         /// <summary>
         /// Disconnect if connection failed, warn otherwise
         /// </summary>
-        private void HandleSetupFailed(string error)
+        private void HandleSetupFailed(Exception setupException)
         {
-            RaiseError(error, $"Setup failed after {FailedConnectionAttempts} attempts.");
-            if (string.Equals(WitConstants.ERROR_AUTHENTICATION_DENIED, error))
+            // If not connecting, ignore
+            if (ConnectionState != WitWebSocketConnectionState.Connecting)
             {
-                var exception = new AuthenticationException(error);
-                FailedConnectionAttempts = Settings.ReconnectAttempts + 1;
-                foreach (var request in _requests) {
-                    var nullOrComplete = request.Value?.Completion?.Task?.IsCompleted ?? true;
-                    if (!nullOrComplete)
-                    {
-                        request.Value.Completion.SetException(exception);
-                        UntrackRequest(request.Value);
-                    }
-                }
-                if (!ConnectionCompletion.Task.IsCompleted)
-                {
-                    ConnectionCompletion.SetException(exception);
-                }
+                Logger.Warning("Connection Failure Ignored\nConnection Request Id: {0}\nException: {1}",
+                  Options.RequestId,
+                  setupException);
+                return;
             }
-            if (ConnectionState == WitWebSocketConnectionState.Connecting)
+
+            // Thread-safe increment of failed connection attempts
+            System.Threading.Interlocked.Increment(ref _failedConnectionAttempts);
+
+            // Error for authentication - prevent any further reconnection attempts
+            if (setupException is AuthenticationException)
             {
-                FailedConnectionAttempts++;
-                if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
-                {
-                    Logger.Error("Connection Failed\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
-                        Options.RequestId,
-                        error,
-                        FailedConnectionAttempts);
-                }
-                else
-                {
-                    Logger.Warning("Connection Disrupted & Reconnecting\nConnection Request Id: {0}\nMessage: {1}\nFailed Attempts: {2}",
-                      Options.RequestId,
-                      error,
-                      FailedConnectionAttempts);
-                }
-                ForceDisconnect();
+                FailedConnectionAttempts = WitConstants.WIT_SOCKET_MAX_FAILED_ATTEMPTS;
+                Logger.Error("Connection Authentication Failed\nConnection Request Id: {0}\nAuth Exception: {1}",
+                    Options.RequestId,
+                    setupException);
             }
+            // Error if max attempts have been hit
+            else if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
+            {
+                Logger.Error("Connection Failed\nConnection Request Id: {0}\nFailed Attempts: {1}\nException: {2}",
+                    Options.RequestId,
+                    FailedConnectionAttempts,
+                    setupException);
+            }
+            // Warning if retrying
             else
             {
-                Logger.Warning("Connection Cancelled\nConnection Request Id: {0}\nMessage: {1}",
-                  Options.RequestId,
-                    error);
+                Logger.Warning("Connection Disrupted & Reconnecting\nConnection Request Id: {0}\nFailed Attempts: {1}\nException: {2}",
+                    Options.RequestId,
+                    FailedConnectionAttempts,
+                    setupException);
             }
+
+            // Set connection completion if not completed
+            if (!ConnectionCompletion.Task.IsCompleted)
+            {
+                ConnectionCompletion.SetException(setupException);
+            }
+
+            // Force disconnect to set state to disconnected and unload requests
+            ForceDisconnect();
         }
+        private void HandleSetupFailed(string error) => HandleSetupFailed(new Exception(error));
 
         /// <summary>
         /// Raise error on main thread
@@ -684,7 +692,15 @@ namespace Meta.Voice.Net.WebSockets
             {
                 return;
             }
-            // Ignore if failed too many times
+            // Ignore if hard maximum exceeded (prevents infinite retries)
+            if (FailedConnectionAttempts > WitConstants.WIT_SOCKET_MAX_FAILED_ATTEMPTS)
+            {
+                Logger.Error("Reconnect Failed\nHard maximum failed attempts exceeded\nFailures: {0}\nMax Allowed: {1}",
+                    FailedConnectionAttempts,
+                    WitConstants.WIT_SOCKET_MAX_FAILED_ATTEMPTS);
+                return;
+            }
+            // Ignore if failed too many times per configured settings
             if (Settings.ReconnectAttempts >= 0 && FailedConnectionAttempts > Settings.ReconnectAttempts)
             {
                 Logger.Error("Reconnect Failed\nToo many failed reconnect attempts\nFailures: {0}\nAttempts Allowed: {1}",
@@ -1058,6 +1074,19 @@ namespace Meta.Voice.Net.WebSockets
                 OnTopicRequestTracked?.Invoke(topicId, request);
             }
 
+            // If disconnected and max reconnect attempts exceeded, reset and retry if referenced
+            if (ConnectionState == WitWebSocketConnectionState.Disconnected
+                && IsReferenced
+                && FailedConnectionAttempts > 0
+                && !IsReconnecting)
+            {
+                Logger.Info("New Request Tracked - Resetting Failed Connection Attempts\nPrevious Failures: {0}\nRequest: {1}",
+                    FailedConnectionAttempts,
+                    request.RequestId);
+                FailedConnectionAttempts = 0;
+                Reconnect();
+            }
+
             // Success
             OnRequestTracked?.Invoke(this, request);
             return true;
@@ -1117,14 +1146,15 @@ namespace Meta.Voice.Net.WebSockets
             request.OnComplete -= CompleteRequestTracking;
             if (!request.IsComplete)
             {
-                if (ConnectionState == WitWebSocketConnectionState.Disconnecting
+                if (ConnectionCompletion.Task.IsFaulted
+                    && ConnectionCompletion.Task.Exception != null)
+                {
+                    request.HandleError(WitConstants.ERROR_CODE_GENERAL, GetExceptionMessage(ConnectionCompletion.Task.Exception));
+                }
+                else if (ConnectionState == WitWebSocketConnectionState.Disconnecting
                     || ConnectionState == WitWebSocketConnectionState.Disconnected)
                 {
-                    var jsonData = new WitResponseClass();
-                    jsonData[WitConstants.WIT_SOCKET_REQUEST_ID_KEY] = new WitResponseData(request.RequestId);
-                    jsonData[WitConstants.KEY_RESPONSE_CODE] = new WitResponseData(WitConstants.WIT_SOCKET_DISCONNECT_CODE);
-                    jsonData[WitConstants.KEY_RESPONSE_ERROR] = new WitResponseData(WitConstants.WIT_SOCKET_DISCONNECT_ERROR);
-                    request.HandleDownload(jsonData.ToString(), jsonData, null);
+                    request.HandleError(WitConstants.WIT_SOCKET_DISCONNECT_CODE, WitConstants.WIT_SOCKET_DISCONNECT_ERROR);
                 }
                 else
                 {
@@ -1134,6 +1164,12 @@ namespace Meta.Voice.Net.WebSockets
             Logger.Info($"Untrack Request\n{request}");
             OnRequestUntracked?.Invoke(this, request);
             return true;
+        }
+        private string GetExceptionMessage(Exception exception)
+        {
+            if (exception == null) return WitConstants.ERROR_CODE_GENERAL.ToString();
+            if (exception.InnerException != null) return exception.InnerException.Message;
+            return exception.Message;
         }
         #endregion REQUESTS
 

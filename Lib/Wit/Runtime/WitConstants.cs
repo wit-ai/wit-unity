@@ -401,7 +401,7 @@ namespace Meta.WitAi
     // Setup constant keys & values
     public const string WIT_SOCKET_URL = "wss://api.wit.ai/composer";
     public const int WIT_SOCKET_CONNECT_TIMEOUT = 2000; // Default connection timeout in ms
-    public const int WIT_SOCKET_RECONNECT_ATTEMPTS = -1; // Default is retry infinitely
+    public const int WIT_SOCKET_RECONNECT_ATTEMPTS = 10; // Default is retry 10 times
     public const float WIT_SOCKET_RECONNECT_INTERVAL = 1f; // Default to one retry per second
     public const int WIT_SOCKET_RECONNECT_INTERVAL_MIN = 100; // Minimum interval in ms
     public const string WIT_SOCKET_REQUEST_ID_KEY = RESPONSE_REQUEST_ID;
@@ -415,6 +415,12 @@ namespace Meta.WitAi
     public const int WIT_SOCKET_DISCONNECT_CODE = 499;
 
     public const string WIT_SOCKET_DISCONNECT_ERROR = "WebSocket disconnected";
+
+    /// <summary>
+    /// Maximum number of failed connection attempts before stopping reconnection.
+    /// Used to prevent infinite authentication retry loops.
+    /// </summary>
+    public const int WIT_SOCKET_MAX_FAILED_ATTEMPTS = 25;
 
     // Authorization request constant keys & values
     public const string WIT_SOCKET_AUTH_TOKEN = "wit_auth_token";

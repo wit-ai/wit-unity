@@ -83,6 +83,13 @@ namespace Meta.Voice.Net.WebSockets
         void HandleDownload(string jsonString, WitResponseNode jsonData, byte[] binaryData);
 
         /// <summary>
+        /// Called when request should handle an error code or message.  Ignored if already complete.
+        /// </summary>
+        /// <param name="errorCode">Error code to throw</param>
+        /// <param name="errorMessage">Error message to return</param>
+        void HandleError(int errorCode, string errorMessage);
+
+        /// <summary>
         /// Whether request is currently complete
         /// </summary>
         bool IsComplete { get; }

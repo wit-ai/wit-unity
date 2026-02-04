@@ -207,19 +207,8 @@ namespace Meta.Voice.Net.WebSockets.Requests
             UpdateTimeoutStart();
             await TaskUtility.WaitForTimeout(TimeoutMs, GetTimeoutStart, Completion.Task);
 
-            // Ignore if completed
-            if (IsComplete)
-            {
-                return;
-            }
-
-            // Send abort
-            SendAbort(WitConstants.ERROR_RESPONSE_TIMEOUT);
-
-            // Set code, error and callback for completion
-            Code = WitConstants.ERROR_CODE_TIMEOUT;
-            Error = WitConstants.ERROR_RESPONSE_TIMEOUT;
-            HandleComplete();
+            // Handle error if desired
+            HandleError(WitConstants.ERROR_CODE_TIMEOUT, WitConstants.ERROR_RESPONSE_TIMEOUT);
         }
 
         /// <summary>
@@ -237,18 +226,12 @@ namespace Meta.Voice.Net.WebSockets.Requests
         /// </summary>
         public virtual void Cancel()
         {
-            // Handle completion
+            // Set immediately even if already complete
             Code = WitConstants.ERROR_CODE_ABORTED;
             Error = WitConstants.CANCEL_ERROR;
 
-            if (IsComplete)
-            {
-                return;
-            }
-
-            // Send abort method if possible
-            SendAbort(WitConstants.CANCEL_ERROR);
-            HandleComplete();
+            // Handle same as you would an error
+            HandleError(Code, Error);
         }
 
         /// <summary>
@@ -351,6 +334,23 @@ namespace Meta.Voice.Net.WebSockets.Requests
         }
 
         /// <summary>
+        /// If not complete, mark as complete and call completion callback on main thread
+        /// </summary>
+        public virtual void HandleError(int errorCode, string errorMessage)
+        {
+            // Ignore if already complete
+            if (IsComplete) return;
+
+            // Send abort message
+            SendAbort(errorMessage);
+
+            // Finalize completion
+            Code = errorCode;
+            Error = errorMessage;
+            HandleComplete();
+        }
+
+        /// <summary>
         /// Resets the state of the request and marks request as complete.
         /// </summary>
         protected virtual void HandleComplete()
@@ -366,19 +366,7 @@ namespace Meta.Voice.Net.WebSockets.Requests
             IsComplete = true;
             if (!Completion.Task.IsCompleted)
             {
-                // We will return success if there was no error or if this was cancelled.
-                // A cancelled request was technically successful, it just had no outcome.
-                if (Code == WitConstants.ERROR_CODE_ABORTED)
-                {
-                        Logger.Info("Request was cancelled.");
-                        Completion.SetResult(true);
-                        // Reset the error so it doesn't trigger error events. We will keep the code.
-                        Error = "";
-                }
-                else
-                {
-                    Completion.SetResult(string.IsNullOrEmpty(Error));
-                }
+                Completion.SetResult(string.IsNullOrEmpty(Error));
             }
 
             ThreadUtility.CallOnMainThread(RaiseComplete);
