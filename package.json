@@ -1,7 +1,7 @@
 {
   "name": "com.meta.witai",
   "displayName": "Meta - Wit.ai",
-  "version": "84.0.0",
+  "version": "203.0.0",
   "samples": [
     {
       "displayName": "OVR Lipsync Library",
