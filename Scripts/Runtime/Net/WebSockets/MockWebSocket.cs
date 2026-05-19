@@ -51,15 +51,27 @@ namespace Meta.Voice.Net.WebSockets
         #pragma warning disable 0067
         public event Action<string> OnError;
         #pragma warning restore 0067
-        public void SimulateError(string error)
+        /// <summary>
+        /// Simulates a transport error. By default also cascades into an Abnormal close,
+        /// which mirrors the behavior of most real websocket implementations. Pass
+        /// <paramref name="autoClose"/>=false to test the "OnError without close" branch
+        /// (e.g. transient warnings on a still-Connected socket).
+        /// </summary>
+        public void SimulateError(string error, bool autoClose = true)
         {
             OnError?.Invoke(error);
-            SimulateClose(WebSocketCloseCode.Abnormal);
+            if (autoClose)
+            {
+                SimulateClose(WebSocketCloseCode.Abnormal);
+            }
         }
 
         // Simulate close
         public event Action<WebSocketCloseCode> OnClose;
-        private void SimulateClose(WebSocketCloseCode closeCode)
+        /// <summary>
+        /// Public so tests can inject server-initiated close events without going through SimulateError.
+        /// </summary>
+        public void SimulateClose(WebSocketCloseCode closeCode)
         {
             State = WitWebSocketConnectionState.Disconnected;
             OnClose?.Invoke(closeCode);
